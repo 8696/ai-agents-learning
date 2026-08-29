@@ -6,6 +6,8 @@
   <title>AI Agent 开发学习仓库</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🤖%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css" />
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <style>
     /* ── reset & base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; }
@@ -38,6 +40,9 @@
       line-height: 1.55;
     }
     pre code { background: transparent; padding: 0; font-size: 1em; }
+    /* highlight.js：块级代码用主题底色，行内 code 仍用上面的浅灰底 */
+    pre code.hljs { background: transparent; padding: 0; }
+    .hljs { background: #f6f8fa; }
     hr { border: 0; border-top: 1px solid #d0d7de; margin: 24px 0; }
     blockquote {
       margin: 0 0 16px;
@@ -191,7 +196,7 @@
       margin-left: 280px;
       flex: 1;
       padding: 32px 48px 64px;
-      max-width: 920px;
+      /* max-width: 920px; */
       min-width: 0;
     }
     main.content h1,
@@ -206,20 +211,6 @@
     main.content h2 { font-size: 22px; border-bottom: 1px solid #d0d7de; padding-bottom: 6px; }
     main.content h3 { font-size: 18px; }
     main.content h4 { font-size: 16px; }
-
-    .meta-bar {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      align-items: center;
-      padding: 8px 0 16px;
-      margin-bottom: 16px;
-      border-bottom: 1px solid #d0d7de;
-      font-size: 12px;
-      color: #57606a;
-    }
-    .meta-bar a { color: #57606a; }
-    .meta-bar .raw-link::before { content: "📄 "; }
 
     .err {
       background: #fff1f0;
@@ -266,7 +257,6 @@
       <nav class="tree" id="navTree"></nav>
     </aside>
     <main class="content">
-      <div class="meta-bar" id="metaBar"></div>
       <article id="markdown" class="loading">加载中…</article>
     </main>
   </div>
@@ -277,7 +267,6 @@
        仓库结构变了：先 node script/gen-manifest.js，再推到 master。
        ════════════════════════════════════════════════════════════ */
     const RAW_BASE = 'https://raw.githubusercontent.com/8696/ai-agents-learning/refs/heads/master/';
-    const GITHUB_BLOB = 'https://github.com/8696/ai-agents-learning/blob/master/';
     let NAV = [];
 
     /** 仓库相对路径 → GitHub raw URL（分段编码，中文路径也能请求） */
@@ -286,10 +275,32 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       marked 配置
+       marked + highlight.js（marked 13 无 highlight 回调，渲染后扫 DOM）
        ════════════════════════════════════════════════════════════ */
     if (window.marked && marked.setOptions) {
       marked.setOptions({ gfm: true, breaks: false });
+    }
+
+    /** 扩展名 → highlight.js language id */
+    function langFromPath(path) {
+      const ext = path.split('.').pop().toLowerCase();
+      const map = {
+        ts: 'typescript', tsx: 'typescript',
+        js: 'javascript', jsx: 'javascript', mjs: 'javascript', cjs: 'javascript',
+        json: 'json', md: 'markdown',
+        yml: 'yaml', yaml: 'yaml',
+        sh: 'bash', bash: 'bash', zsh: 'bash',
+      };
+      return map[ext] || '';
+    }
+
+    /** 对 article 内尚未高亮的 <pre><code> 跑一遍 hljs */
+    function highlightArticle(article) {
+      if (!window.hljs) return;
+      article.querySelectorAll('pre code').forEach((block) => {
+        if (block.classList.contains('hljs')) return;
+        hljs.highlightElement(block);
+      });
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -404,27 +415,12 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       渲染元信息条（带 raw 链接）
-       ════════════════════════════════════════════════════════════ */
-    function renderMeta(path) {
-      const meta = document.getElementById('metaBar');
-      const isMd = path.endsWith('.md');
-      const encoded = path.split('/').map(encodeURIComponent).join('/');
-      meta.innerHTML = `
-        <span>📍 ${escapeHTML(path)}</span>
-        ${isMd ? `<a class="raw-link" target="_blank" rel="noopener" href="${rawUrl(path)}">查看原始 Markdown</a>` : ''}
-        <a target="_blank" rel="noopener" href="${GITHUB_BLOB}${encoded}">在 GitHub 上查看</a>
-      `;
-    }
-
-    /* ════════════════════════════════════════════════════════════
        抓取 + 渲染内容
        ════════════════════════════════════════════════════════════ */
     async function loadAndRender(path) {
       const article = document.getElementById('markdown');
       article.className = 'loading';
       article.textContent = '加载中…';
-      renderMeta(path);
       renderCrumb(path);
       highlightActive(path);
       window.scrollTo({ top: 0, behavior: 'instant' });
@@ -439,16 +435,14 @@
           html = marked.parse(text);
           // 重写内部 .md 链接为 hash 链接
           html = rewriteMdLinks(html, path);
-        } else if (path.endsWith('.json')) {
-          html = `<pre><code>${escapeHTML(text)}</code></pre>`;
-        } else if (path.endsWith('.ts') || path.endsWith('.tsx') || path.endsWith('.js')) {
-          html = `<pre><code>${escapeHTML(text)}</code></pre>`;
         } else {
-          html = `<pre>${escapeHTML(text)}</pre>`;
+          const lang = langFromPath(path);
+          const cls = lang ? ` class="language-${lang}"` : '';
+          html = `<pre><code${cls}>${escapeHTML(text)}</code></pre>`;
         }
         article.className = '';
         article.innerHTML = html;
-        // 给标题加 id（marked 默认就会给 id，OK）
+        highlightArticle(article);
       } catch (e) {
         article.className = '';
         article.innerHTML = `
