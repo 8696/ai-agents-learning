@@ -1,0 +1,763 @@
+[
+  {
+    "label": "README.md",
+    "path": "README.md"
+  },
+  {
+    "label": "AGENTS.md",
+    "path": "AGENTS.md"
+  },
+  {
+    "label": "docs",
+    "children": [
+      {
+        "label": "00-目录.md",
+        "path": "docs/00-目录.md"
+      },
+      {
+        "label": "01-使用协议.md",
+        "path": "docs/01-使用协议.md"
+      },
+      {
+        "label": "02-怎么用.md",
+        "path": "docs/02-怎么用.md"
+      },
+      {
+        "label": "03-学习路线.md",
+        "path": "docs/03-学习路线.md"
+      },
+      {
+        "label": "04-自测题库.md",
+        "path": "docs/04-自测题库.md"
+      },
+      {
+        "label": "05-资源清单.md",
+        "path": "docs/05-资源清单.md"
+      },
+      {
+        "label": "06-学习总览.md",
+        "path": "docs/06-学习总览.md"
+      },
+      {
+        "label": "07-核心术语.md",
+        "path": "docs/07-核心术语.md"
+      },
+      {
+        "label": "学习模块",
+        "children": [
+          {
+            "label": "00-环境准备",
+            "children": [
+              {
+                "label": "01-API-Key-计费.md",
+                "path": "docs/学习模块/00-环境准备/01-API-Key-计费.md"
+              },
+              {
+                "label": "02-Node-22.md",
+                "path": "docs/学习模块/00-环境准备/02-Node-22.md"
+              },
+              {
+                "label": "03-密钥安全.md",
+                "path": "docs/学习模块/00-环境准备/03-密钥安全.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/00-环境准备/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/00-环境准备/README.md"
+              }
+            ]
+          },
+          {
+            "label": "01-AI与LLM基础认知",
+            "children": [
+              {
+                "label": "01-AI-ML-DL-与能力边界.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/01-AI-ML-DL-与能力边界.md"
+              },
+              {
+                "label": "02-Token.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/02-Token.md"
+              },
+              {
+                "label": "03-Context-Window.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/03-Context-Window.md"
+              },
+              {
+                "label": "04-Transformer.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/04-Transformer.md"
+              },
+              {
+                "label": "05-Attention-Self-Attention.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/05-Attention-Self-Attention.md"
+              },
+              {
+                "label": "06-Embedding.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/06-Embedding.md"
+              },
+              {
+                "label": "07-Temperature-Top-P.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/07-Temperature-Top-P.md"
+              },
+              {
+                "label": "08-Hallucination.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/08-Hallucination.md"
+              },
+              {
+                "label": "09-预训练-vs-推理.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/09-预训练-vs-推理.md"
+              },
+              {
+                "label": "10-主流模型对比.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/10-主流模型对比.md"
+              },
+              {
+                "label": "11-本地产出.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/11-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/README.md"
+              }
+            ]
+          },
+          {
+            "label": "02-LLM-API开发",
+            "children": [
+              {
+                "label": "01-Streaming-SSE.md",
+                "path": "docs/学习模块/02-LLM-API开发/01-Streaming-SSE.md"
+              },
+              {
+                "label": "02-协议-A-vs-B.md",
+                "path": "docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md"
+              },
+              {
+                "label": "03-AbortController.md",
+                "path": "docs/学习模块/02-LLM-API开发/03-AbortController.md"
+              },
+              {
+                "label": "04-Rate-Limit.md",
+                "path": "docs/学习模块/02-LLM-API开发/04-Rate-Limit.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/02-LLM-API开发/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/02-LLM-API开发/README.md"
+              }
+            ]
+          },
+          {
+            "label": "03-Prompt-Engineering",
+            "children": [
+              {
+                "label": "01-System-User-Assistant-优先级.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/01-System-User-Assistant-优先级.md"
+              },
+              {
+                "label": "02-Few-shot-Zero-shot.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/02-Few-shot-Zero-shot.md"
+              },
+              {
+                "label": "03-CoT-ReAct概念.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/03-CoT-ReAct概念.md"
+              },
+              {
+                "label": "04-Prompt-版本管理.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/04-Prompt-版本管理.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/README.md"
+              }
+            ]
+          },
+          {
+            "label": "04-Structured-Output",
+            "children": [
+              {
+                "label": "01-JSON-Schema.md",
+                "path": "docs/学习模块/04-Structured-Output/01-JSON-Schema.md"
+              },
+              {
+                "label": "02-JSON-Mode-vs-Structured-Output.md",
+                "path": "docs/学习模块/04-Structured-Output/02-JSON-Mode-vs-Structured-Output.md"
+              },
+              {
+                "label": "03-本地产出.md",
+                "path": "docs/学习模块/04-Structured-Output/03-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/04-Structured-Output/README.md"
+              }
+            ]
+          },
+          {
+            "label": "05-Tool-Calling",
+            "children": [
+              {
+                "label": "01-Function-Calling-协议.md",
+                "path": "docs/学习模块/05-Tool-Calling/01-Function-Calling-协议.md"
+              },
+              {
+                "label": "02-Tool-Description.md",
+                "path": "docs/学习模块/05-Tool-Calling/02-Tool-Description.md"
+              },
+              {
+                "label": "03-Tool-Choice.md",
+                "path": "docs/学习模块/05-Tool-Calling/03-Tool-Choice.md"
+              },
+              {
+                "label": "04-Tool-Gateway-幂等.md",
+                "path": "docs/学习模块/05-Tool-Calling/04-Tool-Gateway-幂等.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/05-Tool-Calling/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/05-Tool-Calling/README.md"
+              }
+            ]
+          },
+          {
+            "label": "06-多轮对话与Context",
+            "children": [
+              {
+                "label": "01-Context-vs-Memory.md",
+                "path": "docs/学习模块/06-多轮对话与Context/01-Context-vs-Memory.md"
+              },
+              {
+                "label": "02-压缩-摘要-vs-滑动窗口.md",
+                "path": "docs/学习模块/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口.md"
+              },
+              {
+                "label": "03-Token-Budget.md",
+                "path": "docs/学习模块/06-多轮对话与Context/03-Token-Budget.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/06-多轮对话与Context/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/06-多轮对话与Context/README.md"
+              }
+            ]
+          },
+          {
+            "label": "07-手写Agent",
+            "children": [
+              {
+                "label": "01-Agent-Loop-ReAct.md",
+                "path": "docs/学习模块/07-手写Agent/01-Agent-Loop-ReAct.md"
+              },
+              {
+                "label": "02-先规划再执行-vs-一步步走.md",
+                "path": "docs/学习模块/07-手写Agent/02-先规划再执行-vs-一步步走.md"
+              },
+              {
+                "label": "03-死循环防护.md",
+                "path": "docs/学习模块/07-手写Agent/03-死循环防护.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/07-手写Agent/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/07-手写Agent/README.md"
+              }
+            ]
+          },
+          {
+            "label": "08-RAG基础",
+            "children": [
+              {
+                "label": "01-RAG-流水线.md",
+                "path": "docs/学习模块/08-RAG基础/01-RAG-流水线.md"
+              },
+              {
+                "label": "02-Chunking.md",
+                "path": "docs/学习模块/08-RAG基础/02-Chunking.md"
+              },
+              {
+                "label": "03-余弦相似度.md",
+                "path": "docs/学习模块/08-RAG基础/03-余弦相似度.md"
+              },
+              {
+                "label": "04-RAG-vs-Fine-tuning.md",
+                "path": "docs/学习模块/08-RAG基础/04-RAG-vs-Fine-tuning.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/08-RAG基础/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/08-RAG基础/README.md"
+              }
+            ]
+          },
+          {
+            "label": "09-RAG进阶",
+            "children": [
+              {
+                "label": "01-BM25-混合检索.md",
+                "path": "docs/学习模块/09-RAG进阶/01-BM25-混合检索.md"
+              },
+              {
+                "label": "02-Rerank.md",
+                "path": "docs/学习模块/09-RAG进阶/02-Rerank.md"
+              },
+              {
+                "label": "03-Query-Rewrite.md",
+                "path": "docs/学习模块/09-RAG进阶/03-Query-Rewrite.md"
+              },
+              {
+                "label": "04-切块与查询变体.md",
+                "path": "docs/学习模块/09-RAG进阶/04-切块与查询变体.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/09-RAG进阶/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/09-RAG进阶/README.md"
+              }
+            ]
+          },
+          {
+            "label": "10-Memory",
+            "children": [
+              {
+                "label": "01-记忆分类.md",
+                "path": "docs/学习模块/10-Memory/01-记忆分类.md"
+              },
+              {
+                "label": "02-写入策略.md",
+                "path": "docs/学习模块/10-Memory/02-写入策略.md"
+              },
+              {
+                "label": "03-本地产出.md",
+                "path": "docs/学习模块/10-Memory/03-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/10-Memory/README.md"
+              }
+            ]
+          },
+          {
+            "label": "11-Agent-State-Workflow",
+            "children": [
+              {
+                "label": "01-状态机.md",
+                "path": "docs/学习模块/11-Agent-State-Workflow/01-状态机.md"
+              },
+              {
+                "label": "02-Checkpoint-Durable-Resume.md",
+                "path": "docs/学习模块/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume.md"
+              },
+              {
+                "label": "03-Human-in-the-loop.md",
+                "path": "docs/学习模块/11-Agent-State-Workflow/03-Human-in-the-loop.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/11-Agent-State-Workflow/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/11-Agent-State-Workflow/README.md"
+              }
+            ]
+          },
+          {
+            "label": "12-MCP",
+            "children": [
+              {
+                "label": "01-MCP-架构.md",
+                "path": "docs/学习模块/12-MCP/01-MCP-架构.md"
+              },
+              {
+                "label": "02-stdio-vs-Streamable-HTTP.md",
+                "path": "docs/学习模块/12-MCP/02-stdio-vs-Streamable-HTTP.md"
+              },
+              {
+                "label": "03-Skills-vs-MCP.md",
+                "path": "docs/学习模块/12-MCP/03-Skills-vs-MCP.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/12-MCP/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/12-MCP/README.md"
+              }
+            ]
+          },
+          {
+            "label": "13-Agent-Framework",
+            "children": [
+              {
+                "label": "01-框架解决什么.md",
+                "path": "docs/学习模块/13-Agent-Framework/01-框架解决什么.md"
+              },
+              {
+                "label": "02-State-Graph.md",
+                "path": "docs/学习模块/13-Agent-Framework/02-State-Graph.md"
+              },
+              {
+                "label": "03-Agents-as-Tools-vs-Handoff.md",
+                "path": "docs/学习模块/13-Agent-Framework/03-Agents-as-Tools-vs-Handoff.md"
+              },
+              {
+                "label": "04-Dify-等编排产品.md",
+                "path": "docs/学习模块/13-Agent-Framework/04-Dify-等编排产品.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/13-Agent-Framework/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/13-Agent-Framework/README.md"
+              }
+            ]
+          },
+          {
+            "label": "14-Multi-Agent",
+            "children": [
+              {
+                "label": "01-Supervisor-模式.md",
+                "path": "docs/学习模块/14-Multi-Agent/01-Supervisor-模式.md"
+              },
+              {
+                "label": "02-多-Agent-成本.md",
+                "path": "docs/学习模块/14-Multi-Agent/02-多-Agent-成本.md"
+              },
+              {
+                "label": "03-A2A.md",
+                "path": "docs/学习模块/14-Multi-Agent/03-A2A.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/14-Multi-Agent/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/14-Multi-Agent/README.md"
+              }
+            ]
+          },
+          {
+            "label": "15-Browser-Computer-Agent",
+            "children": [
+              {
+                "label": "01-Accessibility-Tree.md",
+                "path": "docs/学习模块/15-Browser-Computer-Agent/01-Accessibility-Tree.md"
+              },
+              {
+                "label": "02-Computer-Use.md",
+                "path": "docs/学习模块/15-Browser-Computer-Agent/02-Computer-Use.md"
+              },
+              {
+                "label": "03-本地产出.md",
+                "path": "docs/学习模块/15-Browser-Computer-Agent/03-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/15-Browser-Computer-Agent/README.md"
+              }
+            ]
+          },
+          {
+            "label": "16-Coding-Agent",
+            "children": [
+              {
+                "label": "01-产品形态.md",
+                "path": "docs/学习模块/16-Coding-Agent/01-产品形态.md"
+              },
+              {
+                "label": "02-精确编辑-vs-整文件重写.md",
+                "path": "docs/学习模块/16-Coding-Agent/02-精确编辑-vs-整文件重写.md"
+              },
+              {
+                "label": "03-AGENTS-Skills.md",
+                "path": "docs/学习模块/16-Coding-Agent/03-AGENTS-Skills.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/16-Coding-Agent/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/16-Coding-Agent/README.md"
+              }
+            ]
+          },
+          {
+            "label": "17-Agent-Evaluation",
+            "children": [
+              {
+                "label": "01-LLM-as-Judge.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/01-LLM-as-Judge.md"
+              },
+              {
+                "label": "02-轨迹评测.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/02-轨迹评测.md"
+              },
+              {
+                "label": "03-Faithfulness-Relevance-Retrieval-Accuracy.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/03-Faithfulness-Relevance-Retrieval-Accuracy.md"
+              },
+              {
+                "label": "04-CI-ship-no-ship.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/04-CI-ship-no-ship.md"
+              },
+              {
+                "label": "05-本地产出.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/05-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/README.md"
+              }
+            ]
+          },
+          {
+            "label": "18-Observability",
+            "children": [
+              {
+                "label": "01-Trace-Span.md",
+                "path": "docs/学习模块/18-Observability/01-Trace-Span.md"
+              },
+              {
+                "label": "02-轨迹可视化.md",
+                "path": "docs/学习模块/18-Observability/02-轨迹可视化.md"
+              },
+              {
+                "label": "03-本地产出.md",
+                "path": "docs/学习模块/18-Observability/03-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/18-Observability/README.md"
+              }
+            ]
+          },
+          {
+            "label": "19-可靠性成本性能",
+            "children": [
+              {
+                "label": "01-熔断.md",
+                "path": "docs/学习模块/19-可靠性成本性能/01-熔断.md"
+              },
+              {
+                "label": "02-Prompt-Caching.md",
+                "path": "docs/学习模块/19-可靠性成本性能/02-Prompt-Caching.md"
+              },
+              {
+                "label": "03-Model-Routing.md",
+                "path": "docs/学习模块/19-可靠性成本性能/03-Model-Routing.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/19-可靠性成本性能/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/19-可靠性成本性能/README.md"
+              }
+            ]
+          },
+          {
+            "label": "20-AI-Security",
+            "children": [
+              {
+                "label": "01-Prompt-Injection.md",
+                "path": "docs/学习模块/20-AI-Security/01-Prompt-Injection.md"
+              },
+              {
+                "label": "02-SSRF-Sandbox.md",
+                "path": "docs/学习模块/20-AI-Security/02-SSRF-Sandbox.md"
+              },
+              {
+                "label": "03-Tool-Gateway-OAuth.md",
+                "path": "docs/学习模块/20-AI-Security/03-Tool-Gateway-OAuth.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/20-AI-Security/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/20-AI-Security/README.md"
+              }
+            ]
+          },
+          {
+            "label": "21-后端与基础设施",
+            "children": [
+              {
+                "label": "01-SSE-被网关缓冲.md",
+                "path": "docs/学习模块/21-后端与基础设施/01-SSE-被网关缓冲.md"
+              },
+              {
+                "label": "02-任务队列.md",
+                "path": "docs/学习模块/21-后端与基础设施/02-任务队列.md"
+              },
+              {
+                "label": "03-对象存储-RBAC.md",
+                "path": "docs/学习模块/21-后端与基础设施/03-对象存储-RBAC.md"
+              },
+              {
+                "label": "04-本地产出.md",
+                "path": "docs/学习模块/21-后端与基础设施/04-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/21-后端与基础设施/README.md"
+              }
+            ]
+          },
+          {
+            "label": "22-AI全栈产品化",
+            "children": [
+              {
+                "label": "01-流式-Markdown.md",
+                "path": "docs/学习模块/22-AI全栈产品化/01-流式-Markdown.md"
+              },
+              {
+                "label": "02-Agent-Steps-UI.md",
+                "path": "docs/学习模块/22-AI全栈产品化/02-Agent-Steps-UI.md"
+              },
+              {
+                "label": "03-本地产出.md",
+                "path": "docs/学习模块/22-AI全栈产品化/03-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/22-AI全栈产品化/README.md"
+              }
+            ]
+          },
+          {
+            "label": "23-Production-Agent-Architecture",
+            "children": [
+              {
+                "label": "01-Agent-Runtime.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/01-Agent-Runtime.md"
+              },
+              {
+                "label": "02-容量-成本估算.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/02-容量-成本估算.md"
+              },
+              {
+                "label": "03-项目交付标准.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/03-项目交付标准.md"
+              },
+              {
+                "label": "04-项目复盘.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/04-项目复盘.md"
+              },
+              {
+                "label": "05-原理串讲.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/05-原理串讲.md"
+              },
+              {
+                "label": "06-独立系统设计.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/06-独立系统设计.md"
+              },
+              {
+                "label": "07-本地产出.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/07-本地产出.md"
+              },
+              {
+                "label": "README.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/README.md"
+              }
+            ]
+          },
+          {
+            "label": "README.md",
+            "path": "docs/学习模块/README.md"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "apps",
+    "children": [
+      {
+        "label": ".env.example",
+        "path": "apps/.env.example"
+      },
+      {
+        "label": ".nvmrc",
+        "path": "apps/.nvmrc"
+      },
+      {
+        "label": "01-chatgpt-mini",
+        "children": [
+          {
+            "label": "LEARNING.md",
+            "path": "apps/01-chatgpt-mini/LEARNING.md"
+          },
+          {
+            "label": "package.json",
+            "path": "apps/01-chatgpt-mini/package.json"
+          },
+          {
+            "label": "README.md",
+            "path": "apps/01-chatgpt-mini/README.md"
+          },
+          {
+            "label": "src",
+            "children": [
+              {
+                "label": "index-anthropic.ts",
+                "path": "apps/01-chatgpt-mini/src/index-anthropic.ts"
+              },
+              {
+                "label": "index.ts",
+                "path": "apps/01-chatgpt-mini/src/index.ts"
+              },
+              {
+                "label": "load-root-env.ts",
+                "path": "apps/01-chatgpt-mini/src/load-root-env.ts"
+              }
+            ]
+          },
+          {
+            "label": "tsconfig.json",
+            "path": "apps/01-chatgpt-mini/tsconfig.json"
+          },
+          {
+            "label": "yarn.lock",
+            "path": "apps/01-chatgpt-mini/yarn.lock"
+          }
+        ]
+      },
+      {
+        "label": "tsconfig.base.json",
+        "path": "apps/tsconfig.base.json"
+      }
+    ]
+  }
+]
