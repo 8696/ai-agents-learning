@@ -263,15 +263,50 @@
 
   <script>
     /* ════════════════════════════════════════════════════════════
-       配置：导航与正文都从 GitHub raw 读取，不读本地服务器上的文件。
+       配置：导航与正文从 GitHub 文件镜像读取（国内直连 raw.githubusercontent.com 常不通）。
+       按顺序试：jsDelivr 官方主域名 → GitHub raw。成功后记住该源。
        仓库结构变了：先 node script/gen-manifest.js，再推到 master。
        ════════════════════════════════════════════════════════════ */
-    const RAW_BASE = 'https://raw.githubusercontent.com/8696/ai-agents-learning/refs/heads/master/';
+    const RAW_MIRRORS = [
+      'https://cdn.jsdelivr.net/gh/8696/ai-agents-learning@master/',
+      'https://raw.githubusercontent.com/8696/ai-agents-learning/refs/heads/master/',
+    ];
+    let rawBase = RAW_MIRRORS[0];
     let NAV = [];
 
-    /** 仓库相对路径 → GitHub raw URL（分段编码，中文路径也能请求） */
-    function rawUrl(repoPath) {
-      return RAW_BASE + repoPath.split('/').map(encodeURIComponent).join('/');
+    function encodeRepoPath(repoPath) {
+      return repoPath.split('/').map(encodeURIComponent).join('/');
+    }
+
+    async function fetchWithTimeout(url, ms = 8000) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      try {
+        return await fetch(url, { cache: 'no-cache', signal: ctrl.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    /** 按镜像列表拉取仓库文件；某个源成功后后续请求优先用它 */
+    async function fetchRepoFile(repoPath) {
+      const encoded = encodeRepoPath(repoPath);
+      const order = [rawBase, ...RAW_MIRRORS.filter((b) => b !== rawBase)];
+      const errors = [];
+      for (const base of order) {
+        try {
+          const res = await fetchWithTimeout(base + encoded);
+          if (!res.ok) {
+            errors.push(`${base} → HTTP ${res.status}`);
+            continue;
+          }
+          rawBase = base;
+          return await res.text();
+        } catch (e) {
+          errors.push(`${base} → ${e && e.name === 'AbortError' ? '超时' : e}`);
+        }
+      }
+      throw new Error(errors.join('\n'));
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -426,9 +461,7 @@
       window.scrollTo({ top: 0, behavior: 'instant' });
 
       try {
-        const res = await fetch(rawUrl(path), { cache: 'no-cache' });
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        const text = await res.text();
+        const text = await fetchRepoFile(path);
 
         let html;
         if (path.endsWith('.md')) {
@@ -449,9 +482,8 @@
           <div class="err">
             <strong>加载失败：</strong> ${escapeHTML(path)}
             <pre>${escapeHTML(String(e))}</pre>
-            <p style="margin-top:12px">正文从 GitHub raw 加载。请确认该路径已推到
-              <code>master</code>，且本机能访问
-              <code>raw.githubusercontent.com</code>。</p>
+            <p style="margin-top:12px">已依次尝试 jsDelivr（cdn.jsdelivr.net）和 GitHub raw。
+              请确认该路径已推到 <code>master</code>。</p>
           </div>`;
       }
     }
@@ -517,16 +549,15 @@
        ════════════════════════════════════════════════════════════ */
     async function bootstrap() {
       try {
-        const res = await fetch(rawUrl('manifest.json'), { cache: 'no-cache' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        NAV = await res.json();
+        NAV = JSON.parse(await fetchRepoFile('manifest.json'));
       } catch (e) {
         document.getElementById('markdown').innerHTML = `
           <div class="err">
             <strong>加载 manifest.json 失败：</strong> ${escapeHTML(String(e))}
             <p style="margin-top:12px">
-              导航从 GitHub raw 读取。请确认 <code>manifest.json</code> 已推到
-              <code>master</code>，本地可先跑 <code>node script/gen-manifest.js</code> 再推送。
+              已依次尝试 jsDelivr（cdn.jsdelivr.net）和 GitHub raw。请确认
+              <code>manifest.json</code> 已推到 <code>master</code>（本地可先跑
+              <code>node script/gen-manifest.js</code> 再推送）。
             </p>
           </div>`;
         return;
