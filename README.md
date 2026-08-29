@@ -1,89 +1,91 @@
 # AI Agent 开发学习仓库
 
-从 0 到 1 学 **AI Agent 开发** 的 Git 仓库。根目录不是业务应用：一边是学习文档，一边是最多五个动手项目。
+从 0 到 1 学 **AI Agent 开发**：一条可执行路线 + 最多五个动手项目。面向前端转 Agent，主线是 **TypeScript + Node.js**，调用云端模型 API，不训练模型。
+
+根目录没有业务应用。打开仓库先分清两件事：
+
+| | 是什么 | 去哪 |
+| - | ------ | ---- |
+| **学什么、怎么验收** | 路线、模块、题目、笔记 | [`docs/`](docs/00-目录.md) |
+| **代码落哪、助手怎么陪跑** | 何时建 `apps/`、怎么回填 | 本页 + [`AGENTS.md`](AGENTS.md) |
+
+`docs/` 可以单独拿走当总纲。拿走之后，文档里的「ChatGPT Mini」等是**作品名**，本仓库路径以本页为准。
+
+**编号不要混：** `docs/01-使用协议.md` 是文档第 1 篇；**模块 01** 是「AI & LLM 基础认知」。说「01」时写全名或写路径。
 
 ---
 
-## 两层东西，不要混
+## 现在怎么开始
 
-| | 是什么 | 在哪 |
-| -- | ------ | ---- |
-| **学习文档** | 知识、路线、验收、题目。可以单独拿走，也可以按部分拆成多份 md | `docs/` |
-| **这个仓库** | 文档在本机如何落地：代码进哪个文件夹、何时新建 | `README.md`、`AGENTS.md`、`apps/` |
+1. 读 [`docs/02-怎么用.md`](docs/02-怎么用.md)（含默认选型），再按 [`docs/03-学习路线.md`](docs/03-学习路线.md) 的 24 个模块走。
+2. 过没过完、现在学哪一条：看 [`docs/06-学习总览.md`](docs/06-学习总览.md) 和对应模块文件夹里的 **小节进度**。
+3. 配环境：在 `apps/` 下 `nvm use`（推荐 Node 22，**最低 ≥22**），`cp apps/.env.example apps/.env`，填 Key。包管理用 **yarn**。
+4. 对 Cursor / Claude Code / Codex 说 `coach start`（忘了进度说 `coach status`）。助手按 `AGENTS.md` 陪跑，不要让它跳模块。
 
-`docs/` 已按部分拆开，总目录是 [docs/00-目录.md](docs/00-目录.md)。那是学习文档，不是本仓库说明书。
-
-**编号不要混**：`docs/01-使用协议.md` 是文档第 1 篇；**模块 01** 是「AI & LLM 基础认知」（`docs/学习模块/01-AI与LLM基础认知/README.md`）。说「01」时写全名或写路径。
-
-交给 Cursor / Claude Code / Codex 等助手时读 `AGENTS.md` + `docs/`。怎么建子项目只听 `AGENTS.md`。学习文档里出现的 `apps/` 路径是本仓库落地对照；拿走 `docs/` 时以作品名（ChatGPT Mini 等）为准。
+当前：模块 00 已完成；模块 01 外部学习进行中。精确到哪一条以学习总览为准。
 
 ---
 
-## 这份仓库是什么
+## 仓库结构
 
-| 是 | 不是 |
-| -- | ---- |
-| 一条可执行的学习路线 | 框架教程合集 |
-| 一个 Git 仓库里最多 5 个子项目 | 24 个章节 = 24 个文件夹 |
-| TypeScript 主线，面向前端转 Agent | 训练模型 / CUDA / 转 Python |
-
----
-
-## 代码放哪
-
-不抽共享包，不上 monorepo 工具链。每个 `apps/*` 自己有 `package.json`，学到再创建，不要提前建空目录。包管理用 **yarn**。
+不抽共享包，不上 monorepo。每个 `apps/*` 自己有 `package.json`，**学到再创建**，禁止第 6 个 app。共用配置只放在 `apps/`：`.nvmrc`、`.env.example`、`tsconfig.base.json`。
 
 ```text
 ai-agents-learning/
-├── README.md                      ← 这个仓库给人看
-├── AGENTS.md                      ← 这个仓库给 AI 看
-├── docs/                          ← 学习文档
-│   ├── 学习模块/                  ← 模块 00–23，一模块一文件夹、一小节一 MD
-│   ├── 00-目录.md                 ← 总目录
-│   ├── 01-使用协议.md
-│   ├── 02-怎么用.md
-│   ├── 03-学习路线.md
-│   ├── 04-自测题库.md
-│   ├── 05-资源清单.md
-│   ├── 06-学习总览.md
-│   └── 07-核心术语.md
-├── .gitignore
-└── apps/                          ← 学到再创建，不要提前建空目录
-    ├── .nvmrc                     ← 推荐 Node 22（在 apps/ 下 nvm use；最低 ≥22）
-    ├── .env.example               ← 全 apps 共用 Key 模板
-    ├── tsconfig.base.json         ← 全 apps 共用 TS 配置
-    ├── 01-chatgpt-mini/           ← 模块 00 时建
-    ├── 02-tool-agent/             ← 模块 05 时建
-    ├── 03-knowledge-agent/        ← 模块 08 时建
-    ├── 04-research-agent/         ← 模块 11/12 时建
-    └── 05-coding-agent/           ← 模块 15 时建
+├── README.md          ← 给人看（本页）
+├── AGENTS.md          ← 给 AI 看（建目录、coach、写回笔记）
+├── docs/              ← 学习文档
+│   ├── 00-目录.md
+│   ├── 01–07          ← 协议 / 怎么用 / 路线 / 题库 / 资源 / 总览 / 术语
+│   └── 学习模块/      ← 模块 00–23：一模块一文件夹，一小节一个 MD
+└── apps/
+    ├── .nvmrc · .env.example · tsconfig.base.json
+    ├── 01-chatgpt-mini/     ← 模块 00 已建
+    ├── 02-tool-agent/       ← 模块 05
+    ├── 03-knowledge-agent/  ← 模块 08
+    ├── 04-research-agent/   ← 模块 11/12
+    └── 05-coding-agent/     ← 模块 15
 ```
 
-判断规则：新能力能加进已有 app 就加进去；会改掉现有应用的核心隐喻，才新建。禁止第 6 个 app。细节和模板见 `AGENTS.md` 第 4–6 节。
+新能力能加进已有 app 就加进去。细节见 `AGENTS.md` §4–5。
 
-| 总纲项目 | 目录 | 对应模块 |
-| -------- | ---- | -------- |
-| 1. ChatGPT Mini | `apps/01-chatgpt-mini` | 00、02–04、06、22（最简 UI）；01 为笔记 |
-| 2. Tool Agent | `apps/02-tool-agent` | 05、07，回填 10、11 |
-| 3. Knowledge Agent | `apps/03-knowledge-agent` | 08、09，回填 17、18 |
-| 4. Research Agent | `apps/04-research-agent` | 11–14，回填 19、21 |
-| 5. Coding Agent | `apps/05-coding-agent` | 15、16、20，回填 22、23 |
+| 项目 | 目录 | 主要模块 |
+| ---- | ---- | -------- |
+| ChatGPT Mini | [`apps/01-chatgpt-mini`](apps/01-chatgpt-mini) | 00、02–04、06；22 最简 UI（模块 01 只写笔记） |
+| Tool Agent | `apps/02-tool-agent` | 05、07，回填 10、11 |
+| Knowledge Agent | `apps/03-knowledge-agent` | 08、09，回填 17、18 |
+| Research Agent | `apps/04-research-agent` | 11–14，回填 19、21 |
+| Coding Agent | `apps/05-coding-agent` | 15、16、20，回填 22、23 |
+
+每个已建项目：`README.md` 只管现在怎么跑；`LEARNING.md` 是当前代码地图。概念笔记写在 `docs/学习模块/` 对应小节 MD。
+
+跑 ChatGPT Mini：`cd apps && nvm use`，配好 `.env`，再 `cd 01-chatgpt-mini && yarn install && yarn dev`。
 
 ---
 
 ## 怎么学
 
-1. 打开 [docs/00-目录.md](docs/00-目录.md)，先读 [怎么用](docs/02-怎么用.md)（含默认选型），再按 [学习路线](docs/03-学习路线.md) 的 24 个模块走（或明确说改走 13 阶段）。
-2. 进入 `apps/` 后 `nvm use`（推荐 Node 22；**最低 ≥22**），模型 Key 配 `apps/.env`：`cp apps/.env.example apps/.env`。
-3. 对 AI 说 `coach status` 或 `coach start`。它应先报五行：当前模块、**节奏**、当前条目、代码落点、动作。外部学习时 `coach start` 还必须给**出门包**：网上搜什么 + **一整段可复制、拿去问别的 AI 的问题**（不用你再要）。
-4. 每个模块打开 [docs/学习模块/](docs/学习模块/README.md) 对应文件夹（`README.md` = 验收 + 小节进度；每小节一个 MD = 笔记）。过没过完看 [学习总览](docs/06-学习总览.md)。有代码则更新该项目 `LEARNING.md`。勾本地前必须写好该模块「本地产出」MD。
+每个模块先外部（概念，写进该条小节 MD）→ 再本地（验收 + `{NN}-本地产出.md`；有代码则更新该 app 的 `LEARNING.md` / `README.md`）→ 才进下一模块。禁止跳条。
 
-常用命令只有三条：`coach status` · `coach start` · `coach next`。讲概念、自测、review、报错排查直接说就行。完整约定在 `AGENTS.md` §6。
+对助手只需三条命令：
 
-技术栈：**TypeScript 5.x + Node.js ≥22** + yarn。模型：**MiniMax / 智谱**（各支持 OpenAI + Anthropic 双协议，同 Key 换 Base URL）+ **Anthropic 官方**。`openai` → 协议 A；`@anthropic-ai/sdk` → 协议 B。Key 在 `apps/.env`。
+| 你说 | 它做什么 |
+| ---- | -------- |
+| `coach status` | 报进度：在哪、刚过完什么、现在学什么、下一条是什么 |
+| `coach start` | 讲当前条。外部节奏会给出门包（网上搜什么 + 可复制去问另一套 AI 的提问）和完整讲解 |
+| `coach next` | 当前条达标后勾进度、进下一条。笔记空壳不准勾 |
+
+讲概念、考我、贴报错、review 直接说即可。完整约定在 `AGENTS.md` §6。
+
+学习笔记由助手按模板写入小节 MD，你只减不加。看过的外部 URL 填进该模块 README 的「我的链接」（没有就写 `暂无链接`）。
 
 ---
 
-## 当前进度
+## 技术栈（学习默认）
 
-过没过完、现在学哪一条，以 [学习总览](docs/06-学习总览.md) 和对应模块 README 的**小节进度**为准（不要只看本段）。模块 00 已完成，从 [模块 01](docs/学习模块/01-AI与LLM基础认知/README.md) 接着走。
+- **运行时**：TypeScript 5 + Node.js ≥22 + yarn
+- **模型**：MiniMax / 智谱（各支持 OpenAI + Anthropic 双协议，同 Key 换 Base URL）+ Anthropic 官方
+- **SDK**：协议 A → `openai`；协议 B → `@anthropic-ai/sdk`
+- **Key**：只放 `apps/.env`，不进 git
+
+选型理由和何时才换供应商，见 [`docs/02-怎么用.md`](docs/02-怎么用.md) §1.2。模块 00 只要求 MiniMax 协议 A；协议 B 对照在模块 02。

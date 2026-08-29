@@ -17,8 +17,8 @@
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**AI / ML / DL 与能力边界**：三者是包含关系；神经网络是用数据拟合输入→输出；LLM 有明确做不好的事](./01-AI-ML-DL-与能力边界.md) | 能画包含关系；不推公式；能举 3 件当前模型做不好的事 | `AI vs ML vs DL` `neural network intuition` `LLM limitations` · 任意 15 min 科普（不要开课） | 暂无链接 |
 | ✅ | [**Token**：模型读写的计费单位，不是「字」也不是「词」；中文通常更贵](./02-Token.md) | 能解释计费单位、中英文差异 | `what is LLM token` `GPT tokenizer 中文` `tiktoken demo` · OpenAI tokenizer 工具 · [tiktoken](https://github.com/openai/tiktoken) · B 站搜「大模型 Token 是什么」 | 暂无链接 |
-| ⬜ | [**Context Window**：一次请求里输入 + 输出共享的长度上限](./03-Context-Window.md) | 能解释超了怎么办（截断 / 摘要） | `LLM context window explained` `context length limit` · 各模型文档的 context 说明 · YouTube「context window LLM」 | — |
-| ⬜ | [**Transformer**：Encoder / Decoder；Self-Attention 用来「看整句关系」](./04-Transformer.md) | **不要推公式**；能画这三块 | `Transformer architecture explained` `Attention Is All You Need 图解` · Jay Alammar [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) · 3Blue1Brown 注意力相关 | — |
+| ✅ | [**Context Window**：一次请求里输入 + 输出共享的长度上限](./03-Context-Window.md) | 能解释超了怎么办（截断 / 摘要） | `LLM context window explained` `context length limit` · 各模型文档的 context 说明 · YouTube「context window LLM」 | 暂无链接 |
+| ✅ | [**Transformer**：Encoder / Decoder；Self-Attention 用来「看整句关系」](./04-Transformer.md) | **不要推公式**；能画这三块 | `Transformer architecture explained` `Attention Is All You Need 图解` · Jay Alammar [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) · 3Blue1Brown 注意力相关 | 暂无链接 |
 | ⬜ | [**Attention / Self-Attention**：每个词根据整句其它词算权重](./05-Attention-Self-Attention.md) | 能用一句话说清 | `self attention intuitive explanation` `Q K V attention` · 同上 Jay Alammar · 李宏毅 Transformer 章节（选看） | — |
 | ⬜ | [**Embedding**：文本 → 向量；语义近的距离近；和 Token 不是同一层](./06-Embedding.md) | 能区分 Token（离散计数）和 Embedding（连续向量） | `word embedding visualization` `text embedding semantic similarity` · TensorFlow Embedding Projector · OpenAI Embeddings 文档 | — |
 | ⬜ | [**Temperature / Top-P**：随机性怎么控；抽取任务 vs 创意任务](./07-Temperature-Top-P.md) | 能说清两者区别、什么场景调哪个 | `LLM temperature top_p sampling` `nucleus sampling` · OpenAI / Anthropic 官方参数说明 | — |
