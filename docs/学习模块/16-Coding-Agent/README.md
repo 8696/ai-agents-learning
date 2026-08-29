@@ -1,0 +1,51 @@
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / 项目 LEARNING.md
+
+# 模块 16 · Coding Agent ⭐⭐⭐⭐⭐
+
+[← 15 Browser / Computer Agent](../15-Browser-Computer-Agent/README.md) · [17 Agent Evaluation →](../17-Agent-Evaluation/README.md)
+
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」仍以项目 `LEARNING.md` 为准（行号会变）。
+> **项目当前地图**：`apps/05-coding-agent/LEARNING.md`（回填）
+
+## 小节进度
+
+> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
+
+| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+|------|----------------|------------|-----------------|----------|
+| ⬜ | [**产品形态**：文件 Tool + Shell + Git（+ 测试）组成编码循环](./01-产品形态.md) | 能对标 Cursor / Claude Code / Codex（以及 Aider）的能力块 | `AI coding agent architecture` `sandbox code execution agent` · Cursor / Claude Code / Codex / Aider 公开介绍 | — |
+| ⬜ | [**精确编辑 vs 整文件重写**：为什么生产里要用 patch / diff](./02-精确编辑-vs-整文件重写.md) | 能说出整文件重写会踩什么坑 | `search replace edit LLM code` `unified diff agent` · 开源 Coding Agent README | — |
+| ⬜ | [**AGENTS.md / Skills**：用文档约束 Agent 行为，不是再写一套 MCP](./03-AGENTS-Skills.md) | 知道「规则文件」和「工具协议」的分工 | `AGENTS.md` `Claude Code SKILL.md` `Codex AGENTS.md` · Anthropic Skills · Cursor / Claude Code / Codex 的仓库规则文件 | — |
+| ⬜ | [**本地产出**](./04-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-本地产出.md) |
+
+## 验收
+
+> 本地节奏 / `coach next` 勾本地前对照本节。
+
+**一句话目标**：做一个 Mini Coding Agent，对标 Cursor / Claude Code / Codex 这类产品的核心能力块——非常适合你的程序员背景。
+
+**动手产出**：一个能读代码、改代码、跑测试、提交 Git 的 Coding Agent。
+
+**验收标准**
+- [ ] 实现了文件 Tool：read / write / list / search（grep）
+- [ ] 实现了 Shell Tool，并且**有命令白名单或人工确认**
+- [ ] 实现了 Git Tool：diff / status / commit
+- [ ] 能完成一个真实小任务：「给这个函数加单元测试并跑通」
+- [ ] 有 Sandbox 或工作目录限制，Agent 不能碰工作目录之外的文件
+- [ ] 危险操作（删除、force push、修改配置）必须人工确认
+- [ ] 修改文件前有备份或依赖 Git 保护
+- [ ] 仓库里有一份 **`AGENTS.md` 或 `SKILL.md`**，用来约束 Coding Agent 的行为（工作目录、禁止事项、怎么改文件）；能讲清它和 MCP 的差别
+
+**自测问题**：Coding Agent 的权限边界怎么设计？如何让 Agent 精确编辑文件而不是整文件重写？Shell Tool 的安全风险有哪些？Skills / AGENTS.md 解决什么问题？
+
+**常见坑**：让 Agent 整个文件重写，导致丢失无关代码。应该用**精确的 diff / 字符串替换**方式编辑。
+
+**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`coding agent architecture` · `search replace edit LLM`
+
+## 本地拆步
+
+> 回填 `apps/05-coding-agent`。
+
+1. 文件 Tool（read / write / list / grep）+ 受限 Shell + Git
+2. 用 patch / 替换改文件，不要整文件重写；工作目录之外碰不到
+3. 仓库内放 `AGENTS.md` 或 `SKILL.md` 约束行为；危险操作 HITL

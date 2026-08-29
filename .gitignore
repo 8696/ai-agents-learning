@@ -1,0 +1,108 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Secrets & local env
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.p12
+*.key
+credentials.json
+secrets.json
+service-account*.json
+
+# Node / yarn / TypeScript
+node_modules/
+.npm/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
+pnpm-debug.log*
+.turbo/
+.cache/
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.vite/
+.vuepress/dist
+*.tsbuildinfo
+
+# Test / coverage / eval artifacts
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+*.lcov
+
+# Local databases, vector stores, checkpoints
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+prisma/migrations/dev.db*
+.lancedb/
+chroma/
+.chroma/
+qdrant_storage/
+.qdrant/
+*.faiss
+checkpoints/
+.langgraph_checkpoint/
+
+# Agent / RAG local data (keep examples)
+data/local/
+uploads/
+tmp/
+temp/
+*.log
+logs/
+
+# Python (optional scripts, not the main stack)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDEs & editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+
+# Cursor
+.cursor/debug.log
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Misc
+*.local
+*.bak
+*.tmp
+.vercel/
+.wrangler/
