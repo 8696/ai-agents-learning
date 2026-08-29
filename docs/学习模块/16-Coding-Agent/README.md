@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**产品形态**：文件 Tool + Shell + Git（+ 测试）组成编码循环](./01-产品形态.md) | 能对标 Cursor / Claude Code / Codex（以及 Aider）的能力块 | `AI coding agent architecture` `sandbox code execution agent` · Cursor / Claude Code / Codex / Aider 公开介绍 | — |
 | ⬜ | [**精确编辑 vs 整文件重写**：为什么生产里要用 patch / diff](./02-精确编辑-vs-整文件重写.md) | 能说出整文件重写会踩什么坑 | `search replace edit LLM code` `unified diff agent` · 开源 Coding Agent README | — |

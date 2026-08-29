@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**BM25 / 混合检索**：关键词能补纯向量的短板（专有名词、编号）](./01-BM25-混合检索.md) | 知道向量不擅长什么、BM25 补什么 | `BM25 algorithm explained simple` `hybrid search vector bm25` · Elasticsearch BM25 文档 · Pinecone hybrid 教程 | — |
 | ⬜ | [**Rerank**：先粗召回再精排，不是一次 Top-K 定生死](./02-Rerank.md) | 能说出两阶段各干什么 | `cross encoder reranking RAG` `Cohere rerank` · Cohere Rerank 文档 · Jina Reranker | — |

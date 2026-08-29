@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Agent Loop / ReAct**：Reason → Act → Observe，以及停止条件](./01-Agent-Loop-ReAct.md) | 能画 Loop，能说出何时停 | `ReAct agent loop explained` `reason act observe agent` · [ReAct 论文](https://arxiv.org/abs/2210.03629) 摘要+图 · Yannic Kilcher 视频摘要 | — |
 | ⬜ | [**先规划再执行 vs 一步步走**：两种策略的代价](./02-先规划再执行-vs-一步步走.md) | 知道什么时候值得先出计划 | `LLM agent planning` `plan and execute agent` · LangGraph 概念文档（只读概念） | — |

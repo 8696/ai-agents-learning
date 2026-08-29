@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Prompt Injection**：用户直接注入；RAG 文档里的间接注入](./01-Prompt-Injection.md) | 能各演示或讲清一种攻击路径；能区分 Jailbreak（诱使突破安全策略）和 Injection（外部内容当指令）；Tool Injection 发生在工具返回值里 | `prompt injection LLM attack` `indirect prompt injection RAG` `jailbreak vs prompt injection` · [OWASP LLM Top 10](https://genai.owasp.org/llm-top-10/) · Anthropic 安全文档 | — |
 | ⬜ | [**SSRF / Sandbox**：Agent 能出网、能跑代码时的边界](./02-SSRF-Sandbox.md) | 知道「让模型决定 URL」有什么危险 | `SSRF prevention` `sandbox code execution agent` · OWASP SSRF · Docker 安全基线 | — |

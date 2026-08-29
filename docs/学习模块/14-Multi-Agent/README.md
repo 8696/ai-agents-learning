@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Supervisor 模式**：谁分派、谁执行、怎么交还](./01-Supervisor-模式.md) | 能画一张分工图 | `multi agent supervisor pattern` `orchestrator worker LLM` · LangGraph Multi-Agent 示例 · [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | — |
 | ⬜ | [**多 Agent 成本**：多一次交接就多一轮 Token；要有自己的数字](./02-多-Agent-成本.md) | 能对比单 Agent vs 多 Agent 的用量 | `multi agent token cost` · 自己实验数据 | — |

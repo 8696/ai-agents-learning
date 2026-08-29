@@ -31,7 +31,7 @@ const envSchema = z.object({
     .url()
     .default("https://api.minimaxi.com/anthropic"),
   MINIMAX_ANTHROPIC_MODEL: z.string().default("MiniMax-M3"),
-  // Messages API 必填 max_tokens；学习阶段给一个够用上限
+  // Messages API 必填 max_tokens；学习阶段给一个足够大的上限
   MINIMAX_ANTHROPIC_MAX_TOKENS: z.coerce
     .number()
     .int()

@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Agent Runtime**：网关、鉴权、Loop、Tool、队列、观测、评测怎么叠在一起](./01-Agent-Runtime.md) | 能画全链路，并能说每层的取舍 | `production LLM agent architecture` `agent platform design` · 各厂工程博客 · 你自己 5 个项目的复盘 | — |
 | ⬜ | [**容量 / 成本估算**：用自己项目的 Token 数外推 1000 DAU](./02-容量-成本估算.md) | 有数量级（月费），不要求精确到元 | `LLM cost estimation DAU` `agent infrastructure sizing` · Artificial Analysis · 自己 spreadsheet | — |

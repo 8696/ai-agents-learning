@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**记忆分类**：工作记忆（Working / Conversation，本轮）/ episodic（经历）/ semantic（事实，含 User Memory）](./01-记忆分类.md) | 能给自己的 Agent 对号入座；能把 Short-term / Long-term 对上这三类 | `AI agent memory types` `episodic semantic memory agent` · LangGraph Memory 概念 · MemGPT 论文摘要 | — |
 | ⬜ | [**写入策略**：不是每句都存；要提取、要去重、要有过期](./02-写入策略.md) | 能说出「什么该写进长期记忆」；知道原始对话要压缩/摘要，不能整段当记忆 | `when to save agent memory` `memory extraction LLM` `memory compression agent` · 产品案例：ChatGPT memory 说明 | — |

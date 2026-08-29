@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**SSE 被网关缓冲**：Nginx / PaaS 默认可能攒满再发，流式会「卡住再一次性喷出」](./01-SSE-被网关缓冲.md) | 知道生产流式要关 buffer | `nginx SSE buffering disable` `reverse proxy streaming response` · Nginx `X-Accel-Buffering` · 各 PaaS 流式说明 | — |
 | ⬜ | [**任务队列**：长 Agent 不要占着 HTTP 请求不放](./02-任务队列.md) | 能说出为何要异步化、用什么扛 | `BullMQ tutorial` `async agent job queue` · BullMQ 文档 · Redis 队列模式 | — |

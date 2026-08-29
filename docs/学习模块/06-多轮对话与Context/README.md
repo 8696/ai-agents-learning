@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Context vs Memory**：本次请求塞进 messages 的，vs 跨会话存起来的](./01-Context-vs-Memory.md) | 能区分「这轮发给模型什么」和「长期记得什么」 | `LLM context vs memory agent` `conversation history management` · [模块 06 常见坑](#验收) · [模块 10 Memory](../10-Memory/README.md) | — |
 | ⬜ | [**压缩 / 摘要 vs 滑动窗口**：两种裁剪各丢哪类信息](./02-压缩-摘要-vs-滑动窗口.md) | 能对比丢了什么、什么场景用哪个 | `conversation summarization LLM` `sliding window vs summary context` · OpenAI Cookbook 上下文管理示例 | — |

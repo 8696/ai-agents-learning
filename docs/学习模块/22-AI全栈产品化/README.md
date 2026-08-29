@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**流式 Markdown**：边到边渲染会闪、标题/列表会跳动](./01-流式-Markdown.md) | 知道常见原因（不完整语法） | `streaming markdown react` `incremental markdown render` · Vercel AI SDK UI · `react-markdown` issue 讨论 | — |
 | ⬜ | [**Agent Steps UI**：思考中 / 正在调工具 / 完成，要让人看懂 Agent 在干什么](./02-Agent-Steps-UI.md) | 能画出三种状态的界面 | `AI agent UI design steps` `tool call status UI` · ChatGPT / Claude / Cursor / Claude Code / Codex 产品截图分析 | — |

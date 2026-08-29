@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**框架解决什么**：对照自己手写的 Loop / State，看它省了什么、藏了什么](./01-框架解决什么.md) | 能列「省了 / 多了」各 3 条 | `LangGraph vs handwritten agent` `Vercel AI SDK useChat` · 各框架 Getting Started · 模块 07 自己的代码 | — |
 | ⬜ | [**State Graph**：用图表达工作流，和手写 if/else 循环的差别](./02-State-Graph.md) | 能对照模块 07/11 的代码逐条 diff | `LangGraph tutorial state graph` · [LangGraph.js 文档](https://langchain-ai.github.io/langgraphjs/) | — |

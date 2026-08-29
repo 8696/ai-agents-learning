@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**LLM-as-Judge**：用模型打分方便，但 Judge 自己也有偏差](./01-LLM-as-Judge.md) | 知道不能把 Judge 分数当成客观真理 | `LLM as a judge evaluation` `G-eval metric` · OpenAI Evals · LangSmith Evaluation | — |
 | ⬜ | [**轨迹评测**：工具调对了没有、步骤是否跑偏，不只看最终答案](./02-轨迹评测.md) | 能说出至少 2 个过程指标 | `agent trajectory evaluation` `tool call accuracy metric` · Langfuse / LangSmith 文档 | — |

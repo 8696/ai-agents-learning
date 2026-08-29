@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**RAG 流水线**：Load → Chunk → Embed → Retrieve → Generate](./01-RAG-流水线.md) | 能默画这一条，不要求背论文 | `RAG retrieval augmented generation explained` `RAG pipeline diagram` · [RAG 论文摘要](https://arxiv.org/abs/2005.11401) · LlamaIndex / LangChain RAG 概念页 | — |
 | ⬜ | [**Chunking**：太大丢细节、太小丢语义；overlap 补边界](./02-Chunking.md) | 能说出 size / overlap 的取舍 | `text chunking strategies RAG` `chunk size overlap RAG` · Pinecone / LanceDB 博客 | — |

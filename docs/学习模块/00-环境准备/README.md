@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**API Key / 计费**：按 Token 计费，输入 / 输出分开；订阅 Key ≠ 按量 API Key](./01-API-Key-计费.md) | 能说清差别，知道去控制台看账单 | `LLM API pricing tokens` `MiniMax 按量计费` `API key vs subscription key` · [MiniMax 控制台](https://platform.minimaxi.com) 计费说明 · 各厂商 Pricing 页 | — |
 | ✅ | [**Node ≥22**：最低 22，不锁死小版本；换机器怎么对齐](./02-Node-22.md) | 会 `nvm use`，知道 `engines: ">=22"` 只拦低于 22 的 | `nvm node version` `engines field package.json` · [Node.js 22 文档](https://nodejs.org/docs/latest-v22.x/api/index.html) · nvm README | — |

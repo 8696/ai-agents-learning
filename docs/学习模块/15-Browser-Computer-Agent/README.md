@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Accessibility Tree**：给 LLM 的页面摘要，通常比 DOM 短、噪音少](./01-Accessibility-Tree.md) | 知道为什么优先 a11y 而不是塞整个 HTML | `accessibility tree browser automation` `playwright accessibility snapshot` · [Playwright 文档](https://playwright.dev/docs/aria-snapshots) · Chrome DevTools a11y | — |
 | ⬜ | [**Computer Use**：比「只开浏览器」范围大（桌面），权限和风险更高](./02-Computer-Use.md) | 能说出和 Browser Agent 的差别 | `Claude computer use` `GUI agent LLM` · Anthropic Computer Use 文档 | — |

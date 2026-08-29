@@ -13,7 +13,7 @@
 
 > 先按表从上到下看完（约 3～4 小时），再写笔记（本地产出）。不要推公式。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**AI / ML / DL 与能力边界**：三者是包含关系；神经网络是用数据拟合输入→输出；LLM 有明确做不好的事](./01-AI-ML-DL-与能力边界.md) | 能画包含关系；不推公式；能举 3 件当前模型做不好的事 | `AI vs ML vs DL` `neural network intuition` `LLM limitations` · 任意 15 min 科普（不要开课） | 暂无链接 |
 | ✅ | [**Token**：模型读写的计费单位，不是「字」也不是「词」；中文通常更贵](./02-Token.md) | 能解释计费单位、中英文差异 | `what is LLM token` `GPT tokenizer 中文` `tiktoken demo` · OpenAI tokenizer 工具 · [tiktoken](https://github.com/openai/tiktoken) · B 站搜「大模型 Token 是什么」 | 暂无链接 |

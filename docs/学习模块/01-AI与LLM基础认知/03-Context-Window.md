@@ -267,7 +267,7 @@ Attention 权重经 softmax 后和为 1，成因留给 [Attention](./05-Attentio
 
 ### 过关自检
 
-对照 README「够用就算过」：**能解释超了怎么办（截断 / 摘要）**。能说出口即可勾本条（量级对比是第 10 条「主流模型对比」的够用项，本条不强制背 128K / 1M / 2M）。讲解上还要能用人话讲清电梯限重、四种办法各像什么：
+对照 README「本条要能讲清」：**能解释超了怎么办（截断 / 摘要）**。能说出口即可勾本条（量级对比是第 10 条「主流模型对比」要能讲清的，本条不强制背 128K / 1M / 2M）。讲解上还要能用人话讲清电梯限重、四种办法各像什么：
 
 - context window = 一次请求里输入 + 输出共享的 token 上限（不要按字数当定义）。
 - 超了：Completions 一类常直接失败；要继续干活就自己截断 / 摘要 / 滑动窗口，长文档再上 RAG。
@@ -297,7 +297,7 @@ Attention 权重经 softmax 后和为 1，成因留给 [Attention](./05-Attentio
 
 ### 还没搞懂的
 
-本条没有未闭合问题。「够用」已覆盖。留给后面模块：
+本条没有未闭合问题。进度表该列已能转述。留给后面模块：
 
 - **Self-Attention O(n²)**：上限的根因之一，不推公式 → [Transformer](./04-Transformer.md) / [Attention](./05-Attention-Self-Attention.md)。
 - **lost in the middle 成因** → Embedding / Transformer。

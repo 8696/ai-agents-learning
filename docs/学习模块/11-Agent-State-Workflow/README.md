@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**状态机**：节点、边、条件路由；Agent 步骤 = 状态转移](./01-状态机.md) | 能画一张自己任务的状态图 | `finite state machine tutorial` `agent workflow state machine` · 任意 FSM 入门 · LangGraph State 文档 | — |
 | ⬜ | [**Checkpoint / Durable Resume**：State 可序列化；恢复时不重复有副作用的 Tool](./02-Checkpoint-Durable-Resume.md) | 能解释「杀进程再起来」要保证什么 | `LangGraph checkpoint persistence` `workflow resume pattern` `durable execution agent` · LangGraph Persistence 文档 | — |

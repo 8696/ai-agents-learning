@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**JSON Schema**：类型、optional、enum；Zod 和 Schema 的关系](./01-JSON-Schema.md) | 能读一份 Schema，知道必填 / 枚举 | `JSON Schema tutorial` `zod to json schema` · [json-schema.org](https://json-schema.org) · [Zod 文档](https://zod.dev) | — |
 | ⬜ | [**JSON Mode vs Structured Output**：前者保证合法 JSON，后者保证符合 schema](./02-JSON-Mode-vs-Structured-Output.md) | 能说清严格模式多保证了什么 | `OpenAI structured outputs vs json mode` · OpenAI Structured Outputs 文档 | — |

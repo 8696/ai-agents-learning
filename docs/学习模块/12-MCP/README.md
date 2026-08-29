@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**MCP 架构**：Client / Server；Tool、Resource、Prompt 三种原语](./01-MCP-架构.md) | 能说清谁连谁、三种原语各干什么 | `Model Context Protocol architecture` `MCP tool resource prompt` · [modelcontextprotocol.io](https://modelcontextprotocol.io) 官方文档 | — |
 | ⬜ | [**stdio vs Streamable HTTP**：本地玩具 vs 远程 + 按用户鉴权](./02-stdio-vs-Streamable-HTTP.md) | 知道生产形态为什么不是 stdio | `MCP stdio transport` `MCP streamable HTTP` `MCP OAuth 2.1` · MCP 规范 Transport / Authorization | — |

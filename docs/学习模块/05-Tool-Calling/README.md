@@ -11,7 +11,7 @@
 
 > 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。
 
-| 状态 | 重点（学什么） | 够用就算过 | 搜什么 / 去哪学 | 我的链接 |
+| 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Function Calling 协议**：model → tool_call → execute → tool_result → model](./01-Function-Calling-协议.md) | 能画出这一圈，含并行调用 | `OpenAI function calling guide` `Anthropic tool use` `parallel function calling` · 资源清单里的厂商 Tool 文档 | — |
 | ⬜ | [**Tool Description**：description / schema 影响模型**何时**调用](./02-Tool-Description.md) | 知道写不好就会乱调或不调 | `writing good tool descriptions LLM` `tool schema best practices` · Anthropic Tool Use 最佳实践章节 | — |
