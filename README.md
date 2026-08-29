@@ -57,7 +57,7 @@ ai-agents-learning/
 | Research Agent | `apps/04-research-agent` | 11–14，回填 19、21 |
 | Coding Agent | `apps/05-coding-agent` | 15、16、20，回填 22、23 |
 
-每个已建项目：`README.md` 只管现在怎么跑；`LEARNING.md` 是当前代码地图。概念笔记写在 `docs/学习模块/` 对应小节 MD。
+每个已建项目：**只有** `README.md`（现在怎么跑）和 `LEARNING.md`（当前代码地图）两份，代码一改就改写这两份。概念笔记在 `docs/学习模块/` 对应小节 MD，**不因项目迭代而改成现在的全貌**。
 
 跑 ChatGPT Mini：`cd apps && nvm use`，配好 `.env`，再 `cd 01-chatgpt-mini && yarn install && yarn dev`。
 
