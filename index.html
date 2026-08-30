@@ -263,15 +263,16 @@
 
   <script>
     /* ════════════════════════════════════════════════════════════
-       配置：导航与正文从 GitHub 文件镜像读取（国内直连 raw.githubusercontent.com 常不通）。
-       按顺序试：jsDelivr 官方主域名 → GitHub raw。成功后记住该源。
+       配置：导航与正文只从远程镜像读（静态站通常只挂 index.html，不挂 md）。
+       jsDelivr 的 @master 会被 CDN 缓存约 12h，URL 加 ?t= 破不了。
+       做法：先解析 master 最新 commit SHA，优先用 @sha 拉 jsDelivr；
+       再试 GitHub raw；最后才退回 @master。
        仓库结构变了：先 node script/gen-manifest.js，再推到 master。
        ════════════════════════════════════════════════════════════ */
-    const RAW_MIRRORS = [
-      'https://cdn.jsdelivr.net/gh/8696/ai-agents-learning@master/',
-      'https://raw.githubusercontent.com/8696/ai-agents-learning/refs/heads/master/',
-    ];
-    let rawBase = RAW_MIRRORS[0];
+    const REPO = '8696/ai-agents-learning';
+    const BRANCH = 'master';
+    let rawBase = null;
+    let commitSha = null;
     let NAV = [];
 
     function encodeRepoPath(repoPath) {
@@ -293,10 +294,48 @@
       }
     }
 
+    /** 解析 master 最新 commit，供 jsDelivr 用 @sha（避免 @master 边沿缓存） */
+    async function resolveCommitSha() {
+      if (commitSha) return commitSha;
+      const endpoints = [
+        `https://api.github.com/repos/${REPO}/commits/${BRANCH}`,
+        `https://api.github.com/repos/${REPO}/git/ref/heads/${BRANCH}`,
+      ];
+      for (const url of endpoints) {
+        try {
+          const res = await fetchWithTimeout(withCacheBust(url), 5000);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const sha = (data && data.sha)
+            || (data && data.object && data.object.sha);
+          if (typeof sha === 'string' && /^[0-9a-f]{7,40}$/i.test(sha)) {
+            commitSha = sha.slice(0, 40);
+            return commitSha;
+          }
+        } catch (_) { /* 国内偶发不通，继续试 */ }
+      }
+      return null;
+    }
+
+    function buildMirrors() {
+      const list = [];
+      if (commitSha) {
+        list.push(`https://cdn.jsdelivr.net/gh/${REPO}@${commitSha}/`);
+      }
+      list.push(
+        `https://raw.githubusercontent.com/${REPO}/refs/heads/${BRANCH}/`,
+        `https://cdn.jsdelivr.net/gh/${REPO}@${BRANCH}/`,
+      );
+      return list;
+    }
+
     /** 按镜像列表拉取仓库文件；某个源成功后后续请求优先用它 */
     async function fetchRepoFile(repoPath) {
       const encoded = encodeRepoPath(repoPath);
-      const order = [rawBase, ...RAW_MIRRORS.filter((b) => b !== rawBase)];
+      const mirrors = buildMirrors();
+      const order = rawBase
+        ? [rawBase, ...mirrors.filter((b) => b !== rawBase)]
+        : mirrors;
       const errors = [];
       for (const base of order) {
         try {
@@ -487,7 +526,7 @@
           <div class="err">
             <strong>加载失败：</strong> ${escapeHTML(path)}
             <pre>${escapeHTML(String(e))}</pre>
-            <p style="margin-top:12px">已依次尝试 jsDelivr（cdn.jsdelivr.net）和 GitHub raw。
+            <p style="margin-top:12px">已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
               请确认该路径已推到 <code>master</code>。</p>
           </div>`;
       }
@@ -553,6 +592,7 @@
        启动
        ════════════════════════════════════════════════════════════ */
     async function bootstrap() {
+      await resolveCommitSha();
       try {
         NAV = JSON.parse(await fetchRepoFile('manifest.json'));
       } catch (e) {
@@ -560,9 +600,9 @@
           <div class="err">
             <strong>加载 manifest.json 失败：</strong> ${escapeHTML(String(e))}
             <p style="margin-top:12px">
-              已依次尝试 jsDelivr（cdn.jsdelivr.net）和 GitHub raw。请确认
-              <code>manifest.json</code> 已推到 <code>master</code>（本地可先跑
-              <code>node script/gen-manifest.js</code> 再推送）。
+              已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
+              请确认 <code>manifest.json</code> 已推到 <code>master</code>
+              （可先跑 <code>node script/gen-manifest.js</code> 再推送）。
             </p>
           </div>`;
         return;
