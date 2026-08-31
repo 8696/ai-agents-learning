@@ -78,6 +78,42 @@
 
 ---
 
+**一个容易漏的刀：LLM 自己底层也是固定 lookup**
+
+上面那张表把「静态 = word2vec」「上下文相关 = LLM hidden state」对得清清楚楚——**但漏了一刀**：LLM 自己的**输入层 embedding 也是固定 lookup**，跟 word2vec **机理一模一样**。
+
+**流水线看清**：
+
+```text
+token "bank" (id=8234)
+    ↓
+[Embedding 查表层] → 固定向量 v₁ = [0.12, -0.34, ...]    ← 跟 word2vec 没区别
+    ↓
+[Self-Attention × N 层]   ← 每跑一层，向量都被「重塑」一次
+    ↓
+最终表示 v_N ≠ v₁    ← 这才是笔记说的「LLM hidden state」
+```
+
+**所以严格说**：「上下文相关 Embedding」= **attention 之后**的表示，**不是**输入层那个固定向量。
+
+**重新对齐四种东西**：
+
+| 东西 | 在哪一层 | 是否上下文相关 |
+|------|---------|--------------|
+| word2vec / GloVe | 训好的查表 | ❌ 纯固定 |
+| **LLM 底层输入 embedding** | 模型第一层查表 | ❌ **也是固定**（容易漏） |
+| **LLM 顶层 hidden state** | 经过 N 层 attention 之后 | ✅ 上下文相关 |
+| OpenAI text-embedding-3 / BGE | 端到端 API（走完整个网络） | ✅ 段内上下文已混，粒度是「段」 |
+
+**怎么用**：
+
+- **RAG 检索** → 用 OpenAI / BGE 这类**段级 API**，便宜、可缓存、可入库
+- **细粒度语义**（比如「我踢了狗」vs「狗踢了我」） → **Embedding API 拿不到这种区分**，得靠 LLM 自身 + Self-Attention，**不是 Embedding 的活**
+
+**和上节 Self-Attention 串起来**：Self-Attention 就是干「重塑」这件事的——它把底层固定的 v₁ 按上下文动态调成 v_N。**没有 Self-Attention，LLM 的 Embedding 层就是个高级 word2vec**。
+
+---
+
 ### 为什么（Agent 开发要懂）
 
 不懂 Embedding，做 Agent 会在这些地方翻车：
