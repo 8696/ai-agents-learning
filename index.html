@@ -224,6 +224,90 @@
 
     .loading { color: #57606a; font-style: italic; }
 
+    .topbar .source-badge {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      background: transparent;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .topbar .source-badge:hover { border-color: #8b949e; color: #fff; }
+    .topbar .source-badge.local {
+      border-color: #238636;
+      color: #3fb950;
+    }
+    .topbar .source-badge.remote {
+      border-color: #1f6feb;
+      color: #58a6ff;
+    }
+
+    /* ── 本地数据源选择弹层 ───────────────────────────── */
+    /* display:flex 会盖过 UA 的 [hidden]{display:none}，必须显式关掉 */
+    .source-modal-mask[hidden] { display: none !important; }
+    .source-modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(27, 31, 36, 0.55);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .source-modal {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      max-width: 420px;
+      width: 100%;
+      padding: 24px 24px 20px;
+    }
+    .source-modal h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .source-modal p {
+      margin: 0 0 18px;
+      color: #57606a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .source-modal .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .source-modal button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid #d0d7de;
+      background: #f6f8fa;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #24292f;
+    }
+    .source-modal button:hover {
+      border-color: #0969da;
+      background: #ddf4ff;
+    }
+    .source-modal button strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 2px;
+    }
+    .source-modal button span {
+      color: #57606a;
+      font-size: 12px;
+    }
+
     /* ── responsive ──────────────────────────────────── */
     @media (max-width: 900px) {
       aside.sidebar {
@@ -247,6 +331,24 @@
     <button class="menu-btn" id="menuBtn" aria-label="切换导航">☰ 导航</button>
     <a class="brand" href="#README.md">🤖 AI Agent 学习仓库</a>
     <div class="crumb" id="crumb"></div>
+    <button type="button" class="source-badge" id="sourceBadge" hidden title="点击切换数据源"></button>
+  </div>
+
+  <div class="source-modal-mask" id="sourceModal" hidden>
+    <div class="source-modal" role="dialog" aria-modal="true" aria-labelledby="sourceModalTitle">
+      <h2 id="sourceModalTitle">选择文档来源</h2>
+      <p>检测到本机预览（localhost）。未推送的本地 MD 只有选「本地仓库」才能看到；线上静态站请继续用远程镜像。</p>
+      <div class="actions">
+        <button type="button" id="pickLocal">
+          <strong>本地仓库</strong>
+          <span>从当前站点相对路径读取（需在仓库根目录起静态服务）</span>
+        </button>
+        <button type="button" id="pickRemote">
+          <strong>远程镜像</strong>
+          <span>与线上一致：jsDelivr / GitHub raw（已推送的 master）</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div class="layout">
@@ -263,7 +365,8 @@
 
   <script>
     /* ════════════════════════════════════════════════════════════
-       配置：导航与正文只从远程镜像读（静态站通常只挂 index.html，不挂 md）。
+       配置：导航与正文默认从远程镜像读（静态站通常只挂 index.html）。
+       本机（localhost / 127.0.0.1）可改选「本地仓库」，用相对路径读未推送的 MD。
        jsDelivr 的 @master 会被 CDN 缓存约 12h，URL 加 ?t= 破不了。
        做法：先解析 master 最新 commit SHA，优先用 @sha 拉 jsDelivr；
        再试 GitHub raw；最后才退回 @master。
@@ -271,9 +374,17 @@
        ════════════════════════════════════════════════════════════ */
     const REPO = '8696/ai-agents-learning';
     const BRANCH = 'master';
+    const SOURCE_KEY = 'docs-source'; // sessionStorage: 'local' | 'remote'
     let rawBase = null;
     let commitSha = null;
     let NAV = [];
+    /** @type {'local' | 'remote'} */
+    let contentSource = 'remote';
+
+    function isLocalHost() {
+      const h = location.hostname;
+      return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+    }
 
     function encodeRepoPath(repoPath) {
       return repoPath.split('/').map(encodeURIComponent).join('/');
@@ -329,8 +440,18 @@
       return list;
     }
 
+    /** 本机静态服务：相对路径拉仓库文件 */
+    async function fetchLocalFile(repoPath) {
+      const url = withCacheBust('./' + encodeRepoPath(repoPath));
+      const res = await fetchWithTimeout(url);
+      if (!res.ok) {
+        throw new Error(`${url} → HTTP ${res.status}`);
+      }
+      return await res.text();
+    }
+
     /** 按镜像列表拉取仓库文件；某个源成功后后续请求优先用它 */
-    async function fetchRepoFile(repoPath) {
+    async function fetchRemoteFile(repoPath) {
       const encoded = encodeRepoPath(repoPath);
       const mirrors = buildMirrors();
       const order = rawBase
@@ -351,6 +472,52 @@
         }
       }
       throw new Error(errors.join('\n'));
+    }
+
+    async function fetchRepoFile(repoPath) {
+      if (contentSource === 'local') return fetchLocalFile(repoPath);
+      return fetchRemoteFile(repoPath);
+    }
+
+    function updateSourceBadge() {
+      const badge = document.getElementById('sourceBadge');
+      if (!isLocalHost()) {
+        badge.hidden = true;
+        return;
+      }
+      badge.hidden = false;
+      badge.classList.toggle('local', contentSource === 'local');
+      badge.classList.toggle('remote', contentSource === 'remote');
+      badge.textContent = contentSource === 'local' ? '本地仓库' : '远程镜像';
+      badge.title = '点击重新选择文档来源';
+    }
+
+    /** 本机弹出数据源选择；返回 'local' | 'remote' */
+    function chooseContentSource({ force = false } = {}) {
+      return new Promise((resolve) => {
+        if (!isLocalHost()) {
+          resolve('remote');
+          return;
+        }
+        if (!force) {
+          const saved = sessionStorage.getItem(SOURCE_KEY);
+          if (saved === 'local' || saved === 'remote') {
+            resolve(saved);
+            return;
+          }
+        }
+        const modal = document.getElementById('sourceModal');
+        modal.hidden = false;
+        const finish = (src) => {
+          modal.hidden = true;
+          sessionStorage.setItem(SOURCE_KEY, src);
+          document.getElementById('pickLocal').onclick = null;
+          document.getElementById('pickRemote').onclick = null;
+          resolve(src);
+        };
+        document.getElementById('pickLocal').onclick = () => finish('local');
+        document.getElementById('pickRemote').onclick = () => finish('remote');
+      });
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -521,13 +688,19 @@
         article.innerHTML = html;
         highlightArticle(article);
       } catch (e) {
+        const tip = contentSource === 'local'
+          ? `当前是<strong>本地仓库</strong>模式。请确认已在仓库根目录起静态服务（例如
+              <code>python3 -m http.server 8080</code>），并打开
+              <code>http://localhost:8080/</code>；同时确认路径
+              <code>${escapeHTML(path)}</code> 在本地存在。`
+          : `已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
+              请确认该路径已推到 <code>master</code>。`;
         article.className = '';
         article.innerHTML = `
           <div class="err">
             <strong>加载失败：</strong> ${escapeHTML(path)}
             <pre>${escapeHTML(String(e))}</pre>
-            <p style="margin-top:12px">已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
-              请确认该路径已推到 <code>master</code>。</p>
+            <p style="margin-top:12px">${tip}</p>
           </div>`;
       }
     }
@@ -591,28 +764,53 @@
     /* ════════════════════════════════════════════════════════════
        启动
        ════════════════════════════════════════════════════════════ */
-    async function bootstrap() {
-      await resolveCommitSha();
+    function route() {
+      loadAndRender(currentPath());
+    }
+
+    async function startApp() {
+      rawBase = null;
+      if (contentSource === 'remote') {
+        await resolveCommitSha();
+      }
       try {
         NAV = JSON.parse(await fetchRepoFile('manifest.json'));
       } catch (e) {
+        const tip = contentSource === 'local'
+          ? `当前是<strong>本地仓库</strong>模式。请在仓库根目录起静态服务，并确认
+              <code>manifest.json</code> 存在（可先跑
+              <code>node script/gen-manifest.js</code>）。`
+          : `已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
+              请确认 <code>manifest.json</code> 已推到 <code>master</code>
+              （可先跑 <code>node script/gen-manifest.js</code> 再推送）。`;
         document.getElementById('markdown').innerHTML = `
           <div class="err">
             <strong>加载 manifest.json 失败：</strong> ${escapeHTML(String(e))}
-            <p style="margin-top:12px">
-              已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
-              请确认 <code>manifest.json</code> 已推到 <code>master</code>
-              （可先跑 <code>node script/gen-manifest.js</code> 再推送）。
-            </p>
+            <p style="margin-top:12px">${tip}</p>
           </div>`;
         return;
       }
       renderNav();
-      function route() { loadAndRender(currentPath()); }
-      window.addEventListener('hashchange', route);
       if (!location.hash) location.hash = 'README.md';
       else route();
     }
+
+    async function bootstrap() {
+      contentSource = await chooseContentSource();
+      updateSourceBadge();
+      window.addEventListener('hashchange', route);
+      await startApp();
+    }
+
+    document.getElementById('sourceBadge').addEventListener('click', async () => {
+      contentSource = await chooseContentSource({ force: true });
+      updateSourceBadge();
+      document.getElementById('markdown').className = 'loading';
+      document.getElementById('markdown').textContent = '切换数据源…';
+      document.getElementById('navTree').innerHTML = '';
+      await startApp();
+    });
+
     bootstrap();
   </script>
 </body>
