@@ -21,8 +21,8 @@
 | ✅ | [**Transformer**：Encoder / Decoder；Self-Attention 用来「看整句关系」](./04-Transformer.md) | **不要推公式**；能画这三块 | `Transformer architecture explained` `Attention Is All You Need 图解` · Jay Alammar [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) · 3Blue1Brown 注意力相关 | 暂无链接 |
 | ✅ | [**Attention / Self-Attention**：每个词根据整句其它词算权重](./05-Attention-Self-Attention.md) | 能用一句话说清 | `self attention intuitive explanation` `Q K V attention` · 同上 Jay Alammar · 李宏毅 Transformer 章节（选看） | 暂无链接 |
 | ✅ | [**Embedding**：文本 → 向量；语义近的距离近；和 Token 不是同一层](./06-Embedding.md) | 能区分 Token（离散计数）和 Embedding（连续向量） | `word embedding visualization` `text embedding semantic similarity` · TensorFlow Embedding Projector · OpenAI Embeddings 文档 | 暂无链接 |
-| ⬜ | [**Temperature / Top-P**：随机性怎么控；抽取任务 vs 创意任务](./07-Temperature-Top-P.md) | 能说清两者区别、什么场景调哪个 | `LLM temperature top_p sampling` `nucleus sampling` · OpenAI / Anthropic 官方参数说明 | — |
-| ⬜ | [**Hallucination**：模型在预测下一个 Token，不是在查数据库](./08-Hallucination.md) | 能用一句话说明成因 | `LLM hallucination why` `大模型幻觉 原因` · Anthropic / OpenAI 安全文档 · 任意 10 分钟科普视频 | — |
+| ✅ | [**Temperature / Top-P**：随机性怎么控；抽取任务 vs 创意任务](./07-Temperature-Top-P.md) | 能说清两者区别、什么场景调哪个 | `LLM temperature top_p sampling` `nucleus sampling` · OpenAI / Anthropic 官方参数说明 | 暂无链接 |
+| ✅ | [**Hallucination**：模型在预测下一个 Token，不是在查数据库](./08-Hallucination.md) | 能用一句话说明成因 | `LLM hallucination why` `大模型幻觉 原因` · Anthropic / OpenAI 安全文档 · 任意 10 分钟科普视频 | 暂无链接 |
 | ⬜ | [**预训练 vs 推理**：训练你不做；你调 API 做的是推理](./09-预训练-vs-推理.md) | 能分清两阶段各自发生什么 | `LLM pretraining vs inference` `RLHF explained simple` · Karpathy「Intro to LLMs」类视频 · 论文只看摘要 | — |
 | ⬜ | [**主流模型对比**：至少 4 家的强项、价格档、Context 上限](./10-主流模型对比.md) | 能列表，不要求背参数 | `GPT-4 vs Claude vs Gemini comparison 2025` `模型选型 agent` · 各厂商 Model Card · [Artificial Analysis](https://artificialanalysis.ai/) | — |
 | ⬜ | [**本地产出**](./11-本地产出.md) | 笔记能向非技术的人解释「LLM 为什么会胡说八道」；本页验收 + 学习沉淀 | — | [沉淀](./11-本地产出.md) |
