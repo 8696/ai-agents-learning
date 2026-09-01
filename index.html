@@ -370,7 +370,7 @@
        jsDelivr 的 @master 会被 CDN 缓存约 12h，URL 加 ?t= 破不了。
        做法：先解析 master 最新 commit SHA，优先用 @sha 拉 jsDelivr；
        再试 GitHub raw；最后才退回 @master。
-       仓库结构变了：先 node script/gen-manifest.js，再推到 master。
+       仓库结构变了：先 node scripts/gen-manifest.js，再推到 master。
        ════════════════════════════════════════════════════════════ */
     const REPO = '8696/ai-agents-learning';
     const BRANCH = 'master';
@@ -779,10 +779,10 @@
         const tip = contentSource === 'local'
           ? `当前是<strong>本地仓库</strong>模式。请在仓库根目录起静态服务，并确认
               <code>manifest.json</code> 存在（可先跑
-              <code>node script/gen-manifest.js</code>）。`
+              <code>node scripts/gen-manifest.js</code>）。`
           : `已依次尝试 jsDelivr（按最新 commit）、GitHub raw、jsDelivr @master。
               请确认 <code>manifest.json</code> 已推到 <code>master</code>
-              （可先跑 <code>node script/gen-manifest.js</code> 再推送）。`;
+              （可先跑 <code>node scripts/gen-manifest.js</code> 再推送）。`;
         document.getElementById('markdown').innerHTML = `
           <div class="err">
             <strong>加载 manifest.json 失败：</strong> ${escapeHTML(String(e))}

@@ -3,8 +3,8 @@
  * 根据仓库当前目录结构生成 manifest.json，给 index.html 渲染左侧导航用。
  *
  * 用法：
- *     node script/gen-manifest.js           # 默认生成仓库根目录 manifest.json
- *     node script/gen-manifest.js -o xxx    # 指定输出文件
+ *     node scripts/gen-manifest.js           # 默认生成仓库根目录 manifest.json
+ *     node scripts/gen-manifest.js -o xxx    # 指定输出文件
  *
  * 约定：
  *     - 只扫描：README.md、AGENTS.md、docs/、apps/
