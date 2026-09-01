@@ -76,6 +76,9 @@ temp/
 *.log
 logs/
 
+# Local demos / scaffolding (experiments, not learning materials)
+demos/
+
 # Python (optional scripts, not the main stack)
 __pycache__/
 *.py[cod]
