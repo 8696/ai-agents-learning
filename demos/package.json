@@ -10,9 +10,13 @@
     "typecheck": "tsc --noEmit",
     "demo:00-api-key-billing": "tsx 00-环境准备/01-API-Key-计费/index.ts",
     "demo:01-token": "tsx 01-AI与LLM基础认知/02-Token/index.ts",
-    "demo:01-temperature": "tsx 01-AI与LLM基础认知/07-Temperature-Top-P/index.ts"
+    "demo:01-temperature": "tsx 01-AI与LLM基础认知/07-Temperature-Top-P/index.ts",
+    "demo:02-streaming-sse": "tsx 02-LLM-API开发/01-Streaming-SSE/index.ts",
+    "demo:02-protocol-ab": "tsx 02-LLM-API开发/02-协议-A-vs-B/index.ts",
+    "demo:02-adapter": "tsx 02-LLM-API开发/03-adapter-demo/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "dotenv": "^16.4.7",
     "gpt-tokenizer": "^2.9.0",
     "openai": "^4.85.4",

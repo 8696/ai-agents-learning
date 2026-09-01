@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>01 ChatGPT Mini · SSE Chat</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 18px; margin-bottom: 16px; }
+    .row { display: flex; gap: 8px; }
+    input { flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 8px 16px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fafafa; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .out { margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; min-height: 140px; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+    .meta { margin-top: 8px; color: #666; font-size: 12px; }
+    .err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>01 ChatGPT Mini · SSE Chat（POST /api/chat）</h1>
+  <div class="row">
+    <input id="msg" placeholder="输入消息，回车或点发送" value="用一句话介绍你自己。">
+    <button id="send">发送</button>
+  </div>
+  <div class="out" id="out"></div>
+  <div class="meta" id="meta"></div>
+
+  <script>
+    // 流式渲染：fetch + getReader + 按 \n\n 切帧 + 累加 delta.content
+    // 对应 docs/学习模块/02-LLM-API开发/01-Streaming-SSE.md 的「写代码会踩」
+    const input = document.getElementById('msg');
+    const sendBtn = document.getElementById('send');
+    const out = document.getElementById('out');
+    const meta = document.getElementById('meta');
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+
+    async function send() {
+      const message = input.value.trim();
+      if (!message) return;
+      out.textContent = '';
+      meta.textContent = '';
+      meta.classList.remove('err');
+      sendBtn.disabled = true;
+
+      // buffer 累加：TCP 可能把一帧拆成多个 chunk 到达
+      let buffer = '';
+      let content = '';
+      let usage = null;
+      let frameCount = 0;
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        });
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // SSE 规定空行 \n\n = 帧结束；按 \n\n 切帧
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) >= 0) {
+            const frame = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+            // 一帧里可能有多个 data: 行；这里教学版只取第一个
+            const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
+            if (!dataLine) continue;
+            const payload = dataLine.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const obj = JSON.parse(payload);
+              frameCount += 1;
+              const delta = obj.choices?.[0]?.delta?.content;
+              if (delta) {
+                content += delta;
+                out.textContent = content; // 逐字渲染
+              }
+              if (obj.usage) usage = obj.usage;
+            } catch (e) {
+              // 半截 JSON 等下一帧合并后再 parse
+            }
+          }
+        }
+
+        if (usage) {
+          meta.textContent =
+            `token: prompt=${usage.prompt_tokens} completion=${usage.completion_tokens} total=${usage.total_tokens} · 帧数=${frameCount}`;
+        } else {
+          meta.textContent = `帧数=${frameCount}（无 usage，去 MiniMax 控制台查）`;
+        }
+      } catch (err) {
+        meta.classList.add('err');
+        meta.textContent = `失败: ${err.message}`;
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

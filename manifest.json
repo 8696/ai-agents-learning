@@ -728,6 +728,15 @@
             "path": "apps/01-chatgpt-mini/package.json"
           },
           {
+            "label": "public",
+            "children": [
+              {
+                "label": "index.html",
+                "path": "apps/01-chatgpt-mini/public/index.html"
+              }
+            ]
+          },
+          {
             "label": "README.md",
             "path": "apps/01-chatgpt-mini/README.md"
           },
@@ -745,6 +754,10 @@
               {
                 "label": "load-root-env.ts",
                 "path": "apps/01-chatgpt-mini/src/load-root-env.ts"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/01-chatgpt-mini/src/server.ts"
               }
             ]
           },
@@ -761,6 +774,159 @@
       {
         "label": "tsconfig.base.json",
         "path": "apps/tsconfig.base.json"
+      }
+    ]
+  },
+  {
+    "label": "demos",
+    "children": [
+      {
+        "label": "00-环境准备",
+        "children": [
+          {
+            "label": "01-API-Key-计费",
+            "children": [
+              {
+                "label": "index.ts",
+                "path": "demos/00-环境准备/01-API-Key-计费/index.ts"
+              },
+              {
+                "label": "README.md",
+                "path": "demos/00-环境准备/01-API-Key-计费/README.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "01-AI与LLM基础认知",
+        "children": [
+          {
+            "label": "02-Token",
+            "children": [
+              {
+                "label": "index.ts",
+                "path": "demos/01-AI与LLM基础认知/02-Token/index.ts"
+              },
+              {
+                "label": "README.md",
+                "path": "demos/01-AI与LLM基础认知/02-Token/README.md"
+              }
+            ]
+          },
+          {
+            "label": "07-Temperature-Top-P",
+            "children": [
+              {
+                "label": "index.ts",
+                "path": "demos/01-AI与LLM基础认知/07-Temperature-Top-P/index.ts"
+              },
+              {
+                "label": "README.md",
+                "path": "demos/01-AI与LLM基础认知/07-Temperature-Top-P/README.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "02-LLM-API开发",
+        "children": [
+          {
+            "label": "01-Streaming-SSE",
+            "children": [
+              {
+                "label": "index.ts",
+                "path": "demos/02-LLM-API开发/01-Streaming-SSE/index.ts"
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "demos/02-LLM-API开发/01-Streaming-SSE/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "demos/02-LLM-API开发/01-Streaming-SSE/README.md"
+              }
+            ]
+          },
+          {
+            "label": "02-协议-A-vs-B",
+            "children": [
+              {
+                "label": "index.ts",
+                "path": "demos/02-LLM-API开发/02-协议-A-vs-B/index.ts"
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "demos/02-LLM-API开发/02-协议-A-vs-B/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "demos/02-LLM-API开发/02-协议-A-vs-B/README.md"
+              },
+              {
+                "label": "think-test.ts",
+                "path": "demos/02-LLM-API开发/02-协议-A-vs-B/think-test.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-adapter-demo",
+            "children": [
+              {
+                "label": "adapter.ts",
+                "path": "demos/02-LLM-API开发/03-adapter-demo/adapter.ts"
+              },
+              {
+                "label": "index.ts",
+                "path": "demos/02-LLM-API开发/03-adapter-demo/index.ts"
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "demos/02-LLM-API开发/03-adapter-demo/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "demos/02-LLM-API开发/03-adapter-demo/README.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "load-root-env.ts",
+        "path": "demos/load-root-env.ts"
+      },
+      {
+        "label": "package.json",
+        "path": "demos/package.json"
+      },
+      {
+        "label": "README.md",
+        "path": "demos/README.md"
+      },
+      {
+        "label": "tsconfig.json",
+        "path": "demos/tsconfig.json"
+      },
+      {
+        "label": "yarn.lock",
+        "path": "demos/yarn.lock"
       }
     ]
   }

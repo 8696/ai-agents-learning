@@ -18,6 +18,7 @@ Key 仍只读 `apps/.env`。Demo 判断见 [AGENTS.md §5.2](../AGENTS.md#52-小
 | `yarn demo:00-api-key-billing` | 输入 / 输出 Token 分开 |
 | `yarn demo:01-token` | 中英文 Token 数（不调 API） |
 | `yarn demo:01-temperature` | 同一 prompt，温度 0 vs 1.2 |
+| `yarn demo:02-streaming-sse` | SSE 帧长什么样 + 流式 vs 一次性 TTFT 对照（不调 API） |
 
 ```bash
 cd demos
