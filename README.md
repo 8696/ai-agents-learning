@@ -1,101 +1,90 @@
-# AI Agent 开发学习仓库
+# AI Agent 开发 0 → 1 完整学习仓库
 
-从 0 到 1 学 **AI Agent 开发**：一条可执行路线 + 最多五个动手项目。面向前端转 Agent，主线是 **TypeScript + Node.js**，调用云端模型 API，不训练模型。
+24 个模块的学习笔记 + apps/ 唯一代码落点（模块 00 mini-app + 每条外部小节的最小可运行 Demo）。
 
-根目录没有五个项目的业务应用。打开仓库先分清三件事：
+详细目录 → [docs/00-目录.md](docs/00-目录.md)。学习协议 → [docs/01-使用协议.md](docs/01-使用协议.md)。路线 → [docs/03-学习路线.md](docs/03-学习路线.md)。
 
-|                 | 是什么              | 去哪                            |
-| --------------- | ---------------- | ----------------------------- |
-| **学什么、怎么验收**    | 路线、模块、题目、笔记      | `[docs/](docs/00-目录.md)`      |
-| **五个项目代码落哪** | 何时建 `apps/`、怎么回填 | 本页 + `[AGENTS.md](AGENTS.md)` §4–5 |
-| **小节 Demo** | 每条外部学完判断要不要可运行小样例 | `[AGENTS.md §5.2](AGENTS.md#52-小节-demo与五个项目分离)` · `[demos/](demos/)` |
+## 怎么用
 
-`docs/` 可以单独拿走当总纲。拿走之后，文档里的「ChatGPT Mini」等是**作品名**，本仓库路径以本页为准。
+1. 按 [docs/06-学习总览.md](docs/06-学习总览.md) 看当前进度
+2. 找到当前模块的 README → [docs/学习模块/](docs/学习模块/)
+3. 跟着「小节进度」从外部第一条走到本地产出
+4. 每条学完 → 写小节 MD（说「沉淀文档」）→ Demo 判断（说「写 Demo / 不写 Demo」）→ `coach next`
+5. 不写代码？只学概念也行。`coach status` 看当前节奏
 
-**编号不要混：** `docs/01-使用协议.md` 是文档第 1 篇；**模块 01** 是「AI & LLM 基础认知」。说「01」时写全名或写路径。
+`apps/` 是**唯一**的代码落点（[AGENTS.md §4](AGENTS.md#4-代码落点)）：
+- 模块 00 mini-app：`apps/00-环境准备/01-mini-app/`
+- 各外部小节 Demo：`apps/{模块}/{小节}/`（按 §5.2 判断要不要建）
 
-要从 0 清空进度与项目再开练：见 `[RESET.md](RESET.md)`（仅在你明确要清时打开）。
+每个 `apps/` 子文件夹只保持 `README.md`（怎么跑 + 当前能做什么），跟代码一起改写。
 
----
-
-## 快速命令
-
-| 你说 | 它做什么 |
-| --- | --- |
-| `coach status` | 报进度：在哪、刚过完什么、现在学什么、下一条是什么 |
-| `coach start` | 讲当前条。外部：出门包 + 完整讲解 + **本条产出预告**（要不要写 Demo、要不要回填项目；默认先不落，你说写就写） |
-| `coach next` | 当前条达标后勾进度、进下一条。笔记空壳不准勾 |
-| 进入维护模式 | 改陪跑 / 学习过程 / Agent 交互。**默认是学习**；未点名不要走维护 |
-
----
-
-## 怎么使用
-
-### 1. 拉仓库
+## 跑起来
 
 ```bash
-git clone <本仓库地址>
-cd ai-agents-learning
+# Node ≥22；apps/.nvmrc 推荐 22
+cd apps
+nvm use
+yarn install
+cp .env.example .env
+# 编辑 apps/.env：填 MINIMAX_API_KEY
+
+# 模块 00 mini-app
+yarn app:00-01-mini-cli-a          # CLI 协议 A（流式）
+yarn app:00-01-mini-cli-b          # CLI 协议 B（对照）
+yarn app:00-01-mini-server         # HTTP + SSE + 浏览器聊天页（http://127.0.0.1:3000/）
+
+# 其它入口（按 docs/学习模块/README.md 里的小节）
+yarn app:01-02-token               # 例：模块 01 · Token
+yarn app:02-01-streaming-sse       # 例：模块 02 · Streaming/SSE
 ```
 
-用 Cursor / Claude Code / Codex 打开这个目录（助手会读根目录 `[AGENTS.md](AGENTS.md)`）。若需要先清进度 / 动手项目，打开 `[RESET.md](RESET.md)` 按里面的话对助手说即可。
+## 仓库约定
 
-### 2. 配环境，再开练
+- **TS 5 + Node ≥22 + yarn**（[AGENTS.md §5.0](AGENTS.md#50-代码落点规范node--ts--注释--key--选型)）
+- **Zod 守门**（环境变量 + 外部数据）
+- **apps/ 子文件夹互不 import**
+- **协议 A = OpenAI Chat Completions**；**协议 B = Anthropic Messages**；同 Key 换 baseURL
+- 共用 Key 只放 `apps/.env`，不进 git
 
-1. 读 `[docs/02-怎么用.md](docs/02-怎么用.md)`（含默认选型），路线见 `[docs/03-学习路线.md](docs/03-学习路线.md)`。
-2. `cd apps && nvm use`（推荐 Node 22，**最低 ≥22**），`cp .env.example .env`，填 Key。包管理用 **yarn**。
-3. 对助手说 `coach start`。之后按模块：**外部**（概念 + **当场告诉你本条要不要写 Demo / 要不要回填项目** → 写入该条小节 MD → **按预告落小节 Demo**（`demos/`）**以及本条这一刀增量回填**）→ **本地**（验收**收口** + `{NN}-本地产出.md`；有代码则更新该 app 的 `LEARNING.md` / `README.md`）→ 才进下一模块。禁止跳条。不要把整模块代码攒到最后一节才一次性写。
+不抽共享 npm 包（[AGENTS.md §5.0](AGENTS.md#50-代码落点规范node--ts--注释--key--选型)）；新建入口时复制 `apps/load-root-env.ts`。
 
-讲概念、考我、贴报错、review 直接说即可。不好处理或有多个合理选项时，助手先给选项、说明为什么、推荐一个并说明为什么，等你选。笔记由助手按模板写入，你只减不加。看过的外部 URL 填进该模块 README「我的链接」（没有就写 `暂无链接`）。完整约定见 `[AGENTS.md](AGENTS.md)` §6。
-
-进度以 `[docs/06-学习总览.md](docs/06-学习总览.md)` 与各模块 **小节进度** 为准。
-
----
-
-## 仓库结构
-
-不抽共享包，不上 monorepo。每个 `apps/*` 自己有 `package.json`，**学到再创建**，禁止第 6 个 app。小节教学 Demo 在 `demos/`（不是第 6 个 app；条与条隔离）。共用配置只放在 `apps/`：`.nvmrc`、`.env.example`、`tsconfig.base.json`。
+## 目录
 
 ```text
 ai-agents-learning/
-├── README.md          ← 给人看（本页）
-├── AGENTS.md          ← 给 AI 看（建目录、coach、写回笔记、小节 Demo）
-├── RESET.md           ← 清进度 / 清 apps / 清 demos（按需打开，非日常）
-├── docs/              ← 学习文档
-│   ├── 00-目录.md
-│   ├── 01–07          ← 协议 / 怎么用 / 路线 / 题库 / 资源 / 总览 / 术语
-│   └── 学习模块/      ← 模块 00–23：一模块一文件夹，一小节一个 MD
-├── demos/             ← 小节 Demo（学到该条且判断要可运行才建内容）
-└── apps/
-    ├── .nvmrc · .env.example · tsconfig.base.json
-    ├── 01-chatgpt-mini/     ← 模块 00 新建
-    ├── 02-tool-agent/       ← 模块 05
-    ├── 03-knowledge-agent/  ← 模块 08
-    ├── 04-research-agent/   ← 模块 11/12
-    └── 05-coding-agent/     ← 模块 15
+├── README.md · AGENTS.md · RESET.md
+├── docs/
+│   ├── 00-目录.md · 01-使用协议.md · 02-怎么用.md
+│   ├── 03-学习路线.md · 04-自测题库.md · 05-资源清单.md
+│   ├── 06-学习总览.md · 07-核心术语.md
+│   └── 学习模块/                    ← 一模块一文件夹
+│       ├── 00-环境准备/README.md · 01-{小节}.md · ... · 04-本地产出.md
+│       ├── 01-AI与LLM基础认知/README.md · 01~11-*.md
+│       └── ...（到 23）
+├── apps/
+│   ├── README.md · package.json · tsconfig.json · tsconfig.base.json
+│   ├── load-root-env.ts · .env.example · .nvmrc · .env（Key，不进 git）
+│   ├── 00-环境准备/01-mini-app/        ← 模块 00 mini-app（三入口）
+│   ├── 01-AI与LLM基础认知/01-API-Key-计费/
+│   ├── 02-LLM-API开发/01-Streaming-SSE/ · 02-协议-A-vs-B/ · 03-AbortController/ · 04-Rate-Limit/
+│   └── ...（学到哪条建哪条）
+└── RESET.md                          ← 清进度 / 清 apps（按需打开，非日常）
 ```
 
-新能力能加进已有 app 就加进去。五个项目见 `AGENTS.md` §4–5；小节 Demo 见 §5.2。
+学完所有模块后想要作品集再从零建（[AGENTS.md §5](AGENTS.md#5-demo-落点)）。
 
-| 项目              | 目录                        | 主要模块                             |
-| --------------- | ------------------------- | -------------------------------- |
-| ChatGPT Mini    | `apps/01-chatgpt-mini`    | 00、02–04、06；22 最简 UI（模块 01 只写笔记） |
-| Tool Agent      | `apps/02-tool-agent`      | 05、07，回填 10、11                   |
-| Knowledge Agent | `apps/03-knowledge-agent` | 08、09，回填 17、18                   |
-| Research Agent  | `apps/04-research-agent`  | 11–14，回填 19、21                   |
-| Coding Agent    | `apps/05-coding-agent`    | 15、16、20，回填 22、23                |
+## 学习总览（截至模块 00）
 
-每个已建项目：**只有** `README.md`（现在怎么跑）和 `LEARNING.md`（当前代码地图）两份，代码一改就改写这两份。概念笔记在 `docs/学习模块/` 对应小节 MD，**不因项目迭代而改成现在的全貌**。外部小节的可运行小样例在 `demos/`，和五个项目分开，也不和其他小节互相引用。
+| 模块 | 状态 | 内容 |
+| ---- | ---- | ---- |
+| 00 | ✅ 完成 | 环境准备 / Key 安全 / Node ≥22 / 本地产出 |
+| 01 | ✅ 完成 | Token / Context / Transformer / 幻觉 |
+| 02 | ✅ 完成 | Streaming · 协议 A/B · AbortController · Rate-Limit |
+| 03 ~ 23 | ⬜ | 见 [docs/06-学习总览.md](docs/06-学习总览.md) |
 
-跑 ChatGPT Mini（模块 00 本地建好之后）：`cd apps && nvm use`，配好 `.env`，再 `cd 01-chatgpt-mini && yarn install && yarn dev`。
+## 关键链接
 
----
-
-## 技术栈（学习默认）
-
-- **运行时**：TypeScript 5 + Node.js ≥22 + yarn
-- **模型**：MiniMax / 智谱（各支持 OpenAI + Anthropic 双协议，同 Key 换 Base URL）+ Anthropic 官方
-- **SDK**：协议 A → `openai`；协议 B → `@anthropic-ai/sdk`
-- **Key**：只放 `apps/.env`，不进 git
-
-选型理由和何时才换供应商，见 `[docs/02-怎么用.md](docs/02-怎么用.md)` §1.2。模块 00 只要求 MiniMax 协议 A；协议 B 对照在模块 02。
+- [AGENTS.md](AGENTS.md) — 仓库操作契约（**打开本仓库的 AI 必读**）
+- [docs/06-学习总览.md](docs/06-学习总览.md) — 进度总表
+- [docs/学习模块/](docs/学习模块/) — 每个模块的 README + 小节 MD
+- [apps/README.md](apps/README.md) — 现有入口与跑法

@@ -4,8 +4,7 @@
 
 - **来源**：本对话（`coach start` 出门包 + §6.2 详解，2026-08-31）+ 增量（学习者追问「多数文档建议只调一个，是调哪个，为什么」，2026-08-31）
 - **状态**：已沉淀
-- **Demo**：已落 `demos/01-AI与LLM基础认知/07-Temperature-Top-P/` · `yarn demo:01-07-temperature`（同一 prompt，T=0 vs T=1.2 各两次）
-- **回填**：无（本模块代码落点是笔记即可）
+- **Demo**：已落 `apps/01-AI与LLM基础认知/07-Temperature-Top-P/` · `yarn app:01-07-temperature`（同一 prompt，T=0 vs T=1.2 各两次）
 
 ### 是什么
 

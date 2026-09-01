@@ -1,15 +1,15 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / 项目 LEARNING.md
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/15-Browser-Computer-Agent/01-{短名}/README.md`
 
 # 模块 15 · Browser / Computer Agent ⭐⭐⭐⭐⭐
 
 [← 14 Multi-Agent](../14-Multi-Agent/README.md) · [16 Coding Agent →](../16-Coding-Agent/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」仍以项目 `LEARNING.md` 为准（行号会变）。
-> **项目当前地图**：`apps/05-coding-agent/LEARNING.md`（学到再建）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/15-Browser-Computer-Agent/01-{短名}/README.md` 为准。
+> **代码落点**：`apps/15-Browser-Computer-Agent/01-{短名}/`（每条外部小节的最小可运行 Demo；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo与五个项目分离)）以及要不要把本条增量回填进五个项目（[§5.3](../../../AGENTS.md#53-五个项目按条增量回填本地产出是收口)）。本地产出是验收收口，不是第一次灌全部代码。
+> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是验收收口，不是第一次灌全部代码。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
@@ -40,7 +40,7 @@
 
 ## 本地拆步
 
-> 新建 `apps/05-coding-agent`（先问「可以吗？」）。复制 `load-root-env.ts`。
+> 新建 `apps/15-Browser-Computer-Agent/01-{短名}/`（先按 [AGENTS.md §5.2 可运行 Demo 怎么建](../../../AGENTS.md#52-小节-demo) 的流程来；用到 LLM 时共用 `apps/load-root-env.ts`）。
 
 1. Playwright Tools：navigate / click / type / extract / screenshot
 2. 用 Accessibility Tree 描述页面，不要塞整个 HTML

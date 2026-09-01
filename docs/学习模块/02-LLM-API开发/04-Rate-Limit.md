@@ -1,7 +1,7 @@
 # **429 / Rate Limit**：为什么要指数退避；哪些错误不该重试
 
 > 对应模块：[模块 02 · LLM API 开发 ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 4 条
-> **来源**：本对话（详解 §4.1~§4.9 全部轮次 + `yarn demo:02-04-rate-limit` 跑通的 5 个场景时间线 + 进入维护模式改 `demo:{模块}-{小节}-{短名}` 命名约定 + 真 API burst 撞限的实际结果）
+> **来源**：本对话（详解 §4.1~§4.9 全部轮次 + `yarn app:02-04-rate-limit` 跑通的 5 个场景时间线 + 进入维护模式改 `app:{模块}-{小节}-{短名}` 命名约定 + 真 API burst 撞限的实际结果）
 > **状态**：已沉淀
 
 **一句话概括**：LLM API 一定返回 429；第一次上量整个应用就崩——因为没做「分类重试 + 指数退避 + jitter」。这一条把分类表、退避（人话版步骤，不是公式）、jitter 防 thundering herd、重试上限、流式 + 429 怎么接一次讲清。
@@ -224,16 +224,16 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 > 按 `问了 → 答在哪` 排；只记发生过的，不编。
 
 - **问**：`demo:02-rate-limit` 里 `02` 是模块还是章节？至少应该跟章节对应吧，应该是 `04`。
-  **答**：AGENTS.md §5.2 原写「`{模块两位}` = 进度表模块编号」，所以 `02` 算规范用法；但仓库现状混了 `demo:03-abort-controller` 这种章节命名，不一致。**进维护模式改规范**：`demo:{模块两位}-{小节两位}-{英文短名}`，全仓库 8 个 demo 改名 + AGENTS.md 5 处同步 + `.claude/settings.local.json` Bash 白名单同步
-  → 见 [AGENTS.md §5.2](../../AGENTS.md#52-小节-demo与五个项目分离)、[demos/package.json](../../demos/package.json)
+  **答**：AGENTS.md §5.2 原写「`{模块两位}` = 进度表模块编号」，所以 `02` 算规范用法；但仓库现状混了 `demo:03-abort-controller` 这种章节命名，不一致。**进维护模式改规范**：`app:{模块两位}-{小节两位}-{英文短名}`，全仓库 8 个 demo 改名 + AGENTS.md 5 处同步 + `.claude/settings.local.json` Bash 白名单同步
+  → 见 [AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)、[apps/package.json](../../../apps/package.json)
 
 - **问**：当前 mock demo 能改用真 API 吗？
   **答**：可以；按 4 个选项（保持 mock-only / 加 /api/real / 加 /api/real-burst / 两个都加）。**推荐 4**：单次默认跑 ~0.001 元，并发撞 429 按需开启 ~0.02 元。
-  → 见 [demos/02-LLM-API开发/04-Rate-Limit/index.ts](../../demos/02-LLM-API开发/04-Rate-Limit/index.ts)
+  → 见 [apps/02-LLM-API开发/04-Rate-Limit/index.ts](../../../apps/02-LLM-API开发/04-Rate-Limit/index.ts)
 
 - **问**：burst 并发 20 没撞出 429，是 bug 还是预期？
   **答**：**预期**。MiniMax-M3 个人 Key RPM 配额宽裕，20 并发实际只占 ~2 RPS（每请求 1~10 秒），远低于限速。要撞需并发 50+ 或更短请求。**选项**：保持 20 / 默认 50 / 加 `?concurrency=` 参数让学习者自己调
-  → 本对话 `BURST=1 yarn demo:02-04-rate-limit` 段 + 真 API 聚合输出
+  → 本对话 `BURST=1 yarn app:02-04-rate-limit` 段 + 真 API 聚合输出
 
 ---
 
@@ -250,11 +250,11 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 
 ## 踩坑（本对话 demo 实际撞过的）
 
-- **TS strict 报错 `NodeJS.HttpIncomingMessage` 类型不存在**：在 [demos/02-LLM-API开发/04-Rate-Limit/index.ts](../../demos/02-LLM-API开发/04-Rate-Limit/index.ts) 第 124 行用了 `NodeJS.HttpIncomingMessage["headers"]`，但 Node 22 类型里这个类型是 `IncomingMessage`，从 `node:http` 直接 import 即可
+- **TS strict 报错 `NodeJS.HttpIncomingMessage` 类型不存在**：在 [apps/02-LLM-API开发/04-Rate-Limit/index.ts](../../../apps/02-LLM-API开发/04-Rate-Limit/index.ts) 第 124 行用了 `NodeJS.HttpIncomingMessage["headers"]`，但 Node 22 类型里这个类型是 `IncomingMessage`，从 `node:http` 直接 import 即可
 - **TS strict 报 `RETRYABLE_STATUS` 声明但未使用**：第一次写分类时显式列了 RETRYABLE_STATUS 集合，但代码里其实只检查 NON_RETRYABLE_STATUS（不在 NON_RETRYABLE_STATUS 里且不是 2xx 就当可重试）。**删了显式集合**，注释写清「隐式可重试」逻辑——这样新增可重试状态码不用改代码
 - **真 API burst 没撞出 429**：20 并发 MiniMax-M3 全部 200。要撞需 50+ 并发，或换更小模型，或加 prompt 让 TPM 限制先撞
 - **端口 5176 EADDRINUSE**：多次跑 demo 没关进程，端口被占。`lsof -ti :5176 | xargs kill -9` 清掉
-- **维护模式批量改 demo 命名**：`demos/README.md` 表格 8 行是连续的，老字符串匹配因为第 23 行其实是 `demo:02-adapter`（不是 `demo:03-adapter` 我之前看错了）—— grep 时按文件名而不是按内容读会踩到
+- **维护模式批量改 demo 命名**：`apps/README.md` 表格 8 行是连续的，老字符串匹配因为第 23 行其实是 `demo:02-adapter`（不是 `demo:03-adapter` 我之前看错了）—— grep 时按文件名而不是按内容读会踩到
 
 ---
 
@@ -277,11 +277,10 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 
 ```bash
 # 本条对应 Demo
-cd demos && yarn demo:02-04-rate-limit       # mock 5 个场景 + 真 API 单次
-BURST=1 yarn demo:02-04-rate-limit           # 加并发 20 真请求（撞 429 用，会烧 token）
+cd apps && yarn app:02-04-rate-limit       # mock 5 个场景 + 真 API 单次
+BURST=1 yarn app:02-04-rate-limit           # 加并发 20 真请求（撞 429 用，会烧 token）
 ```
 
 ---
 
-- **Demo**：已落 `demos/02-LLM-API开发/04-Rate-Limit/` · `yarn demo:02-04-rate-limit`（mock 5 个 + 真 API 单次；`BURST=1` 加并发 20 撞 429）
-- **回填**：已增量 `apps/01-chatgpt-mini`（本条最小一刀：新增 [`src/retry.ts`](../../../apps/01-chatgpt-mini/src/retry.ts) 退避重试客户端 + [`src/index.ts`](../../../apps/01-chatgpt-mini/src/index.ts) 把 `chat.completions.create()` 套上 `retryWithBackoff`；catch 区分 AbortError / NonRetryableError / RetryExhaustedError；`LEARNING.md` 顶部地图 + 模块知识锚点 + 回填记录同步。**未做**：`server.ts`（HTTP + SSE 流中途 429）与 `index-anthropic.ts`（协议 B 错误码映射）留到模块 02 本地产出收口一起补）
+- **Demo**：已落 `apps/02-LLM-API开发/04-Rate-Limit/` · `yarn app:02-04-rate-limit`（mock 5 个 + 真 API 单次；`BURST=1` 加并发 20 撞 429）

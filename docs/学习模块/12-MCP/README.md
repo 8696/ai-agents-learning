@@ -1,15 +1,15 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / 项目 LEARNING.md
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/12-MCP/01-{短名}/README.md`
 
 # 模块 12 · MCP ⭐⭐⭐⭐⭐
 
 [← 11 Agent State / Workflow](../11-Agent-State-Workflow/README.md) · [13 Agent Framework →](../13-Agent-Framework/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」仍以项目 `LEARNING.md` 为准（行号会变）。
-> **项目当前地图**：`apps/04-research-agent/LEARNING.md`
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/12-MCP/01-{短名}/README.md` 为准。
+> **代码落点**：`apps/12-MCP/01-{短名}/`（学到再建；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo与五个项目分离)）以及要不要把本条增量回填进五个项目（[§5.3](../../../AGENTS.md#53-五个项目按条增量回填本地产出是收口)）。本地产出是验收收口，不是第一次灌全部代码。
+> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是验收收口，不是第一次灌全部代码。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
@@ -44,8 +44,8 @@
 
 ## 本地拆步
 
-> `apps/04-research-agent`：没有就新建（先问）并复制 `load-root-env.ts`。
+> 落到 `apps/12-MCP/01-{短名}/`。LLM 配置通过 `apps/load-root-env.ts` 读 `apps/.env`。
 
 1. 自写 MCP Server：≥2 个 Tool + 1 个 Resource
 2. 先 stdio，再 Streamable HTTP（至少 API Token 鉴权）
-3. 本项目 Agent 当 Client 调通；再接进 Cursor / Claude Code / Codex 之一
+3. 本 demo Agent 当 Client 调通；再接进 Cursor / Claude Code / Codex 之一

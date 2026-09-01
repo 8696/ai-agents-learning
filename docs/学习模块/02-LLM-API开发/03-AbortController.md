@@ -2,10 +2,9 @@
 
 > 对应模块：[模块 02 · LLM API 开发 ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 3 条
 
-- **来源**：本对话（§6.2 完整讲解 + 用户追问"是否看模型提供商" + 厂商行为对照 + demo `demos/02-LLM-API开发/03-AbortController/` 实证 + 项目回填 `apps/01-chatgpt-mini/src/{index.ts, server.ts}`）
+- **来源**：本对话（§6.2 完整讲解 + 用户追问"是否看模型提供商" + 厂商行为对照 + demo `apps/02-LLM-API开发/03-AbortController/` 实证）
 - **状态**：已沉淀
-- **Demo**：已落 [demos/02-LLM-API开发/03-AbortController/](../../../demos/02-LLM-API开发/03-AbortController/)（3 端点对照：流到底基线 / 收 N 帧就停 / 故意不传 signal；浏览器页面 + 后端日志）
-- **回填**：已增量 `apps/01-chatgpt-mini`（[src/index.ts](../../../apps/01-chatgpt-mini/src/index.ts) CLI 接 SIGINT + [src/server.ts](../../../apps/01-chatgpt-mini/src/server.ts) HTTP 接 `req.on('close')`）
+- **Demo**：已落 [apps/02-LLM-API开发/03-AbortController/](../../../apps/02-LLM-API开发/03-AbortController/)（3 端点对照：流到底基线 / 收 N 帧就停 / 故意不传 signal；浏览器页面 + 后端日志）
 
 > 各节写什么、怎么判断归哪一节、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -115,11 +114,11 @@ OpenAI / Anthropic SDK 接 AbortController 做两步：
 - 把 `signal` 传给底层 fetch / HTTP 客户端（**真正关 socket**）
 - SDK 自己再抛 `APIUserAbortError` 让你能 catch
 
-**catch 要双写**：`err.name === 'AbortError'`（Node fetch）vs `err.constructor?.name === 'APIUserAbortError'`（SDK 包过）。本项目 `apps/01-chatgpt-mini/src/{index.ts, server.ts}` 同时判这两种。
+**catch 要双写**：`err.name === 'AbortError'`（Node fetch）vs `err.constructor?.name === 'APIUserAbortError'`（SDK 包过）。本项目 `apps/00-环境准备/01-mini-app/src/{index.ts, server.ts}` 同时判这两种。
 
 ## 例子
 
-### 例子 1：CLI — 收到第一个 chunk 后 3 秒自动 abort（已回填到 `src/index.ts`）
+### 例子 1：CLI — 收到第一个 chunk 后 3 秒自动 abort（示意；可运行对照见小节 Demo）
 
 ```ts
 const controller = new AbortController();
@@ -163,7 +162,7 @@ main().catch((error: unknown) => {
 });
 ```
 
-### 例子 2：HTTP 服务端 — 收到第一个 chunk 后 3 秒自动 abort（已回填到 `src/server.ts`）
+### 例子 2：HTTP 服务端 — 收到第一个 chunk 后 3 秒自动 abort（示意；可运行对照见小节 Demo）
 
 ```ts
 const controller = new AbortController();
@@ -209,7 +208,7 @@ try {
 }
 ```
 
-**为什么不监听 `process.on('SIGINT')` / `req.on('close')`？**——本项目的回填**只**模拟"用户读了会儿中途取消"这一个场景，所以用 **3 秒自动定时**就够。生产里这两个监听**也常用**（CLI 用户按 Ctrl-C / 浏览器关页面），只是被本模块的回填缩到一个最小表达。
+**为什么不监听 `process.on('SIGINT')` / `req.on('close')`？**——本条 Demo **只**模拟"用户读了会儿中途取消"这一个场景，所以用 **3 秒自动定时**就够。生产里这两个监听**也常用**（CLI 用户按 Ctrl-C / 浏览器关页面），只是被本条缩到一个最小表达。**不要**把演示动作塞进模块 00 mini-app。
 
 ### 例子 3：浏览器关页面时取消流
 
@@ -237,7 +236,7 @@ for await (const chunk of stream) {
 }
 ```
 
-### 例子 5：Demo 三端点对照实证（[demos/02-LLM-API开发/03-AbortController/](../../../demos/02-LLM-API开发/03-AbortController/)）
+### 例子 5：Demo 三端点对照实证（[apps/02-LLM-API开发/03-AbortController/](../../../apps/02-LLM-API开发/03-AbortController/)）
 
 浏览器页面三个按钮：
 

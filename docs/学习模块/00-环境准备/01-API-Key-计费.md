@@ -4,8 +4,7 @@
 
 - **来源**：本对话（陪跑 Coach）；无外部 URL
 - **状态**：已沉淀
-- **Demo**：已落 `demos/00-环境准备/01-API-Key-计费/` · `yarn demo:00-01-api-key-billing`（看见 prompt_tokens / completion_tokens 分开）
-- **回填**：无（本条「去控制台看账单 / 订阅≠按量」不靠改项目；用量打印已在模块 00 本地产出的 `apps/01-chatgpt-mini`）
+- **Demo**：已落 `apps/00-环境准备/01-API-Key-计费/` · `yarn app:00-01-api-key-billing`（看见 prompt_tokens / completion_tokens 分开）
 
 ### 是什么
 
@@ -32,7 +31,7 @@
 
 Agent 从第一天就要盯用量。后面多轮对话把历史塞进 prompt、Tool 来回、RAG 把检索片段贴进去，**输入会暴涨**；模型一边想一边写，**输出通常比输入贵**。不知道这次请求花了多少、不知道去哪看账号花费，后面会突然烧钱还查不到是哪一次。
 
-ChatGPT Mini 流结束后打印 `usage`，就是把「这一枪打了多少发」钉在终端上。对不上，再去 [MiniMax 控制台](https://platform.minimaxi.com) 看账单。流式最后一包不一定带 `usage`（看厂商支不支持 `stream_options.include_usage`）；没有数字时，**控制台才是准的**。
+模块 00 mini-app 流结束后打印 `usage`，就是把「这一枪打了多少发」钉在终端上。对不上，再去 [MiniMax 控制台](https://platform.minimaxi.com) 看账单。流式最后一包不一定带 `usage`（看厂商支不支持 `stream_options.include_usage`）；没有数字时，**控制台才是准的**。
 
 模块 00 只验证链路：能发、能流、能看到用量。不在第一周比三家价格。
 
@@ -40,7 +39,7 @@ ChatGPT Mini 流结束后打印 `usage`，就是把「这一枪打了多少发�
 
 | 容易当成 | 其实是 |
 |----------|--------|
-| 网页能聊天 = 代码能调 API | 会员 Key ≠ 按量接口密钥。能进网页 ≠ `yarn dev` 能过鉴权。 |
+| 网页能聊天 = 代码能调 API | 会员 Key ≠ 按量接口密钥。能进网页 ≠ `yarn app:00-01-mini-cli-a` 能过鉴权。 |
 | Token Plan 订阅 Key | 填进 `MINIMAX_API_KEY` 会 401，不是 `baseURL` 写错。 |
 | 「发一条消息 = 收一次固定费」 | 按这条消息里的 Token 数算；同样意思中文通常件数更多（→ Token 那条）。 |
 | 国内站 / 海外站同一把环境 | 国内 `api.minimaxi.com`，海外 `*.minimax.io`。抄错域名 = 进错店。 |
@@ -67,7 +66,7 @@ ChatGPT Mini 流结束后打印 `usage`，就是把「这一枪打了多少发�
 
 **5. usage 和小票：口袋心算 vs 收银台扫描枪**
 
-跑 `yarn dev "你好"`，流结束后类似：
+跑 `yarn app:00-01-mini-cli-a "你好"`，流结束后类似：
 
 ```text
 prompt_tokens: …      ← 你送进去的
@@ -84,7 +83,7 @@ total_tokens: …
 ### 我追问过的
 
 - 问了：默认用中国区、现在用 MiniMax、后面还有 GLM → 答在「取舍」：模块 00 只接 MiniMax 按量 Key；智谱放到模块 02。中国区控制台 / API / 账单走国内站，不要写成海外 `*.minimax.io`。
-- 问了：配置放到公共地方，但不要抽共享包 → 答在「取舍」和 [密钥安全](./03-密钥安全.md)：Key 集中在 `apps/.env`，代码仍在各 app 里。
+- 问了：配置放到公共地方，但不要抽共享包 → 答在「取舍」和 [密钥安全](./03-密钥安全.md)：Key 集中在 `apps/.env`，代码仍在各 `apps/` 子文件夹里。
 
 ### 取舍
 

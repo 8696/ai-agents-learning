@@ -4,12 +4,12 @@
 
 [← 00 环境准备](../00-环境准备/README.md) · [02 LLM API 开发 →](../02-LLM-API开发/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」仍以项目 `LEARNING.md` 为准（行号会变）。
-> **项目当前地图**：无代码（笔记写在同目录各小节 MD）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以该小节 `apps/` README 为准。
+> **代码落点**：笔记为主。已落可运行 Demo：[`02-Token`](../../../apps/01-AI与LLM基础认知/02-Token/) · [`06-Embedding`](../../../apps/01-AI与LLM基础认知/06-Embedding/) · [`07-Temperature-Top-P`](../../../apps/01-AI与LLM基础认知/07-Temperature-Top-P/)。Transformer / Attention / Context 是伪代码，不建文件夹。
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo与五个项目分离)）以及要不要把本条增量回填进五个项目（[§5.3](../../../AGENTS.md#53-五个项目按条增量回填本地产出是收口)）。本地产出是验收收口，不是第一次灌全部代码。
+> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是验收收口，不是第一次灌全部代码。
 
 > 先按表从上到下看完（约 3～4 小时），再写笔记（本地产出）。不要推公式。
 
@@ -48,10 +48,10 @@
 
 **自测问题**：AI / ML / DL 是什么关系？Transformer 的 Self-Attention 在做什么？为什么 Context Window 有上限？Embedding 和 Token 有什么关系？当前 LLM 做不好哪几件事？
 
-**常见坑**：陷进 Transformer 数学推导（B 档内容），迟迟不写一行代码。设硬性上限。
+**常见坑**：陷进 Transformer 数学推导（B 档内容），迟迟不写一行代码。设硬性上限。Token / Temperature 该看见数字的已经落了 Demo；不要为 Attention 再起一个进程。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：⭐ 本模块几乎无代码，**必须出去补**
-- `LLM token explained` · `tiktoken 中文` — 用在线 tokenizer 数一段中英文
+**出门线索**（完整勾选表见 [小节进度](#小节进度)）：⭐ 本模块大部分是概念；**Token 用本地 tokenizer 数过、Temperature 跑过对照**就算代码侧够了
+- `LLM token explained` · `tiktoken 中文` — 跑 `yarn app:01-02-token`，或再用在线 tokenizer 对一下
 - `context window limit LLM` — 各模型文档的 Context 章节
 - `illustrated transformer` — Jay Alammar《The Illustrated Transformer》，**不要推公式**
 - `why LLM hallucinate` — 任意 10 min 科普视频
@@ -59,8 +59,8 @@
 
 ## 本地拆步
 
-> 本模块无代码。节奏变成本地 = 写 [本地产出](./11-本地产出.md)（对照上方验收）。各外部条的笔记已在同目录对应 MD。
+> 节奏变成本地 = 写 [本地产出](./11-本地产出.md)（对照上方验收）。不要把后面模块的 API / RAG 灌进本模块。
 
-1. 只改本模块小节 MD，不建 `apps/`、不改代码
-2. 对照验收，把综合笔记写入 [本地产出](./11-本地产出.md)
-3. 用 tokenizer 数一段中英文，把数字写进 [Token](./02-Token.md) 或本地产出；能向非技术的人解释幻觉再 `coach next`
+1. 对照验收扫一遍；Token / Embedding / Temperature 的 Demo 已在 `apps/01-…`，不必重做
+2. Transformer / Attention / Context 的机制伪代码在对应小节 MD，不新建 `apps/` 文件夹
+3. 把综合笔记写入 [本地产出](./11-本地产出.md)；能向非技术的人解释幻觉再 `coach next`
