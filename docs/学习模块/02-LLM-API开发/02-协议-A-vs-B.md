@@ -789,7 +789,7 @@ demos/02-LLM-API开发/03-adapter-demo/
 ```bash
 cd demos
 yarn install
-yarn demo:02-adapter    # 端口 5175
+yarn demo:02-03-adapter    # 端口 5175
 ```
 
 浏览器打开 `http://127.0.0.1:5175/`；切换「协议」下拉框在 A / B 之间，看 4 块显示区（thinking / answer / usage / 原始 JSON）的字段一致——**业务层永远看不到协议差异**。

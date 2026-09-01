@@ -15,7 +15,7 @@
 ```bash
 cd demos
 yarn install
-yarn demo:02-protocol-ab
+yarn demo:02-02-protocol-ab
 ```
 
 跑起来后浏览器打开 `http://127.0.0.1:5174/`，从**最上面到最下面**依次有 4 个面板（h1 标题下直接进入 thinking 差异对照）：

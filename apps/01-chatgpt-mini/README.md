@@ -10,13 +10,15 @@
 | 命令 | 文件 | 类型 | 协议 | SDK | 端点 |
 | ---- | ---- | ---- | ---- | --- | ---- |
 | `yarn dev` | `src/index.ts` | CLI 流式 | A · OpenAI Chat Completions | `openai` | `api.minimaxi.com/v1` |
+| `yarn dev --no-stream` | `src/index.ts` | CLI 一次性（非流式） | A · OpenAI Chat Completions | `openai` | `api.minimaxi.com/v1` |
 | `yarn dev:anthropic` | `src/index-anthropic.ts` | CLI 流式 | B · Anthropic Messages API | `@anthropic-ai/sdk` | `api.minimaxi.com/anthropic` |
 | `yarn dev:server` | `src/server.ts` | HTTP + SSE 服务端（浏览器聊天 UI） | A · OpenAI Chat Completions | `openai` | `api.minimaxi.com/v1` |
 
 自定义问题：
 
 ```bash
-yarn dev 什么是 Agent？
+yarn dev 什么是 Agent？                          # 流式（默认）
+yarn dev --no-stream 什么是 Agent？              # 一次性（非流式；用途：成本可控、自动化脚本）
 yarn dev:anthropic 什么是 Agent？
 
 # 浏览器聊天（推荐）：打开 http://127.0.0.1:3000/
@@ -26,6 +28,13 @@ yarn dev:server
 curl -N -X POST http://127.0.0.1:3000/api/chat \
   -H "Content-Type: application/json" \
   -d '{"message":"什么是 Agent？"}'
+```
+
+每次请求完会打印：
+
+```text
+Token 用量: { prompt: 12, completion: 280, total: 292 }
+估算成本：¥ 0.000292（单价 0.001 元/1k token，由 MINIMAX_PRICE_PER_1K 控制）
 ```
 
 ## 环境变量
@@ -48,12 +57,13 @@ yarn dev:anthropic    # CLI · 协议 B（流式，对照）
 yarn dev:server       # HTTP + SSE 服务端 · POST /api/chat
 ```
 
-| 变量 | CLI 协议 A | CLI 协议 B | HTTP 服务端 |
-| ---- | ---------- | ---------- | ----------- |
-| `MINIMAX_API_KEY` | ✅ 必填 | ✅ 必填（同一把 Key） | ✅ 必填 |
-| `MINIMAX_BASE_URL` / `MINIMAX_MODEL` | ✅ | — | ✅ |
-| `MINIMAX_ANTHROPIC_BASE_URL` / `MINIMAX_ANTHROPIC_MODEL` | — | ✅（有默认值） | — |
-| `PORT`（HTTP 服务端） | — | — | 默认 `3000` |
+| 变量 | CLI 协议 A 流式 | CLI 协议 A 非流式 | CLI 协议 B | HTTP 服务端 |
+| ---- | -------------- | ---------------- | ---------- | ----------- |
+| `MINIMAX_API_KEY` | ✅ 必填 | ✅ 必填 | ✅ 必填（同一把 Key） | ✅ 必填 |
+| `MINIMAX_BASE_URL` / `MINIMAX_MODEL` | ✅ | ✅ | — | ✅ |
+| `MINIMAX_ANTHROPIC_BASE_URL` / `MINIMAX_ANTHROPIC_MODEL` | — | — | ✅（有默认值） | — |
+| `MINIMAX_PRICE_PER_1K` | ✅（成本估算） | ✅（成本估算） | — | — |
+| `PORT`（HTTP 服务端） | — | — | — | 默认 `3000` |
 
 类型检查：`yarn typecheck`
 
@@ -61,8 +71,9 @@ yarn dev:server       # HTTP + SSE 服务端 · POST /api/chat
 
 > 回填后**改写**本节（现在能跑什么），不要追加「模块 02 验收」这类历史清单。勾选进度在 [学习总览](../../docs/06-学习总览.md) 和对应模块 README。
 
-- `yarn dev` 流式回复成功（协议 A）
-- `yarn dev:anthropic` 协议 B 对照入口可用（对照验收在模块 02 协议 A vs B 那条）
-- `yarn dev:server` 起一个 HTTP 服务端；浏览器打开 http://127.0.0.1:3000/ 直接聊天；`POST /api/chat` 返回 SSE 流式；`GET /health` 返回当前模型与端点（模块 02 Streaming/SSE 那条对应）
-- 控制台能看到 token 用量（或知道去控制台查）
+- `yarn dev` 流式回复（协议 A） + 3 秒自动 abort 模拟中途取消 + 429/5xx 退避重试
+- `yarn dev --no-stream` 一次性回复（协议 A） + 同样走 retry + 打印 token + 估算成本
+- `yarn dev:anthropic` 协议 B 对照入口可用 + 同样走 retry + 3 秒自动 abort（对照验收在模块 02 协议 A vs B 那条）
+- `yarn dev:server` 起一个 HTTP 服务端；浏览器打开 http://127.0.0.1:3000/ 直接聊天；`POST /api/chat` 返回 SSE 流式；`GET /health` 返回当前模型与端点（模块 02 Streaming/SSE + 03-AbortController 那两条对应）
+- 控制台能看到 token 用量 + 估算成本（`MINIMAX_PRICE_PER_1K` 控制单价）
 - `apps/.env` 不进 git

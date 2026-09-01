@@ -7,10 +7,10 @@
 ```bash
 cd demos
 yarn install      # 第一次或新加依赖时
-yarn demo:03-abort-controller
+yarn demo:02-03-abort-controller
 ```
 
-打开浏览器 `http://127.0.0.1:5175/`，页面有三个按钮（端口由 `demos/02-LLM-API开发/03-AbortController/index.ts` 默认 5175；可用 `PORT=5180 yarn demo:03-abort-controller` 改）。
+打开浏览器 `http://127.0.0.1:5175/`，页面有三个按钮（端口由 `demos/02-LLM-API开发/03-AbortController/index.ts` 默认 5175；可用 `PORT=5180 yarn demo:02-03-abort-controller` 改）。
 
 ## 看什么
 

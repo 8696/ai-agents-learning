@@ -9,7 +9,7 @@
 ```bash
 cd demos
 yarn install
-yarn demo:01-token
+yarn demo:01-02-token
 ```
 
 不调 API、不消耗额度。这不是五个项目。

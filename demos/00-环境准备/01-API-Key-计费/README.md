@@ -7,7 +7,7 @@
 ```bash
 cd demos
 yarn install
-yarn demo:00-api-key-billing
+yarn demo:00-01-api-key-billing
 ```
 
 需要已填 `apps/.env` 的 `MINIMAX_API_KEY`。这不是五个项目，不要复制进 `apps/01-chatgpt-mini`。

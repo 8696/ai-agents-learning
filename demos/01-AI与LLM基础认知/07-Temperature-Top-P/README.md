@@ -7,7 +7,7 @@
 ```bash
 cd demos
 yarn install
-yarn demo:01-temperature
+yarn demo:01-07-temperature
 ```
 
 需要已填 `apps/.env` 的 `MINIMAX_API_KEY`。会打 4 次短请求。若模型夹了思考过程，脚本会剥掉再比「四个字」本身。这不是五个项目。

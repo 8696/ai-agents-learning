@@ -19,7 +19,7 @@
 ```bash
 cd demos
 yarn install
-yarn demo:02-adapter
+yarn demo:02-03-adapter
 ```
 
 浏览器打开 `http://127.0.0.1:5175/`，**两个面板**：

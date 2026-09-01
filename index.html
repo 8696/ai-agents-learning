@@ -176,10 +176,12 @@
       font-weight: 600;
     }
     .topbar .menu-btn:hover { background: var(--ink-2); border-color: #6b7787; }
-    body:not(.nav-open) .topbar .menu-btn {
-      background: var(--accent-bar);
-      border-color: var(--accent-bar);
-      color: var(--ink);
+    @media (min-width: 901px) {
+      body:not(.nav-open) .topbar .menu-btn {
+        background: var(--accent-bar);
+        border-color: var(--accent-bar);
+        color: var(--ink);
+      }
     }
 
     .layout {

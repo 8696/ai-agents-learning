@@ -14,7 +14,7 @@
 ```bash
 cd demos
 yarn install
-yarn demo:02-streaming-sse
+yarn demo:02-01-streaming-sse
 ```
 
 跑起来后**两个窗口对照看**：

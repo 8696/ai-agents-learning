@@ -241,7 +241,7 @@ data: {"id":"chatcmpl-9X","object":"chat.completion.chunk","created":1700000000,
 
 ```bash
 cd demos
-yarn demo:02-streaming-sse
+yarn demo:02-01-streaming-sse
 ```
 
 打开浏览器 `http://127.0.0.1:5173/`，点页面里三个按钮对照；后端控制台同步打印每一帧 SSE 原文（**真实版会打 OpenAI 原始 chunk 全文**，含 `id` / `object` / `model` / `service_tier` / `base_resp` 等）。

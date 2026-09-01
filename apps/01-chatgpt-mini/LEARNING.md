@@ -24,21 +24,35 @@
 | 8 | **Token = 钱** | `prompt_tokens` + `completion_tokens`；流式时只在**最后一帧**报 | [`src/index.ts`](./src/index.ts#L65-L66) · [`src/index.ts`](./src/index.ts#L82-L93) |
 | 9 | **SSE 帧 = `data: {json}\n\n`** | `\n\n` 是帧分隔；`data: [DONE]` 是结束帧；body 必须先 buffer 再 parse | [`src/server.ts`](./src/server.ts) |
 | 10 | **OpenAI SDK chunk 是 zod 类实例** | 直接 `JSON.stringify(chunk)` 会得 `{}`；要 `JSON.parse(JSON.stringify(...))` 才能原样转发 | [`src/server.ts`](./src/server.ts) |
+| 11 | **可重试 vs 不可重试** | `retryWithBackoff` 默认 429 / 408 / 5xx / 网络错走退避；400 / 401 / 403 / 404 / 422 直接抛 NonRetryableError | [`src/retry.ts`](./src/retry.ts) |
+| 12 | **流式 vs 非流式 + 成本估算** | 流式 = `stream:true` + `for await` + delta；非流式 = 一次性 `create()` 返回 `ChatCompletion`；成本 = `total_tokens / 1000 × MINIMAX_PRICE_PER_1K` | [`src/index.ts`](./src/index.ts#L92-L130) · [`src/index.ts`](./src/index.ts#L141-L155) |
 
 ### 必须能手画的数据流（闭卷）
 
-CLI（协议 A）：
+CLI（协议 A · 流式，默认）：
 
 ```text
 yarn dev "你好"
-  → process.argv 得到 userMessage
+  → process.argv 拿 userMessage（去掉 --no-stream）
   → dotenv 读 apps/.env
-  → Zod 校验 MINIMAX_*
+  → Zod 校验 MINIMAX_* (含 MINIMAX_PRICE_PER_1K)
   → new OpenAI({ apiKey, baseURL })   // baseURL 指向 MiniMax
-  → POST .../chat/completions { messages, stream: true }
+  → retryWithBackoff 包 POST .../chat/completions { messages, stream: true }
   → 服务端逐 chunk 推送
   → for await: 取 choices[0].delta.content → stdout（不换行）
-  → 流结束: usage 或提示去控制台
+  → 流结束: printUsageAndCost(usage) → prompt / completion / total + 估算成本
+  → 收到第一个 chunk 后 3 秒自动 controller.abort()（模拟用户中途取消）
+```
+
+CLI（协议 A · 非流式，`--no-stream`）：
+
+```text
+yarn dev --no-stream "你好"
+  → 解析 argv → useStream = false
+  → retryWithBackoff<ChatCompletion> 包 POST .../chat/completions { messages }  // 不传 stream:true
+  → 一次性返回 ChatCompletion（含 message.content + usage）
+  → 打印 message.content + printUsageAndCost(usage)
+  → 不挂自动 abort（一次性返回没法中途取消）
 ```
 
 HTTP + SSE（协议 A）：
@@ -60,6 +74,8 @@ yarn dev:server
 4. **流式和非流式差在哪？** → 非流式一次返回全文；流式边生成边推，TTFT 更短。
 5. **SSE 一帧长什么样？怎么判结束？** → `Content-Type: text/event-stream`，每帧 `data: {json}\n\n`，遇 `data: [DONE]\n\n` 退出循环。
 6. **为什么不能 `JSON.stringify(chunk)` 直接转发？** → OpenAI SDK v4 的 chunk 是 zod 类实例（`ChatCompletionChunk`），属性不通过 enumerable 暴露；必须 `JSON.parse(JSON.stringify(chunk))` 彻底 plain 化再 stringify。
+7. **`--no-stream` 和流式差在哪？什么时候用？** → 流式边生成边推，TTFT 短、用户体验好（聊天）；非流式一次性返回，**总耗时已知** + 用量固定，适合自动化脚本 / 批量任务 / 成本敏感场景。
+8. **成本估算怎么算？单价哪来？** → `cost = total_tokens / 1000 × MINIMAX_PRICE_PER_1K`；单价 env 化（不写死代码），按 vendor 控制台实际值改。粗估可用占位价 0.001 元/1k token（MiniMax-M3）。
 
 ### 本模块最容易踩的 3 个坑
 
@@ -76,7 +92,7 @@ yarn dev:server
       ↓
 模块 01            Token、Context Window（笔记，不改本项目）
       ↓
-模块 02            Streaming/SSE 已回填（HTTP + SSE 服务端） → 协议 A↔B 对照 + AbortController 已回填 + 429
+模块 02            Streaming/SSE 已回填 → 协议 A↔B 对照 + AbortController 已回填 + 429 已回填（CLI 协议 A 流式 + 非流式）
       ↓
 模块 03–04         system prompt + Zod 约束模型 JSON
       ↓
@@ -110,7 +126,14 @@ yarn dev:server
   - 概念/取舍/踩坑见 [Streaming / SSE 小节 MD](../../docs/学习模块/02-LLM-API开发/01-Streaming-SSE.md)
 - **模块 02 · 02-协议-A-vs-B（已落）**：项目协议 B 入口 [`src/index-anthropic.ts`](./src/index-anthropic.ts) 在模块 00 已超前放置；模块 02 本地拆步第 5 步「跑 yarn dev:anthropic 对照协议 A vs B（入口若已在则不必新装 SDK）」—— **这一刀已落在模块 00**；双协议字段对照、role 位置、usage 字段名映射等见 [02-协议-A-vs-B 小节 MD](../../docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md)
 - **模块 02 · 03-AbortController（已落）**：CLI 协议 A [`src/index.ts`](./src/index.ts) + CLI 协议 B [`src/index-anthropic.ts`](./src/index-anthropic.ts) + HTTP [`src/server.ts`](./src/server.ts) 三处各自在「首个文本块到时」（协议 A = 第一个 for await chunk；协议 B = 第一个 `stream.on('text')` 事件；HTTP = 第一个 res.write）启 `setTimeout(3000)` → `controller.abort()`，模拟"用户读了会儿中途取消"；`signal` 作为 SDK 的第二个 options 参数传入（`chat.completions.create` / `messages.stream` / `messages.create` 三处都接受）；catch `AbortError` / `APIUserAbortError` 时 HTTP 端发 `{event:"aborted", reason:"simulated-user-cancel-3s"}` 帧 + `res.end()`（非错误结束），CLI 端打印「已中止」并 `exit 0`；详见 [03-AbortController 小节 MD](../../docs/学习模块/02-LLM-API开发/03-AbortController.md)
-- **模块 02 · 04-Rate-Limit（待学）**：429 / 超时 / 网络错误三分支（可重试 vs 不可重试）
+- **模块 02 · 04-Rate-Limit（已落）**：CLI 协议 A [`src/index.ts`](./src/index.ts) 把 `chat.completions.create()` 套上 [`src/retry.ts`](./src/retry.ts) 的 `retryWithBackoff`；429 / 408 / 5xx / 网络错 → 指数退避 + jitter + 听 `Retry-After`（base=500ms、maxDelay=8s、maxAttempts=3、maxTotalTime=60s）；400 / 401 / 403 / 404 / 422 → 直接抛 `NonRetryableError`，不重试；3 次都失败 → 抛 `RetryExhaustedError`；外部 `controller.signal` 同时传给 retry（用户取消时立刻停手，不重试）；catch 区分三类错误给出对应提示；流式 + 非流式两条路径都套了。详见 [04-Rate-Limit 小节 MD](../../docs/学习模块/02-LLM-API开发/04-Rate-Limit.md)
+- **模块 02 · 05-本地产出（已落，验收收口）**：
+  - **--no-stream 走非流式**：argv 解析 `--no-stream` flag → `useStream=false` → 调 `chat.completions.create({messages})`（不传 stream:true）→ 一次性返回 `ChatCompletion`（含 `message.content` + `usage`）；不走 3 秒自动 abort（一次性返回没"中途"可言）
+  - **printUsageAndCost(usage)**：算 `cost = total_tokens / 1000 × MINIMAX_PRICE_PER_1K`；单价 env 化（Zod `MINIMAX_PRICE_PER_1K`，默认 0.001 = MiniMax-M3 占位价）
+  - **logRetry(attempts)**：attempts > 1 时打印 `[retry] 共 N 次 attempt：200 → 429 → 200`，学习 / 调试用
+  - **验收对照**：6 条全部 ✅（流式/非流式 ✅、逐字渲染 ✅、abort ✅、usage+cost ✅、429/超时/网络错 ✅、协议 A/B ✅）
+  - **LEARNING.md 数据流** 增 `useStream=false` 分支；**关键问题** 加 Q7 (--no-stream 何时用) + Q8 (成本估算)
+  - **详见** [05-本地产出 小节 MD](../../docs/学习模块/02-LLM-API开发/05-本地产出.md)
 
 ---
 
@@ -121,10 +144,10 @@ yarn dev:server
 3. **校验**：`envSchema.parse(process.env)`；失败则退出并打印 Zod 中文错误。
 4. **建客户端**：`new OpenAI({ apiKey, baseURL })`，请求走 MiniMax 国内 endpoint。
 5. **拼消息**：CLI 或默认句 → `messages: [{ role: "user", content }]`。
-6. **发请求**：`chat.completions.create({ stream: true, stream_options: { include_usage: true } })`。
-7. **收流**：`for await`；每个 `delta.content` 写入 stdout。
-8. **收尾**：换行；有 `usage` 则打印，否则提示去控制台。
-9. **错误**：`main().catch` → `process.exit(1)`。
+6. **发请求**：`retryWithBackoff` 包一层 `chat.completions.create({ stream: true, stream_options: { include_usage: true } })`；429 / 408 / 5xx / 网络错 → 退避；400 / 401 / 403 / 404 / 422 → `NonRetryableError`（不重试）。`--no-stream` 时不传 stream:true，一次性返回 `ChatCompletion`。
+7. **收流**：流式路径 `for await`；每个 `delta.content` 写入 stdout。非流式路径直接打印 `completion.choices[0].message.content`。
+8. **收尾**：换行；有 `usage` 则 `printUsageAndCost`（token 数 + 估算成本）；流式若无 usage 提示去控制台查。
+9. **错误**：`main().catch` 区分 AbortError（exit 0）/ `NonRetryableError`（exit 1 + 提示）/ `RetryExhaustedError`（exit 1 + 退避耗尽状态码）/ 其他（exit 1）。
 
 HTTP + SSE（`yarn dev:server` → `tsx src/server.ts`）：
 
@@ -164,9 +187,10 @@ yarn dev:server  →  createServer(:3000)  →  POST /api/chat
 | ---- | ---- |
 | `src/index.ts` | 协议 A：`openai` + `/v1` → `chat.completions` 流式（CLI，模块 00 验收） |
 | `src/index-anthropic.ts` | 协议 B 对照入口：`@anthropic-ai/sdk` + `/anthropic`（CLI；模块 02 协议 A vs B 那条验收）+ 首个 `text` 事件后 3 秒自动 abort（模块 02 03-AbortController） |
-| `src/server.ts` | HTTP + SSE 服务端：GET / 返回浏览器聊天页；GET /health 健康检查；POST /api/chat → 协议 A 流式转发为 SSE + **第一个 chunk 后 3 秒自动 abort**（模块 02 Streaming/SSE + 03-AbortController 那两条） |
+| `src/server.ts` | HTTP + SSE 服务端：GET / 返回浏览器聊天页；GET /health 健康检查；POST /api/chat → 协议 A 流式转发为 SSE + **第一个 chunk 后 3 秒自动 abort**（模块 02 Streaming/SSE + 03-AbortController 那两条；**04-Rate-Limit 待补**：HTTP 路径还没套 retry，需处理流中途 429） |
 | `public/index.html` | 浏览器聊天 UI：fetch + getReader + 按 `\n\n` 切帧 + 累加 `delta.content`（最小 SSE 客户端；逐字渲染 + 显示 usage） |
 | `src/load-root-env.ts` | 共用 dotenv 加载 `apps/.env`；新建 app 时复制此文件 |
+| `src/retry.ts` | 退避重试客户端（模块 02 · 04-Rate-Limit）：`retryWithBackoff` + `NonRetryableError` + `RetryExhaustedError`；可重试 429 / 408 / 5xx / 网络错、不可重试 400 / 401 / 403 / 404 / 422；泛型 `<T>` 支持流式 / 非流式；CLI 协议 A 流式 + 非流式两条路径已套；`server.ts`（HTTP）与 `index-anthropic.ts`（协议 B）**待本地产出收口补** |
 | `apps/.env` | `MINIMAX_*` 运行时配置 |
 | `apps/.env.example` | 变量模板与智谱预留 |
 | `package.json` | 依赖；`engines.node` ≥22；`yarn dev` / `yarn dev:anthropic` / `yarn dev:server` / `yarn typecheck` |
@@ -177,4 +201,4 @@ yarn dev:server  →  createServer(:3000)  →  POST /api/chat
 | 模块 | 加了什么 |
 | ---- | -------- |
 | 00 | 项目初始化；协议 A 验收入口；协议 B 对照入口（超前，02 再验收）；`apps/.env` 约定 |
-| 02 | 模块 02 / Streaming-SSE：新增 [`src/server.ts`](./src/server.ts)（HTTP + SSE；CLI 保留） · 模块 02 / 03-AbortController：[`src/index.ts`](./src/index.ts)、[`src/index-anthropic.ts`](./src/index-anthropic.ts) 与 [`src/server.ts`](./src/server.ts) 各自在「首个文本块到时」`setTimeout(3000)` 自动 `controller.abort()`；signal 作为 SDK options 第二参 |
+| 02 | 模块 02 / Streaming-SSE：新增 [`src/server.ts`](./src/server.ts)（HTTP + SSE；CLI 保留） · 模块 02 / 03-AbortController：[`src/index.ts`](./src/index.ts)、[`src/index-anthropic.ts`](./src/index-anthropic.ts) 与 [`src/server.ts`](./src/server.ts) 各自在「首个文本块到时」`setTimeout(3000)` 自动 `controller.abort()`；signal 作为 SDK options 第二参 · 模块 02 / 04-Rate-Limit：新增 [`src/retry.ts`](./src/retry.ts)（退避重试客户端）；[`src/index.ts`](./src/index.ts) 把 `chat.completions.create()` 套上 `retryWithBackoff`；catch 区分 AbortError / NonRetryableError / RetryExhaustedError · 模块 02 / 05-本地产出收口：[`src/index.ts`](./src/index.ts) 加 `--no-stream` flag 走非流式；新增 `printUsageAndCost`（基于 `MINIMAX_PRICE_PER_1K` 单价算成本）；`logRetry` 打 retry 链路；`server.ts` 和 `index-anthropic.ts` 待后续模块回填时再补 retry |
