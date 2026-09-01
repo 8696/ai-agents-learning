@@ -2,13 +2,14 @@
 
 从 0 到 1 学 **AI Agent 开发**：一条可执行路线 + 最多五个动手项目。面向前端转 Agent，主线是 **TypeScript + Node.js**，调用云端模型 API，不训练模型。
 
-根目录没有业务应用。打开仓库先分清两件事：
+根目录没有五个项目的业务应用。打开仓库先分清三件事：
 
 
 |                 | 是什么              | 去哪                            |
 | --------------- | ---------------- | ----------------------------- |
 | **学什么、怎么验收**    | 路线、模块、题目、笔记      | `[docs/](docs/00-目录.md)`      |
-| **代码落哪、助手怎么陪跑** | 何时建 `apps/`、怎么回填 | 本页 + `[AGENTS.md](AGENTS.md)` |
+| **五个项目代码落哪** | 何时建 `apps/`、怎么回填 | 本页 + `[AGENTS.md](AGENTS.md)` §4–5 |
+| **小节 Demo** | 每条外部学完判断要不要可运行小样例 | `[AGENTS.md §5.2](AGENTS.md#52-小节-demo与五个项目分离)` · `[demos/](demos/)` |
 
 
 `docs/` 可以单独拿走当总纲。拿走之后，文档里的「ChatGPT Mini」等是**作品名**，本仓库路径以本页为准。
@@ -34,7 +35,7 @@ cd ai-agents-learning
 
 1. 读 `[docs/02-怎么用.md](docs/02-怎么用.md)`（含默认选型），路线见 `[docs/03-学习路线.md](docs/03-学习路线.md)`。
 2. `cd apps && nvm use`（推荐 Node 22，**最低 ≥22**），`cp .env.example .env`，填 Key。包管理用 **yarn**。
-3. 对助手说 `coach start`。之后按模块：**外部**（概念 → 写入该条小节 MD）→ **本地**（验收 + `{NN}-本地产出.md`；有代码则更新该 app 的 `LEARNING.md` / `README.md`）→ 才进下一模块。禁止跳条。
+3. 对助手说 `coach start`。之后按模块：**外部**（概念 → 写入该条小节 MD → **判断本条 Demo**（`demos/`）**以及要不要把本条这一刀增量回填进五个项目**）→ **本地**（验收**收口** + `{NN}-本地产出.md`；有代码则更新该 app 的 `LEARNING.md` / `README.md`）→ 才进下一模块。禁止跳条。不要把整模块代码攒到最后一节才一次性写。
 
 
 | 你说             | 它做什么                      |
@@ -55,17 +56,18 @@ cd ai-agents-learning
 
 ## 仓库结构
 
-不抽共享包，不上 monorepo。每个 `apps/*` 自己有 `package.json`，**学到再创建**，禁止第 6 个 app。共用配置只放在 `apps/`：`.nvmrc`、`.env.example`、`tsconfig.base.json`。
+不抽共享包，不上 monorepo。每个 `apps/*` 自己有 `package.json`，**学到再创建**，禁止第 6 个 app。小节教学 Demo 在 `demos/`（不是第 6 个 app；条与条隔离）。共用配置只放在 `apps/`：`.nvmrc`、`.env.example`、`tsconfig.base.json`。
 
 ```text
 ai-agents-learning/
 ├── README.md          ← 给人看（本页）
-├── AGENTS.md          ← 给 AI 看（建目录、coach、写回笔记）
-├── RESET.md           ← 清进度 / 清 apps（按需打开，非日常）
+├── AGENTS.md          ← 给 AI 看（建目录、coach、写回笔记、小节 Demo）
+├── RESET.md           ← 清进度 / 清 apps / 清 demos（按需打开，非日常）
 ├── docs/              ← 学习文档
 │   ├── 00-目录.md
 │   ├── 01–07          ← 协议 / 怎么用 / 路线 / 题库 / 资源 / 总览 / 术语
 │   └── 学习模块/      ← 模块 00–23：一模块一文件夹，一小节一个 MD
+├── demos/             ← 小节 Demo（学到该条且判断要可运行才建内容）
 └── apps/
     ├── .nvmrc · .env.example · tsconfig.base.json
     ├── 01-chatgpt-mini/     ← 模块 00 新建
@@ -75,7 +77,7 @@ ai-agents-learning/
     └── 05-coding-agent/     ← 模块 15
 ```
 
-新能力能加进已有 app 就加进去。细节见 `AGENTS.md` §4–5。
+新能力能加进已有 app 就加进去。五个项目见 `AGENTS.md` §4–5；小节 Demo 见 §5.2。
 
 
 | 项目              | 目录                        | 主要模块                             |
@@ -87,7 +89,7 @@ ai-agents-learning/
 | Coding Agent    | `apps/05-coding-agent`    | 15、16、20，回填 22、23                |
 
 
-每个已建项目：**只有** `README.md`（现在怎么跑）和 `LEARNING.md`（当前代码地图）两份，代码一改就改写这两份。概念笔记在 `docs/学习模块/` 对应小节 MD，**不因项目迭代而改成现在的全貌**。
+每个已建项目：**只有** `README.md`（现在怎么跑）和 `LEARNING.md`（当前代码地图）两份，代码一改就改写这两份。概念笔记在 `docs/学习模块/` 对应小节 MD，**不因项目迭代而改成现在的全貌**。外部小节的可运行小样例在 `demos/`，和五个项目分开，也不和其他小节互相引用。
 
 跑 ChatGPT Mini（模块 00 本地建好之后）：`cd apps && nvm use`，配好 `.env`，再 `cd 01-chatgpt-mini && yarn install && yarn dev`。
 

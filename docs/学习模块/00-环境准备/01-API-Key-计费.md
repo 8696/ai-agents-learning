@@ -4,6 +4,8 @@
 
 - **来源**：本对话（陪跑 Coach）；无外部 URL
 - **状态**：已沉淀
+- **Demo**：已落 `demos/00-环境准备/01-API-Key-计费/` · `yarn demo:00-api-key-billing`（看见 prompt_tokens / completion_tokens 分开）
+- **回填**：无（本条「去控制台看账单 / 订阅≠按量」不靠改项目；用量打印已在模块 00 本地产出的 `apps/01-chatgpt-mini`）
 
 ### 是什么
 
