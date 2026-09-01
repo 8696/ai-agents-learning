@@ -19,6 +19,9 @@ Key 仍只读 `apps/.env`。Demo 判断见 [AGENTS.md §5.2](../AGENTS.md#52-小
 | `yarn demo:01-token` | 中英文 Token 数（不调 API） |
 | `yarn demo:01-temperature` | 同一 prompt，温度 0 vs 1.2 |
 | `yarn demo:02-streaming-sse` | SSE 帧长什么样 + 流式 vs 一次性 TTFT 对照（不调 API） |
+| `yarn demo:02-protocol-ab` | MiniMax-M3 同 Key 跑协议 A vs B（OpenAI / Anthropic 双端点流式 + 一次性 + thinking 4 组对照） |
+| `yarn demo:02-adapter` | 适配层示例（不调 API） |
+| `yarn demo:03-abort-controller` | AbortController 三端点对照：流到底 / 收 N 帧就停 / 故意不传 signal |
 
 ```bash
 cd demos

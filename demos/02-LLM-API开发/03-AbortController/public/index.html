@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AbortController Demo · 客户端停 ≠ 服务端停</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { font-size: 20px; }
+  .small { color: #666; font-size: 13px; }
+  .row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; align-items: center; }
+  button { padding: 8px 16px; border: 1px solid #ccc; background: #fafafa; cursor: pointer; border-radius: 4px; font-size: 14px; }
+  button:hover { background: #f0f0f0; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.primary { background: #2563eb; color: white; border-color: #2563eb; }
+  button.primary:hover { background: #1d4ed8; }
+  button.danger { background: #dc2626; color: white; border-color: #dc2626; }
+  button.danger:hover { background: #b91c1c; }
+  button.danger-outline { background: white; color: #dc2626; border-color: #dc2626; }
+  button.danger-outline:hover { background: #fee2e2; }
+  input[type="number"] { width: 60px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; }
+  .card { border: 1px solid #e5e5e5; border-radius: 6px; padding: 12px; margin: 12px 0; background: #fafafa; }
+  .card h3 { margin: 0 0 8px 0; font-size: 14px; }
+  .output { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 4px; font-family: "SF Mono", Monaco, monospace; font-size: 12px; white-space: pre-wrap; min-height: 60px; max-height: 300px; overflow-y: auto; }
+  .stat { display: inline-block; padding: 2px 8px; background: #e0e7ff; border-radius: 3px; font-size: 12px; margin-right: 4px; }
+  .stat.warn { background: #fee2e2; }
+  .stat.ok { background: #d1fae5; }
+  .stat.dim { background: #e5e7eb; color: #6b7280; }
+</style>
+</head>
+<body>
+<h1>AbortController Demo · 客户端停 ≠ 服务端停</h1>
+<p class="small">
+  三组对照：<b>流到底</b>（基线）/ <b>收 N 帧就停</b>（客户端按钮触发 abort）/ <b>故意不传 signal</b>（模拟"忘了传 signal"）。
+  看每组的<b>帧数 / 耗时 / usage</b>，理解 abort 是关客户端读取 + 关 socket，**已生成的 token 照算钱**。
+</p>
+
+<div class="card">
+  <h3>控制面板</h3>
+  <div class="row">
+    <label class="small">按钮 ② 用：收几帧就停：</label>
+    <input type="number" id="abortAfterFrames" value="5" min="1" max="50">
+  </div>
+  <div class="row">
+    <button class="primary" id="btnFull">① 流到底（基线）</button>
+    <button class="danger" id="btnCancel">② 收 N 帧就停</button>
+    <button id="btnNoSignal">③ 故意不传 signal</button>
+  </div>
+  <div class="row">
+    <span class="small">关掉 / 切走这个页面也会触发 abort（pagehide 监听）</span>
+  </div>
+</div>
+
+<div class="card">
+  <h3>① 流到底（基线 / /api/full）</h3>
+  <div class="row">
+    <span class="stat" id="fullFrameCount">帧数 0</span>
+    <span class="stat" id="fullElapsed">耗时 -</span>
+    <span class="stat" id="fullUsage">usage -</span>
+    <span class="stat dim" id="fullStatus">未开始</span>
+  </div>
+  <div class="output" id="fullOutput">（点按钮开始）</div>
+</div>
+
+<div class="card">
+  <h3>② 收 N 帧就停（/api/cancel-after-frames）</h3>
+  <div class="row">
+    <button class="danger-outline" id="btnManualAbort" disabled>✋ 立即取消（abort）</button>
+    <span class="small">演示：服务端到 N 帧自动 abort；或中途点这个按钮手动 abort</span>
+  </div>
+  <div class="row">
+    <span class="stat" id="cancelFrameCount">帧数 0</span>
+    <span class="stat" id="cancelElapsed">耗时 -</span>
+    <span class="stat warn" id="cancelUsage">usage -</span>
+    <span class="stat dim" id="cancelStatus">未开始</span>
+  </div>
+  <div class="output" id="cancelOutput">（点按钮 ② 开始；中途可点"立即取消"按钮手动 abort）</div>
+</div>
+
+<div class="card">
+  <h3>③ 故意不传 signal（/api/no-signal-abort）</h3>
+  <div class="row">
+    <span class="stat" id="nsFrameCount">帧数 0</span>
+    <span class="stat" id="nsElapsed">耗时 -</span>
+    <span class="stat" id="nsUsage">usage -</span>
+    <span class="stat dim" id="nsStatus">未开始</span>
+  </div>
+  <div class="output" id="nsOutput">（点按钮开始；5s 后服务端 res.end()，但 SDK 没收到 abort，可能继续跑）</div>
+</div>
+
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+
+  function setOutput(id, text) { $(id).textContent = text; }
+  function appendOutput(id, text) { $(id).textContent += text; }
+
+  function resetCard(prefix) {
+    $(prefix + 'FrameCount').textContent = '帧数 0';
+    $(prefix + 'Elapsed').textContent = '耗时 -';
+    $(prefix + 'Usage').textContent = 'usage -';
+    $(prefix + 'Status').textContent = '进行中';
+    $(prefix + 'Status').className = 'stat dim';
+    setOutput(prefix + 'Output', '');
+  }
+
+  // 通用 SSE 消费器
+  //   prefix    : UI 卡片 id 前缀（full / cancel / ns）
+  //   endpoint  : 后端路由
+  //   body      : POST body（undefined = {}）
+  //   controller: AbortController 实例；undefined 表示"不传 signal"
+  //   onEvent   : 收到每帧回调（拿到 evt，可做自定义渲染）
+  function consumeSSE(prefix, endpoint, body, controller, onEvent) {
+    const t0 = performance.now();
+    let frameCount = 0;
+    let aborted = false;
+    let lastReason = '';
+
+    // 信号：仅当 controller 有才传（按钮 3 故意不传）
+    const signal = controller ? controller.signal : undefined;
+
+    return fetch('/api/' + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body ?? {}),
+      signal,
+    }).then(async (res) => {
+      if (!res.ok) {
+        $(prefix + 'Status').textContent = '❌ HTTP ' + res.status;
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break; // 服务端正常 res.end() → EOF → 走这里（不抛错）
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const frame = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const m = frame.match(/^data: (.*)$/m);
+          if (!m) continue;
+          if (m[1] === '[DONE]') continue;
+          let evt;
+          try { evt = JSON.parse(m[1]); } catch { continue; }
+          if (onEvent) onEvent(evt);
+          if (evt.event === 'delta') {
+            frameCount++;
+            appendOutput(prefix + 'Output', evt.content);
+            $(prefix + 'FrameCount').textContent = '帧数 ' + frameCount;
+          } else if (evt.event === 'usage') {
+            const total = evt.usage?.total_tokens;
+            $(prefix + 'Usage').textContent = total != null ? 'usage ' + total + ' tokens' : 'usage 未拿到';
+          } else if (evt.event === 'aborted') {
+            aborted = true;
+            lastReason = evt.reason;
+            const total = evt.usage?.total_tokens;
+            $(prefix + 'Usage').textContent = total != null
+              ? 'usage ' + total + ' tokens（流提前结束）'
+              : 'usage 未拿到（流提前结束）';
+            $(prefix + 'Status').textContent = '🛑 已 abort（reason=' + evt.reason + '）';
+            $(prefix + 'Status').className = 'stat warn';
+          } else if (evt.event === 'error') {
+            $(prefix + 'Status').textContent = '❌ 错误';
+            $(prefix + 'Status').className = 'stat warn';
+            appendOutput(prefix + 'Output', '\n[错误] ' + evt.message);
+          }
+        }
+      }
+      const elapsed = Math.round(performance.now() - t0);
+      $(prefix + 'Elapsed').textContent = '耗时 ' + elapsed + 'ms';
+      if (!aborted) {
+        $(prefix + 'Status').textContent = '✅ 完成';
+        $(prefix + 'Status').className = 'stat ok';
+      }
+    }).catch((err) => {
+      // 服务端 abort 后走 res.end() 正常关闭 → 这里通常**不会**触发
+      // 只有 fetch 还没建立就 abort、或网络层立即断才会到这里
+      if (err.name === 'AbortError') {
+        $(prefix + 'Status').textContent = '🛑 浏览器层 fetch 被中断（' + (lastReason || '网络层立即断') + '）';
+        $(prefix + 'Status').className = 'stat warn';
+        $(prefix + 'Elapsed').textContent = '耗时 ' + Math.round(performance.now() - t0) + 'ms（浏览器层中断）';
+      } else {
+        $(prefix + 'Status').textContent = '❌ ' + err.message;
+        $(prefix + 'Status').className = 'stat warn';
+      }
+    });
+  }
+
+  // ── 全局 controller（关页面时统一 abort） ──
+  let fullController = null;
+  let cancelController = null;
+
+  // 页面隐藏/卸载时 abort 当前活动请求
+  window.addEventListener('pagehide', () => {
+    fullController?.abort();
+    cancelController?.abort();
+  });
+
+  // ── 按钮 1：流到底（基线） ──
+  $('btnFull').addEventListener('click', async () => {
+    if (fullController) fullController.abort(); // 上一个未结束就先停
+    resetCard('full');
+    fullController = new AbortController();
+    await consumeSSE('full', 'full', {}, fullController, null);
+    fullController = null;
+  });
+
+  // ── 按钮 2：收 N 帧就停（服务端到 N 帧自动 abort） ──
+  const btnManualAbort = $('btnManualAbort');
+  $('btnCancel').addEventListener('click', async () => {
+    if (cancelController) cancelController.abort();
+    resetCard('cancel');
+    cancelController = new AbortController();
+    btnManualAbort.disabled = false;
+    const targetFrames = Number($('abortAfterFrames').value);
+    const consumePromise = consumeSSE(
+      'cancel',
+      'cancel-after-frames',
+      { abortAfterFrames: targetFrames },
+      cancelController,
+      null,
+    );
+    await consumePromise;
+    btnManualAbort.disabled = true;
+    cancelController = null;
+  });
+
+  // 按钮 2 卡片里的手动取消按钮 = 立刻 abort 客户端 fetch
+  btnManualAbort.addEventListener('click', () => {
+    if (cancelController) {
+      console.log('[手动取消] abort()');
+      cancelController.abort();
+      btnManualAbort.disabled = true;
+    }
+  });
+
+  // ── 按钮 3：故意不传 signal ──
+  $('btnNoSignal').addEventListener('click', async () => {
+    resetCard('ns');
+    // 第四个参数传 undefined = "故意不传 signal"
+    await consumeSSE('ns', 'no-signal-abort', {}, undefined, null);
+  });
+</script>
+</body>
+</html>

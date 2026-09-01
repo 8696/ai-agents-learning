@@ -14,8 +14,8 @@
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**Streaming / SSE**：为什么 LLM 用 SSE 而不是一次返回整段](./01-Streaming-SSE.md) | 能说帧大概长什么样、和 WebSocket 怎么选 | `Server-Sent Events explained` `SSE vs WebSocket LLM` `text/event-stream` · MDN SSE · 厂商 Streaming 文档 | 暂无链接 |
-| ⬜ | [**协议 A vs B**：`chat.completions` 与 `messages.create` 的字段、role、usage 位置](./02-协议-A-vs-B.md) | 能对照说出差异，不要求背全字段 | `OpenAI chat completions vs Anthropic messages API` · 资源清单四家文档对照 | — |
-| ⬜ | [**AbortController**：取消后客户端停写、服务端可能仍在生成](./03-AbortController.md) | 知道两边各自发生什么 | `AbortController fetch node` `cancel streaming request` · MDN AbortController · Node fetch 文档 | — |
+| ✅ | [**协议 A vs B**：`chat.completions` 与 `messages.create` 的字段、role、usage 位置](./02-协议-A-vs-B.md) | 能对照说出差异，不要求背全字段 | `OpenAI chat completions vs Anthropic messages API` · 资源清单四家文档对照 | 暂无链接 |
+| ✅ | [**AbortController**：取消后客户端停写、服务端可能仍在生成](./03-AbortController.md) | 知道两边各自发生什么 | `AbortController fetch node` `cancel streaming request` · MDN AbortController · Node fetch 文档 | 暂无链接 |
 | ⬜ | [**429 / Rate Limit**：为什么要指数退避；哪些错误不该重试](./04-Rate-Limit.md) | 能解释退避动机、区分可重试 / 不可重试 | `OpenAI rate limit exponential backoff` `API 429 retry` · 厂商 Rate Limit 文档 | — |
 | ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀（回填 `01-chatgpt-mini`） | — | [沉淀](./05-本地产出.md) |
 

@@ -76,7 +76,7 @@ yarn dev:server
       ↓
 模块 01            Token、Context Window（笔记，不改本项目）
       ↓
-模块 02            Streaming/SSE 已回填（HTTP + SSE 服务端） → 协议 A↔B 对照 + AbortController + 429
+模块 02            Streaming/SSE 已回填（HTTP + SSE 服务端） → 协议 A↔B 对照 + AbortController 已回填 + 429
       ↓
 模块 03–04         system prompt + Zod 约束模型 JSON
       ↓
@@ -108,7 +108,9 @@ yarn dev:server
   - Zod 校验 `MINIMAX_*` 与请求体 `message`；CORS 预检 + 跨域响应头
   - `JSON.parse(JSON.stringify(chunk))` 把 OpenAI SDK 的 zod 类实例 plain 化再转发
   - 概念/取舍/踩坑见 [Streaming / SSE 小节 MD](../../docs/学习模块/02-LLM-API开发/01-Streaming-SSE.md)
-- **模块 02 · 02-协议-A-vs-B / 03-AbortController / 04-Rate-Limit（待学）**：对应 README「协议 B 入口已在」、CLI 中途取消、429/超时/网络错误三分支
+- **模块 02 · 02-协议-A-vs-B（已落）**：项目协议 B 入口 [`src/index-anthropic.ts`](./src/index-anthropic.ts) 在模块 00 已超前放置；模块 02 本地拆步第 5 步「跑 yarn dev:anthropic 对照协议 A vs B（入口若已在则不必新装 SDK）」—— **这一刀已落在模块 00**；双协议字段对照、role 位置、usage 字段名映射等见 [02-协议-A-vs-B 小节 MD](../../docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md)
+- **模块 02 · 03-AbortController（已落）**：CLI 协议 A [`src/index.ts`](./src/index.ts) + CLI 协议 B [`src/index-anthropic.ts`](./src/index-anthropic.ts) + HTTP [`src/server.ts`](./src/server.ts) 三处各自在「首个文本块到时」（协议 A = 第一个 for await chunk；协议 B = 第一个 `stream.on('text')` 事件；HTTP = 第一个 res.write）启 `setTimeout(3000)` → `controller.abort()`，模拟"用户读了会儿中途取消"；`signal` 作为 SDK 的第二个 options 参数传入（`chat.completions.create` / `messages.stream` / `messages.create` 三处都接受）；catch `AbortError` / `APIUserAbortError` 时 HTTP 端发 `{event:"aborted", reason:"simulated-user-cancel-3s"}` 帧 + `res.end()`（非错误结束），CLI 端打印「已中止」并 `exit 0`；详见 [03-AbortController 小节 MD](../../docs/学习模块/02-LLM-API开发/03-AbortController.md)
+- **模块 02 · 04-Rate-Limit（待学）**：429 / 超时 / 网络错误三分支（可重试 vs 不可重试）
 
 ---
 
@@ -161,8 +163,8 @@ yarn dev:server  →  createServer(:3000)  →  POST /api/chat
 | 文件 | 职责 |
 | ---- | ---- |
 | `src/index.ts` | 协议 A：`openai` + `/v1` → `chat.completions` 流式（CLI，模块 00 验收） |
-| `src/index-anthropic.ts` | 协议 B 对照入口：`@anthropic-ai/sdk` + `/anthropic`（CLI；模块 02 协议 A vs B 那条验收） |
-| `src/server.ts` | HTTP + SSE 服务端：GET / 返回浏览器聊天页；GET /health 健康检查；POST /api/chat → 协议 A 流式转发为 SSE（模块 02 Streaming/SSE 那条） |
+| `src/index-anthropic.ts` | 协议 B 对照入口：`@anthropic-ai/sdk` + `/anthropic`（CLI；模块 02 协议 A vs B 那条验收）+ 首个 `text` 事件后 3 秒自动 abort（模块 02 03-AbortController） |
+| `src/server.ts` | HTTP + SSE 服务端：GET / 返回浏览器聊天页；GET /health 健康检查；POST /api/chat → 协议 A 流式转发为 SSE + **第一个 chunk 后 3 秒自动 abort**（模块 02 Streaming/SSE + 03-AbortController 那两条） |
 | `public/index.html` | 浏览器聊天 UI：fetch + getReader + 按 `\n\n` 切帧 + 累加 `delta.content`（最小 SSE 客户端；逐字渲染 + 显示 usage） |
 | `src/load-root-env.ts` | 共用 dotenv 加载 `apps/.env`；新建 app 时复制此文件 |
 | `apps/.env` | `MINIMAX_*` 运行时配置 |
@@ -175,4 +177,4 @@ yarn dev:server  →  createServer(:3000)  →  POST /api/chat
 | 模块 | 加了什么 |
 | ---- | -------- |
 | 00 | 项目初始化；协议 A 验收入口；协议 B 对照入口（超前，02 再验收）；`apps/.env` 约定 |
-| 02 | 模块 02 / Streaming-SSE：新增 [`src/server.ts`](./src/server.ts)（HTTP + SSE；CLI 保留） |
+| 02 | 模块 02 / Streaming-SSE：新增 [`src/server.ts`](./src/server.ts)（HTTP + SSE；CLI 保留） · 模块 02 / 03-AbortController：[`src/index.ts`](./src/index.ts)、[`src/index-anthropic.ts`](./src/index-anthropic.ts) 与 [`src/server.ts`](./src/server.ts) 各自在「首个文本块到时」`setTimeout(3000)` 自动 `controller.abort()`；signal 作为 SDK options 第二参 |
