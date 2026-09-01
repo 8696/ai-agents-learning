@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/23-Production-Agent-Architecture/01-{短名}/` README
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/23-Production-Agent-Architecture/{小节文件夹}/` README
 
 # 模块 23 · Production Agent Architecture ⭐⭐⭐⭐⭐
 
 [← 22 AI 全栈产品化](../22-AI全栈产品化/README.md) · （无下一模块）
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/23-Production-Agent-Architecture/01-{短名}/README.md` 为准。
-> **代码落点**：`docs/学习模块/23-Production-Agent-Architecture/` 设计文档 + `apps/23-Production-Agent-Architecture/01-{短名}/` 各小节 Demo。
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/23-Production-Agent-Architecture/{小节文件夹}/README.md` 为准。
+> **代码落点**：`docs/学习模块/23-Production-Agent-Architecture/` 设计文档 + `apps/23-Production-Agent-Architecture/{小节文件夹}/` 各小节 Demo。
 
 ## 小节进度
 

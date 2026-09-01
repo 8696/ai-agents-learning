@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/05-Tool-Calling/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/05-Tool-Calling/{小节文件夹}/README.md`
 
 # 模块 05 · Tool Calling / Function Calling ⭐⭐⭐⭐⭐
 
 [← 04 Structured Output](../04-Structured-Output/README.md) · [06 多轮对话 & Context Engineering →](../06-多轮对话与Context/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/05-Tool-Calling/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/05-Tool-Calling/01-{短名}/`（学到再建；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/05-Tool-Calling/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/05-Tool-Calling/{小节文件夹}/`（学到再建；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -17,7 +17,7 @@
 | ⬜ | [**Tool Description**：description / schema 影响模型**何时**调用](./02-Tool-Description.md) | 知道写不好就会乱调或不调 | `writing good tool descriptions LLM` `tool schema best practices` · Anthropic Tool Use 最佳实践章节 | — |
 | ⬜ | [**Tool Choice**：auto / none / required 各适合什么](./03-Tool-Choice.md) | 能举三种模式的使用场景 | `tool_choice openai` `force tool call` · 官方 API 参考 | — |
 | ⬜ | [**Tool Gateway / 幂等**：请求 ≠ 执行；有副作用的 Tool 必须可重试](./04-Tool-Gateway-幂等.md) | 知道执行前要鉴权 / 校验 | `idempotent API tool calling` `LLM tool permission gateway` · 模块 20 安全卡片 | — |
-| ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀（落 `apps/05-Tool-Calling/01-{短名}/`） | — | [沉淀](./05-本地产出.md) |
+| ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀（落 `apps/05-Tool-Calling/{小节文件夹}/`） | — | [沉淀](./05-本地产出.md) |
 
 ## 验收
 
@@ -46,7 +46,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/05-Tool-Calling/01-{短名}/`。LLM 配置通过 `apps/load-root-env.ts` 读 `apps/.env`，所有 demo 共用。
+> 落到 `apps/05-Tool-Calling/{小节文件夹}/`。LLM 配置通过 `apps/load-root-env.ts` 读 `apps/.env`，所有 demo 共用。
 
 1. `src/registry.ts` + 3～4 个 Tool，参数用 Zod
 2. 跑通 model → execute → tool_result → model

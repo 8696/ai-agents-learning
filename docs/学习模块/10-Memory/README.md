@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/10-Memory/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/10-Memory/{小节文件夹}/README.md`
 
 # 模块 10 · Memory ⭐⭐⭐⭐
 
 [← 09 RAG 进阶](../09-RAG进阶/README.md) · [11 Agent State / Workflow →](../11-Agent-State-Workflow/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/10-Memory/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/10-Memory/01-{短名}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/10-Memory/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/10-Memory/{小节文件夹}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -42,7 +42,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/10-Memory/01-{短名}/`（不要把记忆做进 RAG demo）。
+> 落到 `apps/10-Memory/{小节文件夹}/`（不要把记忆做进 RAG demo）。
 
 1. 长期记忆落真实 DB，重启还在
 2. 写入策略：提取 / 去重 / 冲突覆盖（「我改用 Vue 了」）

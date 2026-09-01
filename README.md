@@ -65,15 +65,15 @@ ai-agents-learning/
 │   ├── README.md · package.json · tsconfig.json · tsconfig.base.json
 │   ├── load-root-env.ts · .env.example · .nvmrc · .env（Key，不进 git）
 │   ├── 00-环境准备/01-mini-app/        ← 模块 00 mini-app（三入口）
-│   ├── 01-AI与LLM基础认知/01-API-Key-计费/
+│   ├── 01-AI与LLM基础认知/02-Token/ · 06-Embedding/ · 07-Temperature-Top-P/
 │   ├── 02-LLM-API开发/01-Streaming-SSE/ · 02-协议-A-vs-B/ · 03-AbortController/ · 04-Rate-Limit/
-│   └── ...（学到哪条建哪条）
+│   └── ...（学到哪条、§5.2 判为可运行才建）
 └── RESET.md                          ← 清进度 / 清 apps（按需打开，非日常）
 ```
 
 学完所有模块后想要作品集再从零建（[AGENTS.md §5](AGENTS.md#5-demo-落点)）。
 
-## 学习总览（截至模块 00）
+## 学习总览（截至模块 02）
 
 | 模块 | 状态 | 内容 |
 | ---- | ---- | ---- |

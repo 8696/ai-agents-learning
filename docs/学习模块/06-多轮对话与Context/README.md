@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/06-多轮对话与Context/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/06-多轮对话与Context/{小节文件夹}/README.md`
 
 # 模块 06 · 多轮对话 & Context Engineering ⭐⭐⭐⭐⭐
 
 [← 05 Tool Calling / Function Calling](../05-Tool-Calling/README.md) · [07 手写 Agent →](../07-手写Agent/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/06-多轮对话与Context/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/06-多轮对话与Context/01-{短名}/`（每条外部小节的最小可运行 Demo；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/06-多轮对话与Context/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/06-多轮对话与Context/{小节文件夹}/`（每条外部小节的最小可运行 Demo；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -41,7 +41,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/06-多轮对话与Context/01-{短名}/`（不要改 `07-手写Agent` 的 demo）。
+> 落到 `apps/06-多轮对话与Context/{小节文件夹}/`（不要改 `07-手写Agent` 的 demo）。
 
 1. messages 数组持久化；能打印「本次实际发给模型的完整上下文」
 2. Token Budget：滑动窗口 vs 摘要，两种都实现并能对比

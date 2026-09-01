@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/08-RAG基础/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/08-RAG基础/{小节文件夹}/README.md`
 
 # 模块 08 · RAG 基础 ⭐⭐⭐⭐⭐
 
 [← 07 手写 Agent](../07-手写Agent/README.md) · [09 RAG 进阶 →](../09-RAG进阶/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/08-RAG基础/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/08-RAG基础/01-{短名}/`（学到再建；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/08-RAG基础/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/08-RAG基础/{小节文件夹}/`（学到再建；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -17,7 +17,7 @@
 | ⬜ | [**Chunking**：太大丢细节、太小丢语义；overlap 补边界](./02-Chunking.md) | 能说出 size / overlap 的取舍 | `text chunking strategies RAG` `chunk size overlap RAG` · Pinecone / LanceDB 博客 | — |
 | ⬜ | [**余弦相似度**：比的是方向，不是向量长度](./03-余弦相似度.md) | 能解释「语义近」在几何上是什么 | `cosine similarity embedding` `vector similarity search` · 3Blue1Brown 向量 · 任意 10 min 科普 | — |
 | ⬜ | [**RAG vs Fine-tuning**：知识常变 / 要引用 → RAG；风格 / 格式稳 → 才考虑微调](./04-RAG-vs-Fine-tuning.md) | 能用一句话说选型 | `RAG vs fine tuning when to use` · OpenAI / Anthropic 官方对比文 | — |
-| ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀（落 `apps/08-RAG基础/01-{短名}/`） | — | [沉淀](./05-本地产出.md) |
+| ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀（落 `apps/08-RAG基础/{小节文件夹}/`） | — | [沉淀](./05-本地产出.md) |
 
 ## 验收
 
@@ -44,7 +44,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/08-RAG基础/01-{短名}/`。`apps/` 下每个子文件夹互不 import；本 demo 自己写最小循环。
+> 落到 `apps/08-RAG基础/{小节文件夹}/`。`apps/` 下每个子文件夹互不 import；本 demo 自己写最小循环。
 
 1. Load → Chunk → Embed → LanceDB → Retrieve
 2. 检索做成**本 demo 内**的 Tool，自带最小循环决定要不要检索

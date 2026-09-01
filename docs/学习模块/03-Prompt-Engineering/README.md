@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/03-Prompt-Engineering/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/03-Prompt-Engineering/{小节文件夹}/README.md`
 
 # 模块 03 · Prompt Engineering ⭐⭐⭐⭐
 
 [← 02 LLM API 开发](../02-LLM-API开发/README.md) · [04 Structured Output →](../04-Structured-Output/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/03-Prompt-Engineering/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/03-Prompt-Engineering/01-{短名}/`（每条外部小节的最小可运行 Demo；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/03-Prompt-Engineering/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/03-Prompt-Engineering/{小节文件夹}/`（每条外部小节的最小可运行 Demo；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -25,7 +25,7 @@
 
 **一句话目标**：让模型稳定按照你的要求工作，而不是「有时候好有时候不好」。
 
-**动手产出**：8–10 个不同类型的高质量 Prompt：提取、分类、总结、改写、分析、路由等。文件落在 `apps/03-Prompt-Engineering/01-{短名}/src/prompts.ts`（或同目录 `prompts/`），不要只躺在对话里。
+**动手产出**：8–10 个不同类型的高质量 Prompt：提取、分类、总结、改写、分析、路由等。文件落在 `apps/03-Prompt-Engineering/{小节文件夹}/src/prompts.ts`（或同目录 `prompts/`），不要只躺在对话里。
 
 **验收标准**
 - [ ] 每个 Prompt 都有版本号和变更记录
@@ -42,7 +42,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/03-Prompt-Engineering/01-{短名}/`。
+> 落到 `apps/03-Prompt-Engineering/{小节文件夹}/`。
 
 1. `src/index.ts`：8–10 个 Prompt 落文件（提取、分类、总结、改写、分析、路由等），不要只躺在对话里
 2. 每个有版本号 + 至少 5 条样本

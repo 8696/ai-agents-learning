@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/14-Multi-Agent/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/14-Multi-Agent/{小节文件夹}/README.md`
 
 # 模块 14 · Multi-Agent ⭐⭐⭐⭐
 
 [← 13 Agent Framework](../13-Agent-Framework/README.md) · [15 Browser / Computer Agent →](../15-Browser-Computer-Agent/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/14-Multi-Agent/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/14-Multi-Agent/01-{短名}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/14-Multi-Agent/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/14-Multi-Agent/{小节文件夹}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -42,7 +42,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/14-Multi-Agent/01-{短名}/`。
+> 落到 `apps/14-Multi-Agent/{小节文件夹}/`。
 
 1. Supervisor + Researcher / Writer / Reviewer；实现 Handoff + Shared State
 2. 同一任务再打一版单 Agent，记下 Token 和耗时

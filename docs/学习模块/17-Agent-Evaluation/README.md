@@ -1,11 +1,11 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/17-Agent-Evaluation/01-{短名}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/17-Agent-Evaluation/{小节文件夹}/README.md`
 
 # 模块 17 · Agent Evaluation ⭐⭐⭐⭐⭐
 
 [← 16 Coding Agent](../16-Coding-Agent/README.md) · [18 Observability →](../18-Observability/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/17-Agent-Evaluation/01-{短名}/README.md` 为准。
-> **代码落点**：`apps/17-Agent-Evaluation/01-{短名}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
+> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/17-Agent-Evaluation/{小节文件夹}/README.md` 为准。
+> **代码落点**：`apps/17-Agent-Evaluation/{小节文件夹}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
@@ -46,7 +46,7 @@
 
 ## 本地拆步
 
-> 落到 `apps/17-Agent-Evaluation/01-{短名}/`。
+> 落到 `apps/17-Agent-Evaluation/{小节文件夹}/`。
 
 1. Golden Dataset ≥30 条；`yarn app:17-01-eval` 一条命令出报告（学到该条再加脚本）
 2. 最终答案 + 轨迹（Tool 是否该调）都评；能量 Faithfulness 或等价项
