@@ -1,0 +1,26 @@
+{
+  "name": "ai-agents-learning-demos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "demo:00-api-key-billing": "tsx 00-环境准备/01-API-Key-计费/index.ts",
+    "demo:01-token": "tsx 01-AI与LLM基础认知/02-Token/index.ts",
+    "demo:01-temperature": "tsx 01-AI与LLM基础认知/07-Temperature-Top-P/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "gpt-tokenizer": "^2.9.0",
+    "openai": "^4.85.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
