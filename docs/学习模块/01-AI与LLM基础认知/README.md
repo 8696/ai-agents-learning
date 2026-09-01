@@ -24,8 +24,8 @@
 | ✅ | [**Temperature / Top-P**：随机性怎么控；抽取任务 vs 创意任务](./07-Temperature-Top-P.md) | 能说清两者区别、什么场景调哪个 | `LLM temperature top_p sampling` `nucleus sampling` · OpenAI / Anthropic 官方参数说明 | 暂无链接 |
 | ✅ | [**Hallucination**：模型在预测下一个 Token，不是在查数据库](./08-Hallucination.md) | 能用一句话说明成因 | `LLM hallucination why` `大模型幻觉 原因` · Anthropic / OpenAI 安全文档 · 任意 10 分钟科普视频 | 暂无链接 |
 | ✅ | [**预训练 vs 推理**：训练你不做；你调 API 做的是推理](./09-预训练-vs-推理.md) | 能分清两阶段各自发生什么 | `LLM pretraining vs inference` `RLHF explained simple` · Karpathy「Intro to LLMs」类视频 · 论文只看摘要 | 暂无链接 |
-| ⬜ | [**主流模型对比**：至少 4 家的强项、价格档、Context 上限](./10-主流模型对比.md) | 能列表，不要求背参数 | `GPT-4 vs Claude vs Gemini comparison 2025` `模型选型 agent` · 各厂商 Model Card · [Artificial Analysis](https://artificialanalysis.ai/) | — |
-| ⬜ | [**本地产出**](./11-本地产出.md) | 笔记能向非技术的人解释「LLM 为什么会胡说八道」；本页验收 + 学习沉淀 | — | [沉淀](./11-本地产出.md) |
+| ✅ | [**主流模型对比**：至少 4 家的强项、价格档、Context 上限](./10-主流模型对比.md) | 能列表，不要求背参数 | `GPT-4 vs Claude vs Gemini comparison 2025` `模型选型 agent` · 各厂商 Model Card · [Artificial Analysis](https://artificialanalysis.ai/) | 暂无链接 |
+| ✅ | [**本地产出**](./11-本地产出.md) | 笔记能向非技术的人解释「LLM 为什么会胡说八道」；本页验收 + 学习沉淀 | — | [沉淀](./11-本地产出.md) |
 
 推荐最小观看（做完把**你打开过的 URL**填进上表）：AI/ML/DL 包含关系科普（15 min 内）→ Jay Alammar *Illustrated Transformer* → Token / Context 科普 → 在线 tokenizer 数一段中英文 → 各厂 Model Card / 价格页。
 
