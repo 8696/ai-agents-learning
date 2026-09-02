@@ -44,45 +44,15 @@ import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-// ── 1) 环境变量校验（与模块 02 协议对照 demo 同源）──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1, "请在 apps/.env 填 MINIMAX_API_KEY"),
-  MINIMAX_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  MINIMAX_ANTHROPIC_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.minimaxi.com/anthropic"),
-  MINIMAX_ANTHROPIC_MODEL: z.string().default("MiniMax-M3"),
-  // 协议 B 必填 max_tokens（学习阶段给够）
-  MINIMAX_ANTHROPIC_MAX_TOKENS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(1024),
-  PORT: z.coerce.number().int().positive().default(50301),
-});
-const env = envSchema.parse(process.env);
-
-// ── 2) 两个客户端（同 Key 换 baseURL）──
-const aClient = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
-});
-const bClient = new Anthropic({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-});
+const llm = getLlm();
+const aClient = llm.openai;
+const bClient = llm.anthropic;
+const PORT = z.coerce.number().int().positive().default(50301).parse(
+  process.env.PORT,
+);
 
 // ── 3) 类型 ──
 type Role = "system" | "user" | "assistant";
@@ -132,7 +102,7 @@ async function runProtocolA(
   messages.push(...turns);
 
   const r = await aClient.chat.completions.create({
-    model: env.MINIMAX_MODEL,
+    model: llm.modelA,
     messages,
     stream: false,
   });
@@ -154,9 +124,9 @@ async function runProtocolB(
 ): Promise<CallResult> {
   const t0 = performance.now();
   const r = await bClient.messages.create({
-    model: env.MINIMAX_ANTHROPIC_MODEL,
+    model: llm.modelB,
     system: system ?? undefined,
-    max_tokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+    max_tokens: llm.maxTokensB,
     messages: turns,
   });
   const t1 = performance.now();
@@ -410,11 +380,11 @@ app.use(bodyParser());
 router.get("/health", (ctx: Context) => {
   ctx.body = {
     ok: true,
-    a: { baseURL: env.MINIMAX_BASE_URL, model: env.MINIMAX_MODEL },
+    a: { baseURL: llm.baseUrlA, model: llm.modelA },
     b: {
-      baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-      model: env.MINIMAX_ANTHROPIC_MODEL,
-      maxTokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+      baseURL: llm.baseUrlB,
+      model: llm.modelB,
+      maxTokens: llm.maxTokensB,
     },
   };
 });
@@ -445,16 +415,15 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 // ── 12) 启动 ──
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(
     "──── 模块 03 · 01 System / User / Assistant 优先级 Demo（§5.3 React + koa · HTML 内联块）· 已启动 ────",
   );
-  console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  POST /api/case1-priority     → 优先级对照（System JSON-only vs User 长文段）`);
   console.log(`  POST /api/case2-with-history → 多轮 WITH assistant 历史`);
   console.log(`  POST /api/case3-no-history   → 多轮 WITHOUT assistant 历史（失忆对照组）`);
   console.log(`  GET  /health                 → 环境信息`);
-  console.log(`  模型 A: ${env.MINIMAX_MODEL}    baseURL: ${env.MINIMAX_BASE_URL}`);
-  console.log(`  模型 B: ${env.MINIMAX_ANTHROPIC_MODEL}    baseURL: ${env.MINIMAX_ANTHROPIC_BASE_URL}`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

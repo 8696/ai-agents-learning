@@ -37,34 +37,13 @@ import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-// ── 1) 环境变量校验 ──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z
-    .string()
-    .min(1, "请在 apps/.env 填 MINIMAX_API_KEY"),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  MINIMAX_ANTHROPIC_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.minimaxi.com/anthropic"),
-  MINIMAX_ANTHROPIC_MODEL: z.string().default("MiniMax-M3"),
-  // Messages API 必填 max_tokens；学习阶段给够
-  MINIMAX_ANTHROPIC_MAX_TOKENS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(1024),
-  PORT: z.coerce.number().int().positive().default(50202),
-});
-const env = envSchema.parse(process.env);
+const llm = getLlm();
+const PORT = z.coerce.number().int().positive().default(50202).parse(
+  process.env.PORT,
+);
 
 // ── 2) 请求体校验 ──
 const bodySchema = z.object({
@@ -88,16 +67,8 @@ function parseBody(ctx: Context): Body {
   return parsed.data;
 }
 
-// ── 3) 两个客户端 ──
-// 同一把 Key，只换 baseURL —— 这是「同 Key 换协议」的最直接对照
-const aClient = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
-});
-const bClient = new Anthropic({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-});
+const aClient = llm.openai;
+const bClient = llm.anthropic;
 
 // ── 4) koa 框架 ──
 const app = new Koa();
@@ -113,11 +84,16 @@ app.use(bodyParser());
 router.get("/health", (ctx: Context) => {
   ctx.body = {
     ok: true,
-    a: { baseURL: env.MINIMAX_BASE_URL, model: env.MINIMAX_MODEL },
+    a: {
+      provider: llm.provider,
+      baseURL: llm.baseUrlA,
+      model: llm.modelA,
+    },
     b: {
-      baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-      model: env.MINIMAX_ANTHROPIC_MODEL,
-      maxTokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+      provider: llm.provider,
+      baseURL: llm.baseUrlB,
+      model: llm.modelB,
+      maxTokens: llm.maxTokensB,
     },
   };
 });
@@ -250,7 +226,7 @@ async function handleA(
 
   try {
     const stream = await aClient.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages,
       stream: true,
       stream_options: { include_usage: true },
@@ -304,9 +280,9 @@ async function handleB(
   try {
     // B: system 放顶层（不在 messages 里）
     const stream = bClient.messages.stream({
-      model: env.MINIMAX_ANTHROPIC_MODEL,
+      model: llm.modelB,
       system: body.system,
-      max_tokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+      max_tokens: llm.maxTokensB,
       messages: [{ role: "user", content: body.message }],
     });
 
@@ -384,14 +360,14 @@ async function handleCompare(
   // 用 Promise.all 让 A、B 并发起跑（不阻塞）
   const [aResult, bResult] = await Promise.allSettled([
     aClient.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages,
       stream: false,
     }),
     bClient.messages.create({
-      model: env.MINIMAX_ANTHROPIC_MODEL,
+      model: llm.modelB,
       system: body.system,
-      max_tokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+      max_tokens: llm.maxTokensB,
       messages: [{ role: "user", content: body.message }],
     }),
   ]);
@@ -455,7 +431,7 @@ async function handleThinkCompare(
         if (sc.protocol === "A") {
           // 协议 A：不支持 thinking 参数；总是返回 string content（嵌 <think>）
           const r = await aClient.chat.completions.create({
-            model: env.MINIMAX_MODEL,
+            model: llm.modelA,
             messages,
             stream: false,
           });
@@ -484,7 +460,7 @@ async function handleThinkCompare(
         }
         // 协议 B：thinking 参数控制是否启用 extended thinking block
         const r = await bClient.messages.create({
-          model: env.MINIMAX_ANTHROPIC_MODEL,
+          model: llm.modelB,
           system,
           // Anthropic 协议：max_tokens 必须 >= budget_tokens；学习阶段给够
           max_tokens: Math.max(sc.thinking?.budget_tokens ?? 0, 2048),
@@ -555,7 +531,7 @@ async function handleBThinkingStream(
 
   try {
     const stream = bClient.messages.stream({
-      model: env.MINIMAX_ANTHROPIC_MODEL,
+      model: llm.modelB,
       system: body.system,
       // Anthropic 协议：max_tokens ≥ budget_tokens
       max_tokens: Math.max(thinkingBudget, 2048),
@@ -629,7 +605,7 @@ async function handleAStreamRaw(
 
   try {
     const stream = await aClient.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages,
       stream: true,
       stream_options: { include_usage: true },
@@ -710,9 +686,9 @@ async function handleBStreamRaw(
 
   try {
     const stream = bClient.messages.stream({
-      model: env.MINIMAX_ANTHROPIC_MODEL,
+      model: llm.modelB,
       system: body.system,
-      max_tokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+      max_tokens: llm.maxTokensB,
       // 关键：不传 thinking 参数
       messages: [{ role: "user", content: body.message }],
     });
@@ -765,9 +741,9 @@ async function handleBStreamRaw(
 
 // ── 7) 启动 ──
 // 端口：§5.3.3 `5{MM}{SS}` → 50202
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`──── 协议 A vs B 对照 Demo（§5.3 React + koa · HTML 内联块） · 已启动 ────`);
-  console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  GET  /                     → public/index.html（React + Babel 内联块）`);
   console.log(`  GET  /health               → { ok, a, b }`);
   console.log(`  POST /api/a                → 协议 A 流式（MiniMax /v1, openai SDK）`);
@@ -777,6 +753,6 @@ app.listen(env.PORT, "127.0.0.1", () => {
   console.log(`  POST /api/b-thinking-stream → 协议 B 流式 + 启用 thinking（看完整事件流：thinking block + text block + message_delta）`);
   console.log(`  POST /api/a-stream-raw     → 协议 A 流式（OpenAI chunk 原样转发 + meta frame：role / chunk / finish / usage）`);
   console.log(`  POST /api/b-stream-raw     → 协议 B 流式（不启用 thinking，原样转发事件流）`);
-  console.log(`  模型: ${env.MINIMAX_MODEL} / ${env.MINIMAX_ANTHROPIC_MODEL}`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

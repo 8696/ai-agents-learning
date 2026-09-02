@@ -49,9 +49,8 @@ import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
-import OpenAI from "openai";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlmOptional, logLlmConfig } from "../../llm.js";
 import {
   retryWithBackoff,
   NonRetryableError,
@@ -60,23 +59,14 @@ import {
   type AttemptRecord,
 } from "./retry.js";
 
-loadRootEnv(); // mock 端点不依赖 env；real 端点需要 env 里有 Key
-const envPortSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(50204),
-});
-const PORT = envPortSchema.parse(process.env).PORT;
-
-// ── env 校验（real 端点用） ────────────────────────────────────
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1).optional(),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-});
-const env = envSchema.parse(process.env);
-const hasRealKey = !!env.MINIMAX_API_KEY;
-const realClient = hasRealKey
-  ? new OpenAI({ apiKey: env.MINIMAX_API_KEY!, baseURL: env.MINIMAX_BASE_URL })
-  : null;
+const llm = getLlmOptional();
+const realClient = llm?.openai ?? null;
+const PORT = z.coerce
+  .number()
+  .int()
+  .positive()
+  .default(50204)
+  .parse(process.env.PORT);
 
 // ── 1) mock server 的端点状态机 ────────────────────────────────
 /** /api/easy 的"还差几次就 200"计数器（per-process；刷新页面 / 重跑会重置） */
@@ -207,7 +197,7 @@ async function callOpenAI(
   try {
     const resp = await realClient.chat.completions.create(
       {
-        model: env.MINIMAX_MODEL,
+        model: llm!.modelA,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 120,
       },
@@ -265,7 +255,7 @@ async function handleReal(): Promise<{
   if (!realClient) {
     return {
       ok: false, hasKey: false,
-      error: "apps/.env 里没有 MINIMAX_API_KEY，跳过 /api/real",
+      error: "apps/.env 当前 LLM_PROVIDER 没有 Key，跳过 /api/real",
       errorType: "NoKey", attempts: [],
     };
   }
@@ -436,10 +426,10 @@ async function runCliScenarios() {
   }
 
   // ⑥ 真 API：单次（默认跑，~0.001 元）
-  console.log(`\n▶ ⑥ /api/real     （真调 ${env.MINIMAX_MODEL}，套 retry；看真网络延迟 / 真错误结构）`);
+  console.log(`\n▶ ⑥ /api/real     （真调 ${llm?.modelA ?? "—"}，套 retry；看真网络延迟 / 真错误结构）`);
   console.log(`  预期：大多数情况直接 200；偶发网络抖动 → retry`);
   if (!realClient) {
-    console.log(`  ⚠️  apps/.env 里没有 MINIMAX_API_KEY，跳过`);
+    console.log(`  ⚠️  apps/.env 当前提供商没有 Key，跳过`);
   } else {
     const out = await handleReal();
     if (out.ok) {
@@ -501,10 +491,11 @@ app.listen(PORT, "127.0.0.1", () => {
   );
   console.log(`   CLI 场景跑完后，浏览器打开 http://127.0.0.1:${PORT}/ 看时间线`);
   console.log(`   按 Ctrl+C 退出`);
+  logLlmConfig(llm);
   if (realClient) {
-    console.log(`   ✅ 检测到 MINIMAX_API_KEY：⑥ /api/real 默认跑；⑦ /api/real-burst 设 BURST=1 才跑`);
+    console.log(`   ✅ ⑥ /api/real 默认跑；⑦ /api/real-burst 设 BURST=1 才跑`);
   } else {
-    console.log(`   ⚠️  apps/.env 里没有 MINIMAX_API_KEY：⑥ ⑦ 跳过；只看 ①~⑤ mock`);
+    console.log(`   ⚠️  ⑥ ⑦ 跳过；只看 ①~⑤ mock`);
   }
   console.log("");
 

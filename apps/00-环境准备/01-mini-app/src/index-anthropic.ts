@@ -5,7 +5,7 @@
  *       使用 @anthropic-ai/sdk + MiniMax 国内 /anthropic 端点（与 OpenAI 兼容版共用 MINIMAX_API_KEY）。
  *
  * 数据流：
- *   apps/.env → Zod 校验 → Anthropic SDK（baseURL → api.minimaxi.com/anthropic）
+ *   apps/.env → getLlm() → 当前提供商的协议 B（Anthropic SDK）
  *   → messages.stream(body) → content_block_delta 事件流
  *   → 监听 'text' 事件拿到 delta 文本
  *   → await stream.finalMessage() → 拿 usage / stop_reason
@@ -13,7 +13,7 @@
  * 对照：index.ts 用 openai 包 + /v1 + for await；本文件用 @anthropic-ai/sdk + /anthropic（同 Key）
  *
  * 注意：
- *   - 协议 A/B 用同一把 MINIMAX_API_KEY（同 Key 不同 baseURL）
+ *   - 协议 A/B 用同一把提供商 Key（同 Key 不同 baseURL）
  *   - 协议 B 的流是事件流（message_start / content_block_delta / message_stop ...），
  *     不是 async iterable，监听 'text' 拿到的是已经 decode 后的文本增量
  *   - 进阶能力（取消、限流等演示）在 apps/02-LLM-API开发/ 对应小节，**不**塞进本入口
@@ -23,38 +23,10 @@
  * 概念 / 取舍 / 踩坑：docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
-import { loadRootEnv } from "../../../load-root-env.js";
+import { getLlm } from "../../../llm.js";
 
-// ── 1. 加载环境变量 ──
-loadRootEnv();
-
-// ── 2. Zod 校验（协议 B 专用变量；Key 仍与协议 A 共用 MINIMAX_API_KEY） ──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z
-    .string()
-    .min(1, "请在 apps/.env 中设置 MINIMAX_API_KEY（见 apps/.env.example）"),
-  // Anthropic 兼容端点：路径是 /anthropic，不是 /v1
-  MINIMAX_ANTHROPIC_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.minimaxi.com/anthropic"),
-  MINIMAX_ANTHROPIC_MODEL: z.string().default("MiniMax-M3"),
-  // Messages API 必填 max_tokens；学习阶段给一个足够大的上限
-  MINIMAX_ANTHROPIC_MAX_TOKENS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(1024),
-});
-const env = envSchema.parse(process.env);
-
-// ── 3. Anthropic SDK 客户端（Key 与 OpenAI 兼容版相同，只换 baseURL） ──
-const client = new Anthropic({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-});
+const llm = getLlm();
+const client = llm.anthropic;
 
 const userMessage =
   process.argv.slice(2).join(" ").trim() || "用3000字介绍你自己。";
@@ -62,13 +34,13 @@ const userMessage =
 async function main() {
   console.log(`> ${userMessage}\n`);
   console.log(
-    `[协议 B · Anthropic Messages API · ${env.MINIMAX_ANTHROPIC_MODEL}]\n`,
+    `[协议 B · Anthropic Messages API · ${llm.provider} · ${llm.modelB}]\n`,
   );
 
   // messages.stream：返回 MessageStream（事件流模型），不是 async iterable
   const stream = client.messages.stream({
-    model: env.MINIMAX_ANTHROPIC_MODEL,
-    max_tokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+    model: llm.modelB,
+    max_tokens: llm.maxTokensB,
     messages: [{ role: "user", content: userMessage }],
   });
 

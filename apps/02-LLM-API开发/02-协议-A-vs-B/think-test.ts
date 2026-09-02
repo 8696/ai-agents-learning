@@ -7,21 +7,14 @@
  *   B1  协议 B 流式（带 thinking 100 token）  → 看是否被接受 / 出 type=thinking block / 改变 output_tokens
  *   B2  协议 B 流式（带 thinking 500 token）  → 看 budget 增大是否生效
  */
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm } from "../../llm.js";
 
-loadRootEnv();
-
-const apiKey = process.env.MINIMAX_API_KEY!;
-const baseURL_A = process.env.MINIMAX_BASE_URL ?? "https://api.minimaxi.com/v1";
-const baseURL_B = process.env.MINIMAX_ANTHROPIC_BASE_URL ?? "https://api.minimaxi.com/anthropic";
-const model = process.env.MINIMAX_MODEL ?? "MiniMax-M3";
-const modelB = process.env.MINIMAX_ANTHROPIC_MODEL ?? "MiniMax-M3";
+const llm = getLlm();
+const a = llm.openai;
+const b = llm.anthropic;
+const model = llm.modelA;
+const modelB = llm.modelB;
 const prompt = "23 × 47 等于多少？先一步步想，再回答。";
-
-const a = new OpenAI({ apiKey, baseURL: baseURL_A });
-const b = new Anthropic({ apiKey, baseURL: baseURL_B });
 
 // ── 1) A 流式（不带 thinking） ──
 async function runA0() {

@@ -25,20 +25,12 @@ import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-// ── 1) 环境变量校验 ──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1, "请在 apps/.env 中设置 MINIMAX_API_KEY"),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  PORT: z.coerce.number().int().positive().default(50107),
-});
-const env = envSchema.parse(process.env);
+const llm = getLlm();
+const client = llm.openai;
+const PORT = z.coerce.number().int().positive().default(50107).parse(process.env.PORT);
 
 // ── 2) 请求体校验 ──
 const DEFAULT_PROMPT =
@@ -47,13 +39,7 @@ const bodySchema = z.object({
   prompt: z.string().min(1).max(2000).optional(),
 });
 
-// ── 3) OpenAI 客户端 ──
-const client = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
-});
-
-// ── 4) 三档温度（与本条笔记"多数文档建议只调一个"对齐：Top-P 固定 1，只动温度）──
+// ── 3) 三档温度（与本条笔记"多数文档建议只调一个"对齐：Top-P 固定 1，只动温度）──
 const TEMPERATURES: readonly number[] = [0, 0.7, 1.2] as const;
 const RUNS_PER_GROUP = 2;
 
@@ -73,7 +59,7 @@ async function once(prompt: string, temperature: number): Promise<SingleRun> {
   const t0 = performance.now();
   try {
     const completion = await client.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages: [
         {
           role: "system",
@@ -166,7 +152,7 @@ app.use(bodyParser());
 
 // 8.1) /health
 router.get("/health", (ctx: Context) => {
-  ctx.body = { ok: true, model: env.MINIMAX_MODEL, port: env.PORT };
+  ctx.body = { ok: true, model: llm.modelA, port: PORT };
 });
 
 // 8.2) POST /api/compare：并发跑 3 组 × 2 次 = 6 次调用
@@ -194,7 +180,7 @@ router.post("/api/compare", async (ctx: Context, _next: Next) => {
     );
 
     ctx.body = {
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       prompt,
       topP: 1,
       temperatures: TEMPERATURES,
@@ -218,11 +204,11 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 // ── 9) 启动 ──
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`──── Temperature / Top-P Demo（§5.3 React + koa · HTML 内联块） · 已启动 ────`);
-  console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  POST /api/compare  → 跑 3 组温度 × 2 次 = 6 次调用`);
   console.log(`  GET  /health       → { ok, model, port }`);
-  console.log(`  模型: ${env.MINIMAX_MODEL}    默认端口: ${env.PORT}`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

@@ -16,38 +16,11 @@
  * 适配层做的事：选 SDK → 填协议壳字段 → 调对应方法 → 把响应拆解成统一格式。
  */
 
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm } from "../../llm.js";
 
-// ── 1. 加载环境变量 + 校验 ──
-loadRootEnv();
-
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1, "请在 apps/.env 填 MINIMAX_API_KEY"),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  MINIMAX_ANTHROPIC_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.minimaxi.com/anthropic"),
-  MINIMAX_ANTHROPIC_MODEL: z.string().default("MiniMax-M3"),
-  // B 协议 max_tokens 必填，给一个安全默认
-  MINIMAX_ANTHROPIC_MAX_TOKENS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(1024),
-});
-const env = envSchema.parse(process.env);
-
-// ── 2. 两个客户端（同 Key、不同 baseURL）──
-const aClient = new OpenAI({ apiKey: env.MINIMAX_API_KEY, baseURL: env.MINIMAX_BASE_URL });
-const bClient = new Anthropic({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-});
+const llm = getLlm();
+const aClient = llm.openai;
+const bClient = llm.anthropic;
 
 // ── 3. 统一类型（adapter 对外暴露的接口，业务代码只看到这个）──
 
@@ -145,7 +118,7 @@ async function sendViaA(opts: SendMessageOptions): Promise<UnifiedResponse> {
   messages.push({ role: "user", content: opts.message });
 
   const r = await aClient.chat.completions.create({
-    model: env.MINIMAX_MODEL,
+    model: llm.modelA,
     messages,
     // 协议 A 的 thinking 是 MiniMax 自己实现的"嵌字符串"模式，无需 thinking 参数
     stream: false,
@@ -170,7 +143,7 @@ async function sendViaA(opts: SendMessageOptions): Promise<UnifiedResponse> {
       cachedTokens: u.prompt_tokens_details?.cached_tokens,
     },
     protocol: "A",
-    model: env.MINIMAX_MODEL,
+    model: llm.modelA,
   };
 }
 
@@ -188,10 +161,10 @@ async function sendViaB(opts: SendMessageOptions): Promise<UnifiedResponse> {
   // Anthropic 协议：max_tokens 必须 ≥ budget_tokens（启用 thinking 时）
   const maxTokens = opts.thinking
     ? Math.max(opts.thinking.budget_tokens, 2048)
-    : env.MINIMAX_ANTHROPIC_MAX_TOKENS;
+    : llm.maxTokensB;
 
   const r = await bClient.messages.create({
-    model: env.MINIMAX_ANTHROPIC_MODEL,
+    model: llm.modelB,
     system: opts.system,
     max_tokens: maxTokens,
     ...(opts.thinking ? { thinking: opts.thinking } : {}),
@@ -224,7 +197,7 @@ async function sendViaB(opts: SendMessageOptions): Promise<UnifiedResponse> {
       cachedTokens: u.cache_read_input_tokens,
     },
     protocol: "B",
-    model: env.MINIMAX_ANTHROPIC_MODEL,
+    model: llm.modelB,
   };
 }
 
@@ -274,7 +247,7 @@ async function* sendViaAStream(
   messages.push({ role: "user", content: opts.message });
 
   const stream = await aClient.chat.completions.create({
-    model: env.MINIMAX_MODEL,
+    model: llm.modelA,
     messages,
     stream: true,
     stream_options: { include_usage: true },
@@ -352,7 +325,7 @@ async function* sendViaAStream(
       },
       stopReason,
       protocol: "A",
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
     };
   }
   yield { type: "done" };
@@ -371,10 +344,10 @@ async function* sendViaBStream(
 ): AsyncGenerator<UnifiedDelta> {
   const maxTokens = opts.thinking
     ? Math.max(opts.thinking.budget_tokens, 2048)
-    : env.MINIMAX_ANTHROPIC_MAX_TOKENS;
+    : llm.maxTokensB;
 
   const stream = bClient.messages.stream({
-    model: env.MINIMAX_ANTHROPIC_MODEL,
+    model: llm.modelB,
     system: opts.system,
     max_tokens: maxTokens,
     ...(opts.thinking ? { thinking: opts.thinking } : {}),
@@ -471,7 +444,7 @@ async function* sendViaBStream(
       },
       stopReason,
       protocol: "B",
-      model: env.MINIMAX_ANTHROPIC_MODEL,
+      model: llm.modelB,
     };
   }
   yield { type: "done" };

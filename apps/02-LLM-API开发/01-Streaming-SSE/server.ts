@@ -26,20 +26,13 @@ import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlmOptional, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-// ── 1) 环境变量（模拟接口不强制 Key；/api/real 才需要）──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1).optional(),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  PORT: z.coerce.number().int().positive().default(50201),
-});
-const env = envSchema.parse(process.env);
+const llm = getLlmOptional();
+const PORT = z.coerce.number().int().positive().default(50201).parse(
+  process.env.PORT,
+);
 
 // ── 2) 模拟 LLM 的 token 序列 ──
 const TOKENS = ["你", "好", "，", "我", "是", " ", "AI", " ", "助", "手", "。"];
@@ -60,9 +53,10 @@ app.use(bodyParser());
 router.get("/health", (ctx: Context) => {
   ctx.body = {
     ok: true,
-    port: env.PORT,
-    model: env.MINIMAX_MODEL,
-    hasKey: Boolean(env.MINIMAX_API_KEY),
+    port: PORT,
+    model: llm?.modelA ?? null,
+    provider: llm?.provider ?? null,
+    hasKey: Boolean(llm),
   };
 });
 
@@ -105,31 +99,28 @@ router.get("/api/blocking", async (ctx: Context, _next: Next) => {
 // ── 真实 LLM：原样转发 OpenAI chunk ──
 router.get("/api/real", async (ctx: Context, _next: Next) => {
   ctx.respond = false;
-  if (!env.MINIMAX_API_KEY) {
+  if (!llm) {
     ctx.res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
     ctx.res.end(
       JSON.stringify({
         error:
-          "MINIMAX_API_KEY 未配置。在 apps/.env 填一个 MiniMax / 智谱 / OpenAI Key 即可（Key 兼容 OpenAI 协议即可）。",
+          "当前 LLM_PROVIDER 没有 Key。在 apps/.env 填对应 Key（见 .env.example）。",
       }),
     );
     return;
   }
 
-  const client = new OpenAI({
-    apiKey: env.MINIMAX_API_KEY,
-    baseURL: env.MINIMAX_BASE_URL,
-  });
+  const client = llm.openai;
   const t0 = performance.now();
   console.log(
-    `\n[${(t0 / 1000).toFixed(2)}s] /api/real: 开始调用 ${env.MINIMAX_MODEL}（baseURL=${env.MINIMAX_BASE_URL}）`,
+    `\n[${(t0 / 1000).toFixed(2)}s] /api/real: 开始调用 ${llm.provider} ${llm.modelA}（baseURL=${llm.baseUrlA}）`,
   );
 
   ctx.res.writeHead(200, SSE_HEADERS);
 
   try {
     const stream = await client.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       stream: true,
       stream_options: { include_usage: true },
       messages: [{ role: "user", content: "用一句话介绍你自己，30 字以内。" }],
@@ -171,14 +162,15 @@ app.use(router.routes()).use(router.allowedMethods());
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(
     "──── 模块 02 · 01 Streaming / SSE Demo（§5.3 React + koa · HTML 内联块）· 已启动 ────",
   );
-  console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  GET  /api/stream    → 模拟 SSE（每 200ms 一帧）`);
   console.log(`  GET  /api/blocking  → 一次性（攒齐 2.2s）`);
   console.log(`  GET  /api/real      → 真实 LLM 流式（需 Key）`);
   console.log(`  GET  /health        → 环境信息`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

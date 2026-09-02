@@ -22,26 +22,12 @@ import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-// ── 1) 环境变量校验 ──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1, "请在 apps/.env 中设置 MINIMAX_API_KEY"),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  PORT: z.coerce.number().int().positive().default(50001),
-});
-const env = envSchema.parse(process.env);
-
-// ── 2) OpenAI 客户端 ──
-const client = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
-});
+const llm = getLlm();
+const client = llm.openai;
+const PORT = z.coerce.number().int().positive().default(50001).parse(process.env.PORT);
 
 // ── 3) koa + router + static ──
 const app = new Koa();
@@ -52,7 +38,7 @@ app.use(bodyParser());
 
 // 3.2) /health
 router.get("/health", (ctx: Context) => {
-  ctx.body = { ok: true, model: env.MINIMAX_MODEL, port: env.PORT };
+  ctx.body = { ok: true, model: llm.modelA, port: PORT };
 });
 
 // 3.3) POST /api/billing
@@ -74,7 +60,7 @@ router.post("/api/billing", async (ctx: Context, _next: Next) => {
 
   try {
     const completion = await client.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 16,
       stream: false,
@@ -93,7 +79,7 @@ router.post("/api/billing", async (ctx: Context, _next: Next) => {
       `[/api/billing] ✅ 耗时 ${(performance.now() - t0).toFixed(0)}ms | prompt=${usage.prompt_tokens} completion=${usage.completion_tokens} total=${usage.total_tokens}`,
     );
     ctx.body = {
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       reply: text,
       usage: {
         prompt_tokens: usage.prompt_tokens,
@@ -118,11 +104,11 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 // ── 4) 启动 ──
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`──── API Key / 计费 Demo（§5.3 React + koa · HTML 内联块） · 已启动 ────`);
-  console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  POST /api/billing → 调一次 LLM（非流式），返回 usage`);
   console.log(`  GET  /health      → { ok, model, port }`);
-  console.log(`  模型: ${env.MINIMAX_MODEL}`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

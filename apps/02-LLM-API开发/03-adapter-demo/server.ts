@@ -23,6 +23,7 @@ import {
   sendMessageStream,
   type Protocol,
 } from "./adapter.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
 const PORT = Number(process.env.PORT) || 50213;
 
@@ -116,5 +117,6 @@ app.listen(PORT, "127.0.0.1", () => {
   console.log(`  POST /api/chat         → UnifiedResponse JSON`);
   console.log(`  POST /api/chat-stream  → SSE UnifiedDelta`);
   console.log(`  业务代码只调 sendMessage / sendMessageStream，不碰 SDK`);
+  logLlmConfig(getLlm());
   console.log(`  Ctrl+C 退出`);
 });

@@ -5,11 +5,11 @@
  *       把模型回复以 Streaming（流式）方式打印到控制台，并输出 Token 用量。
  *
  * 数据流：
- *   apps/.env → Zod 校验 → OpenAI SDK 客户端（baseURL 指向 MiniMax /v1）
+ *   apps/.env → getLlm() → 当前提供商的协议 A（OpenAI SDK）
  *   → chat.completions.create({ stream: true }) → 逐 chunk 打印 → 汇总 usage
  *
  * 对照：
- *   - 协议 B：index-anthropic.ts（@anthropic-ai/sdk + /anthropic，同 MINIMAX_API_KEY）
+ *   - 协议 B：index-anthropic.ts（同一 getLlm() 的 anthropic 客户端）
  *   - HTTP + SSE：server.ts（GET / 返回浏览器页；POST /api/chat 返回 SSE 流）
  *   - 进阶能力（AbortController 演示、Rate-Limit 重试等）在 apps/02-LLM-API开发/
  *     各小节里，**不**塞进本入口（演示动作会污染产品入口）
@@ -20,34 +20,10 @@
  */
 
 import OpenAI from "openai";
-import { z } from "zod";
-import { loadRootEnv } from "../../../load-root-env.js";
+import { getLlm } from "../../../llm.js";
 
-// ── 1. 加载环境变量（Key 在 apps/.env，整份 apps/ 共享一份） ──
-loadRootEnv();
-
-// ── 2. Zod 校验环境变量（启动失败要快，不要等 API 报错才发现 Key 没配） ──
-
-const envSchema = z.object({
-  MINIMAX_API_KEY: z
-    .string()
-    .min(1, "请在 apps/.env 中设置 MINIMAX_API_KEY（见 apps/.env.example）"),
-  // MiniMax 国内 OpenAI 兼容端点；不要用 api.minimax.io（海外站）
-  MINIMAX_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-});
-
-const env = envSchema.parse(process.env);
-
-// ── 3. 创建 OpenAI 兼容客户端（MiniMax 走 Chat Completions 协议） ──
-
-const client = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
-});
+const llm = getLlm();
+const client = llm.openai;
 
 // 命令行参数拼成用户消息；无参数时用默认问题，方便直接验证环境
 const userMessage =
@@ -55,11 +31,11 @@ const userMessage =
 
 async function main() {
   console.log(`> ${userMessage}\n`);
-  console.log(`[协议 A · OpenAI Chat Completions · ${env.MINIMAX_MODEL}]\n`);
+  console.log(`[协议 A · OpenAI Chat Completions · ${llm.provider} · ${llm.modelA}]\n`);
 
   // 流式响应：create() 返回 AsyncIterable，把流当成 result 直接交给 for await
   const stream = await client.chat.completions.create({
-    model: env.MINIMAX_MODEL,
+    model: llm.modelA,
     messages: [{ role: "user", content: userMessage }],
     stream: true,
     // 部分兼容 API 支持在流式最后一帧带上 usage；不支持则后面走控制台查账单

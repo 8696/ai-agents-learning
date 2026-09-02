@@ -49,25 +49,14 @@ import type { Context, Next } from "koa";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-// ── 1) 环境变量校验 ──
-const envSchema = z.object({
-  MINIMAX_API_KEY: z.string().min(1, "请在 apps/.env 填 MINIMAX_API_KEY"),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  PORT: z.coerce.number().int().positive().default(50203),
-});
-const env = envSchema.parse(process.env);
-
-const client = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
-});
+const llm = getLlm();
+const client = llm.openai;
+const PORT = z.coerce.number().int().positive().default(50203).parse(
+  process.env.PORT,
+);
 
 // ── 2) 请求体校验 ──
 const bodySchema = z.object({
@@ -87,8 +76,8 @@ app.use(bodyParser());
 router.get("/health", (ctx: Context) => {
   ctx.body = {
     ok: true,
-    model: env.MINIMAX_MODEL,
-    port: env.PORT,
+    model: llm.modelA,
+    port: PORT,
     endpoints: [
       "POST /api/full",
       "POST /api/cancel-after-frames",
@@ -145,7 +134,7 @@ async function handleFull(body: Body, res: ServerResponse): Promise<void> {
     });
 
     const stream = await client.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages: [{ role: "user", content: body.message }],
       stream: true,
       stream_options: { include_usage: true },
@@ -235,7 +224,7 @@ async function handleCancelAfterFrames(
 
     const stream = await client.chat.completions.create(
       {
-        model: env.MINIMAX_MODEL,
+        model: llm.modelA,
         messages: [{ role: "user", content: body.message }],
         stream: true,
         stream_options: { include_usage: true },
@@ -358,7 +347,7 @@ async function handleNoSignalAbort(
     });
 
     const stream = await client.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages: [{ role: "user", content: body.message }],
       stream: true,
       stream_options: { include_usage: true },
@@ -409,14 +398,14 @@ async function handleNoSignalAbort(
 }
 
 // ── 5) 启动 ──
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`──── AbortController 对照 Demo（§5.3 React + koa · HTML 内联块） · 已启动 ────`);
-  console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  GET  /                          → public/index.html（React + Babel Standalone 内联块）`);
   console.log(`  GET  /health                    → { ok, model, port, endpoints }`);
   console.log(`  POST /api/full                  → 不取消，跑到底（对照基线）`);
   console.log(`  POST /api/cancel-after-frames   → 收 N 帧后 abort；body.abortAfterFrames 默认 5；浏览器点"立即取消"按钮 / pagehide 都走这里`);
   console.log(`  POST /api/no-signal-abort       → 故意不传 signal；5s 后服务端 res.end() 关 SSE；观察 SDK 是否还跑、是否还计费`);
-  console.log(`  模型: ${env.MINIMAX_MODEL}`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

@@ -17,30 +17,15 @@ import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import type { Context, Next } from "koa";
 import { fileURLToPath } from "node:url";
-import OpenAI from "openai";
 import { z } from "zod";
-import { loadRootEnv } from "../../load-root-env.js";
+import { getLlm, logLlmConfig } from "../../llm.js";
 
-loadRootEnv();
-
-const envSchema = z.object({
-  MINIMAX_API_KEY: z
-    .string()
-    .min(1, "请在 apps/.env 中设置 MINIMAX_API_KEY（见 apps/.env.example）"),
-  MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
-  MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  // §5.3.3 PORT = 5{MM}{SS}；mini-app 用 50000
-  PORT: z.coerce.number().int().positive().default(50000),
-});
-const env = envSchema.parse(process.env);
+const llm = getLlm();
+const client = llm.openai;
+const PORT = z.coerce.number().int().positive().default(50000).parse(process.env.PORT);
 
 const bodySchema = z.object({
   message: z.string().min(1, "message 不能为空"),
-});
-
-const client = new OpenAI({
-  apiKey: env.MINIMAX_API_KEY,
-  baseURL: env.MINIMAX_BASE_URL,
 });
 
 const app = new Koa();
@@ -51,9 +36,10 @@ app.use(bodyParser());
 router.get("/health", (ctx: Context) => {
   ctx.body = {
     ok: true,
-    model: env.MINIMAX_MODEL,
-    baseURL: env.MINIMAX_BASE_URL,
-    port: env.PORT,
+    model: llm.modelA,
+    provider: llm.provider,
+    baseURL: llm.baseUrlA,
+    port: PORT,
     endpoint: "POST /api/chat (SSE)",
   };
 });
@@ -77,7 +63,7 @@ router.post("/api/chat", async (ctx: Context, _next: Next) => {
 
   try {
     const stream = await client.chat.completions.create({
-      model: env.MINIMAX_MODEL,
+      model: llm.modelA,
       messages: [{ role: "user", content: parsed.data.message }],
       stream: true,
       stream_options: { include_usage: true },
@@ -114,11 +100,11 @@ app.use(router.routes()).use(router.allowedMethods());
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
-app.listen(env.PORT, "127.0.0.1", () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log("──── 00 环境准备 · HTTP + SSE（§5.3 React + koa）────");
-  console.log(`  浏览器打开: http://127.0.0.1:${env.PORT}/`);
+  console.log(`  浏览器打开: http://127.0.0.1:${PORT}/`);
   console.log(`  POST /api/chat  Body: { "message": "你好" }`);
   console.log(`  GET  /health`);
-  console.log(`  模型: ${env.MINIMAX_MODEL} (${env.MINIMAX_BASE_URL})`);
+  logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });
