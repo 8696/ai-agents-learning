@@ -17,7 +17,7 @@
 | ✅ | [**Few-shot / Zero-shot**：示例怎么帮模型「对齐格式」](./02-Few-shot-Zero-shot.md) | 能对比你的任务上哪种更稳 | `few shot prompting examples` `in-context learning` · 同上官方教程 | — |
 | ✅ | [**CoT / ReAct（概念）**：先知道思想；循环到模块 07 再写](./03-CoT-ReAct概念.md) | 能说清思想，现在不要实现 Agent Loop | `chain of thought prompting` `ReAct paper summary` · Anthropic CoT 章节 · [ReAct 论文摘要](https://arxiv.org/abs/2210.03629) | 暂无链接 |
 | ✅ | [**Prompt 版本管理**：Prompt 也是代码，要 diff、要回归](./04-Prompt-版本管理.md) | 知道改 Prompt 和改代码一样要可追溯 | `prompt versioning best practices` · LangSmith Prompt Hub 概念 · 工程博客 | 暂无链接 |
-| ⬜ | [**本地产出**](./05-本地产出.md) | 打开豆谷客服中台能处理一封来信，得到一张完整工单 | — | [沉淀](./05-本地产出.md) |
+| ✅ | [**本地产出**](./05-本地产出.md) | 打开豆谷客服中台能处理一封来信，得到一张完整工单 | — | [沉淀](./05-本地产出.md) |
 
 ## 验收
 
