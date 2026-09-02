@@ -1,6 +1,6 @@
-# 00 环境准备 · Mini App（模块 00 本地产出 Demo APP）
+# 00 环境准备 · Mini App（模块 00 代码落点）
 
-把模块 00 **已经落下的代码**整合成这一份最小产品（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）：
+模块 00 的**最小三入口**（[AGENTS.md §5.1](../../../AGENTS.md#51-apps-子文件夹结构)）：
 
 - **CLI · 协议 A**（`openai` + `/v1`）：一行命令发起流式对话，打印到控制台
 - **CLI · 协议 B**（`@anthropic-ai/sdk` + `/anthropic`）：同上，但走 Anthropic Messages API

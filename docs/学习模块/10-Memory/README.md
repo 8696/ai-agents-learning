@@ -1,25 +1,26 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/10-Memory/{小节文件夹}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「模块复盘」MD / `apps/10-Memory/{小节文件夹}/README.md`
 
 # 模块 10 · Memory ⭐⭐⭐⭐
 
 [← 09 RAG 进阶](../09-RAG进阶/README.md) · [11 Agent State / Workflow →](../11-Agent-State-Workflow/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/10-Memory/{小节文件夹}/README.md` 为准。
+> **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/10-Memory/{小节文件夹}/README.md` 为准。
 > **代码落点**：`apps/10-Memory/{小节文件夹}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是本模块小 APP（把已学能力串起来，不 import 其它小节），不是再讲一节新概念、也不是从零灌代码（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）。
+> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**记忆分类**：工作记忆（Working / Conversation，本轮）/ episodic（经历）/ semantic（事实，含 User Memory）](./01-记忆分类.md) | 能给自己的 Agent 对号入座；能把 Short-term / Long-term 对上这三类 | `AI agent memory types` `episodic semantic memory agent` · LangGraph Memory 概念 · MemGPT 论文摘要 | — |
 | ⬜ | [**写入策略**：不是每句都存；要提取、要去重、要有过期](./02-写入策略.md) | 能说出「什么该写进长期记忆」；知道原始对话要压缩/摘要，不能整段当记忆 | `when to save agent memory` `memory extraction LLM` `memory compression agent` · 产品案例：ChatGPT memory 说明 | — |
-| ⬜ | [**本地产出**](./03-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-本地产出.md) |
+| ⬜ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
 
 ## 验收
 
-> 本地节奏 / `coach next` 勾本地前对照本节。
+> 写**模块复盘**时对照本节：复盘的「模块验收对答」表逐条抄这里。
+> `coach next` 勾复盘行前走 [AGENTS.md §7.3 闸门](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不打 Demo 判断块）。
 
 **一句话目标**：理解 Agent 如何拥有跨会话的长期记忆。
 
@@ -40,7 +41,7 @@
 
 **出门线索**（完整勾选表见 [小节进度](#小节进度)）：`agent memory types` · `episodic semantic memory`
 
-## 本地拆步
+## 动手落点
 
 > 落到 `apps/10-Memory/{小节文件夹}/`（不要把记忆做进 RAG demo）。
 

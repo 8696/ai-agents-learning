@@ -4,27 +4,28 @@
 
 （无上一模块） · [01 AI & LLM 基础认知 →](../01-AI与LLM基础认知/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/00-环境准备/01-mini-app/README.md` 为准。
-> **代码落点**：[apps/00-环境准备/01-mini-app/README.md](../../../apps/00-环境准备/01-mini-app/README.md)（模块 00 本地产出 Demo APP = mini-app 三入口；按条另有 [API Key 计费](../../../apps/00-环境准备/01-API-Key-计费/)）
+> **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/00-环境准备/01-mini-app/README.md` 为准。
+> **代码落点**：[apps/00-环境准备/01-mini-app/README.md](../../../apps/00-环境准备/01-mini-app/README.md)（模块 00 代码落点 = mini-app 三入口；按条另有 [API Key 计费](../../../apps/00-环境准备/01-API-Key-计费/)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是本模块小 APP（把已学能力串起来，不 import 其它小节），不是再讲一节新概念、也不是从零灌代码（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）。
+> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**API Key / 计费**：按 Token 计费，输入 / 输出分开；订阅 Key ≠ 按量 API Key](./01-API-Key-计费.md) | 能说清差别，知道去控制台看账单 | `LLM API pricing tokens` `MiniMax 按量计费` `API key vs subscription key` · [MiniMax 控制台](https://platform.minimaxi.com) 计费说明 · 各厂商 Pricing 页 | — |
 | ✅ | [**Node ≥22**：最低 22，不锁死小版本；换机器怎么对齐](./02-Node-22.md) | 会 `nvm use`，知道 `engines: ">=22"` 只拦低于 22 的 | `nvm node version` `engines field package.json` · [Node.js 22 文档](https://nodejs.org/docs/latest-v22.x/api/index.html) · nvm README | — |
 | ✅ | [**密钥安全**：泄露后第一件事是 rotate，不是只改 `.gitignore`](./03-密钥安全.md) | 能说出泄露后的第一时间动作 | `git secret scanning` `accidentally committed api key` · GitHub Secret Scanning 说明 · OWASP 密钥管理 | — |
-| ✅ | [**本地产出**](./04-本地产出.md) | 打开 mini-app 能发消息、拿流式回复、看见 usage；Key 不进 git | — | [沉淀](./04-本地产出.md) · [apps mini-app README](../../../apps/00-环境准备/01-mini-app/README.md) |
+| ✅ | [**模块复盘**](./04-模块复盘.md) | 打开 mini-app 能发消息、拿流式回复、看见 usage；Key 不进 git | — | [沉淀](./04-模块复盘.md) · [apps mini-app README](../../../apps/00-环境准备/01-mini-app/README.md) |
 
 ## 验收
 
-> 本地节奏 / `coach next` 勾本地前对照本节。
+> 写**模块复盘**时对照本节：复盘的「模块验收对答」表逐条抄这里。
+> `coach next` 勾复盘行前走 [AGENTS.md §7.3 闸门](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不打 Demo 判断块）。
 
 **一句话目标**：让「我想试一下这个想法」到「代码跑起来」的距离缩短到 30 秒。
 
-**动手产出**：把本模块已落代码整合成 **一份 Demo APP** = `apps/00-环境准备/01-mini-app/`（不另建 `04-本地产出/`）。浏览器 `yarn app:00-01-mini-server`（端口 `50000`）发一条消息拿到流式回复并看见用量；CLI `yarn app:00-01-mini-cli-a` 是同一套链路的终端入口。按条 Demo `yarn app:00-01-api-key-billing` 仍单独验证「输入/输出 Token 分开计费」。
+**代码落点**：模块 00 的全部代码已落在 `apps/00-环境准备/`：`01-mini-app/`（三入口：CLI-A / CLI-B / HTTP+SSE；`yarn app:00-01-mini-server` 端口 `50000`，`yarn app:00-01-mini-cli-a`）+ `01-API-Key-计费/`（按条 Demo `yarn app:00-01-api-key-billing`，验证「输入/输出 Token 分开计费」）。复盘的「落过的 Demo 各自证明了什么」对照这里。
 
 **验收标准**
 - [x] 浏览器打开 Demo APP（`http://127.0.0.1:50000/`）能发消息并逐字看到流式回复
@@ -44,9 +45,9 @@
 
 **出门线索**（完整勾选表见 [小节进度](#小节进度)）：`LLM API pricing` · `git secret scanning`
 
-## 本地拆步
+## 动手落点
 
-> 本地产出 = 把本模块代码整合成 Demo APP。本模块的 APP 就是 mini-app，不另建文件夹。
+> 模块 00 的代码 = mini-app（三入口）+ `01-API-Key-计费` Demo。无额外整合 APP。
 
 1. Demo APP（浏览器）：`yarn app:00-01-mini-server` → `http://127.0.0.1:50000/`
 2. 同一链路 CLI：`yarn app:00-01-mini-cli-a`；协议 B 入口可超前，不算本模块验收

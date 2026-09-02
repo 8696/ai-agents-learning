@@ -1,26 +1,27 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/12-MCP/{小节文件夹}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「模块复盘」MD / `apps/12-MCP/{小节文件夹}/README.md`
 
 # 模块 12 · MCP ⭐⭐⭐⭐⭐
 
 [← 11 Agent State / Workflow](../11-Agent-State-Workflow/README.md) · [13 Agent Framework →](../13-Agent-Framework/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/12-MCP/{小节文件夹}/README.md` 为准。
+> **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/12-MCP/{小节文件夹}/README.md` 为准。
 > **代码落点**：`apps/12-MCP/{小节文件夹}/`（学到再建；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是本模块小 APP（把已学能力串起来，不 import 其它小节），不是再讲一节新概念、也不是从零灌代码（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）。
+> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**MCP 架构**：Client / Server；Tool、Resource、Prompt 三种原语](./01-MCP-架构.md) | 能说清谁连谁、三种原语各干什么 | `Model Context Protocol architecture` `MCP tool resource prompt` · [modelcontextprotocol.io](https://modelcontextprotocol.io) 官方文档 | — |
 | ⬜ | [**stdio vs Streamable HTTP**：本地玩具 vs 远程 + 按用户鉴权](./02-stdio-vs-Streamable-HTTP.md) | 知道生产形态为什么不是 stdio | `MCP stdio transport` `MCP streamable HTTP` `MCP OAuth 2.1` · MCP 规范 Transport / Authorization | — |
 | ⬜ | [**Skills vs MCP**：MCP 是连工具的协议；Skills / AGENTS.md 是打包领域行为](./03-Skills-vs-MCP.md) | 能一句话划界，不混成一个东西 | `Claude agent skills` `AGENTS.md vs MCP` · Anthropic Skills · 本仓库 AGENTS.md | — |
-| ⬜ | [**本地产出**](./04-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-本地产出.md) |
+| ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 
-> 本地节奏 / `coach next` 勾本地前对照本节。
+> 写**模块复盘**时对照本节：复盘的「模块验收对答」表逐条抄这里。
+> `coach next` 勾复盘行前走 [AGENTS.md §7.3 闸门](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不打 Demo 判断块）。
 
 **一句话目标**：理解 Agent 如何标准化地连接外部工具和服务。
 
@@ -42,7 +43,7 @@
 
 **出门线索**（完整勾选表见 [小节进度](#小节进度)）：`Model Context Protocol` · `MCP streamable HTTP` · `MCP OAuth` · `agent skills vs MCP`
 
-## 本地拆步
+## 动手落点
 
 > 落到 `apps/12-MCP/{小节文件夹}/`。LLM 配置通过 `apps/load-root-env.ts` 读 `apps/.env`。
 

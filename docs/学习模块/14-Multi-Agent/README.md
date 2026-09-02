@@ -1,26 +1,27 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/14-Multi-Agent/{小节文件夹}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「模块复盘」MD / `apps/14-Multi-Agent/{小节文件夹}/README.md`
 
 # 模块 14 · Multi-Agent ⭐⭐⭐⭐
 
 [← 13 Agent Framework](../13-Agent-Framework/README.md) · [15 Browser / Computer Agent →](../15-Browser-Computer-Agent/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/14-Multi-Agent/{小节文件夹}/README.md` 为准。
+> **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/14-Multi-Agent/{小节文件夹}/README.md` 为准。
 > **代码落点**：`apps/14-Multi-Agent/{小节文件夹}/`（详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是本模块小 APP（把已学能力串起来，不 import 其它小节），不是再讲一节新概念、也不是从零灌代码（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）。
+> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Supervisor 模式**：谁分派、谁执行、怎么交还](./01-Supervisor-模式.md) | 能画一张分工图 | `multi agent supervisor pattern` `orchestrator worker LLM` · LangGraph Multi-Agent 示例 · [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | — |
 | ⬜ | [**多 Agent 成本**：多一次交接就多一轮 Token；要有自己的数字](./02-多-Agent-成本.md) | 能对比单 Agent vs 多 Agent 的用量 | `multi agent token cost` · 自己实验数据 | — |
 | ⬜ | [**A2A**：MCP 连工具，A2A 连 Agent；本仓库只要求认知](./03-A2A.md) | 能说清边界，不必实现 | `A2A protocol` `Agent2Agent vs MCP` · [a2a-protocol.org](https://a2a-protocol.org) | — |
-| ⬜ | [**本地产出**](./04-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-本地产出.md) |
+| ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 
-> 本地节奏 / `coach next` 勾本地前对照本节。
+> 写**模块复盘**时对照本节：复盘的「模块验收对答」表逐条抄这里。
+> `coach next` 勾复盘行前走 [AGENTS.md §7.3 闸门](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不打 Demo 判断块）。
 
 **一句话目标**：理解什么时候应该多 Agent，什么时候不应该。
 
@@ -40,7 +41,7 @@
 
 **出门线索**（完整勾选表见 [小节进度](#小节进度)）：`multi agent supervisor pattern` · `multi agent token cost` · `A2A protocol vs MCP`
 
-## 本地拆步
+## 动手落点
 
 > 落到 `apps/14-Multi-Agent/{小节文件夹}/`。
 

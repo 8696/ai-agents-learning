@@ -65,8 +65,8 @@
                 "path": "docs/学习模块/00-环境准备/03-密钥安全.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/00-环境准备/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/00-环境准备/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -118,8 +118,8 @@
                 "path": "docs/学习模块/01-AI与LLM基础认知/10-主流模型对比.md"
               },
               {
-                "label": "11-本地产出.md",
-                "path": "docs/学习模块/01-AI与LLM基础认知/11-本地产出.md"
+                "label": "11-模块复盘.md",
+                "path": "docs/学习模块/01-AI与LLM基础认知/11-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -151,8 +151,8 @@
                 "path": "docs/学习模块/02-LLM-API开发/05-思考.md"
               },
               {
-                "label": "06-本地产出.md",
-                "path": "docs/学习模块/02-LLM-API开发/06-本地产出.md"
+                "label": "06-模块复盘.md",
+                "path": "docs/学习模块/02-LLM-API开发/06-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -180,8 +180,8 @@
                 "path": "docs/学习模块/03-Prompt-Engineering/04-Prompt-版本管理.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/03-Prompt-Engineering/05-本地产出.md"
+                "label": "05-模块复盘.md",
+                "path": "docs/学习模块/03-Prompt-Engineering/05-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -201,8 +201,8 @@
                 "path": "docs/学习模块/04-Structured-Output/02-JSON-Mode-vs-Structured-Output.md"
               },
               {
-                "label": "03-本地产出.md",
-                "path": "docs/学习模块/04-Structured-Output/03-本地产出.md"
+                "label": "03-模块复盘.md",
+                "path": "docs/学习模块/04-Structured-Output/03-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -230,8 +230,8 @@
                 "path": "docs/学习模块/05-Tool-Calling/04-Tool-Gateway-幂等.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/05-Tool-Calling/05-本地产出.md"
+                "label": "05-模块复盘.md",
+                "path": "docs/学习模块/05-Tool-Calling/05-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -255,8 +255,8 @@
                 "path": "docs/学习模块/06-多轮对话与Context/03-Token-Budget.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/06-多轮对话与Context/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/06-多轮对话与Context/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -280,8 +280,8 @@
                 "path": "docs/学习模块/07-手写Agent/03-死循环防护.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/07-手写Agent/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/07-手写Agent/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -309,8 +309,8 @@
                 "path": "docs/学习模块/08-RAG基础/04-RAG-vs-Fine-tuning.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/08-RAG基础/05-本地产出.md"
+                "label": "05-模块复盘.md",
+                "path": "docs/学习模块/08-RAG基础/05-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -338,8 +338,8 @@
                 "path": "docs/学习模块/09-RAG进阶/04-切块与查询变体.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/09-RAG进阶/05-本地产出.md"
+                "label": "05-模块复盘.md",
+                "path": "docs/学习模块/09-RAG进阶/05-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -359,8 +359,8 @@
                 "path": "docs/学习模块/10-Memory/02-写入策略.md"
               },
               {
-                "label": "03-本地产出.md",
-                "path": "docs/学习模块/10-Memory/03-本地产出.md"
+                "label": "03-模块复盘.md",
+                "path": "docs/学习模块/10-Memory/03-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -384,8 +384,8 @@
                 "path": "docs/学习模块/11-Agent-State-Workflow/03-Human-in-the-loop.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/11-Agent-State-Workflow/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/11-Agent-State-Workflow/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -409,8 +409,8 @@
                 "path": "docs/学习模块/12-MCP/03-Skills-vs-MCP.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/12-MCP/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/12-MCP/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -438,8 +438,8 @@
                 "path": "docs/学习模块/13-Agent-Framework/04-Dify-等编排产品.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/13-Agent-Framework/05-本地产出.md"
+                "label": "05-模块复盘.md",
+                "path": "docs/学习模块/13-Agent-Framework/05-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -463,8 +463,8 @@
                 "path": "docs/学习模块/14-Multi-Agent/03-A2A.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/14-Multi-Agent/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/14-Multi-Agent/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -484,8 +484,8 @@
                 "path": "docs/学习模块/15-Browser-Computer-Agent/02-Computer-Use.md"
               },
               {
-                "label": "03-本地产出.md",
-                "path": "docs/学习模块/15-Browser-Computer-Agent/03-本地产出.md"
+                "label": "03-模块复盘.md",
+                "path": "docs/学习模块/15-Browser-Computer-Agent/03-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -509,8 +509,8 @@
                 "path": "docs/学习模块/16-Coding-Agent/03-AGENTS-Skills.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/16-Coding-Agent/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/16-Coding-Agent/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -538,8 +538,8 @@
                 "path": "docs/学习模块/17-Agent-Evaluation/04-CI-ship-no-ship.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/17-Agent-Evaluation/05-本地产出.md"
+                "label": "05-模块复盘.md",
+                "path": "docs/学习模块/17-Agent-Evaluation/05-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -559,8 +559,8 @@
                 "path": "docs/学习模块/18-Observability/02-轨迹可视化.md"
               },
               {
-                "label": "03-本地产出.md",
-                "path": "docs/学习模块/18-Observability/03-本地产出.md"
+                "label": "03-模块复盘.md",
+                "path": "docs/学习模块/18-Observability/03-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -584,8 +584,8 @@
                 "path": "docs/学习模块/19-可靠性成本性能/03-Model-Routing.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/19-可靠性成本性能/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/19-可靠性成本性能/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -609,8 +609,8 @@
                 "path": "docs/学习模块/20-AI-Security/03-Tool-Gateway-OAuth.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/20-AI-Security/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/20-AI-Security/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -634,8 +634,8 @@
                 "path": "docs/学习模块/21-后端与基础设施/03-对象存储-RBAC.md"
               },
               {
-                "label": "04-本地产出.md",
-                "path": "docs/学习模块/21-后端与基础设施/04-本地产出.md"
+                "label": "04-模块复盘.md",
+                "path": "docs/学习模块/21-后端与基础设施/04-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -655,8 +655,8 @@
                 "path": "docs/学习模块/22-AI全栈产品化/02-Agent-Steps-UI.md"
               },
               {
-                "label": "03-本地产出.md",
-                "path": "docs/学习模块/22-AI全栈产品化/03-本地产出.md"
+                "label": "03-模块复盘.md",
+                "path": "docs/学习模块/22-AI全栈产品化/03-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -692,8 +692,8 @@
                 "path": "docs/学习模块/23-Production-Agent-Architecture/06-独立系统设计.md"
               },
               {
-                "label": "07-本地产出.md",
-                "path": "docs/学习模块/23-Production-Agent-Architecture/07-本地产出.md"
+                "label": "07-模块复盘.md",
+                "path": "docs/学习模块/23-Production-Agent-Architecture/07-模块复盘.md"
               },
               {
                 "label": "README.md",
@@ -959,6 +959,28 @@
                 "path": "apps/02-LLM-API开发/04-Rate-Limit/server.ts"
               }
             ]
+          },
+          {
+            "label": "05-思考",
+            "children": [
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/02-LLM-API开发/05-思考/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/02-LLM-API开发/05-思考/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/05-思考/server.ts"
+              }
+            ]
           }
         ]
       },
@@ -986,8 +1008,56 @@
                 "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/server.ts"
               }
             ]
+          },
+          {
+            "label": "02-Few-shot-Zero-shot",
+            "children": [
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-Prompt-版本管理",
+            "children": [
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/server.ts"
+              }
+            ]
           }
         ]
+      },
+      {
+        "label": "llm.ts",
+        "path": "apps/llm.ts"
       },
       {
         "label": "load-root-env.ts",

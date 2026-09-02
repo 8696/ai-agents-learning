@@ -1,15 +1,15 @@
-[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「本地产出」MD / `apps/13-Agent-Framework/{小节文件夹}/README.md`
+[目录](../../00-目录.md) · [学习模块](../README.md) · [学习总览](../../06-学习总览.md) · 代码地图见本模块「模块复盘」MD / `apps/13-Agent-Framework/{小节文件夹}/README.md`
 
 # 模块 13 · Agent Framework ⭐⭐⭐⭐
 
 [← 12 MCP](../12-MCP/README.md) · [14 Multi-Agent →](../14-Multi-Agent/README.md)
 
-> **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/13-Agent-Framework/{小节文件夹}/README.md` 为准。
+> **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/13-Agent-Framework/{小节文件夹}/README.md` 为准。
 > **代码落点**：`apps/13-Agent-Framework/{小节文件夹}/`（每条外部小节的最小可运行 Demo；详见 [AGENTS.md §4](../../../AGENTS.md#4-代码落点)）
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行本地产出。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。本地产出是本模块小 APP（把已学能力串起来，不 import 其它小节），不是再讲一节新概念、也不是从零灌代码（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）。
+> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
@@ -17,11 +17,12 @@
 | ⬜ | [**State Graph**：用图表达工作流，和手写 if/else 循环的差别](./02-State-Graph.md) | 能对照模块 07/11 的代码逐条 diff | `LangGraph tutorial state graph` · [LangGraph.js 文档](https://langchain-ai.github.io/langgraphjs/) | — |
 | ⬜ | [**Agents as Tools vs Handoff**：当工具调用（调用方还在）vs 任务移交（控制权换人）](./03-Agents-as-Tools-vs-Handoff.md) | 能一句话划界；实现放到模块 14 | `agents as tools langchain` `agent handoff vs tool` · 模块 14 卡片 | — |
 | ⬜ | [**Dify 等编排产品**：体验即可，不当学习主线](./04-Dify-等编排产品.md) | 能讲：它替你藏了 Loop/State | `Dify agent workflow` · Dify 官方入门（1h 内） | — |
-| ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./05-本地产出.md) |
+| ⬜ | [**模块复盘**](./05-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./05-模块复盘.md) |
 
 ## 验收
 
-> 本地节奏 / `coach next` 勾本地前对照本节。
+> 写**模块复盘**时对照本节：复盘的「模块验收对答」表逐条抄这里。
+> `coach next` 勾复盘行前走 [AGENTS.md §7.3 闸门](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不打 Demo 判断块）。
 
 **一句话目标**：学会用框架把前面自己实现的东西工程化。
 
@@ -42,7 +43,7 @@
 
 **出门线索**（完整勾选表见 [小节进度](#小节进度)）：`LangGraph state graph` · `Vercel AI SDK useChat` · 对照模块 07 手写版
 
-## 本地拆步
+## 动手落点
 
 > 只落到 `apps/13-Agent-Framework/{小节文件夹}/`，不要改掉 `07` 的手写循环。
 

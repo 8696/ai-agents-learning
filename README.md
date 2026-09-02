@@ -8,7 +8,7 @@
 
 1. 按 [docs/06-学习总览.md](docs/06-学习总览.md) 看当前进度
 2. 找到当前模块的 README → [docs/学习模块/](docs/学习模块/)
-3. 跟着「小节进度」从外部第一条走到本地产出
+3. 跟着「小节进度」从外部第一条走到最后一行「模块复盘」
 4. 每条学完 → 写小节 MD（说「沉淀文档」）→ Demo 判断（说「写 Demo / 不写 Demo」）→ `coach next`
 5. 不写代码？只学概念也行。`coach status` 看当前节奏
 
@@ -58,7 +58,7 @@ ai-agents-learning/
 │   ├── 03-学习路线.md · 04-自测题库.md · 05-资源清单.md
 │   ├── 06-学习总览.md · 07-核心术语.md
 │   └── 学习模块/                    ← 一模块一文件夹
-│       ├── 00-环境准备/README.md · 01-{小节}.md · ... · 04-本地产出.md
+│       ├── 00-环境准备/README.md · 01-{小节}.md · ... · 04-模块复盘.md
 │       ├── 01-AI与LLM基础认知/README.md · 01~11-*.md
 │       └── ...（到 23）
 ├── apps/
@@ -77,7 +77,7 @@ ai-agents-learning/
 
 | 模块 | 状态 | 内容 |
 | ---- | ---- | ---- |
-| 00 | ✅ 完成 | 环境准备 / Key 安全 / Node ≥22 / 本地产出 |
+| 00 | ✅ 完成 | 环境准备 / Key 安全 / Node ≥22 |
 | 01 | ✅ 完成 | Token / Context / Transformer / 幻觉 |
 | 02 | ✅ 完成 | Streaming · 协议 A/B · AbortController · Rate-Limit · 思考 |
 | 03 ~ 23 | ⬜ | 见 [docs/06-学习总览.md](docs/06-学习总览.md) |
