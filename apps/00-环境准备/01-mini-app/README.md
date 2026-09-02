@@ -1,6 +1,12 @@
-# 00 环境准备 · Mini App
+# 00 环境准备 · Mini App（模块 00 本地产出 Demo APP）
 
-模块 00 的"代码落点"——**最小可运行**的三入口 demo：
+把模块 00 **已经落下的代码**整合成这一份最小产品（[AGENTS.md §5.4](../../../AGENTS.md#54-模块小-app本地产出行)）：
+
+- **CLI · 协议 A**（`openai` + `/v1`）：一行命令发起流式对话，打印到控制台
+- **CLI · 协议 B**（`@anthropic-ai/sdk` + `/anthropic`）：同上，但走 Anthropic Messages API
+- **HTTP + SSE**（`openai` + `/v1`）：浏览器聊天页 + `POST /api/chat` 流式端点（默认端口 `50000`）
+
+按条 Demo `01-API-Key-计费` 仍单独验证输入/输出 Token 分开；**不** import 进本文件夹。模块 02 的取消 / 429 / 协议对照 **不**塞进本入口。
 
 - **CLI · 协议 A**（`openai` + `/v1`）：一行命令发起流式对话，打印到控制台
 - **CLI · 协议 B**（`@anthropic-ai/sdk` + `/anthropic`）：同上，但走 Anthropic Messages API

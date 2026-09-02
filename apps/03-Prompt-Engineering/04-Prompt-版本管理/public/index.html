@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <title>Prompt 一字之差对照 · 版本管理</title>
+
+ <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+ <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+ integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+ crossorigin="anonymous"></script>
+
+ <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap）。
+ 注：React 19 移除了 UMD bundle 只发 ESM；§5.3.4 用 React 18 UMD。 -->
+ <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+ <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+ <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4。
+ 8.x 默认 preset-react 是 automatic runtime（输出 import { jsx } from "react/jsx-runtime"），
+ 与本规则"完全 ESM 禁用"冲突。7.26.4 默认是 classic runtime（输出 React.createElement）。
+ 不要在 script type="text/babel" 块上加 data-presets / data-plugins——Babel 默认行为即可。 -->
+ <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+ <div id="root"></div>
+
+ <!-- type="text/babel"：告知 Babel Standalone 在运行时转译此脚本块，
+ 将 JSX 语法（如 <App />）转换为 React.createElement() 调用。
+ 所有 React 代码（含 JSX）写在内联块里，不另起 app.tsx / app.js。 -->
+ <script type="text/babel">
+ // ── 解构 React 全局变量（UMD CDN 加载后 window.React / window.ReactDOM 存在） ──
+ const { useState, useMemo } = React;
+
+ // ── 预置样本：都是"直答容易翻车、加 step by step 更稳"的题目 ──
+ const SAMPLES = [
+  { id: "math", title: "追击问题（数学）", text: "火车 A 以 60 km/h 出发 2 小时后，火车 B 以 90 km/h 从同一地点出发。多久后 B 追上 A？" },
+  { id: "subj", title: "含混分类", text: "产品不错，但物流太慢了，两周才到。" },
+  { id: "prime", title: "质数拆分", text: "把 24 写成三个素数之和，按升序列出来。" },
+  { id: "sort", title: "数字排序", text: "把这组数从大到小排序：3.14、π 的近似 3.14159、e 的近似 2.71828。" },
+  { id: "irony", title: "反讽判断", text: "太精彩了，我都看哭了。这家餐厅的服务真是'一流'。" },
+ ];
+
+ /** 两版的默认 User 末尾——你可以直接编辑，也可点下方按钮覆盖。 */
+ const DEFAULT_V1 = "请回答下列问题，直接给出最终答案，不要解释、不要列出推理步骤。";
+ const DEFAULT_V2 = "请回答下列问题。Let's think step by step, then give the final answer.";
+
+ const PILL = {
+  idle: { text: "⏸ 待连接", className: "text-xs px-2 py-1 rounded bg-gray-200" },
+  loading: { text: "🔄 请求中", className: "text-xs px-2 py-1 rounded bg-amber-200" },
+  ok: { text: "✅ 完成", className: "text-xs px-2 py-1 rounded bg-green-200" },
+  err: { text: "❌ 错误", className: "text-xs px-2 py-1 rounded bg-red-200" },
+ };
+
+ function ResultCard({ row, version }) {
+  if (!row) {
+   return <p className="text-sm text-gray-400">尚未跑这一版</p>;
+  }
+  if (row.ok === false) {
+   return (
+    <div className="text-sm space-y-1">
+     <p className="text-red-700">上游失败 HTTP {row.status}</p>
+     <pre className="whitespace-pre-wrap text-xs bg-red-50 p-2 rounded">{row.error}</pre>
+    </div>
+   );
+  }
+  return (
+   <div className="text-sm space-y-2">
+    <p className="text-xs text-gray-600 whitespace-pre-wrap break-words">User 末尾：{version.suffix}</p>
+    <div className="flex flex-wrap gap-2 text-xs">
+     <span className="px-2 py-0.5 rounded bg-gray-100">长度 {row.textLen}</span>
+     <span className={"px-2 py-0.5 rounded " + (row.hasReasoning ? "bg-amber-100 text-amber-900" : "bg-gray-100")}>
+      含推理：{row.hasReasoning ? "是" : "否"}
+     </span>
+    </div>
+    <p className="text-xs text-gray-500">首段：{row.preview || "（空）"}</p>
+    <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border">{row.raw || "（空回复）"}</pre>
+   </div>
+  );
+ }
+
+ // ── 主组件：按 §5.3.4 强制骨架渲染 id ──
+ function App() {
+  const [text, setText] = useState(SAMPLES[0].text);
+  const [v1Prompt, setV1Prompt] = useState(DEFAULT_V1);
+  const [v2Prompt, setV2Prompt] = useState(DEFAULT_V2);
+  const [phase, setPhase] = useState("idle");
+  const [errorLine, setErrorLine] = useState("");
+  const [payload, setPayload] = useState(null);
+
+  const pill = PILL[phase] || PILL.idle;
+  const busy = phase === "loading";
+
+  const v1Len = v1Prompt.length;
+  const v2Len = v2Prompt.length;
+  const lenDelta = useMemo(() => v2Len - v1Len, [v1Len, v2Len]);
+  // "v1 === v2" 的话实验无效：两端一模一样，看不出行为差
+  const identical = v1Prompt.trim() === v2Prompt.trim();
+
+  async function run(modes, overrideText) {
+   setPhase("loading");
+   setErrorLine("");
+   const bodyText = overrideText !== undefined ? overrideText : text;
+   const controller = new AbortController();
+   const timer = setTimeout(() => controller.abort(), 30000);
+   try {
+    const res = await fetch("/api/compare", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({
+      text: bodyText,
+      modes,
+      prompts: { v1: v1Prompt, v2: v2Prompt },
+     }),
+     signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+     setPhase("err");
+     setPayload(data);
+     setErrorLine(
+      data.error
+       ? `HTTP ${res.status}：${data.error}`
+       : `HTTP ${res.status}：服务端或参数错误`
+     );
+     return;
+    }
+    setPayload(data);
+    setPhase("ok");
+   } catch (error) {
+    setPhase("err");
+    setPayload(null);
+    const aborted = error && error.name === "AbortError";
+    setErrorLine(
+     aborted
+      ? "请求超时（30s）或被中止，网络/上游无响应"
+      : `网络失败：${error && error.message ? error.message : String(error)}`
+    );
+   } finally {
+    clearTimeout(timer);
+   }
+  }
+
+  const v1Row = payload && payload.results
+   ? payload.results.find((r) => r.mode === "v1")
+   : null;
+  const v2Row = payload && payload.results
+   ? payload.results.find((r) => r.mode === "v2")
+   : null;
+  const versions = payload && payload.versions ? payload.versions : null;
+
+  const v1Ok = v1Row && v1Row.ok === true ? v1Row : null;
+  const v2Ok = v2Row && v2Row.ok === true ? v2Row : null;
+  const lengthDelta = v1Ok && v2Ok ? v2Ok.textLen - v1Ok.textLen : null;
+
+  return (
+   <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <header
+     id="page-header"
+     className="border-b p-4 flex items-center justify-between bg-white"
+    >
+     <h1 id="page-title" className="text-xl font-semibold">
+      Prompt 一字之差：v1.0.0 vs v1.1.0
+     </h1>
+     <span id="status-pill" className={pill.className}>
+      {pill.text}
+     </span>
+    </header>
+
+    <main id="page-main" className="container mx-auto p-4 space-y-4">
+     <section
+      id="controls"
+      className="bg-white shadow rounded p-4 space-y-3"
+     >
+      <p className="text-sm text-gray-600">
+       System 两版共用；区别只在 User 末尾那句。同样的输入，看输出长度 / 是否含推理 / 首段 preview 的差距。
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+       {SAMPLES.map((s) => (
+        <button
+         key={s.id}
+         type="button"
+         disabled={busy}
+         className="text-xs px-2 py-1 rounded border bg-white disabled:opacity-50"
+         onClick={() => setText(s.text)}
+        >
+         {s.title}
+        </button>
+       ))}
+      </div>
+      <label className="block text-sm">
+       当前问题
+       <textarea
+        className="mt-1 w-full border rounded p-2 text-sm min-h-[80px] font-mono"
+        value={text}
+        disabled={busy}
+        onChange={(e) => setText(e.target.value)}
+       />
+      </label>
+
+      <div className="border-t pt-3 mt-1 space-y-2">
+       <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium">Prompt 编辑（两版的唯一变量）</h2>
+        <div className="flex gap-2">
+         <button
+          type="button"
+          disabled={busy}
+          className="text-xs px-2 py-1 rounded border bg-white disabled:opacity-50"
+          onClick={() => {
+           setV1Prompt(DEFAULT_V1);
+           setV2Prompt(DEFAULT_V2);
+          }}
+         >
+          重置为默认
+         </button>
+         <button
+          type="button"
+          disabled={busy}
+          className="text-xs px-2 py-1 rounded border bg-white disabled:opacity-50"
+          onClick={() => {
+           // 交换 v1 / v2 文本，方便看完"谁更好"再切回去
+           const tmp = v1Prompt;
+           setV1Prompt(v2Prompt);
+           setV2Prompt(tmp);
+          }}
+         >
+          交换两版
+         </button>
+        </div>
+       </div>
+       <div className="grid gap-3 md:grid-cols-2">
+        <label className="block text-sm">
+         <span className="flex items-center justify-between">
+          <span><code>v1.0.0</code> User 末尾</span>
+          <span className="text-xs text-gray-500">长度 {v1Len}</span>
+         </span>
+         <textarea
+          data-testid="prompt-v1"
+          className="mt-1 w-full border rounded p-2 text-sm min-h-[100px] font-mono"
+          value={v1Prompt}
+          disabled={busy}
+          onChange={(e) => setV1Prompt(e.target.value)}
+         />
+        </label>
+        <label className="block text-sm">
+         <span className="flex items-center justify-between">
+          <span><code>v1.1.0</code> User 末尾</span>
+          <span className="text-xs text-gray-500">长度 {v2Len}</span>
+         </span>
+         <textarea
+          data-testid="prompt-v2"
+          className="mt-1 w-full border rounded p-2 text-sm min-h-[100px] font-mono"
+          value={v2Prompt}
+          disabled={busy}
+          onChange={(e) => setV2Prompt(e.target.value)}
+         />
+        </label>
+       </div>
+       <div className="text-xs text-gray-600">
+        Prompt 字符差 v2 − v1 = <strong>{lenDelta >= 0 ? "+" : ""}{lenDelta}</strong>
+        {identical ? (
+         <span className="ml-2 text-red-700">两版一样，对比将看不出行为差，请改其中一边。</span>
+        ) : null}
+       </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 pt-1">
+       <button
+        type="button"
+        disabled={busy || identical}
+        className="px-3 py-2 rounded bg-gray-900 text-white text-sm disabled:opacity-50"
+        onClick={() => run(["v1", "v2"])}
+       >
+        并排对比
+       </button>
+       <button
+        type="button"
+        disabled={busy}
+        className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+        onClick={() => run(["v1"])}
+       >
+        只跑 v1.0.0
+       </button>
+       <button
+        type="button"
+        disabled={busy}
+        className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+        onClick={() => run(["v2"])}
+       >
+        只跑 v1.1.0
+       </button>
+       <button
+        type="button"
+        disabled={busy}
+        className="px-3 py-2 rounded border text-sm text-red-700 disabled:opacity-50"
+        onClick={() => {
+         setText("");
+         run(["v1", "v2"], "");
+        }}
+       >
+        空输入（看 400）
+       </button>
+      </div>
+      {errorLine ? (
+       <p className="text-sm text-red-700">{errorLine}</p>
+      ) : null}
+     </section>
+
+     <section
+      id="output"
+      className="bg-white shadow rounded p-4 min-h-[200px] space-y-4"
+     >
+      {!payload && !errorLine ? (
+       <p className="text-sm text-gray-500">跑一次后，这里覆盖显示最新对照（不是另开会话）。</p>
+      ) : null}
+      {payload && payload.input ? (
+       <p className="text-sm">输入：{payload.input}</p>
+      ) : null}
+      {lengthDelta !== null ? (
+       <div className="text-sm bg-amber-50 border border-amber-200 rounded p-2">
+        v1.0.0 长度 {v1Ok.textLen}，v1.1.0 长度 {v2Ok.textLen}，
+        一字之差带来 <strong>{lengthDelta >= 0 ? "+" : ""}{lengthDelta}</strong> 字符的差距。
+       </div>
+      ) : null}
+      <div className="grid gap-4 md:grid-cols-2">
+       <div className="border rounded p-3 space-y-2">
+        <h2 className="font-medium text-sm">v1.0.0（不含 step by step）</h2>
+        <ResultCard row={v1Row} version={versions ? versions.v1 : { suffix: v1Prompt }} />
+       </div>
+       <div className="border rounded p-3 space-y-2">
+        <h2 className="font-medium text-sm">v1.1.0（加一句 step by step）</h2>
+        <ResultCard row={v2Row} version={versions ? versions.v2 : { suffix: v2Prompt }} />
+       </div>
+      </div>
+     </section>
+    </main>
+
+    <footer
+     id="page-footer"
+     className="border-t p-2 text-xs text-gray-500 text-center"
+    >
+     端口 50304 · 协议 A · 模型随 LLM_PROVIDER · 一字之差对照演示
+    </footer>
+   </div>
+  );
+ }
+
+ // ── 入口：UMD 全局 ReactDOM.createRoot（React 18 API） ──
+ const root = ReactDOM.createRoot(document.getElementById("root"));
+ root.render(<App />);
+ </script>
+</body>
+</html>

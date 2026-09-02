@@ -15,14 +15,19 @@
     "app:01-02-token": "tsx 01-AI与LLM基础认知/02-Token/index.ts",
     "app:01-06-embedding": "tsx 01-AI与LLM基础认知/06-Embedding/index.ts",
     "app:01-07-temperature": "tsx 01-AI与LLM基础认知/07-Temperature-Top-P/server.ts",
+    "app:01-11-cognition-lab": "tsx 01-AI与LLM基础认知/11-本地产出/server.ts",
     "app:02-01-streaming-sse": "tsx 02-LLM-API开发/01-Streaming-SSE/server.ts",
     "app:02-02-protocol-ab": "tsx 02-LLM-API开发/02-协议-A-vs-B/server.ts",
     "app:02-03-adapter": "tsx 02-LLM-API开发/03-adapter-demo/server.ts",
     "app:02-03-abort-controller": "tsx 02-LLM-API开发/03-AbortController/server.ts",
     "app:02-04-rate-limit": "tsx 02-LLM-API开发/04-Rate-Limit/server.ts",
     "app:02-05-thinking": "tsx 02-LLM-API开发/05-思考/server.ts",
+    "app:02-06-api-lab": "tsx 02-LLM-API开发/06-本地产出/server.ts",
     "app:03-01-system-user-assistant-priority": "tsx 03-Prompt-Engineering/01-System-User-Assistant-优先级/server.ts",
-    "app:03-02-few-shot-zero-shot": "tsx 03-Prompt-Engineering/02-Few-shot-Zero-shot/server.ts"
+    "app:03-02-few-shot-zero-shot": "tsx 03-Prompt-Engineering/02-Few-shot-Zero-shot/server.ts",
+    "app:03-04-prompt-versioning-diff": "tsx 03-Prompt-Engineering/04-Prompt-版本管理/server.ts",
+    "app:03-05-prompt-lab": "tsx 03-Prompt-Engineering/05-本地产出/server.ts",
+    "app:03-05-local-products": "tsx 03-Prompt-Engineering/05-本地产出/src/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

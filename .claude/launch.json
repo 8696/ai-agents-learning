@@ -16,6 +16,14 @@
       "port": 5180,
       "url": "http://127.0.0.1:5180/",
       "autoPort": false
+    },
+    {
+      "name": "03-04-prompt-versioning-diff",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:03-04-prompt-versioning-diff"],
+      "port": 50304,
+      "url": "http://127.0.0.1:50304/",
+      "autoPort": false
     }
   ]
 }
