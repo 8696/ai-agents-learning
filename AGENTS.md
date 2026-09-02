@@ -144,11 +144,10 @@ ai-agents-learning/
 ├── docs/                    ← 学习文档，入口 00-目录.md
 └── apps/                   ← 唯一代码落点；清单在 apps/README.md（会随学习变多，本文件不枚举）
     ├── README.md · package.json · tsconfig.json · tsconfig.base.json · .env.example · .nvmrc
-    ├── 00-环境准备/01-mini-app/   ← 唯一三入口：CLI 在 src/；HTTP = 根目录 server.ts + public/（§5.3）；= 模块 00 的本地产出小 APP
+    ├── 00-环境准备/01-mini-app/   ← 三入口：CLI 在 src/；HTTP = 根目录 server.ts + public/（§5.3）；= 模块 00 的本地产出小 APP
     └── {模块文件夹}/{小节文件夹}/ ← 外部条按条 Demo；最后一行 `{NN}-本地产出/` = 模块小 APP（§5.4）
 ```
 
-- **不要 24 个三入口 mini-app。** 模块 00 mini-app 是**唯一**的三入口（CLI-A / CLI-B / HTTP+SSE）。其余模块的本地产出是**单入口模块小 APP**（默认一个 HTTP，§5.3），不是再复制一套三入口。
 - **学习文档**是另一套：`docs/学习模块/` **一模块一文件夹**，一小节一个 MD（进度表在该文件夹 `README.md`）。
 - **小节 Demo** 按条落在 `apps/{模块文件夹}/{小节文件夹}/`：条与条不互相 import，**模块小 APP 也不 import 它们**（[§5.4](#54-模块小-app本地产出行)）。**唯一目录例外**是模块 00 mini-app 还带 CLI：`src/index.ts`、`src/index-anthropic.ts`。共用 `apps/load-root-env.ts` 在 `apps/` 根，不在 mini-app 里。
 - 不要提前建空的小节 Demo 文件夹；不要另开平行三入口项目；模块 00 mini-app 不要拆成多个。
@@ -312,6 +311,8 @@ ai-agents-learning/
 
 `apps/` 下**三类子文件夹**：
 
+> **模块 00 mini-app 是仓库唯一的三入口；其余模块不要复制此结构。**
+
 | 类型 | 位置 | 干什么 | 怎么写 |
 | ---- | ---- | ------ | ------ |
 | **模块 00 mini-app** | `apps/00-环境准备/01-mini-app/` | 模块 00 的代码落点（三入口：CLI-A / CLI-B / HTTP+SSE）= 模块 00 本地产出小 APP | CLI 在 `src/index.ts`、`src/index-anthropic.ts`；HTTP 与 §5.3 相同：根目录 `server.ts` + `public/index.html`；不拆成多个项目 |
@@ -384,7 +385,7 @@ Demo 判断
 apps/{模块文件夹}/{小节文件夹}/
   调 API / 必须看页（§5.3）     README.md · server.ts · public/index.html
   只在终端算                    README.md · index.ts
-模块 00 mini-app（唯一例外）    CLI 在 src/；HTTP 仍是根目录 server.ts + public/（§5.3）
+模块 00 mini-app    CLI 在 src/；HTTP 仍是根目录 server.ts + public/（§5.3）
 ```
 
 - **一个** `apps/package.json`（不要每个小节一个），`cd apps && yarn install` 一次。
