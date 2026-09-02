@@ -14,7 +14,7 @@
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**System / User / Assistant 优先级**：冲突时谁说了算、System 该放什么](./01-System-User-Assistant-优先级.md) | 能解释优先级和 System 的职责 | `system prompt vs user prompt priority` `Claude system prompt` · [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) · OpenAI Prompting Guide | — |
-| ⬜ | [**Few-shot / Zero-shot**：示例怎么帮模型「对齐格式」](./02-Few-shot-Zero-shot.md) | 能对比你的任务上哪种更稳 | `few shot prompting examples` `in-context learning` · 同上官方教程 | — |
+| ✅ | [**Few-shot / Zero-shot**：示例怎么帮模型「对齐格式」](./02-Few-shot-Zero-shot.md) | 能对比你的任务上哪种更稳 | `few shot prompting examples` `in-context learning` · 同上官方教程 | — |
 | ⬜ | [**CoT / ReAct（概念）**：先知道思想；循环到模块 07 再写](./03-CoT-ReAct概念.md) | 能说清思想，现在不要实现 Agent Loop | `chain of thought prompting` `ReAct paper summary` · Anthropic CoT 章节 · [ReAct 论文摘要](https://arxiv.org/abs/2210.03629) | — |
 | ⬜ | [**Prompt 版本管理**：Prompt 也是代码，要 diff、要回归](./04-Prompt-版本管理.md) | 知道改 Prompt 和改代码一样要可追溯 | `prompt versioning best practices` · LangSmith Prompt Hub 概念 · 工程博客 | — |
 | ⬜ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./05-本地产出.md) |
