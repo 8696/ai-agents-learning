@@ -4,7 +4,7 @@
  * 职责：
  *   1. 启动本地 HTTP mock server（5 个端点 × 2 套：直接路径 + 走 retry 的 proxy）
  *   2. CLI 模式：依次跑 6 个 mock 场景 + 1 个真 API 单次场景，console 打印时间线
- *   3. 浏览器模式：访问 http://127.0.0.1:5176/，点按钮跑同样场景，时间线渲染到页面
+ *   3. 浏览器模式：访问 http://127.0.0.1:50204/，点按钮跑同样场景，时间线渲染到页面
  *   4. 真 API：/api/real 单次 + /api/real-burst 并发撞 429（需 apps/.env 里有 Key）
  *
  * 端点（mock LLM 行为，零成本）：
@@ -32,16 +32,21 @@
  *   - 真 API：证明 retry 在真环境也工作 + 看到真 429 真 Retry-After；按需开启 burst 撞限
  *
  * 数据流：
- *   CLI：fetch('http://127.0.0.1:5176/api/proxy?target=…')
+ *   CLI：fetch('http://127.0.0.1:50204/api/proxy?target=…')
  *        → mock server 内部调用 retryWithBackoff → 拿到 { result, attempts }
  *        → console 打印时间线表
  *   浏览器：fetch('/api/proxy?target=…') 或 '/api/real' 或 '/api/real-burst?…' → 同上
  *
+ * 入口：yarn app:02-04-rate-limit → tsx server.ts（无 index.ts）
+ *
  * 概念 / 取舍 / 踩坑：docs/学习模块/02-LLM-API开发/04-Rate-Limit.md
  */
 
-import { createServer, type IncomingMessage } from "node:http";
-import { readFileSync } from "node:fs";
+import Koa from "koa";
+import Router from "@koa/router";
+import serve from "koa-static";
+import { bodyParser } from "@koa/bodyparser";
+import type { Context, Next } from "koa";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 import OpenAI from "openai";
@@ -56,7 +61,10 @@ import {
 } from "./retry.js";
 
 loadRootEnv(); // mock 端点不依赖 env；real 端点需要 env 里有 Key
-const PORT = Number(process.env.PORT) || 5176;
+const envPortSchema = z.object({
+  PORT: z.coerce.number().int().positive().default(50204),
+});
+const PORT = envPortSchema.parse(process.env).PORT;
 
 // ── env 校验（real 端点用） ────────────────────────────────────
 const envSchema = z.object({
@@ -138,22 +146,6 @@ function handleDirect(path: string): { status: number; headers: Record<string, s
       return { status: 404, headers: { "content-type": "application/json" }, body: JSON.stringify({ error: "not_found" }) };
   }
 }
-
-/** 把 Node IncomingMessage 的 headers 转成 Web Headers（retry 用） */
-function nodeHeadersToWeb(headers: IncomingMessage["headers"]): Headers {
-  const h = new Headers();
-  for (const [k, v] of Object.entries(headers)) {
-    if (v == null) continue;
-    h.set(k, Array.isArray(v) ? v.join(", ") : String(v));
-  }
-  return h;
-}
-
-/** 一次性把 HTML 读进内存（小 demo，没必要走流式 fs） */
-const html = readFileSync(
-  fileURLToPath(new URL("./public/index.html", import.meta.url)),
-  "utf-8",
-);
 
 /** /api/proxy：用 retryWithBackoff 包一层后转发到直接路径 */
 async function handleProxy(target: string): Promise<{
@@ -357,74 +349,60 @@ async function handleRealBurst(concurrency: number): Promise<{
   return { ok: true, hasKey: true, concurrency, aggregate, results };
 }
 
-// ── 2) HTTP server 路由 ──────────────────────────────────────────
-const server = createServer(async (req, res) => {
-  // CORS（浏览器 fetch 需要）
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    });
-    res.end();
-    return;
+function applyDirect(ctx: Context, pathname: string) {
+  const direct = handleDirect(pathname);
+  ctx.status = direct.status;
+  for (const [k, v] of Object.entries(direct.headers)) {
+    ctx.set(k, v);
   }
-
-  const url = new URL(req.url ?? "/", `http://127.0.0.1:${PORT}`);
-
-  // 浏览器入口
-  if (url.pathname === "/" || url.pathname === "/index.html") {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(html);
-    return;
+  try {
+    ctx.body = JSON.parse(direct.body);
+  } catch {
+    ctx.body = direct.body;
   }
+}
 
-  // 走 retry 的 proxy
-  if (url.pathname === "/api/proxy") {
-    const target = url.searchParams.get("target") ?? "";
-    if (!target) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "missing target" }));
-      return;
-    }
-    const out = await handleProxy(target);
-    res.writeHead(out.status, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-    res.end(JSON.stringify(out.body));
-    return;
-  }
+// ── 2) koa 路由 ──────────────────────────────────────────
+const app = new Koa();
+const router = new Router();
 
-  // 真 API：单次（拿不到 key 直接 200 + ok:false，不让浏览器控制台炸）
-  if (url.pathname === "/api/real") {
-    const out = await handleReal();
-    res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-    res.end(JSON.stringify(out));
-    return;
-  }
+app.use(bodyParser());
 
-  // 真 API：并发撞 429
-  if (url.pathname === "/api/real-burst") {
-    const conc = Math.min(50, Math.max(1, Number(url.searchParams.get("concurrency") ?? 20)));
-    const out = await handleRealBurst(conc);
-    res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-    res.end(JSON.stringify(out));
-    return;
-  }
-
-  // 直接路径（不走 retry）
-  if (url.pathname.startsWith("/api/")) {
-    const target = url.pathname.slice("/api/".length);
-    const direct = handleDirect(url.pathname);
-    res.writeHead(direct.status, { ...direct.headers, "Access-Control-Allow-Origin": "*" });
-    res.end(direct.body);
-    // 抑制 unused 警告
-    void target;
-    void nodeHeadersToWeb;
-    return;
-  }
-
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "not_found" }));
+router.get("/health", (ctx: Context) => {
+  ctx.body = { ok: true, port: PORT, hasKey: Boolean(realClient) };
 });
+
+router.get("/api/proxy", async (ctx: Context, _next: Next) => {
+  const target = String(ctx.query.target ?? "");
+  if (!target) {
+    ctx.status = 400;
+    ctx.body = { error: "missing target" };
+    return;
+  }
+  const out = await handleProxy(target);
+  ctx.status = out.status;
+  ctx.body = out.body;
+});
+
+router.get("/api/real", async (ctx: Context) => {
+  ctx.body = await handleReal();
+});
+
+router.get("/api/real-burst", async (ctx: Context) => {
+  const conc = Math.min(50, Math.max(1, Number(ctx.query.concurrency ?? 20)));
+  ctx.body = await handleRealBurst(conc);
+});
+
+for (const name of ["easy", "chaos", "auth", "forever", "ok"] as const) {
+  router.get(`/api/${name}`, (ctx: Context) => {
+    applyDirect(ctx, `/api/${name}`);
+  });
+}
+
+app.use(router.routes()).use(router.allowedMethods());
+
+const publicDir = fileURLToPath(new URL("./public", import.meta.url));
+app.use(serve(publicDir));
 
 // ── 3) CLI 模式：依次跑 6 个场景，打印时间线 ──────────────────
 async function runCliScenarios() {
@@ -517,8 +495,10 @@ function printTimeline(attempts: AttemptRecord[]) {
 }
 
 // ── 4) 启动 ──────────────────────────────────────────────────────
-server.listen(PORT, () => {
-  console.log(`\n🟢 Retry Demo 已启动`);
+app.listen(PORT, "127.0.0.1", () => {
+  console.log(
+    "──── 模块 02 · 04 Rate-Limit Demo（§5.3 React + koa · HTML 内联块）· 已启动 ────",
+  );
   console.log(`   CLI 场景跑完后，浏览器打开 http://127.0.0.1:${PORT}/ 看时间线`);
   console.log(`   按 Ctrl+C 退出`);
   if (realClient) {

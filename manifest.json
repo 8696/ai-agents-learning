@@ -723,12 +723,21 @@
             "label": "01-API-Key-计费",
             "children": [
               {
-                "label": "index.ts",
-                "path": "apps/00-环境准备/01-API-Key-计费/index.ts"
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/00-环境准备/01-API-Key-计费/public/index.html"
+                  }
+                ]
               },
               {
                 "label": "README.md",
                 "path": "apps/00-环境准备/01-API-Key-计费/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/00-环境准备/01-API-Key-计费/server.ts"
               }
             ]
           },
@@ -749,6 +758,10 @@
                 "path": "apps/00-环境准备/01-mini-app/README.md"
               },
               {
+                "label": "server.ts",
+                "path": "apps/00-环境准备/01-mini-app/server.ts"
+              },
+              {
                 "label": "src",
                 "children": [
                   {
@@ -758,10 +771,6 @@
                   {
                     "label": "index.ts",
                     "path": "apps/00-环境准备/01-mini-app/src/index.ts"
-                  },
-                  {
-                    "label": "server.ts",
-                    "path": "apps/00-环境准备/01-mini-app/src/server.ts"
                   }
                 ]
               }
@@ -802,12 +811,21 @@
             "label": "07-Temperature-Top-P",
             "children": [
               {
-                "label": "index.ts",
-                "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/index.ts"
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/index.html"
+                  }
+                ]
               },
               {
                 "label": "README.md",
                 "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/server.ts"
               }
             ]
           }
@@ -820,10 +838,6 @@
             "label": "01-Streaming-SSE",
             "children": [
               {
-                "label": "index.ts",
-                "path": "apps/02-LLM-API开发/01-Streaming-SSE/index.ts"
-              },
-              {
                 "label": "public",
                 "children": [
                   {
@@ -835,16 +849,16 @@
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/01-Streaming-SSE/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/01-Streaming-SSE/server.ts"
               }
             ]
           },
           {
             "label": "02-协议-A-vs-B",
             "children": [
-              {
-                "label": "index.ts",
-                "path": "apps/02-LLM-API开发/02-协议-A-vs-B/index.ts"
-              },
               {
                 "label": "public",
                 "children": [
@@ -859,6 +873,10 @@
                 "path": "apps/02-LLM-API开发/02-协议-A-vs-B/README.md"
               },
               {
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/02-协议-A-vs-B/server.ts"
+              },
+              {
                 "label": "think-test.ts",
                 "path": "apps/02-LLM-API开发/02-协议-A-vs-B/think-test.ts"
               }
@@ -867,10 +885,6 @@
           {
             "label": "03-AbortController",
             "children": [
-              {
-                "label": "index.ts",
-                "path": "apps/02-LLM-API开发/03-AbortController/index.ts"
-              },
               {
                 "label": "public",
                 "children": [
@@ -883,6 +897,10 @@
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/03-AbortController/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/03-AbortController/server.ts"
               }
             ]
           },
@@ -892,10 +910,6 @@
               {
                 "label": "adapter.ts",
                 "path": "apps/02-LLM-API开发/03-adapter-demo/adapter.ts"
-              },
-              {
-                "label": "index.ts",
-                "path": "apps/02-LLM-API开发/03-adapter-demo/index.ts"
               },
               {
                 "label": "public",
@@ -909,16 +923,16 @@
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/03-adapter-demo/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/03-adapter-demo/server.ts"
               }
             ]
           },
           {
             "label": "04-Rate-Limit",
             "children": [
-              {
-                "label": "index.ts",
-                "path": "apps/02-LLM-API开发/04-Rate-Limit/index.ts"
-              },
               {
                 "label": "public",
                 "children": [
@@ -935,6 +949,37 @@
               {
                 "label": "retry.ts",
                 "path": "apps/02-LLM-API开发/04-Rate-Limit/retry.ts"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/04-Rate-Limit/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "03-Prompt-Engineering",
+        "children": [
+          {
+            "label": "01-System-User-Assistant-优先级",
+            "children": [
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/README.md"
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/server.ts"
               }
             ]
           }

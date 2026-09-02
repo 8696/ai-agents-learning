@@ -1,6 +1,8 @@
-# Demo · Adapter 层（协议 A vs B 统一调用）
+# Demo · Adapter 层（协议 A vs B 统一调用 · §5.3 React + koa）
 
 对应：[模块 02 · LLM API 开发](../../../docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md)
+
+**端口**：`50213` · 浏览器打开 `http://127.0.0.1:50213/`（由 `PORT` 环境变量覆盖）。
 
 ## 本条必须看见的
 
@@ -22,7 +24,7 @@ yarn install
 yarn app:02-03-adapter
 ```
 
-浏览器打开 `http://127.0.0.1:5175/`，**两个面板**：
+浏览器打开 `http://127.0.0.1:50213/`，**两个面板**：
 
 - **上面「一次性调用 adapter.sendMessage」**——4 个控件（协议 / thinking budget / system / 消息）+ 4 块显示区（thinking / answer / usage / 原始 JSON）。点按钮拿到完整 unified response。
 - **下面「流式调用 adapter.sendMessageStream」**——同样 4 控件 + 3 块显示区（thinking 累加 / content 累加 / usage）+ 1 块 unified delta 日志。点按钮逐块 yield unified delta。
@@ -40,10 +42,10 @@ thinking_budget 输入框填数字（默认 500）—— A 端点忽略（thinki
 
 ```
 03-adapter-demo/
-├── adapter.ts           ← Adapter 层：types + sendViaA + sendViaB + sendMessage（一次性）+ sendMessageStream + sendViaAStream + sendViaBStream（流式）
-├── index.ts             ← HTTP server（POST /api/chat 一次性 + POST /api/chat-stream 流式；零业务逻辑）
+├── adapter.ts           ← Adapter 层：types + sendViaA + sendViaB + sendMessage + sendMessageStream
+├── server.ts            ← koa（POST /api/chat + POST /api/chat-stream；零业务逻辑）
 ├── public/
-│   └── index.html       ← 前端（一次性面板 + 流式面板，4 控件 + 显示区）
+│   └── index.html       ← §5.3：Tailwind + React 18 UMD + Babel Standalone + 内联 JSX
 └── README.md
 ```
 

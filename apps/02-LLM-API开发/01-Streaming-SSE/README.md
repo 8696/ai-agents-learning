@@ -1,6 +1,8 @@
-# Demo · Streaming / SSE（前后端分离）
+# Demo · Streaming / SSE（§5.3 React + koa 完整版）
 
 对应：[模块 02 · LLM API 开发](../../../docs/学习模块/02-LLM-API开发/01-Streaming-SSE.md)
+
+**端口**：`50201` · 浏览器打开 `http://127.0.0.1:50201/`（由 `PORT` 环境变量覆盖）。
 
 本条必须看见的：
 1. 一帧 = `data: <内容>\n\n`（空行收帧）
@@ -19,7 +21,7 @@ yarn app:02-01-streaming-sse
 
 跑起来后**两个窗口对照看**：
 
-- **浏览器**打开 `http://127.0.0.1:5173/`，页面有三个按钮：
+- **浏览器**打开 `http://127.0.0.1:50201/`，页面有三个按钮：
   - 「流式」：调 `/api/stream`（模拟 SSE，每 200ms 一帧、共 11 帧）
   - 「一次性」：调 `/api/blocking`（攒齐 2.2s 再一次返回）
   - 「真实模型」：调 `/api/real`（**真正调线上 MiniMax / 智谱 / OpenAI**，看真实 batching）
@@ -48,12 +50,12 @@ yarn app:02-01-streaming-sse
 
 ```
 01-Streaming-SSE/
-├── index.ts             ← 后端：HTTP server
-│                            - / 静态页
-│                            - /api/stream （模拟 SSE）
-│                            - /api/blocking （一次性）
-│                            - /api/real （真实 LLM，用 openai SDK + apps/.env Key）
+├── server.ts            ← 后端：koa + @koa/router + koa-static
+│                            - GET / 静态页（§5.3 React 内联块）
+│                            - GET /api/stream （模拟 SSE）
+│                            - GET /api/blocking （一次性）
+│                            - GET /api/real （真实 LLM）
 ├── public/
-│   └── index.html       ← 前端：三个按钮 + 流式/一次性/真实展示区 + TTFT + 帧数 + token 数
+│   └── index.html       ← Tailwind + React 18 UMD + Babel Standalone + 内联 JSX
 └── README.md
 ```

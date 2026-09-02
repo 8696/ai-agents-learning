@@ -1,55 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>协议 A vs B · 对照 Demo</title>
+  <!-- §5.0 / §5.3.4 强制：原样引入，禁止换 CDN / 版本 / integrity -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone：在浏览器运行时转译 JSX（§5.3.4 强制锁定 7.x；8.x 默认 preset-react 是
+       automatic runtime，与本规则"完全 ESM 禁用"冲突） -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1280px; margin: 24px auto; padding: 0 16px; color: #222; }
-    h1 { font-size: 18px; margin-bottom: 12px; }
-    .row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
-    input { flex: 1; min-width: 240px; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 8px 14px; font-size: 13px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fafafa; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .panel { border: 1px solid #ddd; border-radius: 6px; padding: 12px; min-height: 220px; display: flex; flex-direction: column; }
-    .panel h3 { margin: 0 0 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-    .panel h3 .tag { font-weight: normal; font-size: 11px; color: #666; padding: 2px 6px; background: #f0f0f0; border-radius: 3px; }
-    .out { flex: 1; white-space: pre-wrap; word-break: break-word; line-height: 1.6; font-size: 14px; }
-    .meta { margin-top: 8px; color: #666; font-size: 12px; border-top: 1px dashed #eee; padding-top: 6px; }
-    .meta code { background: #f4f4f4; padding: 1px 4px; border-radius: 2px; }
-    .compare { border: 1px solid #ddd; border-radius: 6px; padding: 12px; }
-    .compare h3 { margin: 0 0 8px; font-size: 13px; }
-    .compare pre { background: #f8f8f8; padding: 10px; border-radius: 4px; overflow: auto; max-height: 360px; font-size: 12px; line-height: 1.4; }
-    .err { color: #c00; }
+    /* 互补样式（无法纯 tailwind 表达的小调整） */
     .think { color: #999; font-style: italic; }
-    .think-section { margin-top: 24px; border-top: 2px dashed #ccc; padding-top: 16px; }
-    .think-section h2 { font-size: 16px; margin-bottom: 4px; }
-    .hint { color: #666; font-size: 12px; margin: 4px 0 12px; }
-    .think-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
-    .think-card { border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 12px; }
-    .think-card h4 { margin: 0 0 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-    .think-card h4 .badge { font-weight: normal; font-size: 10px; padding: 2px 5px; border-radius: 3px; background: #eef; color: #335; }
-    .think-card .section-title { font-size: 11px; color: #888; margin-top: 8px; margin-bottom: 2px; font-weight: bold; }
-    .think-card .answer { background: #f8f8f8; padding: 6px; border-radius: 3px; max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
-    .think-card .thinking { background: #f0f0f5; color: #555; font-style: italic; padding: 6px; border-radius: 3px; max-height: 120px; overflow: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
-    .think-card .thinking-empty { color: #aaa; font-size: 11px; font-style: italic; }
-    .think-card .usage-line { font-family: ui-monospace, monospace; font-size: 11px; color: #444; margin-top: 4px; }
-    .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .diff-table th, .diff-table td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
-    .diff-table th { background: #f4f4f4; font-weight: bold; }
-    .diff-table .row-label { background: #fafafa; font-weight: bold; width: 140px; }
-    .diff-table code { background: #f4f4f4; padding: 1px 4px; border-radius: 2px; font-size: 11px; }
-    .diff-table .yes { color: #080; font-weight: bold; }
-    .diff-table .no { color: #c00; }
-    .diff-table .highlight { background: #fff8dc; }
-    .bs-panels { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; }
-    .bs-panel { border: 1px solid #ddd; border-radius: 6px; padding: 10px; min-height: 280px; display: flex; flex-direction: column; }
-    .bs-panel h3 { margin: 0 0 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-    .bs-events { flex: 1; overflow: auto; max-height: 360px; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.4; }
-    .bs-event-line { padding: 2px 4px; border-bottom: 1px dotted #eee; display: flex; gap: 8px; align-items: baseline; }
-    .bs-event-line .idx { color: #888; min-width: 32px; }
-    .bs-event-line .type { font-weight: bold; min-width: 130px; }
-    .bs-event-line .summary { color: #555; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bs-event-line.thinking-event .type { color: #6b46c1; }
     .bs-event-line.text-event .type { color: #2b6cb0; }
     .bs-event-line.message-delta .type { color: #c05621; }
@@ -58,192 +25,180 @@
     .bs-event-line.as-kind-chunk .type { color: #4a5568; }
     .bs-event-line.as-kind-finish .type { color: #c05621; }
     .bs-event-line.as-kind-usage .type { color: #2f855a; }
-    .bs-text { flex: 1; white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 13px; overflow: auto; max-height: 360px; padding: 6px; background: #fafafa; border-radius: 3px; }
-    .bs-text.thinking { background: #f0f0f5; color: #555; font-style: italic; }
   </style>
 </head>
-<body>
-  <h1>协议 A vs B 对照 Demo（MiniMax-M3，同 Key，同 prompt）</h1>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
 
-  <!-- ── thinking 差异对照（6 维度对照表 + 4 张卡片） ── -->
-  <div class="think-section">
-    <h2>thinking 差异对照（4 组场景，跑一次看全 6 个差异点）</h2>
-    <p class="hint">4 组：A 不带 thinking / B 不带 thinking / B 带 thinking budget=100 / B 带 thinking budget=500。一次请求同时跑，约 30–60s。</p>
-    <div class="row">
-      <button id="run-think">跑 thinking 差异对照</button>
-      <button id="run-think-math">跑数学题（看 thinking 内容）</button>
-      <span id="think-status"></span>
-    </div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
 
-    <div class="think-cards" id="think-cards"></div>
-    <table class="diff-table" id="diff-table"></table>
-  </div>
+    // ── HTML escape（防 XSS；react 默认 escape 文本节点，但 innerHTML 注入需要手动） ──
+    const esc = (s) => String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
-  <!-- ── 流式协议 A（OpenAI chunk 原样转发 + meta frame）── -->
-  <div class="think-section">
-    <h2>流式协议 A（OpenAI chunk 原样转发：看 role / chunk / finish / usage 四类帧）</h2>
-    <p class="hint">调 <code>/api/a-stream-raw</code>。与下面两个 <code>/api/b-*</code> 形成三向对照：A 是「字符串帧流」（每帧一个 OpenAI chunk JSON + meta <code>kind</code>），B 是「事件流」（多种事件类型）。A 的 thinking 嵌在 <code>delta.content</code> 字符串里（<code><think>...</think></code>），不在独立 block。</p>
-    <div class="row">
-      <input id="as-msg" placeholder="消息（默认数学题）" value="23 × 47 等于多少？先一步步想，再回答。">
-      <button id="run-as">发流式请求</button>
-      <span id="as-status"></span>
-    </div>
+    // ── thought-text → answer split：从累积文本中抽 <think> 部分 ──
+    function extractThink(raw) {
+      const re = /<think>([\s\S]*?)<\/think>/g;
+      let thinking = "";
+      let answer = "";
+      let lastIdx = 0;
+      let m;
+      while ((m = re.exec(raw)) !== null) {
+        answer += raw.slice(lastIdx, m.index);
+        thinking += m[1];
+        lastIdx = m.index + m[0].length;
+      }
+      answer += raw.slice(lastIdx);
+      return { thinking, answer };
+    }
 
-    <div class="bs-panels">
-      <div class="bs-panel">
-        <h3>事件流（按顺序） <span class="tag" id="as-event-count">0 frames</span></h3>
-        <div class="bs-events" id="as-events"></div>
-      </div>
-      <div class="bs-panel">
-        <h3>thinking 累加（从 <think> 提取） <span class="tag" id="as-think-len">0 字符</span></h3>
-        <div class="bs-text thinking" id="as-thinking"></div>
-      </div>
-      <div class="bs-panel">
-        <h3>answer 累加（剥 <think> 后） <span class="tag" id="as-answer-len">0 字符</span></h3>
-        <div class="bs-text" id="as-answer"></div>
-        <div class="meta" id="as-meta"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 流式协议 B + 启用 thinking：完整事件流 ── -->
-  <div class="think-section">
-    <h2>流式协议 B + 启用 thinking（看完整事件流：thinking block + text block + message_delta）</h2>
-    <p class="hint">调 <code>/api/b-thinking-stream</code>。事件序列应是：<code>message_start → content_block_start(thinking) → 多个 content_block_delta(thinking) → content_block_stop → content_block_start(text) → 多个 content_block_delta(text) → content_block_stop → message_delta(usage, stop_reason) → message_stop</code>。thinking 与 text 是两个独立 block，**不是嵌在 answer 里**。</p>
-    <div class="row">
-      <input id="bs-msg" placeholder="消息（默认数学题）" value="23 × 47 等于多少？先一步步想，再回答。">
-      <select id="bs-budget">
-        <option value="100">budget=100</option>
-        <option value="500" selected>budget=500</option>
-        <option value="1000">budget=1000</option>
-      </select>
-      <button id="run-bs">发流式请求</button>
-      <span id="bs-status"></span>
-    </div>
-
-    <div class="bs-panels">
-      <div class="bs-panel">
-        <h3>事件流（按顺序） <span class="tag" id="bs-event-count">0 events</span></h3>
-        <div class="bs-events" id="bs-events"></div>
-      </div>
-      <div class="bs-panel">
-        <h3>thinking 累加 <span class="tag" id="bs-think-len">0 字符</span></h3>
-        <div class="bs-text thinking" id="bs-thinking"></div>
-      </div>
-      <div class="bs-panel">
-        <h3>answer 累加 <span class="tag" id="bs-answer-len">0 字符</span></h3>
-        <div class="bs-text" id="bs-answer"></div>
-        <div class="meta" id="bs-meta"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 流式协议 B（不启用 thinking：原样转发事件流） ── -->
-  <div class="think-section">
-    <h2>流式协议 B（不启用 thinking：原样转发事件流）</h2>
-    <p class="hint">调 <code>/api/b-stream-raw</code>。与上面三个端点形成四向对照：A/B × 带/不带 thinking。这次 B **不启用 thinking**，事件序列里应**没有 thinking block**——只有 text block + message_delta + message_stop。</p>
-    <div class="row">
-      <input id="bsr-msg" placeholder="消息（默认数学题）" value="23 × 47 等于多少？先一步步想，再回答。">
-      <button id="run-bsr">发流式请求</button>
-      <span id="bsr-status"></span>
-    </div>
-
-    <div class="bs-panels">
-      <div class="bs-panel">
-        <h3>事件流（按顺序） <span class="tag" id="bsr-event-count">0 events</span></h3>
-        <div class="bs-events" id="bsr-events"></div>
-      </div>
-      <div class="bs-panel">
-        <h3>thinking 累加 <span class="tag" id="bsr-think-len">0 字符</span></h3>
-        <div class="bs-text thinking" id="bsr-thinking"><span style="color:#aaa;font-style:normal;">（不启用 thinking，此面板永远为空）</span></div>
-      </div>
-      <div class="bs-panel">
-        <h3>answer 累加 <span class="tag" id="bsr-answer-len">0 字符</span></h3>
-        <div class="bs-text" id="bsr-answer"></div>
-        <div class="meta" id="bsr-meta"></div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const $ = (id) => document.getElementById(id);
-
-    // ── thinking 差异对照（4 组一次性跑） ──
-    const thinkCards = $('think-cards');
-    const diffTable = $('diff-table');
-    const thinkStatus = $('think-status');
-
-    $('run-think').onclick = () => runThinkCompare('用一句话介绍你自己，10 字以内。');
-    $('run-think-math').onclick = () => runThinkCompare('23 × 47 等于多少？先一步步想，再回答。');
-
-    async function runThinkCompare(promptText) {
-      const system = undefined;
-      thinkStatus.textContent = '请求中...（4 组，约 30–60s）';
-      thinkStatus.classList.remove('err');
-      $('run-think').disabled = true;
-      $('run-think-math').disabled = true;
-      thinkCards.innerHTML = '';
-      diffTable.innerHTML = '';
-      try {
-        const res = await fetch('/api/think-compare', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: promptText, system }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        renderThinkCards(data.scenarios);
-        renderDiffTable(data.scenarios);
-        thinkStatus.textContent = `完成 · ${data.scenarios.length} 组 · prompt="${promptText.slice(0, 30)}${promptText.length > 30 ? '…' : ''}"`;
-      } catch (err) {
-        thinkStatus.classList.add('err');
-        thinkStatus.textContent = `失败: ${err.message}`;
-      } finally {
-        $('run-think').disabled = false;
-        $('run-think-math').disabled = false;
+    // ── SSE 消费器：返回异步迭代，吐 {payload, raw} ──
+    async function* consumeSSE(res) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const frame = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) continue;
+          const payload = dataLine.slice(5).trim();
+          if (payload === "[DONE]") continue;
+          let obj;
+          try { obj = JSON.parse(payload); } catch { continue; }
+          yield obj;
+        }
       }
     }
 
-    function esc(s) {
-      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
+    // ═════════════════════════════════════════════════════════════
+    // 面板 1：thinking 差异对照
+    // ═════════════════════════════════════════════════════════════
+    function ThinkPanel({ onStart, onEnd }) {
+      const [status, setStatus] = useState("idle"); // idle | loading | ok | error
+      const [errorMsg, setErrorMsg] = useState("");
+      const [scenarios, setScenarios] = useState(null);
 
-    function renderThinkCards(scenarios) {
-      thinkCards.innerHTML = scenarios.map((sc, i) => {
-        if (sc.error) {
-          return `<div class="think-card"><h4>${esc(sc.scenario)} <span class="badge">错误</span></h4>
-            <div class="thinking-empty">${esc(sc.error)}</div></div>`;
+      const run = async (promptText) => {
+        setStatus("loading");
+        setErrorMsg("");
+        onStart();
+        try {
+          const r = await fetch("/api/think-compare", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: promptText }),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const data = await r.json();
+          setScenarios(data.scenarios);
+          setStatus("ok");
+          onEnd(true);
+        } catch (e) {
+          setErrorMsg(String(e.message || e));
+          setStatus("error");
+          onEnd(false);
         }
-        const usageHtml = renderUsage(sc.usage, sc.protocol);
-        const finishHtml = sc.finishReason
-          ? `<div class="usage-line">finish_reason: <code>${esc(sc.finishReason)}</code></div>`
-          : (sc.stopReason ? `<div class="usage-line">stop_reason: <code>${esc(sc.stopReason)}</code></div>` : '');
-        const thinkingHtml = sc.thinking.exists
-          ? `<div class="section-title">thinking (${sc.thinking.location} · ${sc.thinking.charCount} 字符)</div>
-             <div class="thinking">${esc(sc.thinking.preview)}${sc.thinking.charCount > 300 ? '…' : ''}</div>`
-          : `<div class="section-title">thinking</div>
-             <div class="thinking-empty">无独立 thinking block${sc.protocol === 'A' ? '（嵌在 answer 字符串里）' : ''}</div>`;
-        return `<div class="think-card">
-          <h4>${esc(sc.scenario)} <span class="badge">${sc.protocol}${sc.thinkingParam ? ` · thinking budget=${sc.thinkingParam.budget_tokens}` : ''}</span></h4>
-          <div class="section-title">answer (${sc.textAnswer.length} 字符)</div>
-          <div class="answer">${esc(sc.textAnswer)}</div>
-          ${thinkingHtml}
-          <div class="section-title">usage</div>
-          ${usageHtml}
-          ${finishHtml}
-        </div>`;
-      }).join('');
+      };
+
+      return (
+        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+          <h2 className="text-base font-semibold">thinking 差异对照（4 组场景，跑一次看全 6 个差异点）</h2>
+          <p className="text-xs text-gray-500">
+            4 组：A 不带 thinking / B 不带 thinking / B 带 thinking budget=100 / B 带 thinking budget=500。
+            一次请求同时跑，约 30–60s。
+          </p>
+          <div className="flex gap-2 items-center flex-wrap">
+            <button
+              onClick={() => run("用一句话介绍你自己，10 字以内。")}
+              disabled={status === "loading"}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
+            >
+              跑 thinking 差异对照
+            </button>
+            <button
+              onClick={() => run("23 × 47 等于多少？先一步步想，再回答。")}
+              disabled={status === "loading"}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
+            >
+              跑数学题（看 thinking 内容）
+            </button>
+            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
+              {status === "loading" && "请求中...（4 组，约 30–60s）"}
+              {status === "error" && `失败: ${errorMsg}`}
+              {status === "ok" && scenarios && `完成 · ${scenarios.length} 组`}
+            </span>
+          </div>
+
+          {scenarios && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                {scenarios.map((sc, i) => (
+                  <div key={i} className="border border-gray-300 rounded p-2 text-xs space-y-1">
+                    <div className="flex justify-between items-center font-semibold">
+                      <span>{esc(sc.scenario)}</span>
+                      <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                        {sc.protocol}{sc.thinkingParam ? `· budget=${sc.thinkingParam.budget_tokens}` : ""}
+                      </span>
+                    </div>
+                    {sc.error ? (
+                      <div className="text-red-600 italic">{esc(sc.error)}</div>
+                    ) : (
+                      <>
+                        <div className="text-[11px] text-gray-500 font-bold mt-2">answer ({sc.textAnswer.length} 字符)</div>
+                        <div className="bg-gray-50 p-1.5 rounded max-h-40 overflow-auto whitespace-pre-wrap break-words">
+                          {esc(sc.textAnswer)}
+                        </div>
+                        <div className="text-[11px] text-gray-500 font-bold mt-2">
+                          thinking{sc.thinking && sc.thinking.exists && ` (${sc.thinking.location} · ${sc.thinking.charCount} 字符)`}
+                        </div>
+                        <div className={"p-1.5 rounded max-h-32 overflow-auto whitespace-pre-wrap break-words " + (sc.thinking && sc.thinking.exists ? "bg-purple-50 text-gray-600 italic" : "text-gray-400 italic")}>
+                          {sc.thinking && sc.thinking.exists
+                            ? esc(sc.thinking.preview) + (sc.thinking.charCount > 300 ? "…" : "")
+                            : <>无独立 thinking block{sc.protocol === "A" ? "（嵌在 answer 字符串里）" : ""}</>}
+                        </div>
+                        <div className="text-[11px] text-gray-500 font-bold mt-2">usage</div>
+                        <UsageLines scenario={sc} />
+                        {(sc.finishReason || sc.stopReason) && (
+                          <div className="font-mono text-[11px] text-gray-700 mt-1">
+                            {sc.finishReason
+                              ? <>finish_reason: <code className="bg-gray-100 px-1 rounded">{esc(sc.finishReason)}</code></>
+                              : sc.stopReason
+                                ? <>stop_reason: <code className="bg-gray-100 px-1 rounded">{esc(sc.stopReason)}</code></>
+                                : null}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <DiffTable scenarios={scenarios} />
+            </>
+          )}
+        </section>
+      );
     }
 
-    function renderUsage(u, protocol) {
-      if (!u || Object.keys(u).length === 0) return '<div class="usage-line">（无）</div>';
+    // ── Usage 行渲染：A / B 字段命名差异处理 ──
+    function UsageLines({ scenario }) {
+      const u = scenario.usage;
+      if (!u || Object.keys(u).length === 0) return <div className="font-mono text-[11px] text-gray-400">（无）</div>;
       const lines = [];
-      if (protocol === 'A') {
+      if (scenario.protocol === "A") {
         if (u.prompt_tokens != null) lines.push(`prompt_tokens: ${u.prompt_tokens}`);
         if (u.completion_tokens != null) lines.push(`completion_tokens: ${u.completion_tokens}`);
         if (u.total_tokens != null) lines.push(`total_tokens: ${u.total_tokens}`);
         if (u.completion_tokens_details?.reasoning_tokens != null) {
-          lines.push(`<span class="yes">✓ reasoning_tokens: ${u.completion_tokens_details.reasoning_tokens}</span>`);
+          lines.push(<span key="r" className="text-green-700 font-bold">✓ reasoning_tokens: {u.completion_tokens_details.reasoning_tokens}</span>);
         }
         if (u.prompt_tokens_details?.cached_tokens != null) {
           lines.push(`cached_tokens: ${u.prompt_tokens_details.cached_tokens}`);
@@ -251,542 +206,759 @@
       } else {
         if (u.input_tokens != null) lines.push(`input_tokens: ${u.input_tokens}`);
         if (u.output_tokens != null) lines.push(`output_tokens: ${u.output_tokens}`);
-        // 关键：B 端点有没有 reasoning_tokens 字段（Anthropic 官方位置）？
-        if ('reasoning_tokens' in u) {
-          lines.push(`<span class="yes">✓ reasoning_tokens: ${u.reasoning_tokens}</span>`);
+        if ("reasoning_tokens" in u) {
+          lines.push(<span key="r" className="text-green-700 font-bold">✓ reasoning_tokens: {u.reasoning_tokens}</span>);
         } else {
-          lines.push(`<span class="no">✗ reasoning_tokens: 无顶层字段</span>`);
+          lines.push(<span key="r" className="text-red-600">✗ reasoning_tokens: 无顶层字段</span>);
         }
-        // B 端点真正的 thinking 拆分字段：藏在 output_tokens_details.thinking_tokens
-        // （MiniMax 兼容 Anthropic 端点的翻译层 quirk；字段名跟 Anthropic 官方不同）
         if (u.output_tokens_details?.thinking_tokens != null) {
-          lines.push(`<span class="yes">✓ output_tokens_details.thinking_tokens: ${u.output_tokens_details.thinking_tokens}</span>`);
+          lines.push(<span key="t" className="text-green-700 font-bold">✓ output_tokens_details.thinking_tokens: {u.output_tokens_details.thinking_tokens}</span>);
         }
         if (u.cache_read_input_tokens != null) {
           lines.push(`cache_read_input_tokens: ${u.cache_read_input_tokens}`);
         }
       }
-      return lines.map(l => `<div class="usage-line">${l}</div>`).join('');
+      return (
+        <div className="font-mono text-[11px] text-gray-700 space-y-0.5">
+          {lines.map((l, i) => <div key={i}>{l}</div>)}
+        </div>
+      );
     }
 
-    function renderDiffTable(scenarios) {
-      const headers = ['差异点', ...scenarios.map(s => s.scenario)];
+    // ── 6 行差异对照表 ──
+    function DiffTable({ scenarios }) {
+      const headers = ["差异点", ...scenarios.map((s) => s.scenario)];
       const rows = [
         {
-          label: '1. content 形态',
-          values: scenarios.map(sc => sc.contentType === 'string'
-            ? '<code>string</code>（嵌 <think> 标记）'
-            : '<code>block[]</code>（每个元素有 type）'),
+          label: "1. content 形态",
+          values: scenarios.map((sc) => sc.contentType === "string"
+            ? <><code>string</code>（嵌 {"<think>"} 标记）</>
+            : <><code>block[]</code>（每个元素有 type）</>),
         },
         {
-          label: '2. thinking 位置',
-          values: scenarios.map(sc => {
-            if (!sc.thinking) return '—';
-            if (sc.thinking.location === 'embedded_in_content') return '<span class="no">嵌在 content 字符串</span>';
-            if (sc.thinking.location === 'separate_block') return '<span class="yes">独立 type=thinking block</span>';
-            return '<span class="no">无 thinking</span>';
+          label: "2. thinking 位置",
+          values: scenarios.map((sc) => {
+            if (!sc.thinking) return "—";
+            if (sc.thinking.location === "embedded_in_content") return <span className="text-red-600">嵌在 content 字符串</span>;
+            if (sc.thinking.location === "separate_block") return <span className="text-green-700 font-bold">独立 type=thinking block</span>;
+            return <span className="text-red-600">无 thinking</span>;
           }),
         },
         {
-          label: '3. usage 字段命名',
-          values: scenarios.map(sc => sc.protocol === 'A'
-            ? '<code>prompt_tokens</code> / <code>completion_tokens</code>'
-            : '<code>input_tokens</code> / <code>output_tokens</code>'),
+          label: "3. usage 字段命名",
+          values: scenarios.map((sc) => sc.protocol === "A"
+            ? <><code>prompt_tokens</code> / <code>completion_tokens</code></>
+            : <><code>input_tokens</code> / <code>output_tokens</code></>),
         },
         {
-          label: '4. thinking 单独计费？',
-          values: scenarios.map(sc => {
-            if (sc.protocol === 'A') {
-              // A 端点：顶层 completion_tokens_details.reasoning_tokens
-              return sc.usage?.completion_tokens_details?.reasoning_tokens != null
-                ? `<span class="yes">✓ reasoning_tokens: ${sc.usage.completion_tokens_details.reasoning_tokens}</span>`
-                : '<span class="no">✗ 无 reasoning_tokens</span>';
-            }
-            // B 端点：藏 output_tokens_details.thinking_tokens（MiniMax 扩展字段，不是 Anthropic 官方位置）
-            const thinkingTokens = sc.usage?.output_tokens_details?.thinking_tokens;
-            if (thinkingTokens != null) {
-              return `<span class="yes">✓ output_tokens_details.thinking_tokens: ${thinkingTokens}</span><br><span style="font-size:10px;color:#888">（非顶层 reasoning_tokens）</span>`;
-            }
-            if ('reasoning_tokens' in (sc.usage || {})) {
-              return `<span class="yes">✓ reasoning_tokens: ${sc.usage.reasoning_tokens}</span>`;
-            }
-            return `<span class="no">✗ 无字段（输出太短，未触发 thinking）</span>`;
-          }),
+          label: "4. thinking 单独计费？",
           highlight: true,
+          values: scenarios.map((sc) => {
+            if (sc.protocol === "A") {
+              return sc.usage?.completion_tokens_details?.reasoning_tokens != null
+                ? <span className="text-green-700 font-bold">✓ reasoning_tokens: {sc.usage.completion_tokens_details.reasoning_tokens}</span>
+                : <span className="text-red-600">✗ 无 reasoning_tokens</span>;
+            }
+            const t = sc.usage?.output_tokens_details?.thinking_tokens;
+            if (t != null) {
+              return (
+                <>
+                  <span className="text-green-700 font-bold">✓ output_tokens_details.thinking_tokens: {t}</span>
+                  <br /><span className="text-[10px] text-gray-500">（非顶层 reasoning_tokens）</span>
+                </>
+              );
+            }
+            if ("reasoning_tokens" in (sc.usage || {})) {
+              return <span className="text-green-700 font-bold">✓ reasoning_tokens: {sc.usage.reasoning_tokens}</span>;
+            }
+            return <span className="text-red-600">✗ 无字段（输出太短，未触发 thinking）</span>;
+          }),
         },
         {
-          label: '5. 答案长度（字符）',
-          values: scenarios.map(sc => `<code>${sc.textAnswer.length}</code>`),
+          label: "5. 答案长度（字符）",
+          values: scenarios.map((sc) => <code>{sc.textAnswer.length}</code>),
         },
         {
-          label: '6. finish/stop 字段',
-          values: scenarios.map(sc => sc.finishReason
-            ? `<code>finish_reason: "${esc(sc.finishReason)}"</code>`
-            : (sc.stopReason ? `<code>stop_reason: "${esc(sc.stopReason)}"</code>` : '—')),
+          label: "6. finish/stop 字段",
+          values: scenarios.map((sc) => sc.finishReason
+            ? <code>finish_reason: "{esc(sc.finishReason)}"</code>
+            : sc.stopReason ? <code>stop_reason: "{esc(sc.stopReason)}"</code> : "—"),
         },
       ];
-
-      let html = '<thead><tr>';
-      headers.forEach((h, i) => {
-        html += `<th${i === 0 ? '' : ''}>${esc(h)}</th>`;
-      });
-      html += '</tr></thead><tbody>';
-
-      rows.forEach(row => {
-        html += `<tr>`;
-        html += `<td class="row-label${row.highlight ? ' highlight' : ''}">${esc(row.label)}</td>`;
-        row.values.forEach(v => {
-          html += `<td${row.highlight ? ' class="highlight"' : ''}>${v}</td>`;
-        });
-        html += `</tr>`;
-      });
-      html += '</tbody>';
-      diffTable.innerHTML = html;
+      return (
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              {headers.map((h, i) => (
+                <th key={i} className="border border-gray-300 bg-gray-100 px-2 py-1 text-left font-bold">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri}>
+                <td className={"border border-gray-300 bg-gray-50 px-2 py-1 font-bold " + (row.highlight ? "bg-yellow-100" : "")}>
+                  {row.label}
+                </td>
+                {row.values.map((v, vi) => (
+                  <td key={vi} className={"border border-gray-300 px-2 py-1 align-top " + (row.highlight ? "bg-yellow-100" : "")}>
+                    {v}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
     }
 
-    // ── 流式协议 B + thinking：完整事件流 ──
-    const bsMsg = $('bs-msg');
-    const bsBudget = $('bs-budget');
-    const bsEvents = $('bs-events');
-    const bsThinking = $('bs-thinking');
-    const bsAnswer = $('bs-answer');
-    const bsMeta = $('bs-meta');
-    const bsStatus = $('bs-status');
-    const bsEventCount = $('bs-event-count');
-    const bsThinkLen = $('bs-think-len');
-    const bsAnswerLen = $('bs-answer-len');
+    // ═════════════════════════════════════════════════════════════
+    // 面板 2：流式协议 A（OpenAI chunk 原样转发）
+    // ═════════════════════════════════════════════════════════════
+    function AStreamRawPanel({ onStart, onEnd }) {
+      const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
+      const [status, setStatus] = useState("idle");
+      const [errorMsg, setErrorMsg] = useState("");
+      const [lines, setLines] = useState([]);
+      const [thinking, setThinking] = useState("");
+      const [answer, setAnswer] = useState("");
+      const [meta, setMeta] = useState("");
+      const [elapsed, setElapsed] = useState(0);
+      const t0Ref = useRef(0);
+      const rawAccumRef = useRef("");
+      const consumedRef = useRef(0);
+      const thinkingRef = useRef("");
+      const answerRef = useRef("");
+      const usageRef = useRef(null);
+      const finishRef = useRef(null);
 
-    $('run-bs').onclick = runBThinkingStream;
+      const run = async () => {
+        if (!msg.trim()) return;
+        setStatus("loading");
+        setErrorMsg("");
+        setLines([]);
+        setThinking("");
+        setAnswer("");
+        setMeta("");
+        setElapsed(0);
+        rawAccumRef.current = "";
+        consumedRef.current = 0;
+        thinkingRef.current = "";
+        answerRef.current = "";
+        usageRef.current = null;
+        finishRef.current = null;
+        t0Ref.current = performance.now();
+        onStart();
 
-    async function runBThinkingStream() {
-      const message = bsMsg.value.trim();
-      if (!message) return;
-      const thinkingBudget = parseInt(bsBudget.value, 10) || 500;
-
-      bsEvents.innerHTML = '';
-      bsThinking.textContent = '';
-      bsAnswer.textContent = '';
-      bsMeta.textContent = '';
-      bsStatus.textContent = '';
-      bsStatus.classList.remove('err');
-      bsEventCount.textContent = '0 events';
-      bsThinkLen.textContent = '0 字符';
-      bsAnswerLen.textContent = '0 字符';
-      $('run-bs').disabled = true;
-
-      const t0 = performance.now();
-      let buffer = '';
-      let eventCount = 0;
-      let thinkingText = '';
-      let answerText = '';
-      let usage = null;
-      let stopReason = null;
-
-      try {
-        const res = await fetch('/api/b-thinking-stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, thinking_budget: thinkingBudget }),
-        });
-        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-
-        // 把单个 event 渲染到事件流面板 + 累加到 thinking/answer
-        function renderEvent(evt) {
-          eventCount += 1;
-          const t = evt.type || '(no type)';
-          const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
-
-          let summary = '';
-          let eventClass = '';
-          // content_block_delta：用 delta 字段实际内容判断（不看 delta.type 字符串，更稳）
-          if (t === 'content_block_delta') {
-            const d = evt.delta || {};
-            if (d.thinking != null) {
-              // thinking_delta：d.thinking 是字符串
-              eventClass = 'thinking-event';
-              thinkingText += d.thinking;
-              summary = `Δthinking ${(d.thinking).slice(0, 60)}${d.thinking.length > 60 ? '…' : ''}`;
-            } else if (d.text != null) {
-              // text_delta：d.text 是字符串
-              eventClass = 'text-event';
-              answerText += d.text;
-              summary = `Δtext "${(d.text).slice(0, 60)}${d.text.length > 60 ? '…' : ''}"`;
-            } else if (d.type === 'signature_delta') {
-              // Anthropic thinking 验证用的 signature delta（MiniMax 兼容端点可能也会发）
-              summary = 'signature_delta（thinking 验证签名）';
-            } else {
-              summary = JSON.stringify(d).slice(0, 80);
-            }
-          } else if (t === 'content_block_start') {
-            const cb = evt.content_block || {};
-            summary = `block.type=${cb.type || '?'}`;
-            if (cb.type === 'thinking') eventClass = 'thinking-event';
-            if (cb.type === 'text') eventClass = 'text-event';
-          } else if (t === 'message_delta') {
-            eventClass = 'message-delta';
-            if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
-            if (evt.usage) usage = { ...(usage || {}), ...evt.usage };
-            // 流式 message_delta usage 通常只报 input_tokens / output_tokens；
-            // **MiniMax 兼容端点不报 output_tokens_details.thinking_tokens**（与一次性响应不同）
-            summary = `stop_reason=${evt.delta?.stop_reason || '?'}, output_tokens=${evt.usage?.output_tokens ?? '?'}`;
-          } else if (t === 'message_stop') {
-            eventClass = 'message-stop';
-            summary = '（流结束）';
-          } else if (t === 'message_start') {
-            summary = `model=${evt.message?.model || '?'}, id=${(evt.message?.id || '').slice(0, 16)}…`;
-          } else if (t === 'content_block_stop') {
-            summary = '（块结束）';
-          } else {
-            summary = JSON.stringify(evt).slice(0, 80);
-          }
-
-          // 事件流面板加一行
-          const line = document.createElement('div');
-          line.className = `bs-event-line ${eventClass}`;
-          line.innerHTML = `<span class="idx">#${eventCount}</span><span class="type">${esc(t)}</span><span class="summary">${esc(summary)}</span>`;
-          bsEvents.appendChild(line);
-          bsEvents.scrollTop = bsEvents.scrollHeight;
-
-          // 实时更新累加
-          bsThinking.textContent = thinkingText;
-          bsAnswer.textContent = answerText;
-          bsThinkLen.textContent = `${thinkingText.length} 字符`;
-          bsAnswerLen.textContent = `${answerText.length} 字符`;
-          bsEventCount.textContent = `${eventCount} events · ${elapsed}s`;
-        }
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx;
-          while ((idx = buffer.indexOf('\n\n')) >= 0) {
-            const frame = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
-            if (!dataLine) continue;
-            const payload = dataLine.slice(5).trim();
-            if (payload === '[DONE]') continue;
-            let evt;
-            try { evt = JSON.parse(payload); } catch { continue; }
-            renderEvent(evt);
-          }
-        }
-
-        // 流结束：显示 usage
-        const totalElapsed = ((performance.now() - t0) / 1000).toFixed(2);
-        let meta = `${eventCount} events · ${totalElapsed}s · stop_reason=${stopReason || '?'}`;
-        if (usage) {
-          // 流式 message_delta 通常只报 input_tokens / output_tokens；
-          // **MiniMax 兼容端点流式不报 output_tokens_details.thinking_tokens**（与一次性响应不同）
-          meta += ` · output_tokens=${usage.output_tokens ?? '?'}`;
-          if (usage.input_tokens != null) meta += ` · input_tokens=${usage.input_tokens}`;
-          if (usage.cache_read_input_tokens != null) meta += ` · cache_read_input_tokens=${usage.cache_read_input_tokens}`;
-          meta += '（流式 message_delta 不报 thinking 拆分，要拆分得用一次性）';
-        }
-        bsMeta.textContent = meta;
-        bsStatus.textContent = `完成 · budget=${thinkingBudget} · 共 ${eventCount} 个事件`;
-      } catch (err) {
-        bsStatus.classList.add('err');
-        bsStatus.textContent = `失败: ${err.message}`;
-      } finally {
-        $('run-bs').disabled = false;
-      }
-    }
-
-    // ── 流式协议 A（OpenAI chunk 原样转发）──
-    const asMsg = $('as-msg');
-    const asEvents = $('as-events');
-    const asThinking = $('as-thinking');
-    const asAnswer = $('as-answer');
-    const asMeta = $('as-meta');
-    const asStatus = $('as-status');
-    const asEventCount = $('as-event-count');
-    const asThinkLen = $('as-think-len');
-    const asAnswerLen = $('as-answer-len');
-
-    $('run-as').onclick = runAStreamRaw;
-
-    async function runAStreamRaw() {
-      const message = asMsg.value.trim();
-      if (!message) return;
-      asEvents.innerHTML = '';
-      asThinking.textContent = '';
-      asAnswer.textContent = '';
-      asMeta.textContent = '';
-      asStatus.textContent = '';
-      asStatus.classList.remove('err');
-      asEventCount.textContent = '0 frames';
-      asThinkLen.textContent = '0 字符';
-      asAnswerLen.textContent = '0 字符';
-      $('run-as').disabled = true;
-
-      const t0 = performance.now();
-      let buffer = '';
-      let frameCount = 0;
-      // A 端点没有独立 thinking block —— thinking 嵌在 delta.content 字符串的 <think>...</think> 标记里
-      // 累加策略：每个 chunk 的 delta.content 都做"剥 <think>"判断
-      let rawAccum = '';          // 原始 content 累加（含 <think>）
-      let thinkingAccum = '';     // 提取的 <think>...</think> 内容
-      let answerAccum = '';       // 剥掉 <think> 后的 answer
-      let lastUsage = null;
-      let lastFinishReason = null;
-
-      // 抽 <think>...</think> 的小工具：处理跨多个 chunk 的情况
-      // 用 rawAccum 增量扫描；已经抽过的部分不再抽
-      let consumedRawLen = 0;
-      function extractThink(raw) {
-        // 从 raw 里抽 <think>...</think>；返回 [thinkingText, answerText]
-        const thinkRe = /<think>([\s\S]*?)<\/think>/g;
-        let thinking = '';
-        let answer = '';
-        let lastIdx = 0;
-        let m;
-        while ((m = thinkRe.exec(raw)) !== null) {
-          answer += raw.slice(lastIdx, m.index);
-          thinking += m[1];
-          lastIdx = m.index + m[0].length;
-        }
-        answer += raw.slice(lastIdx);
-        return { thinking, answer };
-      }
-
-      try {
-        const res = await fetch('/api/a-stream-raw', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message }),
-        });
-        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-
-        function renderFrame(frame) {
-          frameCount += 1;
-          const kind = frame.kind || 'chunk';
-          const chunk = frame.chunk || {};
+        const flushUI = (kind, chunk, frameIdx) => {
           const delta = chunk.choices?.[0]?.delta;
           const deltaContent = delta?.content;
           const finishReason = chunk.choices?.[0]?.finish_reason;
           const usage = chunk.usage;
-
-          // 累加 thinking / answer
           if (deltaContent) {
-            rawAccum += deltaContent;
-            // 增量扫描：抽新追加部分的 <think> 标记
-            const newSlice = rawAccum.slice(consumedRawLen);
-            const { thinking, answer } = extractThink(newSlice);
-            if (thinking) thinkingAccum += thinking;
-            if (answer) answerAccum += answer;
-            consumedRawLen = rawAccum.length;
+            rawAccumRef.current += deltaContent;
+            const newSlice = rawAccumRef.current.slice(consumedRef.current);
+            const { thinking: tk, answer: an } = extractThink(newSlice);
+            if (tk) thinkingRef.current += tk;
+            if (an) answerRef.current += an;
+            consumedRef.current = rawAccumRef.current.length;
+            setThinking(thinkingRef.current);
+            setAnswer(answerRef.current);
           }
-
-          if (usage) lastUsage = usage;
-          if (finishReason) lastFinishReason = finishReason;
-
-          // 事件流面板一行（按 kind 着色）
-          const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
-          let summary = '';
-          if (kind === 'role') summary = `delta.role=${delta?.role || '?'}（无 content）`;
-          else if (kind === 'chunk') summary = `Δcontent "${(deltaContent || '').slice(0, 60)}${deltaContent && deltaContent.length > 60 ? '…' : ''}"`;
-          else if (kind === 'finish') summary = `finish_reason="${finishReason}", delta.role=${delta?.role || '?'}（无 content）`;
-          else if (kind === 'usage') {
+          if (usage) { usageRef.current = usage; }
+          if (finishReason) { finishRef.current = finishReason; }
+          const now = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
+          setElapsed(now);
+          let summary = "";
+          if (kind === "role") summary = `delta.role=${delta?.role || "?"}（无 content）`;
+          else if (kind === "chunk") summary = `Δcontent "${(deltaContent || "").slice(0, 60)}${deltaContent && deltaContent.length > 60 ? "…" : ""}"`;
+          else if (kind === "finish") summary = `finish_reason="${finishReason}", delta.role=${delta?.role || "?"}（无 content）`;
+          else if (kind === "usage") {
             const u = usage || {};
-            summary = `prompt_tokens=${u.prompt_tokens ?? '?'}, completion_tokens=${u.completion_tokens ?? '?'}`;
+            summary = `prompt_tokens=${u.prompt_tokens ?? "?"}, completion_tokens=${u.completion_tokens ?? "?"}`;
             if (u.completion_tokens_details?.reasoning_tokens != null) {
               summary += `, reasoning_tokens=${u.completion_tokens_details.reasoning_tokens}`;
             }
           } else summary = JSON.stringify(chunk).slice(0, 80);
+          setLines((prev) => [...prev, { kind, summary, frameIdx }]);
+        };
 
-          const line = document.createElement('div');
-          line.className = `bs-event-line as-kind-${kind}`;
-          line.innerHTML = `<span class="idx">#${frameCount}</span><span class="type">${esc(kind)}</span><span class="summary">${esc(summary)}</span>`;
-          asEvents.appendChild(line);
-          asEvents.scrollTop = asEvents.scrollHeight;
-
-          // 更新累加面板
-          asThinking.textContent = thinkingAccum;
-          asAnswer.textContent = answerAccum;
-          asThinkLen.textContent = `${thinkingAccum.length} 字符`;
-          asAnswerLen.textContent = `${answerAccum.length} 字符`;
-          asEventCount.textContent = `${frameCount} frames · ${elapsed}s`;
-        }
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx;
-          while ((idx = buffer.indexOf('\n\n')) >= 0) {
-            const frame = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
-            if (!dataLine) continue;
-            const payload = dataLine.slice(5).trim();
-            if (payload === '[DONE]') continue;
-            let obj;
-            try { obj = JSON.parse(payload); } catch { continue; }
-            if (obj.type === 'openai_chunk') renderFrame(obj);
-          }
-        }
-
-        // 流结束：显示 usage
-        const totalElapsed = ((performance.now() - t0) / 1000).toFixed(2);
-        let meta = `${frameCount} frames · ${totalElapsed}s · finish_reason=${lastFinishReason || '?'}`;
-        if (lastUsage) {
-          meta += ` · prompt_tokens=${lastUsage.prompt_tokens ?? '?'}, completion_tokens=${lastUsage.completion_tokens ?? '?'}`;
-          if (lastUsage.completion_tokens_details?.reasoning_tokens != null) {
-            meta += `, reasoning_tokens=${lastUsage.completion_tokens_details.reasoning_tokens}`;
-          }
-          if (lastUsage.prompt_tokens_details?.cached_tokens != null) {
-            meta += `, cached_tokens=${lastUsage.prompt_tokens_details.cached_tokens}`;
-          }
-        }
-        asMeta.textContent = meta;
-        asStatus.textContent = `完成 · 共 ${frameCount} 帧`;
-      } catch (err) {
-        asStatus.classList.add('err');
-        asStatus.textContent = `失败: ${err.message}`;
-      } finally {
-        $('run-as').disabled = false;
-      }
-    }
-
-    // ── 流式协议 B 不启用 thinking（与 a-stream-raw / b-thinking-stream 形成四向对照）──
-    const bsrMsg = $('bsr-msg');
-    const bsrEvents = $('bsr-events');
-    const bsrThinking = $('bsr-thinking');
-    const bsrAnswer = $('bsr-answer');
-    const bsrMeta = $('bsr-meta');
-    const bsrStatus = $('bsr-status');
-    const bsrEventCount = $('bsr-event-count');
-    const bsrThinkLen = $('bsr-think-len');
-    const bsrAnswerLen = $('bsr-answer-len');
-
-    $('run-bsr').onclick = runBStreamRaw;
-
-    async function runBStreamRaw() {
-      const message = bsrMsg.value.trim();
-      if (!message) return;
-      bsrEvents.innerHTML = '';
-      bsrAnswer.textContent = '';
-      bsrThinking.innerHTML = '<span style="color:#aaa;font-style:normal;">（不启用 thinking，此面板永远为空）</span>';
-      bsrMeta.textContent = '';
-      bsrStatus.textContent = '';
-      bsrStatus.classList.remove('err');
-      bsrEventCount.textContent = '0 events';
-      bsrThinkLen.textContent = '0 字符';
-      bsrAnswerLen.textContent = '0 字符';
-      $('run-bsr').disabled = true;
-
-      const t0 = performance.now();
-      let buffer = '';
-      let eventCount = 0;
-      let answerText = '';
-      let usage = null;
-      let stopReason = null;
-
-      try {
-        const res = await fetch('/api/b-stream-raw', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message }),
-        });
-        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-
-        function renderEvent(evt) {
-          eventCount += 1;
-          const t = evt.type || '(no type)';
-          const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
-
-          let summary = '';
-          let eventClass = '';
-          if (t === 'content_block_delta') {
-            const d = evt.delta || {};
-            if (d.text != null) {
-              eventClass = 'text-event';
-              answerText += d.text;
-              summary = `Δtext "${(d.text).slice(0, 60)}${d.text.length > 60 ? '…' : ''}"`;
-            } else if (d.thinking != null) {
-              eventClass = 'thinking-event';
-              summary = `Δthinking（不启用 thinking 时不应出现）`;
-            } else {
-              summary = JSON.stringify(d).slice(0, 80);
+        try {
+          const res = await fetch("/api/a-stream-raw", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg.trim() }),
+          });
+          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+          for await (const evt of consumeSSE(res)) {
+            if (evt.type === "openai_chunk") {
+              flushUI(evt.kind, evt.chunk, evt.frameIdx);
             }
-          } else if (t === 'content_block_start') {
-            const cb = evt.content_block || {};
-            summary = `block.type=${cb.type || '?'}`;
-            if (cb.type === 'thinking') eventClass = 'thinking-event';
-            if (cb.type === 'text') eventClass = 'text-event';
-          } else if (t === 'message_delta') {
-            eventClass = 'message-delta';
-            if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
-            if (evt.usage) usage = { ...(usage || {}), ...evt.usage };
-            summary = `stop_reason=${evt.delta?.stop_reason || '?'}, output_tokens=${evt.usage?.output_tokens ?? '?'}`;
-          } else if (t === 'message_stop') {
-            eventClass = 'message-stop';
-            summary = '（流结束）';
-          } else if (t === 'message_start') {
-            summary = `model=${evt.message?.model || '?'}, id=${(evt.message?.id || '').slice(0, 16)}…`;
-          } else if (t === 'content_block_stop') {
-            summary = '（块结束）';
-          } else {
-            summary = JSON.stringify(evt).slice(0, 80);
           }
-
-          const line = document.createElement('div');
-          line.className = `bs-event-line ${eventClass}`;
-          line.innerHTML = `<span class="idx">#${eventCount}</span><span class="type">${esc(t)}</span><span class="summary">${esc(summary)}</span>`;
-          bsrEvents.appendChild(line);
-          bsrEvents.scrollTop = bsrEvents.scrollHeight;
-
-          bsrAnswer.textContent = answerText;
-          bsrAnswerLen.textContent = `${answerText.length} 字符`;
-          bsrEventCount.textContent = `${eventCount} events · ${elapsed}s`;
-        }
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx;
-          while ((idx = buffer.indexOf('\n\n')) >= 0) {
-            const frame = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
-            if (!dataLine) continue;
-            const payload = dataLine.slice(5).trim();
-            if (payload === '[DONE]') continue;
-            let obj;
-            try { obj = JSON.parse(payload); } catch { continue; }
-            if (obj.type === 'anthropic_event') renderEvent(obj.event);
+          const totalElapsed = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
+          let metaText = `${lines.length + 1} frames · ${totalElapsed}s · finish_reason=${finishRef.current || "?"}`; // +1 因为 lines 是闭包旧值
+          const u = usageRef.current;
+          if (u) {
+            metaText += ` · prompt_tokens=${u.prompt_tokens ?? "?"}, completion_tokens=${u.completion_tokens ?? "?"}`;
+            if (u.completion_tokens_details?.reasoning_tokens != null) {
+              metaText += `, reasoning_tokens=${u.completion_tokens_details.reasoning_tokens}`;
+            }
+            if (u.prompt_tokens_details?.cached_tokens != null) {
+              metaText += `, cached_tokens=${u.prompt_tokens_details.cached_tokens}`;
+            }
           }
+          setMeta(metaText);
+          setStatus("ok");
+          onEnd(true);
+        } catch (e) {
+          setErrorMsg(String(e.message || e));
+          setStatus("error");
+          onEnd(false);
         }
+      };
 
-        const totalElapsed = ((performance.now() - t0) / 1000).toFixed(2);
-        let meta = `${eventCount} events · ${totalElapsed}s · stop_reason=${stopReason || '?'}`;
-        if (usage) {
-          meta += ` · output_tokens=${usage.output_tokens ?? '?'}`;
-          if (usage.input_tokens != null) meta += ` · input_tokens=${usage.input_tokens}`;
-          if (usage.cache_read_input_tokens != null) meta += ` · cache_read_input_tokens=${usage.cache_read_input_tokens}`;
-          meta += '（不启用 thinking，无 thinking 拆分字段）';
-        }
-        bsrMeta.textContent = meta;
-        bsrStatus.textContent = `完成 · 共 ${eventCount} 个事件`;
-      } catch (err) {
-        bsrStatus.classList.add('err');
-        bsrStatus.textContent = `失败: ${err.message}`;
-      } finally {
-        $('run-bsr').disabled = false;
-      }
+      return (
+        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+          <h2 className="text-base font-semibold">流式协议 A（OpenAI chunk 原样转发：看 role / chunk / finish / usage 四类帧）</h2>
+          <p className="text-xs text-gray-500">
+            调 <code>/api/a-stream-raw</code>。A 是「字符串帧流」（每帧一个 OpenAI chunk JSON + meta <code>kind</code>），
+            A 的 thinking 嵌在 <code>delta.content</code> 字符串里（<code>{"<think>"}...{"</think>"}</code>），不在独立 block。
+          </p>
+          <div className="flex gap-2 items-center flex-wrap">
+            <input
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              placeholder="消息（默认数学题）"
+              className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
+            />
+            <button
+              onClick={run}
+              disabled={status === "loading"}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
+            >
+              发流式请求
+            </button>
+            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
+              {status === "loading" && `请求中… ${elapsed}s`}
+              {status === "error" && `失败: ${errorMsg}`}
+              {status === "ok" && `完成 · 共 ${lines.length} 帧`}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>事件流（按顺序）</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                  {lines.length} frames · {elapsed}s
+                </span>
+              </h3>
+              <div className="flex-1 overflow-auto max-h-[360px] font-mono text-[11px] leading-snug">
+                {lines.map((l, i) => (
+                  <div key={i} className={`bs-event-line as-kind-${l.kind} py-0.5 px-1 border-b border-dotted border-gray-200 flex gap-2 items-baseline`}>
+                    <span className="text-gray-500 min-w-[32px]">#{l.frameIdx}</span>
+                    <span className="font-bold min-w-[60px]">{esc(l.kind)}</span>
+                    <span className="text-gray-700 flex-1 truncate">{esc(l.summary)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>thinking 累加（从 {"<think>"} 提取）</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{thinking.length} 字符</span>
+              </h3>
+              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-purple-50 rounded text-gray-600 italic">
+                {thinking || <span className="text-gray-400 not-italic">（无 {"<think>"}…{"</think>"} 块）</span>}
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>answer 累加（剥 {"<think>"} 后）</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{answer.length} 字符</span>
+              </h3>
+              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-gray-50 rounded">
+                {answer || <span className="text-gray-400">（等待事件流…）</span>}
+              </div>
+              <div className="mt-2 text-gray-600 text-xs border-t border-dashed border-gray-200 pt-1.5 break-all">
+                {meta && <code>{meta}</code>}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
     }
+
+    // ═════════════════════════════════════════════════════════════
+    // 面板 3：流式协议 B + 启用 thinking
+    // ═════════════════════════════════════════════════════════════
+    function BThinkingStreamPanel({ onStart, onEnd }) {
+      const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
+      const [budget, setBudget] = useState("500");
+      const [status, setStatus] = useState("idle");
+      const [errorMsg, setErrorMsg] = useState("");
+      const [lines, setLines] = useState([]);
+      const [thinking, setThinking] = useState("");
+      const [answer, setAnswer] = useState("");
+      const [meta, setMeta] = useState("");
+      const [elapsed, setElapsed] = useState(0);
+      const t0Ref = useRef(0);
+      const thinkingRef = useRef("");
+      const answerRef = useRef("");
+      const usageRef = useRef(null);
+      const stopReasonRef = useRef(null);
+
+      const flushEvent = (evt, evIdx) => {
+        const t = evt.type || "(no type)";
+        const now = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
+        setElapsed(now);
+        let summary = "";
+        let eventClass = "";
+        if (t === "content_block_delta") {
+          const d = evt.delta || {};
+          if (d.thinking != null) {
+            eventClass = "thinking-event";
+            thinkingRef.current += d.thinking;
+            setThinking(thinkingRef.current);
+            summary = `Δthinking ${(d.thinking).slice(0, 60)}${d.thinking.length > 60 ? "…" : ""}`;
+          } else if (d.text != null) {
+            eventClass = "text-event";
+            answerRef.current += d.text;
+            setAnswer(answerRef.current);
+            summary = `Δtext "${(d.text).slice(0, 60)}${d.text.length > 60 ? "…" : ""}"`;
+          } else if (d.type === "signature_delta") {
+            summary = "signature_delta（thinking 验证签名）";
+          } else {
+            summary = JSON.stringify(d).slice(0, 80);
+          }
+        } else if (t === "content_block_start") {
+          const cb = evt.content_block || {};
+          summary = `block.type=${cb.type || "?"}`;
+          if (cb.type === "thinking") eventClass = "thinking-event";
+          if (cb.type === "text") eventClass = "text-event";
+        } else if (t === "message_delta") {
+          eventClass = "message-delta";
+          if (evt.delta?.stop_reason) stopReasonRef.current = evt.delta.stop_reason;
+          if (evt.usage) {
+            usageRef.current = { ...(usageRef.current || {}), ...evt.usage };
+          }
+          summary = `stop_reason=${evt.delta?.stop_reason || "?"}, output_tokens=${evt.usage?.output_tokens ?? "?"}`;
+        } else if (t === "message_stop") {
+          eventClass = "message-stop";
+          summary = "（流结束）";
+        } else if (t === "message_start") {
+          summary = `model=${evt.message?.model || "?"}, id=${(evt.message?.id || "").slice(0, 16)}…`;
+        } else if (t === "content_block_stop") {
+          summary = "（块结束）";
+        } else {
+          summary = JSON.stringify(evt).slice(0, 80);
+        }
+        setLines((prev) => [...prev, { type: t, summary, eventClass, evIdx }]);
+      };
+
+      const run = async () => {
+        if (!msg.trim()) return;
+        const thinkingBudget = parseInt(budget, 10) || 500;
+        setStatus("loading");
+        setErrorMsg("");
+        setLines([]);
+        setThinking("");
+        setAnswer("");
+        setMeta("");
+        setElapsed(0);
+        thinkingRef.current = "";
+        answerRef.current = "";
+        usageRef.current = null;
+        stopReasonRef.current = null;
+        t0Ref.current = performance.now();
+        onStart();
+
+        try {
+          const res = await fetch("/api/b-thinking-stream", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg.trim(), thinking_budget: thinkingBudget }),
+          });
+          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+          for await (const evt of consumeSSE(res)) {
+            flushEvent(evt);
+          }
+          const totalElapsed = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
+          let metaText = `${lines.length + 1} events · ${totalElapsed}s · stop_reason=${stopReasonRef.current || "?"}`;
+          const u = usageRef.current;
+          if (u) {
+            metaText += ` · output_tokens=${u.output_tokens ?? "?"}`;
+            if (u.input_tokens != null) metaText += ` · input_tokens=${u.input_tokens}`;
+            if (u.cache_read_input_tokens != null) metaText += ` · cache_read_input_tokens=${u.cache_read_input_tokens}`;
+            metaText += "（流式 message_delta 不报 thinking 拆分，要拆分得用一次性）";
+          }
+          setMeta(metaText);
+          setStatus("ok");
+          onEnd(true);
+        } catch (e) {
+          setErrorMsg(String(e.message || e));
+          setStatus("error");
+          onEnd(false);
+        }
+      };
+
+      return (
+        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+          <h2 className="text-base font-semibold">流式协议 B + 启用 thinking（看完整事件流：thinking block + text block + message_delta）</h2>
+          <p className="text-xs text-gray-500">
+            调 <code>/api/b-thinking-stream</code>。事件序列应是：<code>message_start → content_block_start(thinking) → ...</code>。
+            thinking 与 text 是两个独立 block，<strong>不是嵌在 answer 里</strong>。
+          </p>
+          <div className="flex gap-2 items-center flex-wrap">
+            <input
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              placeholder="消息（默认数学题）"
+              className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
+            />
+            <select
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              className="border border-gray-300 rounded p-2 text-sm"
+            >
+              <option value="100">budget=100</option>
+              <option value="500">budget=500</option>
+              <option value="1000">budget=1000</option>
+            </select>
+            <button
+              onClick={run}
+              disabled={status === "loading"}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
+            >
+              发流式请求
+            </button>
+            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
+              {status === "loading" && `请求中… ${elapsed}s`}
+              {status === "error" && `失败: ${errorMsg}`}
+              {status === "ok" && `完成 · budget=${budget} · 共 ${lines.length} 个事件`}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>事件流（按顺序）</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                  {lines.length} events · {elapsed}s
+                </span>
+              </h3>
+              <div className="flex-1 overflow-auto max-h-[360px] font-mono text-[11px] leading-snug">
+                {lines.map((l, i) => (
+                  <div key={i} className={`bs-event-line ${l.eventClass} py-0.5 px-1 border-b border-dotted border-gray-200 flex gap-2 items-baseline`}>
+                    <span className="text-gray-500 min-w-[32px]">#{l.evIdx}</span>
+                    <span className="font-bold min-w-[130px]">{esc(l.type)}</span>
+                    <span className="text-gray-700 flex-1 truncate">{esc(l.summary)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>thinking 累加</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{thinking.length} 字符</span>
+              </h3>
+              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-purple-50 rounded text-gray-600 italic">
+                {thinking || <span className="text-gray-400 not-italic">（未触发 thinking）</span>}
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>answer 累加</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{answer.length} 字符</span>
+              </h3>
+              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-gray-50 rounded">
+                {answer || <span className="text-gray-400">（等待事件流…）</span>}
+              </div>
+              <div className="mt-2 text-gray-600 text-xs border-t border-dashed border-gray-200 pt-1.5 break-all">
+                {meta && <code>{meta}</code>}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // 面板 4：流式协议 B 不启用 thinking
+    // ═════════════════════════════════════════════════════════════
+    function BStreamRawPanel({ onStart, onEnd }) {
+      const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
+      const [status, setStatus] = useState("idle");
+      const [errorMsg, setErrorMsg] = useState("");
+      const [lines, setLines] = useState([]);
+      const [answer, setAnswer] = useState("");
+      const [meta, setMeta] = useState("");
+      const [elapsed, setElapsed] = useState(0);
+      const t0Ref = useRef(0);
+      const answerRef = useRef("");
+      const usageRef = useRef(null);
+      const stopReasonRef = useRef(null);
+
+      const flushEvent = (evt, evIdx) => {
+        const t = evt.type || "(no type)";
+        const now = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
+        setElapsed(now);
+        let summary = "";
+        let eventClass = "";
+        if (t === "content_block_delta") {
+          const d = evt.delta || {};
+          if (d.text != null) {
+            eventClass = "text-event";
+            answerRef.current += d.text;
+            setAnswer(answerRef.current);
+            summary = `Δtext "${(d.text).slice(0, 60)}${d.text.length > 60 ? "…" : ""}"`;
+          } else if (d.thinking != null) {
+            eventClass = "thinking-event";
+            summary = "Δthinking（不启用 thinking 时不应出现）";
+          } else {
+            summary = JSON.stringify(d).slice(0, 80);
+          }
+        } else if (t === "content_block_start") {
+          const cb = evt.content_block || {};
+          summary = `block.type=${cb.type || "?"}`;
+          if (cb.type === "thinking") eventClass = "thinking-event";
+          if (cb.type === "text") eventClass = "text-event";
+        } else if (t === "message_delta") {
+          eventClass = "message-delta";
+          if (evt.delta?.stop_reason) stopReasonRef.current = evt.delta.stop_reason;
+          if (evt.usage) {
+            usageRef.current = { ...(usageRef.current || {}), ...evt.usage };
+          }
+          summary = `stop_reason=${evt.delta?.stop_reason || "?"}, output_tokens=${evt.usage?.output_tokens ?? "?"}`;
+        } else if (t === "message_stop") {
+          eventClass = "message-stop";
+          summary = "（流结束）";
+        } else if (t === "message_start") {
+          summary = `model=${evt.message?.model || "?"}, id=${(evt.message?.id || "").slice(0, 16)}…`;
+        } else if (t === "content_block_stop") {
+          summary = "（块结束）";
+        } else {
+          summary = JSON.stringify(evt).slice(0, 80);
+        }
+        setLines((prev) => [...prev, { type: t, summary, eventClass, evIdx }]);
+      };
+
+      const run = async () => {
+        if (!msg.trim()) return;
+        setStatus("loading");
+        setErrorMsg("");
+        setLines([]);
+        setAnswer("");
+        setMeta("");
+        setElapsed(0);
+        answerRef.current = "";
+        usageRef.current = null;
+        stopReasonRef.current = null;
+        t0Ref.current = performance.now();
+        onStart();
+
+        try {
+          const res = await fetch("/api/b-stream-raw", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg.trim() }),
+          });
+          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+          for await (const evt of consumeSSE(res)) {
+            if (evt.type === "anthropic_event") flushEvent(evt.event, evt.eventIdx);
+          }
+          const totalElapsed = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
+          let metaText = `${lines.length + 1} events · ${totalElapsed}s · stop_reason=${stopReasonRef.current || "?"}`;
+          const u = usageRef.current;
+          if (u) {
+            metaText += ` · output_tokens=${u.output_tokens ?? "?"}`;
+            if (u.input_tokens != null) metaText += ` · input_tokens=${u.input_tokens}`;
+            if (u.cache_read_input_tokens != null) metaText += ` · cache_read_input_tokens=${u.cache_read_input_tokens}`;
+            metaText += "（不启用 thinking，无 thinking 拆分字段）";
+          }
+          setMeta(metaText);
+          setStatus("ok");
+          onEnd(true);
+        } catch (e) {
+          setErrorMsg(String(e.message || e));
+          setStatus("error");
+          onEnd(false);
+        }
+      };
+
+      return (
+        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+          <h2 className="text-base font-semibold">流式协议 B（不启用 thinking：原样转发事件流）</h2>
+          <p className="text-xs text-gray-500">
+            调 <code>/api/b-stream-raw</code>。与上面三个端点形成四向对照：A/B × 带/不带 thinking。
+            这次 B <strong>不启用 thinking</strong>，事件序列里应<strong>没有 thinking block</strong>。
+          </p>
+          <div className="flex gap-2 items-center flex-wrap">
+            <input
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              placeholder="消息（默认数学题）"
+              className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
+            />
+            <button
+              onClick={run}
+              disabled={status === "loading"}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
+            >
+              发流式请求
+            </button>
+            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
+              {status === "loading" && `请求中… ${elapsed}s`}
+              {status === "error" && `失败: ${errorMsg}`}
+              {status === "ok" && `完成 · 共 ${lines.length} 个事件`}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>事件流（按顺序）</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                  {lines.length} events · {elapsed}s
+                </span>
+              </h3>
+              <div className="flex-1 overflow-auto max-h-[360px] font-mono text-[11px] leading-snug">
+                {lines.map((l, i) => (
+                  <div key={i} className={`bs-event-line ${l.eventClass} py-0.5 px-1 border-b border-dotted border-gray-200 flex gap-2 items-baseline`}>
+                    <span className="text-gray-500 min-w-[32px]">#{l.evIdx}</span>
+                    <span className="font-bold min-w-[130px]">{esc(l.type)}</span>
+                    <span className="text-gray-700 flex-1 truncate">{esc(l.summary)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>thinking 累加</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">0 字符</span>
+              </h3>
+              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-purple-50 rounded text-gray-400 not-italic">
+                （不启用 thinking，此面板永远为空）
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
+              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
+                <span>answer 累加</span>
+                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{answer.length} 字符</span>
+              </h3>
+              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-gray-50 rounded">
+                {answer || <span className="text-gray-400">（等待事件流…）</span>}
+              </div>
+              <div className="mt-2 text-gray-600 text-xs border-t border-dashed border-gray-200 pt-1.5 break-all">
+                {meta && <code>{meta}</code>}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // 主组件 App：全局 status-pill + 4 面板
+    // ═════════════════════════════════════════════════════════════
+    function App() {
+      // 4 个面板的运行状态：'idle' | 'loading' | 'ok' | 'error'
+      const [panels, setPanels] = useState({
+        think: "idle",
+        as: "idle",
+        bs: "idle",
+        bsr: "idle",
+      });
+      const [model, setModel] = useState("MiniMax-M3");
+      const [connected, setConnected] = useState(false);
+
+      // 启动时 ping /health
+      useEffect(() => {
+        fetch("/health")
+          .then((r) => r.json())
+          .then((d) => {
+            setModel(d.a?.model ?? d.model);
+            setConnected(true);
+          })
+          .catch(() => setConnected(false));
+      }, []);
+
+      // 全局 status-pill 计算
+      const values = Object.values(panels);
+      const runningCount = values.filter((v) => v === "loading").length;
+      const failedCount = values.filter((v) => v === "error").length;
+      let pillState = "idle";
+      let pillBg = "bg-gray-200";
+      let pillText = "⏸ 待连接";
+      if (!connected) {
+        pillText = "❌ 连不上后端";
+        pillBg = "bg-red-100";
+        pillState = "error";
+      } else if (failedCount > 0) {
+        pillText = `❌ ${failedCount} 个面板失败`;
+        pillBg = "bg-red-100";
+        pillState = "error";
+      } else if (runningCount > 0) {
+        pillText = `🔄 ${runningCount} 个面板运行中…`;
+        pillBg = "bg-blue-100";
+        pillState = "loading";
+      } else {
+        pillText = `✅ 全部完成`;
+        pillBg = "bg-green-100";
+        pillState = "ok";
+      }
+
+      const panelStart = (id) => setPanels((p) => ({ ...p, [id]: "loading" }));
+      const panelEnd = (id, ok) =>
+        setPanels((p) => ({ ...p, [id]: ok ? "ok" : "error" }));
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b border-gray-200 p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              协议 A vs B 对照 Demo（{model}，同 Key，同 prompt）
+            </h1>
+            <span
+              id="status-pill"
+              className={`text-xs px-2 py-1 rounded ${pillBg}`}
+              data-state={pillState}
+            >
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-xs text-gray-500">
+                下方 4 个面板都跑「同一 prompt」（默认数学题 <code>23 × 47</code>）。
+                每个面板独立按钮 + 输入；全局 <code>#status-pill</code> 跟踪 4 个面板的运行状态
+                （任一运行中 → 🔄；任一失败 → ❌；全部完成 → ✅；未连上后端 → ❌）。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-6">
+              <ThinkPanel onStart={() => panelStart("think")} onEnd={(ok) => panelEnd("think", ok)} />
+              <AStreamRawPanel onStart={() => panelStart("as")} onEnd={(ok) => panelEnd("as", ok)} />
+              <BThinkingStreamPanel onStart={() => panelStart("bs")} onEnd={(ok) => panelEnd("bs", ok)} />
+              <BStreamRawPanel onStart={() => panelStart("bsr")} onEnd={(ok) => panelEnd("bsr", ok)} />
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t border-gray-200 p-2 text-xs text-gray-500 text-center"
+          >
+            端口 50202 · 协议 A/B · 模型 MiniMax-M3 · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
   </script>
 </body>
 </html>

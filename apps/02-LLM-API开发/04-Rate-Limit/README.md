@@ -1,6 +1,8 @@
-# Demo · 429 / Rate Limit · 分类重试 + 退避 + jitter + 上限
+# Demo · 429 / Rate Limit · 分类重试 + 退避 + jitter + 上限（§5.3 React + koa）
 
 对应小节：[docs/学习模块/02-LLM-API开发/04-Rate-Limit.md](../../../docs/学习模块/02-LLM-API开发/04-Rate-Limit.md)
+
+**端口**：`50204` · 浏览器打开 `http://127.0.0.1:50204/`（由 `PORT` 环境变量覆盖）。
 
 ## 怎么跑
 
@@ -13,7 +15,7 @@ BURST=1 yarn app:02-04-rate-limit                          # 上面 + 并发 20 
 
 启动后做三件事：
 1. **CLI 时间线**：终端打印 5 个 mock 场景 + 真 API 单次（如果 `apps/.env` 里有 Key）。
-2. **浏览器页面**：打开 `http://127.0.0.1:5176/`，点按钮跑同样场景（端口由 `PORT` 环境变量覆盖）。
+2. **浏览器页面**：打开 `http://127.0.0.1:50204/`，点按钮跑同样场景（端口由 `PORT` 环境变量覆盖）。
 3. **真 API**：⑥ 单次默认跑；⑦ 并发 20 在 `BURST=1` 时 CLI 才跑，浏览器里按钮可直接点（按需烧 token）。
 
 按 Ctrl+C 退出。
@@ -67,8 +69,8 @@ BURST=1 yarn app:02-04-rate-limit                          # 上面 + 并发 20 
 ## 关键代码
 
 - `retry.ts`：`retryWithBackoff(fn, opts)` 主入口；`NonRetryableError` / `RetryExhaustedError` 两类错误；每次 attempt 写入 `AttemptRecord`。
-- `index.ts`：mock server 5 个端点 + `/api/proxy` 套 retry + CLI 跑 6 个场景 + 浏览器页面入口。
-- `public/index.html`：5 个按钮 + 时间线表（颜色按状态码分）。
+- `server.ts`：koa mock 5 个端点 + `/api/proxy` 套 retry + CLI 跑场景 + 静态页。
+- `public/index.html`：§5.3 React 内联块；按钮 + 时间线表。
 
 ## 概念 / 取舍 / 踩坑
 

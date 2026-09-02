@@ -1,196 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Retry Demo · 429 / Rate Limit 时间线</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
     .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
     .status-200 { background: #dcfce7; color: #14532d; }
     .status-429 { background: #fef9c3; color: #713f12; }
-    .status-5xx, .status-500, .status-502, .status-503, .status-504 { background: #fee2e2; color: #7f1d1d; }
-    .status-401, .status-403, .status-404, .status-422 { background: #e0e7ff; color: #312e81; }
+    .status-5xx { background: #fee2e2; color: #7f1d1d; }
+    .status-401 { background: #e0e7ff; color: #312e81; }
     .status-network { background: #f3e8ff; color: #581c87; }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-900">
-  <div class="max-w-5xl mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-1">429 / Rate Limit · 重试时间线</h1>
-    <p class="text-sm text-slate-600 mb-6">
-      对应小节：<a class="underline" href="../../../docs/学习模块/02-LLM-API开发/04-Rate-Limit.md" target="_blank">docs/学习模块/02-LLM-API开发/04-Rate-Limit.md</a>。
-      点按钮跑场景，每次返回 attempts[]，渲染成时间线表。
-    </p>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
 
-    <div class="flex flex-wrap gap-2 mb-6">
-      <button data-target="easy" class="btn px-3 py-2 rounded-lg bg-white shadow border border-slate-200 hover:bg-slate-100">① easy（前 2 次 429）</button>
-      <button data-target="chaos" class="btn px-3 py-2 rounded-lg bg-white shadow border border-slate-200 hover:bg-slate-100">② chaos（随机，跑 1 次）</button>
-      <button data-target="auth" class="btn px-3 py-2 rounded-lg bg-white shadow border border-slate-200 hover:bg-slate-100">③ auth（永远 401）</button>
-      <button data-target="forever" class="btn px-3 py-2 rounded-lg bg-white shadow border border-slate-200 hover:bg-slate-100">④ forever（永远 429）</button>
-      <button data-target="ok" class="btn px-3 py-2 rounded-lg bg-white shadow border border-slate-200 hover:bg-slate-100">⑤ ok（直接 200）</button>
-      <button data-target="chaos" data-runs="6" class="btn px-3 py-2 rounded-lg bg-amber-100 shadow border border-amber-300 hover:bg-amber-200">② chaos × 6（看 jitter）</button>
-      <button data-real="1" class="btn px-3 py-2 rounded-lg bg-emerald-100 shadow border border-emerald-300 hover:bg-emerald-200">⑥ 真 API：单次</button>
-      <button data-real="burst" data-concurrency="20" class="btn px-3 py-2 rounded-lg bg-rose-100 shadow border border-rose-300 hover:bg-rose-200">⑦ 真 API：并发 20（撞 429，会烧 token）</button>
-    </div>
-
-    <div id="output" class="space-y-6"></div>
-
-    <details class="mt-10 bg-white border border-slate-200 rounded-lg p-4">
-      <summary class="cursor-pointer font-semibold">看什么 / 怎么对照本条要能讲清列</summary>
-      <ul class="mt-3 space-y-2 text-sm leading-6 list-disc pl-5">
-        <li><b>① easy</b>：看时间线里 attempt 1 / 2 状态码是 429、waitBefore 至少 500ms（因为 Retry-After: 0.5），attempt 3 是 200 → <b>听 Retry-After</b>。</li>
-        <li><b>② chaos × 6</b>：连续跑 6 次，<b>对比每次的 waitBefore 列</b>。如果每次都精确等于 200/400/800…（没 jitter），6 次都是同一组数；加了 jitter 后 6 次的 waitBefore 会<b>各自带随机偏移</b>，这就是防 thundering herd 的那一刀。</li>
-        <li><b>③ auth</b>：只有 1 行 attempt，状态码 401，立刻抛 NonRetryableError → <b>不重试 401</b>。</li>
-        <li><b>④ forever</b>：4 行 attempt 全是 429，最终抛 RetryExhaustedError → <b>maxAttempts 上限生效</b>。</li>
-        <li><b>⑤ ok</b>：1 行 attempt，状态码 200，waitBefore=0 → <b>成功路径不触发重试</b>。</li>
-        <li><b>⑥ 真 API 单次</b>：调一次 MiniMax；通常直接 200 + 真实网络耗时（~100~500ms vs mock 的 1ms）；偶发网络抖动会看到 retry。</li>
-        <li><b>⑦ 真 API 并发 20</b>：每个请求独立套 retry；看<b>真 429 + 真 Retry-After 头</b>。每次跑消耗 token（约 0.02 元），按需开启。</li>
-      </ul>
-    </details>
-  </div>
-
-  <script>
-    const out = document.getElementById("output");
-
-    // ── mock 端点：/api/proxy ───────────────────────────────────
-    async function runMock(target, runs = 1) {
-      const block = document.createElement("div");
-      block.className = "bg-white border border-slate-200 rounded-lg p-4 shadow-sm";
-      block.innerHTML = `<div class="text-xs text-slate-500 mb-2">⏳ 跑 ${target} × ${runs}…</div>`;
-      out.prepend(block);
-
-      for (let r = 0; r < runs; r++) {
-        const label = runs > 1 ? ` (${r + 1}/${runs})` : "";
-        const row = document.createElement("div");
-        row.className = "mt-3";
-        row.innerHTML = `<div class="text-sm font-semibold mb-1">${target}${label}</div><div class="text-xs text-slate-500">请求中…</div>`;
-        block.appendChild(row);
-
-        try {
-          const resp = await fetch(`/api/proxy?target=${encodeURIComponent(target)}`);
-          const data = await resp.json();
-          renderTimeline(row, data);
-        } catch (err) {
-          row.innerHTML += `<div class="text-xs text-red-600 mono mt-1">fetch 失败：${err.message}</div>`;
-        }
-      }
-    }
-
-    // ── 真 API：单次 ───────────────────────────────────────────
-    async function runReal() {
-      const block = document.createElement("div");
-      block.className = "bg-emerald-50 border border-emerald-200 rounded-lg p-4 shadow-sm";
-      block.innerHTML = `<div class="text-xs text-slate-500 mb-2">⏳ 真 API 单次…</div>`;
-      out.prepend(block);
-      const row = document.createElement("div");
-      row.className = "mt-3";
-      block.appendChild(row);
-      try {
-        const resp = await fetch(`/api/real`);
-        const data = await resp.json();
-        if (!data.hasKey) {
-          row.innerHTML = `<div class="text-sm text-amber-700">⚠️ ${escapeHtml(data.error)}</div>`;
-          return;
-        }
-        renderTimeline(row, data);
-      } catch (err) {
-        row.innerHTML = `<div class="text-xs text-red-600 mono">fetch 失败：${err.message}</div>`;
-      }
-    }
-
-    // ── 真 API：并发撞 429 ────────────────────────────────────
-    async function runRealBurst(concurrency) {
-      const block = document.createElement("div");
-      block.className = "bg-rose-50 border border-rose-200 rounded-lg p-4 shadow-sm";
-      block.innerHTML = `<div class="text-xs text-slate-500 mb-2">⏳ 真 API 并发 ${concurrency}…</div>`;
-      out.prepend(block);
-      const row = document.createElement("div");
-      row.className = "mt-3";
-      block.appendChild(row);
-      try {
-        const resp = await fetch(`/api/real-burst?concurrency=${concurrency}`);
-        const data = await resp.json();
-        if (!data.hasKey) {
-          row.innerHTML = `<div class="text-sm text-amber-700">⚠️ ${escapeHtml(data.error || "apps/.env 里没有 MINIMAX_API_KEY")}</div>`;
-          return;
-        }
-        renderBurst(row, data);
-      } catch (err) {
-        row.innerHTML = `<div class="text-xs text-red-600 mono">fetch 失败：${err.message}</div>`;
-      }
-    }
-
-    // ── 渲染：单次 / proxy 的时间线 ──────────────────────────
-    function renderTimeline(row, data) {
-      const verdict = data.ok
-        ? `<span class="text-green-700">✅ 最终成功</span>`
-        : `<span class="text-red-700">❌ ${data.errorType || "Error"}</span>`;
-      const head = `<div class="text-xs text-slate-500 mt-1">${verdict}${data.ok ? ` · result：<span class="mono">${escapeHtml((data.result || "").slice(0, 80))}</span>` : ` · ${escapeHtml((data.error || "").slice(0, 80))}`}</div>`;
-
-      const table = `
-        <table class="w-full text-xs mono mt-2 border border-slate-200">
-          <thead class="bg-slate-100 text-slate-700">
-            <tr><th class="px-2 py-1 text-left">#</th><th class="px-2 py-1 text-left">status</th><th class="px-2 py-1 text-left">waitBefore</th><th class="px-2 py-1 text-left">Retry-After</th><th class="px-2 py-1 text-left">duration</th><th class="px-2 py-1 text-left">body</th></tr>
-          </thead>
-          <tbody>
-            ${(data.attempts || []).map(a => `
-              <tr class="border-t border-slate-200">
-                <td class="px-2 py-1">#${a.attempt}</td>
-                <td class="px-2 py-1"><span class="px-1.5 py-0.5 rounded ${statusClass(a.status)}">${a.status}</span></td>
-                <td class="px-2 py-1">${a.waitBeforeMs.toFixed(0)}ms</td>
-                <td class="px-2 py-1">${a.retryAfterUsedMs === null ? "—" : a.retryAfterUsedMs + "ms"}</td>
-                <td class="px-2 py-1">${a.durationMs.toFixed(0)}ms</td>
-                <td class="px-2 py-1">${escapeHtml((a.errorMessage || "—").slice(0, 60))}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>`;
-      row.innerHTML = head + table;
-    }
-
-    // ── 渲染：burst 的聚合 + 每个请求的末次状态 ──────────────
-    function renderBurst(row, data) {
-      const a = data.aggregate;
-      const summary = `
-        <div class="text-sm font-semibold mb-2">并发 ${data.concurrency} · 聚合</div>
-        <div class="text-xs text-slate-700 mb-2">
-          <span class="text-green-700">✅ 一次成功 ${a.okFirstTry}</span> ·
-          <span class="text-amber-700">🔄 重试后成功 ${a.okAfterRetry}</span> ·
-          <span class="text-red-700">❌ 失败 ${a.failed}</span>
-        </div>
-        <div class="text-xs text-slate-700 mb-3">
-          状态码分布：<b>429</b> = ${a.total429} 次 ·
-          <b>5xx</b> = ${a.total5xx} 次 ·
-          <b>network</b> = ${a.totalNetwork} 次；
-          总重试 = ${a.totalRetries} 次；总耗时 = ${(a.totalTimeMs / 1000).toFixed(1)}s
-        </div>`;
-
-      // 每个请求一行：末次状态 + attempts 数 + 是否成功
-      const rows = data.results.map(r => {
-        const last = r.attempts.at(-1);
-        const lastStatus = last?.status ?? "?";
-        const verdict = r.ok ? "✅" : "❌";
-        return `<tr class="border-t border-slate-200">
-          <td class="px-2 py-1">${verdict}</td>
-          <td class="px-2 py-1">#${r.idx}</td>
-          <td class="px-2 py-1">${r.attempts.length}</td>
-          <td class="px-2 py-1"><span class="px-1.5 py-0.5 rounded ${statusClass(lastStatus)}">${lastStatus}</span></td>
-          <td class="px-2 py-1">${r.totalTimeMs.toFixed(0)}ms</td>
-        </tr>`;
-      }).join("");
-
-      const table = `
-        <table class="w-full text-xs mono border border-slate-200">
-          <thead class="bg-slate-100 text-slate-700">
-            <tr><th class="px-2 py-1 text-left">结果</th><th class="px-2 py-1 text-left">req#</th><th class="px-2 py-1 text-left">attempts</th><th class="px-2 py-1 text-left">lastStatus</th><th class="px-2 py-1 text-left">totalTime</th></tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-      row.innerHTML = summary + table;
-    }
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
     function statusClass(s) {
       if (s === "network") return "status-network";
@@ -201,22 +35,296 @@
       return "bg-slate-100";
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    function StatusPill({ status }) {
+      const map = {
+        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
+        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
+        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
+        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
+      };
+      const s = map[status] || map.idle;
+      return (
+        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
+          {s.emoji} {s.text}
+        </span>
+      );
     }
 
-    document.querySelectorAll(".btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        // 真 API 按钮（data-real="1" / "burst"）
-        const real = btn.dataset.real;
-        if (real === "1") return runReal();
-        if (real === "burst") return runRealBurst(Number(btn.dataset.concurrency || 20));
-        // mock 按钮
-        const target = btn.dataset.target;
-        const runs = Number(btn.dataset.runs || 1);
-        runMock(target, runs);
-      });
-    });
+    function TimelineTable({ attempts }) {
+      return (
+        <table className="w-full text-xs mono mt-2 border border-slate-200">
+          <thead className="bg-slate-100 text-slate-700">
+            <tr>
+              <th className="px-2 py-1 text-left">#</th>
+              <th className="px-2 py-1 text-left">status</th>
+              <th className="px-2 py-1 text-left">waitBefore</th>
+              <th className="px-2 py-1 text-left">Retry-After</th>
+              <th className="px-2 py-1 text-left">duration</th>
+              <th className="px-2 py-1 text-left">body</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(attempts || []).map((a) => (
+              <tr key={a.attempt} className="border-t border-slate-200">
+                <td className="px-2 py-1">#{a.attempt}</td>
+                <td className="px-2 py-1">
+                  <span className={`px-1.5 py-0.5 rounded ${statusClass(a.status)}`}>{a.status}</span>
+                </td>
+                <td className="px-2 py-1">{a.waitBeforeMs.toFixed(0)}ms</td>
+                <td className="px-2 py-1">{a.retryAfterUsedMs === null ? "—" : a.retryAfterUsedMs + "ms"}</td>
+                <td className="px-2 py-1">{a.durationMs.toFixed(0)}ms</td>
+                <td className="px-2 py-1">{(a.errorMessage || "—").slice(0, 60)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
+
+    function TimelineBlock({ data }) {
+      return (
+        <div>
+          <div className="text-xs text-slate-500 mt-1">
+            {data.ok ? (
+              <span className="text-green-700">
+                ✅ 最终成功 · result：<span className="mono">{(data.result || "").slice(0, 80)}</span>
+              </span>
+            ) : (
+              <span className="text-red-700">
+                ❌ {data.errorType || "Error"} · {(data.error || "").slice(0, 80)}
+              </span>
+            )}
+          </div>
+          <TimelineTable attempts={data.attempts} />
+        </div>
+      );
+    }
+
+    function BurstBlock({ data }) {
+      const a = data.aggregate;
+      return (
+        <div>
+          <div className="text-sm font-semibold mb-2">并发 {data.concurrency} · 聚合</div>
+          <div className="text-xs text-slate-700 mb-2">
+            <span className="text-green-700">✅ 一次成功 {a.okFirstTry}</span> ·{" "}
+            <span className="text-amber-700">🔄 重试后成功 {a.okAfterRetry}</span> ·{" "}
+            <span className="text-red-700">❌ 失败 {a.failed}</span>
+          </div>
+          <div className="text-xs text-slate-700 mb-3">
+            状态码分布：<b>429</b> = {a.total429} 次 · <b>5xx</b> = {a.total5xx} 次 ·{" "}
+            <b>network</b> = {a.totalNetwork} 次；总重试 = {a.totalRetries} 次；总耗时 ={" "}
+            {(a.totalTimeMs / 1000).toFixed(1)}s
+          </div>
+          <table className="w-full text-xs mono border border-slate-200">
+            <thead className="bg-slate-100 text-slate-700">
+              <tr>
+                <th className="px-2 py-1 text-left">结果</th>
+                <th className="px-2 py-1 text-left">req#</th>
+                <th className="px-2 py-1 text-left">attempts</th>
+                <th className="px-2 py-1 text-left">lastStatus</th>
+                <th className="px-2 py-1 text-left">totalTime</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.results.map((r) => {
+                const last = r.attempts.at(-1);
+                const lastStatus = last?.status ?? "?";
+                return (
+                  <tr key={r.idx} className="border-t border-slate-200">
+                    <td className="px-2 py-1">{r.ok ? "✅" : "❌"}</td>
+                    <td className="px-2 py-1">#{r.idx}</td>
+                    <td className="px-2 py-1">{r.attempts.length}</td>
+                    <td className="px-2 py-1">
+                      <span className={`px-1.5 py-0.5 rounded ${statusClass(lastStatus)}`}>{lastStatus}</span>
+                    </td>
+                    <td className="px-2 py-1">{r.totalTimeMs.toFixed(0)}ms</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [error, setError] = useState("");
+      const [blocks, setBlocks] = useState([]);
+
+      useEffect(() => {
+        fetch("/health")
+          .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then(() => setStatus("idle"))
+          .catch((e) => {
+            setStatus("error");
+            setError(e instanceof Error ? e.message : String(e));
+          });
+      }, []);
+
+      const withBusy = async (fn) => {
+        if (busy) return;
+        setBusy(true);
+        setStatus("loading");
+        setError("");
+        try {
+          await fn();
+          setStatus("ok");
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          setError(msg);
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      };
+
+      const runMock = (target, runs) =>
+        withBusy(async () => {
+          const rows = [];
+          for (let r = 0; r < runs; r++) {
+            const resp = await fetch(`/api/proxy?target=${encodeURIComponent(target)}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            rows.push({ kind: "timeline", label: runs > 1 ? `${target} (${r + 1}/${runs})` : target, data });
+          }
+          setBlocks((prev) => [{ id: Date.now(), title: `mock ${target} × ${runs}`, rows }, ...prev]);
+        });
+
+      const runReal = () =>
+        withBusy(async () => {
+          const resp = await fetch("/api/real");
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const data = await resp.json();
+          if (!data.hasKey) {
+            setBlocks((prev) => [
+              { id: Date.now(), title: "真 API 单次", warn: data.error },
+              ...prev,
+            ]);
+            return;
+          }
+          setBlocks((prev) => [
+            { id: Date.now(), title: "真 API 单次", rows: [{ kind: "timeline", label: "real", data }] },
+            ...prev,
+          ]);
+        });
+
+      const runBurst = () =>
+        withBusy(async () => {
+          const resp = await fetch("/api/real-burst?concurrency=20");
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const data = await resp.json();
+          if (!data.hasKey) {
+            setBlocks((prev) => [
+              { id: Date.now(), title: "真 API 并发 20", warn: data.error || "apps/.env 里没有 MINIMAX_API_KEY" },
+              ...prev,
+            ]);
+            return;
+          }
+          setBlocks((prev) => [
+            { id: Date.now(), title: "真 API 并发 20", rows: [{ kind: "burst", data }] },
+            ...prev,
+          ]);
+        });
+
+      const buttons = [
+        { label: "① easy（前 2 次 429）", onClick: () => runMock("easy", 1) },
+        { label: "② chaos（随机，跑 1 次）", onClick: () => runMock("chaos", 1) },
+        { label: "③ auth（永远 401）", onClick: () => runMock("auth", 1) },
+        { label: "④ forever（永远 429）", onClick: () => runMock("forever", 1) },
+        { label: "⑤ ok（直接 200）", onClick: () => runMock("ok", 1) },
+        { label: "② chaos × 6（看 jitter）", onClick: () => runMock("chaos", 6), cls: "bg-amber-100 border-amber-300" },
+        { label: "⑥ 真 API：单次", onClick: runReal, cls: "bg-emerald-100 border-emerald-300" },
+        { label: "⑦ 真 API：并发 20（会烧 token）", onClick: runBurst, cls: "bg-rose-100 border-rose-300" },
+      ];
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              429 / Rate Limit · 重试时间线
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-500">
+                点按钮跑场景，每次返回 attempts[]，渲染成时间线表。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {buttons.map((b) => (
+                  <button
+                    key={b.label}
+                    onClick={b.onClick}
+                    disabled={busy}
+                    className={`px-3 py-2 rounded-lg bg-white shadow border border-slate-200 text-sm disabled:opacity-50 ${b.cls || ""}`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+              {error ? (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">⚠️ {error}</div>
+              ) : null}
+              <details className="text-sm text-slate-700">
+                <summary className="cursor-pointer font-semibold">看什么</summary>
+                <ul className="mt-2 space-y-1 list-disc pl-5">
+                  <li>① easy：attempt 1/2 是 429，waitBefore 至少 500ms，attempt 3 是 200。</li>
+                  <li>② chaos × 6：对比每次 waitBefore，jitter 让数值带随机偏移。</li>
+                  <li>③ auth：只有 1 行 401，立刻 NonRetryableError。</li>
+                  <li>④ forever：4 行 429，最终 RetryExhaustedError。</li>
+                  <li>⑤ ok：1 行 200，waitBefore=0。</li>
+                </ul>
+              </details>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              {blocks.length === 0 ? (
+                <div className="text-sm text-slate-400 italic">（点上面按钮，时间线追加在这里）</div>
+              ) : (
+                blocks.map((block) => (
+                  <div key={block.id} className="border border-slate-200 rounded-lg p-4">
+                    <div className="text-xs text-slate-500 mb-2">{block.title}</div>
+                    {block.warn ? (
+                      <div className="text-sm text-amber-700">⚠️ {block.warn}</div>
+                    ) : (
+                      (block.rows || []).map((row, i) => (
+                        <div key={i} className="mt-3">
+                          <div className="text-sm font-semibold mb-1">{row.label}</div>
+                          {row.kind === "burst" ? (
+                            <BurstBlock data={row.data} />
+                          ) : (
+                            <TimelineBlock data={row.data} />
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ))
+              )}
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            端口 50204 · mock + 协议 A · 模型 MiniMax-M3
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
   </script>
 </body>
 </html>

@@ -1,253 +1,271 @@
-<!doctype html>
-<html lang="zh">
-  <head>
-    <meta charset="utf-8" />
-    <title>Streaming / SSE Demo</title>
-    <style>
-      body {
-        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-          "PingFang SC", sans-serif;
-        max-width: 760px;
-        margin: 32px auto;
-        padding: 0 16px;
-        line-height: 1.6;
-        color: #222;
-      }
-      h1 {
-        margin-bottom: 4px;
-      }
-      button {
-        padding: 8px 16px;
-        margin-right: 8px;
-        font-size: 14px;
-        cursor: pointer;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        background: #fff;
-      }
-      button:hover {
-        background: #f4f4f4;
-      }
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      .row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin: 12px 0;
-        flex-wrap: wrap;
-      }
-      .meta {
-        color: #666;
-        font-size: 13px;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      }
-      #stream,
-      #blocking,
-      #real {
-        min-height: 64px;
-        padding: 12px 14px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace;
-        font-size: 14px;
-        white-space: pre-wrap;
-      }
-      #stream {
-        background: #f6f8fa;
-      }
-      #blocking {
-        background: #fffbe6;
-      }
-      #real {
-        background: #f0fdf4;
-      }
-      h2 {
-        margin-top: 28px;
-        font-size: 18px;
-      }
-      code {
-        background: #f1f1f1;
-        padding: 1px 5px;
-        border-radius: 3px;
-        font-size: 13px;
-      }
-      .tip {
-        color: #777;
-        font-size: 13px;
-      }
-      .conclusion {
-        margin-top: 24px;
-        padding: 12px 14px;
-        background: #f0f7ff;
-        border-left: 3px solid #3b82f6;
-        border-radius: 4px;
-        font-size: 14px;
-      }
-      .err {
-        color: #b91c1c;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Streaming / SSE · 前后端分离 Demo</h1>
-    <p class="tip">
-      后端在
-      <code>apps/02-LLM-API开发/01-Streaming-SSE/index.ts</code>
-      ；浏览器用 <code>fetch + getReader</code> 流式读；后端控制台同步打印每一帧 SSE 原文。
-    </p>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Streaming / SSE · Demo</title>
 
-    <h2>1) 流式（模拟 SSE）</h2>
-    <div class="row">
-      <button id="btn-stream">开始流式</button>
-      <span class="meta" id="meta-stream">TTFT: — · 总耗时: —</span>
-    </div>
-    <div id="stream"></div>
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
 
-    <h2>2) 一次性（攒齐再返）</h2>
-    <div class="row">
-      <button id="btn-blocking">开始一次性</button>
-      <span class="meta" id="meta-blocking">TTFT: — · 总耗时: —</span>
-    </div>
-    <div id="blocking"></div>
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 
-    <h2>3) 真实模型（调线上 MiniMax / 智谱 / OpenAI）</h2>
-    <div class="row">
-      <button id="btn-real">开始真实调用</button>
-      <span class="meta" id="meta-real">TTFT: — · 总耗时: — · token: — · 帧: —</span>
-    </div>
-    <div id="real"></div>
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
 
-    <div class="conclusion">
-      <strong>对照结论：</strong>
-      模拟版每帧 1 字符（教学简化）；真实 LLM 每帧可能含 1～3 token 的字符串（厂商 batching）。
-      <code>delta.content</code> 是解码后字符串，**与 token 不一一对应**——token 数唯一信源是最后帧的 <code>usage.completion_tokens</code>。
-    </div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-    <script type="module">
-      const streamEl = document.getElementById("stream");
-      const blockingEl = document.getElementById("blocking");
-      const realEl = document.getElementById("real");
-      const metaStream = document.getElementById("meta-stream");
-      const metaBlocking = document.getElementById("meta-blocking");
-      const metaReal = document.getElementById("meta-real");
-
-      // ── 通用 SSE 流式读取：按 \n\n 切帧，data: 起头的行解析 ──
-      async function consumeSSE(
-        url,
-        onFrame,
-        onError,
-      ) {
-        const res = await fetch(url);
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          buf += text;
-          let sepIdx;
-          while ((sepIdx = buf.indexOf("\n\n")) !== -1) {
-            const frame = buf.slice(0, sepIdx);
-            buf = buf.slice(sepIdx + 2);
-            const dataLine = frame
-              .split("\n")
-              .find((l) => l.startsWith("data: "));
-            if (!dataLine) continue;
-            const data = dataLine.slice("data: ".length);
-            if (data === "[DONE]") continue;
-            try {
-              const json = JSON.parse(data);
-              if (json.error) {
-                onError?.(json.error);
-                return;
-              }
-              onFrame(json);
-            } catch (e) {
-              console.warn("frame parse failed:", e, data);
+    // ── SSE：按 \n\n 切帧，解析 data: 行 ──
+    async function consumeSSE(url, onFrame, onError) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      if (!res.body) throw new Error(`HTTP ${res.status}（无 body）`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let sepIdx;
+        while ((sepIdx = buf.indexOf("\n\n")) !== -1) {
+          const frame = buf.slice(0, sepIdx);
+          buf = buf.slice(sepIdx + 2);
+          const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) continue;
+          const data = dataLine.replace(/^data:\s?/, "").trim();
+          if (data === "[DONE]") continue;
+          try {
+            const json = JSON.parse(data);
+            if (json.error) {
+              onError(json.error);
+              return;
             }
+            onFrame(json);
+          } catch (e) {
+            console.warn("frame parse failed:", e, data);
           }
         }
       }
+    }
 
-      // ── 1) 模拟流式 ──
-      document.getElementById("btn-stream").onclick = async () => {
-        streamEl.textContent = "";
-        metaStream.textContent = "TTFT: 等… · 总耗时: —";
-        const t0 = performance.now();
-        let firstFrameAt = null;
-        await consumeSSE(
-          "/api/stream",
-          (json) => {
-            if (firstFrameAt === null) firstFrameAt = performance.now() - t0;
-            const token = json.choices[0].delta.content ?? "";
-            streamEl.textContent += token;
-          },
-          (err) => {
-            streamEl.textContent = `[错误] ${err}`;
-            streamEl.classList.add("err");
-          },
-        );
-        const totalMs = performance.now() - t0;
-        metaStream.textContent = `TTFT: ${(firstFrameAt ?? totalMs).toFixed(0)}ms · 总耗时: ${totalMs.toFixed(0)}ms`;
+    function StatusPill({ status }) {
+      const map = {
+        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
+        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
+        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
+        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
       };
+      const s = map[status] || map.idle;
+      return (
+        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
+          {s.emoji} {s.text}
+        </span>
+      );
+    }
 
-      // ── 2) 一次性 ──
-      document.getElementById("btn-blocking").onclick = async () => {
-        blockingEl.textContent = "";
-        metaBlocking.textContent = "TTFT: 等… · 总耗时: —";
-        const t0 = performance.now();
-        const res = await fetch("/api/blocking");
-        const text = await res.text();
-        const totalMs = performance.now() - t0;
-        blockingEl.textContent = text;
-        metaBlocking.textContent = `TTFT: ${totalMs.toFixed(0)}ms · 总耗时: ${totalMs.toFixed(0)}ms`;
-      };
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [streamText, setStreamText] = useState("");
+      const [streamMeta, setStreamMeta] = useState("TTFT: — · 总耗时: —");
+      const [blockingText, setBlockingText] = useState("");
+      const [blockingMeta, setBlockingMeta] = useState("TTFT: — · 总耗时: —");
+      const [realText, setRealText] = useState("");
+      const [realMeta, setRealMeta] = useState("TTFT: — · 总耗时: — · token: — · 帧: —");
+      const [error, setError] = useState("");
 
-      // ── 3) 真实模型 ──
-      document.getElementById("btn-real").onclick = async (ev) => {
-        const btn = ev.currentTarget;
-        realEl.textContent = "";
-        realEl.classList.remove("err");
-        metaReal.textContent = "TTFT: 等… · 总耗时: — · token: — · 帧: —";
-        btn.disabled = true;
-        const t0 = performance.now();
-        let firstFrameAt = null;
-        let frameCount = 0;
-        let usage = null;
+      useEffect(() => {
+        fetch("/health")
+          .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then(() => setStatus("idle"))
+          .catch((e) => {
+            setStatus("error");
+            setError(e instanceof Error ? e.message : String(e));
+          });
+      }, []);
+
+      const runWithBusy = async (fn) => {
+        if (busy) return;
+        setBusy(true);
+        setStatus("loading");
+        setError("");
         try {
+          await fn();
+          setStatus("ok");
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          setError(msg);
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      };
+
+      const runStream = () =>
+        runWithBusy(async () => {
+          setStreamText("");
+          setStreamMeta("TTFT: 等… · 总耗时: —");
+          const t0 = performance.now();
+          let firstFrameAt = null;
+          await consumeSSE(
+            "/api/stream",
+            (json) => {
+              if (firstFrameAt === null) firstFrameAt = performance.now() - t0;
+              const token = json.choices?.[0]?.delta?.content ?? "";
+              setStreamText((prev) => prev + token);
+            },
+            (err) => {
+              throw new Error(String(err));
+            },
+          );
+          const totalMs = performance.now() - t0;
+          setStreamMeta(
+            `TTFT: ${(firstFrameAt ?? totalMs).toFixed(0)}ms · 总耗时: ${totalMs.toFixed(0)}ms`,
+          );
+        });
+
+      const runBlocking = () =>
+        runWithBusy(async () => {
+          setBlockingText("");
+          setBlockingMeta("TTFT: 等… · 总耗时: —");
+          const t0 = performance.now();
+          const res = await fetch("/api/blocking");
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const text = await res.text();
+          const totalMs = performance.now() - t0;
+          setBlockingText(text);
+          setBlockingMeta(
+            `TTFT: ${totalMs.toFixed(0)}ms · 总耗时: ${totalMs.toFixed(0)}ms`,
+          );
+        });
+
+      const runReal = () =>
+        runWithBusy(async () => {
+          setRealText("");
+          setRealMeta("TTFT: 等… · 总耗时: — · token: — · 帧: —");
+          const t0 = performance.now();
+          let firstFrameAt = null;
+          let frameCount = 0;
+          let usage = null;
           await consumeSSE(
             "/api/real",
             (json) => {
-              // 直接解析 OpenAI 真实 chunk JSON（与 SDK 内部解析前一致）
-              //   chunk.choices[0].delta.content  ← 最终回答增量（可能含 <think> 标记）
-              //   chunk.choices[0].finish_reason  ← "stop" / "length" 等
-              //   chunk.usage                    ← 只在最后一帧出现
-              //   chunk.{id,object,model,created,service_tier,base_resp} ← 真实流式响应带的扩展字段
               if (firstFrameAt === null) firstFrameAt = performance.now() - t0;
               frameCount += 1;
               const deltaContent = json.choices?.[0]?.delta?.content ?? "";
-              if (deltaContent) realEl.textContent += deltaContent;
+              if (deltaContent) setRealText((prev) => prev + deltaContent);
               if (json.usage) usage = json.usage;
             },
             (err) => {
-              realEl.textContent = `[错误] ${err}`;
-              realEl.classList.add("err");
+              throw new Error(String(err));
             },
           );
-        } finally {
-          btn.disabled = false;
-        }
-        const totalMs = performance.now() - t0;
-        const tokenInfo =
-          usage && usage.completion_tokens != null
-            ? `prompt=${usage.prompt_tokens ?? "?"} + completion=${usage.completion_tokens}`
-            : "未拿到（部分兼容接口不在流里报 usage）";
-        metaReal.textContent = `TTFT: ${(firstFrameAt ?? totalMs).toFixed(0)}ms · 总耗时: ${totalMs.toFixed(0)}ms · 帧: ${frameCount} · token: ${tokenInfo}`;
-      };
-    </script>
-  </body>
+          const totalMs = performance.now() - t0;
+          const tokenInfo =
+            usage && usage.completion_tokens != null
+              ? `prompt=${usage.prompt_tokens ?? "?"} + completion=${usage.completion_tokens}`
+              : "未拿到（部分兼容接口不在流里报 usage）";
+          setRealMeta(
+            `TTFT: ${(firstFrameAt ?? totalMs).toFixed(0)}ms · 总耗时: ${totalMs.toFixed(0)}ms · 帧: ${frameCount} · token: ${tokenInfo}`,
+          );
+        });
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              Streaming / SSE
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-500">
+                浏览器用 <code>fetch + getReader</code> 按 {"\\n\\n"} 切帧；后端控制台同步打印每一帧 SSE 原文。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={runStream}
+                  disabled={busy}
+                  className="px-4 py-2 rounded bg-indigo-600 text-white text-sm disabled:opacity-50"
+                >
+                  开始流式（模拟）
+                </button>
+                <button
+                  onClick={runBlocking}
+                  disabled={busy}
+                  className="px-4 py-2 rounded bg-amber-600 text-white text-sm disabled:opacity-50"
+                >
+                  开始一次性
+                </button>
+                <button
+                  onClick={runReal}
+                  disabled={busy}
+                  className="px-4 py-2 rounded bg-emerald-600 text-white text-sm disabled:opacity-50"
+                >
+                  开始真实调用
+                </button>
+              </div>
+              {error ? (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">⚠️ {error}</div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <div>
+                <div className="text-sm font-semibold">1) 流式（模拟 SSE）</div>
+                <div className="text-xs text-gray-500 font-mono mb-1">{streamMeta}</div>
+                <pre className="bg-gray-50 p-3 rounded min-h-[64px] whitespace-pre-wrap text-sm">{streamText || "（未运行）"}</pre>
+              </div>
+              <div>
+                <div className="text-sm font-semibold">2) 一次性（攒齐再返）</div>
+                <div className="text-xs text-gray-500 font-mono mb-1">{blockingMeta}</div>
+                <pre className="bg-amber-50 p-3 rounded min-h-[64px] whitespace-pre-wrap text-sm">{blockingText || "（未运行）"}</pre>
+              </div>
+              <div>
+                <div className="text-sm font-semibold">3) 真实模型</div>
+                <div className="text-xs text-gray-500 font-mono mb-1">{realMeta}</div>
+                <pre className="bg-emerald-50 p-3 rounded min-h-[64px] whitespace-pre-wrap text-sm">{realText || "（未运行）"}</pre>
+              </div>
+              <div className="text-sm bg-blue-50 border-l-4 border-blue-500 p-3">
+                <b>对照结论：</b>
+                模拟版每帧 1 字符（教学简化）；真实 LLM 每帧可能含 1～3 token 的字符串（厂商 batching）。
+                <code>delta.content</code> 是解码后字符串，与 token 不一一对应——token 数唯一信源是最后帧的 <code>usage.completion_tokens</code>。
+              </div>
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            端口 50201 · 协议 A · 模型 MiniMax-M3
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
 </html>

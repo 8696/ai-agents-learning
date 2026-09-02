@@ -2,23 +2,21 @@
 
 对应：[模块 02 · LLM API 开发](../../../docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md)
 
-本条必须看见的：
-1. **同一把 Key**，协议 A（openai SDK + `api.minimaxi.com/v1`）与协议 B（`@anthropic-ai/sdk` + `api.minimaxi.com/anthropic`）**并行跑同一 prompt**
-2. **流式帧结构不同**：A 是 `choices[0].delta.content` 字符串；B 是事件流 `content_block_delta.delta.text`
-3. **一次性响应字段不同**：A 是 `choices[0].message.content`（string）+ `finish_reason`；B 是 `content[0].text`（block）+ `stop_reason`
-4. **usage 命名不同**：A 是 `prompt_tokens` / `completion_tokens`；B 是 `input_tokens` / `output_tokens`
-5. **system 位置不同**：A 放 `messages` 数组里；B 放顶层 `system` 参数
-6. **thinking 字段位置不同**（进阶）：A 嵌在 content 字符串里 + `completion_tokens_details.reasoning_tokens`；B 独立 `type="thinking"` block + `output_tokens_details.thinking_tokens`（**MiniMax 扩展字段，不是 Anthropic 官方顶层 `reasoning_tokens`**）
+## §5.3 技术栈（2026-09-02 重写）
 
-## 跑法
+- **后端**：`koa` + `@koa/router` + `koa-static` + `@koa/bodyparser`（替换原 `node:http`）
+- **前端**：HTML 内联 React 18.3.1 UMD + Babel Standalone 7.26.4（**JSX 用经典 runtime**，不经 esbuild / Vite）
+- **样式**：Tailwind 4.3.3 browser CDN + 极少量自定义 CSS（事件流着色用 `.bs-event-line.*`）
+- **端口**：50202（§5.3.3 `5{MM}{SS}`；旧版 5174 / 5180 已退役）
+- **入口**：`server.ts` 一份直接跑（`yarn app:02-02-protocol-ab`），**无 `index.ts` 中转**
 
 ```bash
 cd apps
 yarn install
-yarn app:02-02-protocol-ab
+yarn app:02-02-protocol-ab    # 等价 tsx 02-LLM-API开发/02-协议-A-vs-B/server.ts
 ```
 
-跑起来后浏览器打开 `http://127.0.0.1:5174/`，从**最上面到最下面**依次有 4 个面板（h1 标题下直接进入 thinking 差异对照）：
+跑起来后浏览器打开 `http://127.0.0.1:50202/`，从**最上面到最下面**依次有 4 个面板：
 
 | 顺序 | 面板 | 端点 | 用途 |
 | ---- | ---- | ---- | ---- |
@@ -29,10 +27,18 @@ yarn app:02-02-protocol-ab
 
 `Ctrl+C` 退出。后端控制台同步打印每一帧的摘要。
 
+## 本条必须看见的
+1. **同一把 Key**，协议 A（openai SDK + `api.minimaxi.com/v1`）与协议 B（`@anthropic-ai/sdk` + `api.minimaxi.com/anthropic`）**并行跑同一 prompt**
+2. **流式帧结构不同**：A 是 `choices[0].delta.content` 字符串；B 是事件流 `content_block_delta.delta.text`
+3. **一次性响应字段不同**：A 是 `choices[0].message.content`（string）+ `finish_reason`；B 是 `content[0].text`（block）+ `stop_reason`
+4. **usage 命名不同**：A 是 `prompt_tokens` / `completion_tokens`；B 是 `input_tokens` / `output_tokens`
+5. **system 位置不同**：A 放 `messages` 数组里；B 放顶层 `system` 参数
+6. **thinking 字段位置不同**（进阶）：A 嵌在 content 字符串里 + `completion_tokens_details.reasoning_tokens`；B 独立 `type="thinking"` block + `output_tokens_details.thinking_tokens`（**MiniMax 扩展字段，不是 Anthropic 官方顶层 `reasoning_tokens`**）
+
 ## 端点对照
 
 | 端点 | 协议 | SDK | 流式 | 调 API | 用法 |
-| ---- | ---- | --- | --- | ------ | ---- |
+| ---- | ---- | --- | ---- | ------ | ---- |
 | `POST /api/a` | A · OpenAI Chat Completions | `openai` | ✅ SSE | ✅ MiniMax-M3 | 单边流式（curl 直接调；前端面板未展示） |
 | `POST /api/b` | B · Anthropic Messages | `@anthropic-ai/sdk` | ✅ SSE | ✅ MiniMax-M3 | 单边流式（curl 直接调；前端面板未展示） |
 | `POST /api/compare` | A + B 同时 | 两个 SDK | ❌ 一次性 | ✅ | 一次性两侧完整 JSON（curl 直接调；前端面板未展示） |
@@ -40,8 +46,8 @@ yarn app:02-02-protocol-ab
 | **`POST /api/a-stream-raw`** | **A 流式** | `openai` | ✅ SSE | ✅ | **协议 A 流式原样转发（role/chunk/finish/usage 四类帧）** ← 面板 2 |
 | **`POST /api/b-thinking-stream`** | **B + 启用 thinking** | `@anthropic-ai/sdk` | ✅ SSE | ✅ | **协议 B 流式 + 启用 thinking（看完整事件流：thinking block + text block + message_delta）** ← 面板 3 |
 | **`POST /api/b-stream-raw`** | **B 不启用 thinking** | `@anthropic-ai/sdk` | ✅ SSE | ✅ | **协议 B 流式原样转发（与 b-thinking-stream 形成 B 端点有/无 thinking 对照）** ← 面板 4 |
-| `GET /` | — | — | — | — | 浏览器对比页 |
-| `GET /health` | — | — | — | — | 当前 baseURL / model |
+| `GET /` | — | — | — | — | 浏览器对比页（koa-static → public/index.html） |
+| `GET /health` | — | — | — | — | 当前 baseURL / model（A + B 两侧） |
 
 `/api/a` / `/api/b` / `/api/compare` / `/api/think-compare` / `/api/a-stream-raw` / `/api/b-stream-raw` 用**同一份请求体**：`{ "message": "...", "system": "..." }`。`/api/b-thinking-stream` 多一个 `thinking_budget`（默认 500）。
 
@@ -172,25 +178,21 @@ yarn app:02-02-protocol-ab
 
 ```
 02-协议-A-vs-B/
-├── index.ts             ← 后端：HTTP server（7 个端点）
-│                            - /                   静态对比页（5 个面板）
-│                            - /health             配置信息
-│                            - /api/a              协议 A 流式（流式对照面板用，简化）
-│                            - /api/b              协议 B 流式（流式对照面板用，事件流）
-│                            - /api/compare        A + B 一次性完整 JSON
-│                            - /api/think-compare  4 组 thinking 差异对照（一次性）
-│                            - /api/a-stream-raw   A 流式原样转发 + meta kind
-│                            - /api/b-thinking-stream  B 流式 + 启用 thinking（完整事件流）
-│                            - /api/b-stream-raw   B 流式不启用 thinking（事件流）
-├── think-test.ts         ← 一次性实验脚本：流式版本 4 组对比（不依赖 server）
+├── server.ts            ← 后端：koa + 9 个端点（7 个 handler）
+│                           koa-static（绝对路径）→ public/index.html
+│                           7 个 handler 业务逻辑保留旧一字不改
 ├── public/
-│   └── index.html       ← 前端（4 个面板，从上到下）：
-│                          1. thinking 差异对照（4 卡片 + 6 行差异表）
-│                          2. 流式协议 A（事件流 + thinking 累加 + answer 累加 + usage）
-│                          3. 流式协议 B + 启用 thinking（三栏布局）
-│                          4. 流式协议 B（不启用 thinking）（三栏布局）
+│   └── index.html       ← 前端：HTML 内联 React 18.3.1 UMD + Babel Standalone 7.26.4
+│                           4 个面板（从上到下）：
+│                           1. thinking 差异对照（4 卡片 + 6 行差异表）
+│                           2. 流式协议 A（事件流 + thinking 累加 + answer 累加 + usage）
+│                           3. 流式协议 B + 启用 thinking（三栏布局）
+│                           4. 流式协议 B（不启用 thinking）（三栏布局）
+├── think-test.ts        ← 一次性实验脚本：流式版本 4 组对比（不依赖 server）
 └── README.md
 ```
+
+> §5.3 之前：曾有 `index.ts`（仅 `import "./server.js"`）。§5.3 维护模式后已删除入口层；`yarn app:02-02-protocol-ab` 直接 tsx `server.ts`。
 
 ## 与 streaming-sse demo 的关系
 
@@ -198,6 +200,18 @@ yarn app:02-02-protocol-ab
 - **协议 A vs B（本 demo）**：双协议同 prompt 并行 + 多端点（流式 / 一次性 / thinking 对照 / 流式拆解），看**协议差异**（字段、命名、system 位置、事件模型、thinking 计费位置）
 
 不重复 streaming-sse 已经教过的东西（`\n\n` 切帧 / buffer 累加 / `[DONE]` 结束帧等）；本 demo 重点是「并排对照 + 流式拆解」。
+
+## §5.3.4 强制骨架（前端）
+
+| id | 层级 | 渲染值（来自 React 组件） |
+| -- | ---- | -------------------------- |
+| `#page-header` | `<header>` | koa 应用的"协议 A vs B 对照 Demo"标题 + 右侧 status-pill |
+| `#page-title` | `<h1>` 内 | "协议 A vs B 对照 Demo（{model}，同 Key，同 prompt）" |
+| `#status-pill` | `<span>` | `⏸ 待连接` / `🔄 N 个面板运行中…` / `✅ 全部完成` / `❌ N 个面板失败` / `❌ 连不上后端` |
+| `#page-main` | `<main>` | `#controls` + `#output` |
+| `#controls` | `<section>` | 控制区说明段（4 面板独立按钮 / 输入在 `#output` 各 section 内） |
+| `#output` | `<section>` | 4 个面板 section（从 ThinkPanel 到 BStreamRawPanel） |
+| `#page-footer` | `<footer>` | "端口 50202 · 协议 A/B · 模型 MiniMax-M3 · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4" |
 
 ## 跑前需要
 

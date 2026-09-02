@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "00-api-key-billing",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:00-01-api-key-billing"],
+      "port": 5180,
+      "url": "http://127.0.0.1:5180/",
+      "autoPort": false
+    },
+    {
+      "name": "02-02-protocol-ab",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:02-02-protocol-ab"],
+      "port": 5180,
+      "url": "http://127.0.0.1:5180/",
+      "autoPort": false
+    },
+    {
+      "name": "dingtoujisuanqi",
+      "url": "http://dingtoujisuanqi.icode.link/"
+    }
+  ]
+}

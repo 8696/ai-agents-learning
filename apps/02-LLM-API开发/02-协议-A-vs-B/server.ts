@@ -1,7 +1,7 @@
 /**
  * 模块 02 · 协议 A vs B · 对照 Demo（用真实线上对话）
  *
- * 职责：起一个 HTTP server，暴露两个流式端点 + 一个一次性对照端点，
+ * 职责：起一个 koa HTTP server，暴露 9 个端点 + 静态 HTML，
  *       **同时调 MiniMax-M3 的协议 A 与协议 B**（同 Key，不同 baseURL），
  *       让学习者肉眼对比：
  *         - 入口方法 / SDK / 必填参数差异
@@ -19,14 +19,24 @@
  * 为什么：协议 A vs B 的差异是「同一模型 + 不同 API 壳」，必须真的同 prompt 跑两边一次，
  * 看响应字段、流式帧结构、usage 命名，才能把 §6.2 那张速查表「对照观察到」。
  *
+ * §5.3 完整版（2026-09-02 维护模式拆分）：
+ *     - 框架从 node:http 切到 koa + @koa/router + koa-static + @koa/bodyparser
+ *     - 业务逻辑整体从旧 server.ts 搬过来，一字不改（7 个 handler 全保留）
+ *     - 端口：§5.3.3 `5{MM}{SS}` → 50202
+ *     - static serve 走绝对路径（fileURLToPath）
+ *     - 前端改为 HTML 内联 React + Babel Standalone 块（public/index.html）
+ *
  * 概念/取舍/踩坑：docs/学习模块/02-LLM-API开发/02-协议-A-vs-B.md
  *
  * 跑前需要：apps/.env 里填 MINIMAX_API_KEY（模块 00 已有；同 Key 走 A / B 两个端点）。
  */
-import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import Koa from "koa";
+import Router from "@koa/router";
+import serve from "koa-static";
+import { bodyParser } from "@koa/bodyparser";
+import type { Context, Next } from "koa";
 import { performance } from "node:perf_hooks";
+import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
@@ -52,7 +62,7 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(1024),
-  PORT: z.coerce.number().int().positive().default(5174),
+  PORT: z.coerce.number().int().positive().default(50202),
 });
 const env = envSchema.parse(process.env);
 
@@ -66,6 +76,18 @@ const bodySchema = z.object({
 });
 type Body = z.infer<typeof bodySchema>;
 
+function parseBody(ctx: Context): Body {
+  const parsed = bodySchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    const err: Error & { status?: number } = new Error(
+      `请求体不合法: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    );
+    err.status = 400;
+    throw err;
+  }
+  return parsed.data;
+}
+
 // ── 3) 两个客户端 ──
 // 同一把 Key，只换 baseURL —— 这是「同 Key 换协议」的最直接对照
 const aClient = new OpenAI({
@@ -77,119 +99,142 @@ const bClient = new Anthropic({
   baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
 });
 
-// ── 4) 一次性 HTML（启动时读进内存） ──
-const html = readFileSync(
-  fileURLToPath(new URL("./public/index.html", import.meta.url)),
-  "utf-8",
-);
+// ── 4) koa 框架 ──
+const app = new Koa();
+const router = new Router();
 
-// ── 5) HTTP server 路由 ──
-const server = createServer(async (req, res) => {
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    });
-    res.end();
-    return;
-  }
+// 4.1) bodyparser（§5.3.5 显式声明 body 解析）
+app.use(bodyParser());
 
-  if (req.method === "GET" && req.url === "/") {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(html);
-    return;
-  }
+// ── 5) 路由 ──
+// 9 个端点：1×静态 + 1×health + 7×业务 handler
 
-  if (req.method === "GET" && req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        ok: true,
-        a: { baseURL: env.MINIMAX_BASE_URL, model: env.MINIMAX_MODEL },
-        b: {
-          baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
-          model: env.MINIMAX_ANTHROPIC_MODEL,
-          maxTokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
-        },
-      }),
-    );
-    return;
-  }
-
-  // 协议 A 流式
-  if (req.method === "POST" && req.url === "/api/a") {
-    const body = await readBody(req);
-    await handleA(body, res);
-    return;
-  }
-
-  // 协议 B 流式
-  if (req.method === "POST" && req.url === "/api/b") {
-    const body = await readBody(req);
-    await handleB(body, res);
-    return;
-  }
-
-  // 一次性对照：同时跑 A 和 B，返回完整响应
-  if (req.method === "POST" && req.url === "/api/compare") {
-    const body = await readBody(req);
-    await handleCompare(body, res);
-    return;
-  }
-
-  // thinking 差异对照：4 组场景（A 不带 / B 不带 / B 带 budget=100 / B 带 budget=500）
-  // 用于直观展示「协议 A 默认暴露 thinking / 协议 B 要主动启用 + usage 不分开计费」的差异
-  if (req.method === "POST" && req.url === "/api/think-compare") {
-    const body = await readBody(req);
-    await handleThinkCompare(body, res);
-    return;
-  }
-
-  // 协议 B 流式 + 启用 thinking：完整事件流（含 content_block_delta type=text/thinking）
-  if (req.method === "POST" && req.url === "/api/b-thinking-stream") {
-    const body = await readBody(req);
-    await handleBThinkingStream(body, res);
-    return;
-  }
-
-  // 协议 A 流式（OpenAI chunk 原样转发 + meta frame，让前端逐帧分类展示）
-  // 与 /api/b-thinking-stream 形成完美对照：A 是「字符串帧流」、B 是「事件流」
-  if (req.method === "POST" && req.url === "/api/a-stream-raw") {
-    const body = await readBody(req);
-    await handleAStreamRaw(body, res);
-    return;
-  }
-
-  // 协议 B 流式（不启用 thinking，原样转发事件流）
-  // 与 /api/a-stream-raw 形成四向对照：A 有/无 thinking × B 有/无 thinking
-  if (req.method === "POST" && req.url === "/api/b-stream-raw") {
-    const body = await readBody(req);
-    await handleBStreamRaw(body, res);
-    return;
-  }
-
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "Not Found" }));
+// 5.1) GET /health
+router.get("/health", (ctx: Context) => {
+  ctx.body = {
+    ok: true,
+    a: { baseURL: env.MINIMAX_BASE_URL, model: env.MINIMAX_MODEL },
+    b: {
+      baseURL: env.MINIMAX_ANTHROPIC_BASE_URL,
+      model: env.MINIMAX_ANTHROPIC_MODEL,
+      maxTokens: env.MINIMAX_ANTHROPIC_MAX_TOKENS,
+    },
+  };
 });
 
-// ── 6) 读 body（POST 体跨 TCP 包，必须 buffer 累加） ──
-async function readBody(req: import("node:http").IncomingMessage): Promise<Body> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(chunk as Buffer);
-  }
-  const raw = Buffer.concat(chunks).toString("utf-8");
-  let json: unknown;
+// 5.2) POST /api/a —— 协议 A 流式
+router.post("/api/a", async (ctx: Context, _next: Next) => {
   try {
-    json = JSON.parse(raw);
-  } catch {
-    throw new Error("请求体不是合法 JSON");
+    const body = parseBody(ctx);
+    ctx.respond = true; // koa 默认就开始 res 写操作；保留传统流式即可
+    // handleA 需要直接写 res，让 ctx.res 流式输出
+    await handleA(body, ctx.res);
+  } catch (err: unknown) {
+    if (ctx.res.headersSent) return;
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
   }
-  return bodySchema.parse(json);
-}
+});
 
-// ── 7) 协议 A 流式：openai SDK → SSE 帧 ──
+// 5.3) POST /api/b —— 协议 B 流式
+router.post("/api/b", async (ctx: Context, _next: Next) => {
+  try {
+    const body = parseBody(ctx);
+    await handleB(body, ctx.res);
+  } catch (err: unknown) {
+    if (ctx.res.headersSent) return;
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
+  }
+});
+
+// 5.4) POST /api/compare —— 一次性对照（同时跑 A 和 B，非流式）
+router.post("/api/compare", async (ctx: Context, _next: Next) => {
+  try {
+    const body = parseBody(ctx);
+    const result = await handleCompare(body);
+    ctx.status = 200;
+    ctx.type = "application/json; charset=utf-8";
+    ctx.body = JSON.stringify(result, null, 2);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
+  }
+});
+
+// 5.5) POST /api/think-compare
+// 4 组场景（A 不带 / B 不带 / B 带 100 / B 带 500）
+// 用于直观展示「协议 A 默认暴露 thinking / 协议 B 要主动启用 + usage 不分开计费」的差异
+router.post("/api/think-compare", async (ctx: Context, _next: Next) => {
+  try {
+    const body = parseBody(ctx);
+    const result = await handleThinkCompare(body);
+    ctx.status = 200;
+    ctx.type = "application/json; charset=utf-8";
+    ctx.body = JSON.stringify(result, null, 2);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
+  }
+});
+
+// 5.6) POST /api/b-thinking-stream —— 协议 B 流式 + 启用 thinking：完整事件流
+router.post("/api/b-thinking-stream", async (ctx: Context, _next: Next) => {
+  try {
+    const body = parseBody(ctx);
+    await handleBThinkingStream(body, ctx.res);
+  } catch (err: unknown) {
+    if (ctx.res.headersSent) return;
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
+  }
+});
+
+// 5.7) POST /api/a-stream-raw
+// 协议 A 流式（OpenAI chunk 原样转发 + meta frame，让前端逐帧分类展示）
+// 与 /api/b-thinking-stream 形成完美对照：A 是「字符串帧流」、B 是「事件流」
+router.post("/api/a-stream-raw", async (ctx: Context, _next: Next) => {
+  try {
+    const body = parseBody(ctx);
+    await handleAStreamRaw(body, ctx.res);
+  } catch (err: unknown) {
+    if (ctx.res.headersSent) return;
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
+  }
+});
+
+// 5.8) POST /api/b-stream-raw
+// 协议 B 流式（不启用 thinking，原样转发事件流）
+// 与 /api/a-stream-raw 形成四向对照：A 有/无 thinking × B 有/无 thinking
+router.post("/api/b-stream-raw", async (ctx: Context, _next: Next) => {
+  try {
+    const body = parseBody(ctx);
+    await handleBStreamRaw(body, ctx.res);
+  } catch (err: unknown) {
+    if (ctx.res.headersSent) return;
+    const msg = err instanceof Error ? err.message : String(err);
+    ctx.status = err instanceof Error && (err as { status?: number }).status === 400 ? 400 : 500;
+    ctx.body = { error: msg };
+  }
+});
+
+app.use(router.routes()).use(router.allowedMethods());
+
+// 5.9) 静态资源（public/index.html）
+//   §5.3.4 强制：serve 第一个参数必须绝对路径；相对路径是相对 process.cwd()，不可靠
+const publicDir = fileURLToPath(new URL("./public", import.meta.url));
+app.use(serve(publicDir));
+
+// ── 6) Handler 函数（一字不改从旧 server.ts 搬过来） ──
+
+// 6.1) 协议 A 流式：openai SDK → SSE 帧
 async function handleA(
   body: Body,
   res: import("node:http").ServerResponse,
@@ -237,12 +282,17 @@ async function handleA(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[${(performance.now() / 1000).toFixed(2)}s] /api/a error:`, err);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: msg }));
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: msg }));
+    } else {
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+      res.end();
+    }
   }
 }
 
-// ── 8) 协议 B 流式：@anthropic-ai/sdk → SSE 帧（事件流模型） ──
+// 6.2) 协议 B 流式：@anthropic-ai/sdk → SSE 帧（事件流模型）
 async function handleB(
   body: Body,
   res: import("node:http").ServerResponse,
@@ -306,19 +356,23 @@ async function handleB(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[${(performance.now() / 1000).toFixed(2)}s] /api/b error:`, err);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: msg }));
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: msg }));
+    } else {
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+      res.end();
+    }
   }
 }
 
-// ── 9) 一次性对照：同时跑 A 和 B（非流式）──
+// 6.3) 一次性对照：同时跑 A 和 B（非流式）
 // 一次性响应里 A 用 choices[0].message.content / finish_reason / usage.prompt_tokens
 //                 B 用 content[0].text / stop_reason / usage.input_tokens
 // 把两侧完整响应原样返回，让前端能并排对照。
 async function handleCompare(
   body: Body,
-  res: import("node:http").ServerResponse,
-): Promise<void> {
+): Promise<{ a: unknown; b: unknown }> {
   console.log(
     `\n[${(performance.now() / 1000).toFixed(2)}s] /api/compare: 开始同 prompt 跑 A 和 B`,
   );
@@ -354,11 +408,10 @@ async function handleCompare(
     `[${(performance.now() / 1000).toFixed(2)}s] /api/compare: 完成`,
   );
 
-  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify({ a, b }, null, 2));
+  return { a, b };
 }
 
-// ── 10) thinking 差异对照：4 组场景一次性跑 ──
+// 6.4) thinking 差异对照：4 组场景一次性跑
 // 直观看 6 个差异点：
 //   1. content 形态（string vs block 数组）
 //   2. thinking 位置（嵌 content 字符串 vs 独立 block vs 无）
@@ -368,8 +421,7 @@ async function handleCompare(
 //   6. finish_reason vs stop_reason 字段名
 async function handleThinkCompare(
   body: Body,
-  res: import("node:http").ServerResponse,
-): Promise<void> {
+): Promise<{ scenarios: unknown[] }> {
   const prompt = body.message;
   const system = body.system;
   console.log(
@@ -482,11 +534,10 @@ async function handleThinkCompare(
     `[${(performance.now() / 1000).toFixed(2)}s] /api/think-compare: 4 组完成`,
   );
 
-  res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-  res.end(JSON.stringify({ scenarios: results }, null, 2));
+  return { scenarios: results };
 }
 
-// ── 10.5) 协议 B 流式 + 启用 thinking：完整事件流 ──
+// 6.5) 协议 B 流式 + 启用 thinking：完整事件流
 // 与 /api/b 区别：本端点主动传 `thinking: { type: "enabled", budget_tokens: N }`，
 // 让学习者实时看到「带思考模式时协议 B 的完整事件序列」：
 //   message_start → content_block_start (thinking) → 多个 content_block_delta (thinking)
@@ -545,19 +596,18 @@ async function handleBThinkingStream(
       `[${(performance.now() / 1000).toFixed(2)}s] /api/b-thinking-stream error:`,
       err,
     );
+    const msg = err instanceof Error ? err.message : String(err);
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      res.end(JSON.stringify({ error: msg }));
     } else {
-      res.write(
-        `data: ${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n\n`,
-      );
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
       res.end();
     }
   }
 }
 
-// ── 10.6) 协议 A 流式（OpenAI chunk 原样转发 + meta frame）──
+// 6.6) 协议 A 流式（OpenAI chunk 原样转发 + meta frame）
 // 每帧 SSE 格式：data: {"type":"openai_chunk", "kind":"...","frameIdx":N,"chunk":{...原 OpenAI chunk JSON...}}\n\n
 // kind 分类（前端可按颜色区分）：
 //   - "role"   : 帧 #1，只有 delta.role="assistant"，无 content
@@ -635,19 +685,18 @@ async function handleAStreamRaw(
       `[${(performance.now() / 1000).toFixed(2)}s] /api/a-stream-raw error:`,
       err,
     );
+    const msg = err instanceof Error ? err.message : String(err);
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      res.end(JSON.stringify({ error: msg }));
     } else {
-      res.write(
-        `data: ${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n\n`,
-      );
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
       res.end();
     }
   }
 }
 
-// ── 10.7) 协议 B 流式（不启用 thinking：原样转发事件流）──
+// 6.7) 协议 B 流式（不启用 thinking：原样转发事件流）
 // 与 /api/a-stream-raw 形成四向对照（A 有/无 thinking × B 有/无 thinking）。
 // 事件流用 stream.on("streamEvent", ...) 拿 SDK 内部原始事件原样转发；
 // 每帧 SSE 格式：data: {"type":"anthropic_event", "eventIdx":N, "event":{...}}\n\n
@@ -703,25 +752,28 @@ async function handleBStreamRaw(
       `[${(performance.now() / 1000).toFixed(2)}s] /api/b-stream-raw error:`,
       err,
     );
+    const msg = err instanceof Error ? err.message : String(err);
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }));
+      res.end(JSON.stringify({ error: msg }));
     } else {
-      res.write(
-        `data: ${JSON.stringify({ error: err instanceof Error ? err.message : String(err) })}\n\n`,
-      );
+      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
       res.end();
     }
   }
 }
 
-server.listen(env.PORT, "127.0.0.1", () => {
-  console.log(`──── 协议 A vs B 对照 Demo · 已启动 ────`);
+// ── 7) 启动 ──
+// 端口：§5.3.3 `5{MM}{SS}` → 50202
+app.listen(env.PORT, "127.0.0.1", () => {
+  console.log(`──── 协议 A vs B 对照 Demo（§5.3 React + koa · HTML 内联块） · 已启动 ────`);
   console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
-  console.log(`  POST /api/a  → 协议 A 流式（MiniMax /v1, openai SDK）`);
-  console.log(`  POST /api/b  → 协议 B 流式（MiniMax /anthropic, @anthropic-ai/sdk）`);
-  console.log(`  POST /api/compare → 一次性两侧对照（非流式）`);
-  console.log(`  POST /api/think-compare → 4 组 thinking 差异对照（A 不带 / B 不带 / B 带 100 / B 带 500）`);
+  console.log(`  GET  /                     → public/index.html（React + Babel 内联块）`);
+  console.log(`  GET  /health               → { ok, a, b }`);
+  console.log(`  POST /api/a                → 协议 A 流式（MiniMax /v1, openai SDK）`);
+  console.log(`  POST /api/b                → 协议 B 流式（MiniMax /anthropic, @anthropic-ai/sdk）`);
+  console.log(`  POST /api/compare          → 一次性两侧对照（非流式）`);
+  console.log(`  POST /api/think-compare    → 4 组 thinking 差异对照（A 不带 / B 不带 / B 带 100 / B 带 500）`);
   console.log(`  POST /api/b-thinking-stream → 协议 B 流式 + 启用 thinking（看完整事件流：thinking block + text block + message_delta）`);
   console.log(`  POST /api/a-stream-raw     → 协议 A 流式（OpenAI chunk 原样转发 + meta frame：role / chunk / finish / usage）`);
   console.log(`  POST /api/b-stream-raw     → 协议 B 流式（不启用 thinking，原样转发事件流）`);

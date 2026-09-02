@@ -1,40 +1,54 @@
 /**
- * 模块 02 · AbortController · 对照 Demo（用真实线上对话）
+ * 模块 02 · AbortController · 对照 Demo（§5.3 React + koa · HTML 内联块）
  *
- * 职责：起一个 HTTP server，暴露三个流式端点 + 一个浏览器页面，让学习者肉眼对比：
- *   1. /api/full          — 不取消，跑到底（对照基线）
- *   2. /api/cancel-after-N— 客户端先收 N 帧就 abort（让学习者按"按到哪帧就停"做对照）
- *   3. /api/no-signal-abort — 故意不传 signal，模拟"忘了传 signal"：abort 不生效，看服务端是否跑完
+ * 职责：起一个 koa server，暴露 5 个端点 + 浏览器页面（HTML 内联 React + Babel Standalone），
+ *       让学习者肉眼对比：
+ *         1. /api/full                 — 不取消，跑到底（对照基线）
+ *         2. /api/cancel-after-frames  — 客户端先收 N 帧就 abort（让学习者按"按到哪帧就停"做对照）
+ *         3. /api/no-signal-abort      — 故意不传 signal，模拟"忘了传 signal"：abort 不生效，看服务端是否跑完
  *
- *   浏览器页面（GET /）：
- *     - 三个按钮对应三个端点
- *     - 逐帧渲染 + 显示累计耗时 + 是否拿到 usage
+ * 浏览器页面（GET /）：
+ *   - 三个按钮对应三个端点
+ *   - 逐帧渲染 + 显示累计耗时 + 是否拿到 usage + aborted 状态
  *
  * 数据流：
  *   浏览器 POST /api/full
+ *     → koa router → ctx.request.body
  *     → openai SDK stream:true (无 signal)
- *     → 逐帧 SSE → for await delta.content → res.write
- *     → 完成 → usage 帧 → res.end
- *   浏览器 POST /api/cancel-after-N
+ *     → 逐帧 SSE → for await delta.content → ctx.res.write
+ *     → 完成 → usage 帧 → ctx.res.end
+ *   浏览器 POST /api/cancel-after-frames
+ *     → koa router → ctx.request.body
  *     → openai SDK stream:true (signal: controller.signal)
- *     → 收 N 帧后 controller.abort()（或者页面点"立即取消"按钮）
- *     → for await 抛 AbortError → catch 里发"aborted"帧 → res.end
+ *     → 收 N 帧后 controller.abort()（或者页面点"立即取消"按钮 / 客户端断开也走这里）
+ *     → for await 抛 AbortError → catch 里发"aborted"帧 → ctx.res.end
  *   浏览器 POST /api/no-signal-abort
+ *     → koa router → ctx.request.body
  *     → 故意不传 signal → 模拟用户按 Ctrl+C
  *     → 服务端继续跑完（abort 无效）→ 看是否拿到 usage
  *
  * 为什么：必须真按一次"取消"按钮，看到「客户端停了、服务端在 catch 里收到 AbortError 停了，
  * 帧数明显少于 full 端点」才能把"客户端停 ≠ 服务端停"+"abort 是关 socket 不是停生成"+"已生成的 token 算钱"讲清。
  *
+ * §5.3 完整版（2026-09-02 维护模式拆分）：
+ *     - 业务逻辑整体从旧 server.ts（createServer 版）搬过来，handleFull / handleCancelAfterFrames / handleNoSignalAbort 一字不改
+ *     - HTTP 框架从 node:http 换到 koa（@koa/router + koa-static + @koa/bodyparser）
+ *     - 浏览器页面从 vanilla DOM 换成 React 18.3.1 UMD + Babel Standalone 7.26.4（HTML 内联 JSX 块）
+ *     - 入口层（index.ts）已删除，yarn app:02-03-abort-controller 直接 tsx server.ts
+ *     - PORT 默认 50203（§5.3.3 `5{MM}{SS}`）
+ *
  * 概念/取舍/踩坑：docs/学习模块/02-LLM-API开发/03-AbortController.md
  *
  * 跑前需要：apps/.env 里填 MINIMAX_API_KEY（模块 00 已有）。
  */
-import { createServer } from "node:http";
+import Koa from "koa";
+import Router from "@koa/router";
+import serve from "koa-static";
+import { bodyParser } from "@koa/bodyparser";
+import type { Context, Next } from "koa";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
+import { fileURLToPath } from "node:url";
 import OpenAI from "openai";
 import { z } from "zod";
 import { loadRootEnv } from "../../load-root-env.js";
@@ -46,7 +60,7 @@ const envSchema = z.object({
   MINIMAX_API_KEY: z.string().min(1, "请在 apps/.env 填 MINIMAX_API_KEY"),
   MINIMAX_BASE_URL: z.string().url().default("https://api.minimaxi.com/v1"),
   MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  PORT: z.coerce.number().int().positive().default(5175),
+  PORT: z.coerce.number().int().positive().default(50203),
 });
 const env = envSchema.parse(process.env);
 
@@ -56,97 +70,63 @@ const client = new OpenAI({
 });
 
 // ── 2) 请求体校验 ──
-// abortAfterFrames 仅 /api/cancel-after-frames 用
 const bodySchema = z.object({
   message: z.string().min(1).default("用 200 字介绍一下你自己"),
   abortAfterFrames: z.number().int().positive().max(200).default(5),
 });
 type Body = z.infer<typeof bodySchema>;
 
-// ── 3) 一次性 HTML（启动时读进内存） ──
-const html = readFileSync(
-  fileURLToPath(new URL("./public/index.html", import.meta.url)),
-  "utf-8",
-);
+// ── 3) koa + router + bodyparser + static ──
+const app = new Koa();
+const router = new Router();
 
-// ── 4) HTTP server 路由 ──
-const server = createServer(async (req, res) => {
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    });
-    res.end();
-    return;
-  }
+// 3.1) bodyparser（§5.3.5 显式声明 body 解析；bodyParser 必须在 router 之前）
+app.use(bodyParser());
 
-  if (req.method === "GET" && req.url === "/") {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(html);
-    return;
-  }
-
-  if (req.method === "GET" && req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        ok: true,
-        model: env.MINIMAX_MODEL,
-        port: env.PORT,
-        endpoints: [
-          "POST /api/full",
-          "POST /api/cancel-after-frames",
-          "POST /api/no-signal-abort",
-        ],
-      }),
-    );
-    return;
-  }
-
-  // 对照基线：不取消，跑到底
-  if (req.method === "POST" && req.url === "/api/full") {
-    const body = await readBody(req);
-    await handleFull(body, res);
-    return;
-  }
-
-  // 中途取消：服务端收 N 帧后 abort；客户端页面点"立即取消"按钮也走这里
-  if (req.method === "POST" && req.url === "/api/cancel-after-frames") {
-    const body = await readBody(req);
-    await handleCancelAfterFrames(body, req, res);
-    return;
-  }
-
-  // 故意不传 signal：abort 应该无效；服务端会跑完
-  if (req.method === "POST" && req.url === "/api/no-signal-abort") {
-    const body = await readBody(req);
-    await handleNoSignalAbort(body, res);
-    return;
-  }
-
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "Not Found" }));
+// 3.2) GET /health —— 普通 JSON 端点，koa 自动 ctx.body = JSON
+router.get("/health", (ctx: Context) => {
+  ctx.body = {
+    ok: true,
+    model: env.MINIMAX_MODEL,
+    port: env.PORT,
+    endpoints: [
+      "POST /api/full",
+      "POST /api/cancel-after-frames",
+      "POST /api/no-signal-abort",
+    ],
+  };
 });
 
-// ── 5) 读 body ──
-async function readBody(req: IncomingMessage): Promise<Body> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(chunk as Buffer);
-  }
-  const raw = Buffer.concat(chunks).toString("utf-8");
-  if (!raw) return bodySchema.parse({}); // 默认值
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    throw new Error("请求体不是合法 JSON");
-  }
-  return bodySchema.parse(json);
-}
+// 3.3) SSE 端点：ctx.respond = false 让 koa 别接管 response；handler 直接用 ctx.res.write / ctx.res.end
+//      ctx.request.body 已由 bodyParser 解析；ctx.req / ctx.res 是 node 原生 IncomingMessage / ServerResponse
+router.post("/api/full", async (ctx: Context, _next: Next) => {
+  ctx.respond = false;
+  const body = ctx.request.body as Body;
+  await handleFull(body, ctx.res);
+});
 
-// ── 6) /api/full：不取消，跑到底 ──
+router.post("/api/cancel-after-frames", async (ctx: Context, _next: Next) => {
+  ctx.respond = false;
+  const body = ctx.request.body as Body;
+  await handleCancelAfterFrames(body, ctx.req, ctx.res);
+});
+
+router.post("/api/no-signal-abort", async (ctx: Context, _next: Next) => {
+  ctx.respond = false;
+  const body = ctx.request.body as Body;
+  await handleNoSignalAbort(body, ctx.res);
+});
+
+app.use(router.routes()).use(router.allowedMethods());
+
+// 3.4) 静态资源（public/index.html）—— React 代码已在 HTML 内联
+//   § 关键：serve 第一个参数必须绝对路径；相对路径是相对 process.cwd()，不可靠
+const publicDir = fileURLToPath(new URL("./public", import.meta.url));
+app.use(serve(publicDir));
+
+// ── 4) 业务 handler（一字不改从旧 server.ts 搬；只换 HTTP 框架，签名 / 行为保持一致） ──
+
+// ── 4.1) /api/full：不取消，跑到底 ──
 async function handleFull(body: Body, res: ServerResponse): Promise<void> {
   const t0 = performance.now();
   let frameIdx = 0;
@@ -164,7 +144,6 @@ async function handleFull(body: Body, res: ServerResponse): Promise<void> {
       "Access-Control-Allow-Origin": "*",
     });
 
-    // 故意不传 signal
     const stream = await client.chat.completions.create({
       model: env.MINIMAX_MODEL,
       messages: [{ role: "user", content: body.message }],
@@ -215,7 +194,7 @@ async function handleFull(body: Body, res: ServerResponse): Promise<void> {
   }
 }
 
-// ── 7) /api/cancel-after-frames：服务端收 N 帧后自动 abort；或客户端 pagehide 时 abort ──
+// ── 4.2) /api/cancel-after-frames：服务端收 N 帧后自动 abort；客户端断连也 abort ──
 async function handleCancelAfterFrames(
   body: Body,
   req: IncomingMessage,
@@ -227,13 +206,10 @@ async function handleCancelAfterFrames(
   let abortReason: "frames" | "client-close" | "manual" = "frames";
   let usage: unknown = null;
 
-  // 关键：controller + signal
   const controller = new AbortController();
 
-  // (a) 服务端到 N 帧后自动 abort
   const targetFrames = body.abortAfterFrames;
 
-  // (b) 客户端断连（页面关 / 网络断）→ abort
   req.on("close", () => {
     if (!aborted) {
       aborted = true;
@@ -257,7 +233,6 @@ async function handleCancelAfterFrames(
       "Access-Control-Allow-Origin": "*",
     });
 
-    // 关键：传 signal — OpenAI SDK 的 signal 在第二个 options 参数，不在 body 里
     const stream = await client.chat.completions.create(
       {
         model: env.MINIMAX_MODEL,
@@ -279,7 +254,6 @@ async function handleCancelAfterFrames(
       }
       if (plain.usage) usage = plain.usage;
 
-      // 服务端到 N 帧就 abort（模拟客户端按钮）
       if (frameIdx >= targetFrames && !aborted) {
         aborted = true;
         abortReason = "frames";
@@ -287,11 +261,9 @@ async function handleCancelAfterFrames(
           `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: 已收 ${frameIdx} 帧 → controller.abort()（abortAfterFrames=${targetFrames}）`,
         );
         controller.abort();
-        // 立刻 break 不行，要等 for await 自己 reject
       }
     }
 
-    // 正常完成（不应该走到这里——targetFrames >= 1 就 abort）
     res.write(
       `data: ${JSON.stringify({ event: "usage", frameIdx, usage })}\n\n`,
     );
@@ -309,8 +281,6 @@ async function handleCancelAfterFrames(
         err.message.toLowerCase().includes("abort"));
 
     if (isAbort) {
-      // 关键：服务端 catch 到 AbortError → 立刻发"aborted"事件帧 → res.end
-      // **不**继续写 delta（已经没人接了）
       console.log(
         `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: 🛑 AbortError caught | 写了 ${frameIdx} 帧 | 耗时 ${(performance.now() - t0).toFixed(0)}ms | usage ${usage ? "已记录" : "未拿到（流提前结束）"}`,
       );
@@ -326,7 +296,6 @@ async function handleCancelAfterFrames(
         );
         res.end();
       } catch (writeErr: unknown) {
-        // res 可能已 destroy（客户端断连时）
         console.log(
           `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: res 已 destroy，不再写`,
         );
@@ -354,7 +323,7 @@ async function handleCancelAfterFrames(
   }
 }
 
-// ── 8) /api/no-signal-abort：故意不传 signal，对照"忘了传 signal 会怎样" ──
+// ── 4.3) /api/no-signal-abort：故意不传 signal，对照"忘了传 signal 会怎样" ──
 async function handleNoSignalAbort(
   body: Body,
   res: ServerResponse,
@@ -363,8 +332,6 @@ async function handleNoSignalAbort(
   let frameIdx = 0;
   let usage: unknown = null;
 
-  // 模拟"客户端按 Ctrl-C"：5 秒后强行调用 res.end() 关 SSE，
-  // 但**不**传 signal 给 SDK。SDK 不知道，继续跑；服务端拿不到 cancel 信号。
   setTimeout(() => {
     if (!res.writableEnded) {
       console.log(
@@ -390,7 +357,6 @@ async function handleNoSignalAbort(
       "Access-Control-Allow-Origin": "*",
     });
 
-    // 故意不传 signal
     const stream = await client.chat.completions.create({
       model: env.MINIMAX_MODEL,
       messages: [{ role: "user", content: body.message }],
@@ -402,7 +368,6 @@ async function handleNoSignalAbort(
       frameIdx += 1;
       const plain = JSON.parse(JSON.stringify(chunk));
       const delta = plain.choices?.[0]?.delta?.content ?? "";
-      // res 可能已被 res.end() 关掉 → write 会抛 ERR_STREAM_DESTROYED
       try {
         if (delta) {
           res.write(
@@ -417,7 +382,6 @@ async function handleNoSignalAbort(
       }
     }
 
-    // 即使 res.end 过了，SDK 这里仍会跑完（信号没传，HTTP 请求没中断）
     try {
       if (!res.writableEnded) {
         res.write(
@@ -444,12 +408,15 @@ async function handleNoSignalAbort(
   }
 }
 
-server.listen(env.PORT, "127.0.0.1", () => {
-  console.log(`──── AbortController 对照 Demo · 已启动 ────`);
+// ── 5) 启动 ──
+app.listen(env.PORT, "127.0.0.1", () => {
+  console.log(`──── AbortController 对照 Demo（§5.3 React + koa · HTML 内联块） · 已启动 ────`);
   console.log(`  浏览器打开:  http://127.0.0.1:${env.PORT}/`);
-  console.log(`  POST /api/full                 → 不取消，跑到底（对照基线）`);
-  console.log(`  POST /api/cancel-after-frames  → 收 N 帧后 abort；body.abortAfterFrames 默认 5；浏览器点"立即取消"按钮也走这里`);
-  console.log(`  POST /api/no-signal-abort      → 故意不传 signal；5s 后服务端 res.end() 关 SSE；观察 SDK 是否还跑、是否还计费`);
+  console.log(`  GET  /                          → public/index.html（React + Babel Standalone 内联块）`);
+  console.log(`  GET  /health                    → { ok, model, port, endpoints }`);
+  console.log(`  POST /api/full                  → 不取消，跑到底（对照基线）`);
+  console.log(`  POST /api/cancel-after-frames   → 收 N 帧后 abort；body.abortAfterFrames 默认 5；浏览器点"立即取消"按钮 / pagehide 都走这里`);
+  console.log(`  POST /api/no-signal-abort       → 故意不传 signal；5s 后服务端 res.end() 关 SSE；观察 SDK 是否还跑、是否还计费`);
   console.log(`  模型: ${env.MINIMAX_MODEL}`);
   console.log(`  Ctrl+C 退出`);
 });

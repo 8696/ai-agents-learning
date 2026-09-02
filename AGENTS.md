@@ -7,7 +7,7 @@
 | 学什么、验收、题目 | `docs/` 00–03 + [docs/学习模块/](docs/学习模块/README.md) + 04–07 |
 | 学完后写回的归纳 | **学习笔记** → 说「**沉淀文档**」；先 [§6.3 定位小节](#63-沉淀文档)（默认 [§3.1 锁定的当前条](#31-当前小节锁定对话中途绝不换条)），再写该条 MD（[§7.0](#70-写回扩写任意终端)，冻结）。**代码落点** → 该 apps/ 子文件夹只迭代 `README.md`（[§5.1](#51-apps-子文件夹结构)），不改旧小节 |
 | 过没过完、进度 | [docs/06-学习总览.md](docs/06-学习总览.md) |
-| 本仓库怎么建、`apps/` 落点 | **本文件**（代码落点 [§4](#4-代码落点)；Demo [§5.2](#52-小节-demo)） |
+| 本仓库怎么建、`apps/` 落点 | **本文件**写规则与骨架（[§4](#4-代码落点) / [§5](#5-demo-落点)）；**已有 Demo 清单**只看 [apps/README.md](apps/README.md)。新建 Demo **对照本节模板**，禁止「参照 apps/ 某条现有实现」 |
 | 改陪跑怎么接提问、进度怎么锁 | **维护模式**（须点名或明显意图）→ [§0.1](#01-学习模式-vs-维护模式) |
 | 不好处理 / 多个合理选项 | [§0.3](#03-不好处理时先给选项)（选项 + 为什么 + 推荐一个并说明为什么） |
 | 给人看的入口 | [README.md](README.md) |
@@ -142,22 +142,15 @@
 ai-agents-learning/
 ├── README.md · AGENTS.md
 ├── docs/                    ← 学习文档，入口 00-目录.md
-└── apps/                   ← 唯一代码落点（模块 00 mini-app + 每条外部小节的最小 Demo）
+└── apps/                   ← 唯一代码落点；清单在 apps/README.md（会随学习变多，本文件不枚举）
     ├── README.md · package.json · tsconfig.json · tsconfig.base.json · .env.example · .nvmrc
-    ├── 00-环境准备/
-    │   └── 01-mini-app/     ← 模块 00 代码落点（CLI-A / CLI-B / HTTP+SSE 三入口）
-    ├── 01-AI与LLM基础认知/  ← 笔记为主；§5.2 判为可运行才建小节文件夹
-    └── 02-LLM-API开发/
-        ├── 01-Streaming-SSE/
-        ├── 02-协议-A-vs-B/
-        ├── 03-AbortController/
-        ├── 04-Rate-Limit/
-        └── ...              ← 后续模块按条建对应小节文件夹
+    ├── 00-环境准备/01-mini-app/   ← 唯一三入口：CLI 在 src/；HTTP = 根目录 server.ts + public/（§5.3）
+    └── {模块文件夹}/{小节文件夹}/ ← 按条建；调 API / 必须看页 → §5.3；只在终端算 → index.ts
 ```
 
 - 不要 24 模块 = 24 个 mini-app；模块 00 mini-app 是**唯一**的三入口代码落点，新能力不再开新项目。
 - **学习文档**是另一套：`docs/学习模块/` **一模块一文件夹**，一小节一个 MD（进度表在该文件夹 `README.md`）。
-- **小节 Demo** 按条落在 `apps/{模块文件夹}/{小节文件夹}/`：条与条不互相 import。模块 00 mini-app 是**唯一例外**（包含三个入口 + 公共 `load-root-env.ts`）。
+- **小节 Demo** 按条落在 `apps/{模块文件夹}/{小节文件夹}/`：条与条不互相 import。**唯一目录例外**是模块 00 mini-app 还带 CLI：`src/index.ts`、`src/index-anthropic.ts`。共用 `apps/load-root-env.ts` 在 `apps/` 根，不在 mini-app 里。
 - 不要提前建空的小节 Demo 文件夹；不要另开平行 mini-app；模块 00 mini-app 不要拆成多个。
 - 模块 00 的代码落点是 `apps/00-环境准备/01-mini-app/`：CLI 协议 A（`yarn app:00-01-mini-cli-a`）+ CLI 协议 B（`yarn app:00-01-mini-cli-b`，超前放置，模块 02 才对照验收）+ HTTP+SSE（`yarn app:00-01-mini-server`）。协议 A 是模块 00 验收；协议 B 不算本模块必过。不要预装智谱专属 SDK / LangChain / 向量库。
 
@@ -288,7 +281,11 @@ ai-agents-learning/
 
 ## 5. Demo 落点
 
-`apps/` 是本仓库**唯一**的代码落点：模块 00 mini-app（`00-环境准备/01-mini-app/`，三入口）+ 每条外部小节的最小可运行 Demo。学完模块 23 后若要作品集，从零建（届时 24 模块知识齐了）。
+`apps/` 是本仓库**唯一**的代码落点：模块 00 mini-app（三入口）+ 每条外部小节的最小可运行 Demo。学完模块 23 后若要作品集，从零建。
+
+**本文件只写规则与骨架**（何时建、目录长什么样、端口怎么算、HTML/koa 约束）。**不要**在这里追加「现在有哪些 Demo / 各用哪个端口」——那份清单只维护 [apps/README.md](apps/README.md) 和 `apps/package.json`。
+
+**模板只在本文件。** 新建或改 HTTP Demo：对照下文 §5.3（目录、四项、HTML 骨架、koa）。新建 CLI Demo：对照 §5.2。禁止把 `apps/` 里任意一条现有 Demo 当成「以它为准去抄」。旧文件夹只是当时的实现，和本文件冲突时改代码或改协议，不要默默对齐旧代码。
 
 ### 5.0 代码落点规范（Node / TS / 注释 / Key / 选型）
 
@@ -309,7 +306,7 @@ ai-agents-learning/
     crossorigin="anonymous"></script>
 ```
 
-`apps/package.json` 起步依赖：`tsx` `dotenv` `zod` `openai` `typescript` `@types/node@^22`。`@anthropic-ai/sdk` 允许在模块 00 作为对照入口超前存在，**模块 02 才对照验收**。不要预装智谱专属 SDK / LangChain / 向量库 / Playwright。
+`apps/package.json` 起步依赖：`tsx` `dotenv` `zod` `openai` `typescript` `@types/node@^22`。§5.3 HTTP 另需 `koa` `@koa/router` `koa-static` `@koa/bodyparser` 及对应 `@types/*`（已在 `apps/package.json`，不要每个小节再装一份）。`@anthropic-ai/sdk` 允许在模块 00 作为对照入口超前存在，**模块 02 才对照验收**。不要预装智谱专属 SDK / LangChain / 向量库 / Playwright。
 
 ### 5.1 apps/ 子文件夹结构
 
@@ -317,8 +314,8 @@ ai-agents-learning/
 
 | 类型 | 位置 | 干什么 | 怎么写 |
 | ---- | ---- | ------ | ------ |
-| **模块 00 mini-app** | `apps/00-环境准备/01-mini-app/` | 模块 00 的代码落点（三入口：CLI-A / CLI-B / HTTP+SSE） | 单文件夹，含三个 `src/*.ts` + `public/index.html` + `README.md`；不拆成多个 |
-| **小节 Demo** | `apps/{模块文件夹}/{小节文件夹}/` | 每条外部小节的最小可运行 Demo | 单文件夹，含 `index.ts` + `README.md`；不 import 其它小节 |
+| **模块 00 mini-app** | `apps/00-环境准备/01-mini-app/` | 模块 00 的代码落点（三入口：CLI-A / CLI-B / HTTP+SSE） | CLI 在 `src/index.ts`、`src/index-anthropic.ts`；HTTP 与 §5.3 相同：根目录 `server.ts` + `public/index.html`；不拆成多个项目 |
+| **小节 Demo** | `apps/{模块文件夹}/{小节文件夹}/` | 每条外部小节的最小可运行 Demo | **调 API / 必须看页** → §5.3：`server.ts` + `public/index.html` + `README.md`。**只在终端算** → `index.ts` + `README.md`。不 import 其它小节 |
 
 **README.md 写法**：
 - 跑入口（`cd apps && yarn app:...`）
@@ -330,7 +327,7 @@ ai-agents-learning/
 
 **没有 LEARNING.md**——代码改动就改该文件夹的 README.md。
 
-模块笔记写在 [docs/学习模块/](docs/学习模块/README.md) 对应**模块文件夹**：`README.md`（进度 + 验收 + 本地拆步）+ 每小节一个 MD（文件名如 `01-API-Key-计费.md`：两位序号前缀，与小节进度从上到下对齐；`README.md` 不编号）。
+模块笔记写在 [docs/学习模块/](docs/学习模块/README.md) 对应**模块文件夹**：`README.md`（进度 + 验收 + 本地拆步）+ 每小节一个 MD（文件名 `{两位序号}-{短名}.md`，与小节进度从上到下对齐；`README.md` 不编号）。
 
 ### 5.2 小节 Demo
 
@@ -361,11 +358,11 @@ ai-agents-learning/
 
 | 结论 | 何时 | 落哪 |
 | ---- | ---- | ---- |
-| **无** | 纯概念（如 Token 是什么、幻觉从哪来、AI vs ML）；跑起来没有新信息 | 小节 MD 写 `Demo：无` + 一句理由 |
+| **无** | 纯概念（定义、来源、对照）；跑起来没有新信息 | 小节 MD 写 `Demo：无` + 一句理由 |
 | **伪代码** | 机制步骤必须写清，但不值得起进程（如 Attention 数据怎么走） | 写进该条小节 MD 的机制 / 例子，**不建** `apps/` 文件夹；MD 写 `Demo：伪代码（见机制）` |
-| **可运行** | 调 API / 协议字段 / 流式帧 / 取消 / 429 / Tool 闭环等，必须跑一次才过关 | `apps/{模块文件夹名}/{小节 MD 文件名去掉 .md}/`；MD 写 `Demo：已落 apps/…` |
+| **可运行** | 调 API / 协议字段 / 流式帧 / 取消 / 429 / Tool 闭环等，必须跑一次才过关 | 调 API 或必须看见 HTML → §5.3（`server.ts` + 页）；只在终端算 → `index.ts`。MD 写 `Demo：已落 apps/…` |
 
-禁止为凑而建空文件夹。可运行 Demo 只演示本条核心对象：happy path + 本条必须看见的那一个行为（例如 SSE 打印一帧）。不要做成迷你版模块 00 mini-app。
+禁止为凑而建空文件夹。调 API 的可运行 Demo **走 §5.3 四项**，禁止用「happy path + 一个行为然后关进程」交差。不要做成第二份模块 00 mini-app（不要再开三入口项目）。只在终端算的 Demo 才用 §5.2 的 CLI `index.ts`。
 
 #### 判断块（勾进度前必打）
 
@@ -380,37 +377,302 @@ Demo 判断
 
 #### 可运行 Demo 怎么建
 
-不要提前建空的小节文件夹。`apps/` 共享 package（`package.json` · `load-root-env.ts` 等）**已经存在**，不要再问「可不可以建 apps/」。只需按条建该小节文件夹。
+不要提前建空的小节文件夹。`apps/` 共享 package（`package.json` · `load-root-env.ts` 等）**已经存在**，不要再问「可不可以建 apps/」。只需按条建该小节文件夹。已有哪些 Demo → [apps/README.md](apps/README.md)（清单，不是模板）。写法对照本节 + §5.3，不要去抄某一条现有 Demo。
 
 ```text
-apps/
-├── README.md · package.json · tsconfig.json · tsconfig.base.json · load-root-env.ts
-├── .env.example · .nvmrc
-└── {与 docs/学习模块/ 同名的模块文件夹}/
-    ├── 00-环境准备/
-    │   └── 01-mini-app/             ← 模块 00 mini-app（三入口，特殊）
-    └── 02-LLM-API开发/
-        └── 01-Streaming-SSE/        ← 小节 Demo
-            ├── README.md     ← 只写怎么跑、对应哪一条；不是教材
-            └── index.ts      ← 最小可运行；详细中文注释（职责 + 数据流）
+apps/{模块文件夹}/{小节文件夹}/
+  调 API / 必须看页（§5.3）     README.md · server.ts · public/index.html
+  只在终端算                    README.md · index.ts
+模块 00 mini-app（唯一例外）    CLI 在 src/；HTTP 仍是根目录 server.ts + public/（§5.3）
 ```
 
 - **一个** `apps/package.json`（不要每个小节一个），`cd apps && yarn install` 一次。
 - **跑入口必须是 yarn 脚本，名字要能看懂是哪一条。** 新建可运行 Demo 时，同步在 `scripts` 加一条，禁止只留 `yarn tsx 长路径` 当主入口：
-  - 名字：`app:{模块两位}-{小节两位}-{英文短名}`（kebab-case）。`{模块两位}` = 进度表模块编号（`00` `01` …）；`{小节两位}` = 该模块小节进度内的行号（`01` `02` …）；`{英文短名}` 对照该条小节、一眼能认（如 `api-key-billing`、`token`、`temperature`、`mini-cli-a`、`mini-cli-b`、`mini-server`）。禁止用 `dev` / `start` / `app` 这种会撞车的名字。
-  - 命令：`tsx {模块文件夹}/{小节文件夹}/index.ts`（小节 Demo）/ `tsx {模块文件夹}/{小节文件夹}/src/{index|server}.ts`（模块 00 mini-app）
+  - 名字：`app:{模块两位}-{小节两位}-{英文短名}`（kebab-case）。`{模块两位}` = 进度表模块编号（`00` `01` …）；`{小节两位}` = 该模块小节进度内的行号（`01` `02` …）；`{英文短名}` 对照该条小节、一眼能认。禁止用 `dev` / `start` / `app` 这种会撞车的名字。模块 00 mini-app 三入口固定：`mini-cli-a` / `mini-cli-b` / `mini-server`。
+  - 命令：`tsx {模块文件夹}/{小节文件夹}/index.ts`（不调 API 的 CLI Demo）/ `tsx {模块文件夹}/{小节文件夹}/server.ts`（§5.3 HTTP，含 mini-app 的 `mini-server`）/ `tsx {模块文件夹}/{小节文件夹}/src/index.ts` 与 `src/index-anthropic.ts`（仅 mini-app 两个 CLI）
   - 该条 Demo 的 README、`apps/README.md` 表格只写 `cd apps && yarn {script}`。
   - 可运行但 `package.json` 里没有对应 `app:{NN}-…` → **不准勾**（与下面闸门相同）。
 - 共用：`typecheck`（`tsc --noEmit`）。
 - Key 只读 `apps/.env`：`load-root-env.ts` 从 `apps/load-root-env.ts` 读取 `apps/.env`。Demo 里不要再放 `.env`。
 - 技术栈与 [§5.0](#50-代码落点规范node--ts--注释--key--选型) 相同：TS 5 + Node ≥22 + yarn；`tsconfig` `extends` `./tsconfig.base.json`；相对导入带 `.js`；`catch (error: unknown)`。写 `.html` 时 Tailwind 脚本必须用 §5.0 **HTML** 那一段（含 `integrity`），不要换。
-- 起步依赖：`tsx` `dotenv` `zod` `openai` `typescript` `@types/node@^22`。本条需要协议 B 再加 `@anthropic-ai/sdk`。不要预装智谱专属 SDK / LangChain / 向量库 / Playwright（模块未学到）。
+- 起步依赖：见 [§5.0](#50-代码落点规范node--ts--注释--key--选型)。本条需要协议 B 再加 `@anthropic-ai/sdk`。不要预装智谱专属 SDK / LangChain / 向量库 / Playwright（模块未学到）。
 - **无** `LEARNING.md`。概念 / 易混 / 例子只在该条小节 MD。
 - 该小节文件夹不 import 其它小节、不 import 模块 00 mini-app。
 
 #### `coach next` 闸门
 
-外部条勾 ✅ 前：小节 MD 已过 [§7.2](#72-沉淀--小节进度对齐) **且** Demo 行不是 `未判`（必须是 `无` / `伪代码（见机制）` / `已落 …`）。结论是可运行但文件夹不存在、入口跑不起来、或 `apps/package.json` 没有对应 `app:{模块两位}-{小节两位}-{英文短名}` → **不准勾**。Demo 判断不改当前条锁定。
+外部条勾 ✅ 前：小节 MD 已过 [§7.2](#72-沉淀--小节进度对齐) **且** Demo 行不是 `未判`（必须是 `无` / `伪代码（见机制）` / `已落 …`）。结论是可运行但文件夹不存在、入口跑不起来、或 `apps/package.json` 没有对应 `app:{模块两位}-{小节两位}-{英文短名}` → **不准勾**。调 API / 必须看页的条：脚本必须是 `tsx …/server.ts`（不是 `index.ts`），且 §5.3 四项齐。Demo 判断不改当前条锁定。
+
+### 5.3 小节 Demo 完整版（前后端 · React + koa，2026-09-02 维护模式起生效）
+
+`§5.2`「最小可运行」对**必须看页或调 API** 的外部小节不充分：起进程看一次响应就关掉，看不到 5xx 重试、看不到流式逐帧落 HTML、看不到协议 A/B 同 prompt 并排对照。**新规则下，凡是「调 API 或必须在浏览器里看见行为」的外部小节默认按 §5.3 全栈版写**，禁止用 §5.2 的「happy path + 一个行为」最低标准糊弄。
+
+#### 5.3.1 适用范围
+
+| Demo 类型 | 走哪 |
+| --------- | ---- |
+| **调 API / 必须看页**（对照、流式帧、错误时间线、闭环等都算） | **§5.3**（本节，前后端） |
+| **只在终端算** | §5.2 CLI（**不**起 HTTP、**不**写 HTML） |
+| **模块 00 mini-app CLI** | 例外：`src/index.ts` / `src/index-anthropic.ts`；HTTP 已走 §5.3 |
+
+#### 5.3.2 完整版 = 必做的 4 项（替代 §5.2 最低标准）
+
+| # | 项 | 含义 |
+| - | -- | ---- |
+| 1 | **Happy path** | 本条主要用例完整跑通（对照、并排、多端点等按该条需求，不要只打一次就关进程） |
+| 2 | **错误处理**（≥2 类） | 网络 / 超时（fetch reject → `#status-pill` 红色）；参数 / 服务端错误（HTTP 4xx / 5xx 显式显示） |
+| 3 | **Loading 状态** | 请求中 `#status-pill` = 🔄请求中 + 按钮 `disabled`；完成/失败切回 ✅/❌ |
+| 4 | **单会话输出区** | `#output` 显示完整对话 / 对照结果；新结果追加或覆盖，按小节定 |
+
+缺任何一项 = 不算 §5.3 完整版。
+
+#### 5.3.3 目录与脚本
+
+```
+apps/{模块文件夹}/{小节文件夹}/
+├── server.ts         ← koa + @koa/router + koa-static + @koa/bodyparser
+├── README.md         ← §5.3 含「端口」一行
+└── public/
+    └── index.html    ← 固定骨架（§5.3.4）：Tailwind + React 18 UMD + Babel Standalone + #root 挂载 + 内联 React 代码块
+```
+
+- **依赖**：
+  - runtime：`koa` `@koa/router` `koa-static` `@koa/bodyparser` `openai`（要协议 B 加 `@anthropic-ai/sdk`） `zod` `dotenv`
+  - dev：`tsx` `typescript` `@types/node@^22` `@types/koa` `@types/koa-static` `@types/koa__router`
+  - **不引**：`@types/react` / `@types/react-dom` / `esbuild` / 任何打包器（Babel Standalone 在浏览器跑，HTML 内联 JSX 不走 TS）
+- **端口（强制，禁止各 Demo 都写同一个口如 5180 / 3000）**：
+  ```text
+  默认 PORT = 5{模块两位}{小节两位}     // 五位数，一眼看出是哪一条
+  例：模块 02 第 01 条 → 50201
+      模块 03 第 01 条 → 50301
+  ```
+  同一小节两位下第二份 HTTP Demo：小节两位 **+10**（例：`03` → `13`，端口 `5MM13`）。
+  模块 00 mini-app **HTTP** 小节位用 `00` → `50000`，避免和模块 00 其它小节抢口。CLI 无端口。
+  `server.ts` 把该数字写成 `z.coerce.number().default(...)`；启动必须打印 `http://127.0.0.1:{PORT}/`。
+  可用环境变量 `PORT=` **单次**覆盖。**禁止**把 `PORT` 写进共享的 `apps/.env`（否则所有 Demo 被拧成同一个口）。
+- **`package.json` script**：名字 `app:{模块两位}-{小节两位}-{英文短名}`；命令 `tsx {模块文件夹}/{小节文件夹}/server.ts`（在 `apps/` 下跑）。**不再单独入口层**（不要再写一个只转发的 `index.ts`）。
+- **不引**：express / fastify / sirv / 任何非 koa web 框架；htm / preact / 任何 React 替代品；vite / webpack / parcel / esbuild / 任何打包器。
+- **README**：§5.1 四项保留，新增「端口 + 浏览器访问地址」一行。
+
+#### 5.3.4 HTML 固定骨架（强制）
+
+每个 `public/index.html` **必须**按下述结构写，禁止替换。这就是 HTTP Demo 的 HTML 模板（不要改去对齐某条现有 `apps/.../public/index.html`）。
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{小节名}</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap）。
+       注：React 19 移除了 UMD bundle 只发 ESM；§5.3.4 用 React 18 UMD。 -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone **锁定 7.26.4**。
+       8.x 默认 preset-react 是 automatic runtime（输出 import { jsx } from "react/jsx-runtime"），
+       与本规则"完全 ESM 禁用"冲突。7.26.4 默认是 classic runtime（输出 React.createElement）。
+       不要在 script type="text/babel" 块上加 data-presets / data-plugins——Babel 默认行为即可。 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- 自定义 CSS 仅当 public/app.css 真实存在时才加这一行；禁止用它替换 Tailwind -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- type="text/babel"：告知 Babel Standalone 在运行时转译此脚本块，
+       将 JSX 语法（如 <App />）转换为 React.createElement() 调用。
+       所有 React 代码（含 JSX）写在内联块里，**不**另起 app.tsx / app.js。 -->
+  <script type="text/babel">
+    // ── 解构 React 全局变量（UMD CDN 加载后 window.React / window.ReactDOM 存在） ──
+    const { useState, useEffect } = React;
+
+    // ── 主组件：按 §5.3.4 强制骨架渲染 id ──
+    function App() {
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              {小节名}
+            </h1>
+            <span
+              id="status-pill"
+              className="text-xs px-2 py-1 rounded bg-gray-200"
+            >
+              ⏸ 待连接
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section
+              id="controls"
+              className="bg-white shadow rounded p-4"
+            >
+              {/* 该小节交互区：按 demo 业务填充 */}
+              <div className="text-sm text-gray-500">{小节名} Demo</div>
+            </section>
+            <section
+              id="output"
+              className="bg-white shadow rounded p-4 min-h-[200px]"
+            >
+              {/* 该小节输出区 */}
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            端口 {本条 5MMSS} · 协议 A · 模型 MiniMax-M3
+          </footer>
+        </div>
+      );
+    }
+
+    // ── 入口：UMD 全局 ReactDOM.createRoot（React 18 API） ──
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+```
+
+**强制命名约定**（id 全小写连字符，section ≥ 4 个，**由 React 组件渲染出来**）：
+- `#page-header`（含 `#page-title` + `#status-pill`）
+- `#page-main`（含 `#controls` + `#output` 两个 section）
+- `#page-footer`（端口必须写本条 §5.3.3 算出的默认 PORT，禁止抄死数字、禁止抄别条）
+
+**`#status-pill` 四态**：`⏸待连接` / `🔄请求中` / `✅完成` / `❌错误`（由 React 组件根据请求状态切换 className / textContent）。
+
+**禁止**：
+- 替换 §5.0 的 Tailwind 脚本（CDN / 版本 / integrity）
+- 替换 §5.3.4 的 React UMD / Babel Standalone CDN（URL / 版本 / UMD 路径）
+- Babel 升级到 8.x（会触发 automatic runtime 注入 import）
+- 在 `<script type="text/babel">` 块上加 `data-presets` / `data-plugins`（默认 classic runtime 即可；显式加 attribute 反而会踩坑）
+- 用 `<script type="module">` / importmap / `import` 语法（**完全 ESM 禁用**）
+- 在 HTML 里加第三方包（htm / preact / React 替代品均不允许）
+- 用 `<div>` 全替 `<header>` / `<main>` / `<footer>`（JSX 里就是 `<header>` / `<main>` / `<footer>` 标签）
+- 改 id 命名（保持可被 grep 检索）
+
+**`<script>` 加载顺序**（严格按此序；React 未定义会全炸）：
+1. Tailwind 4 browser CDN（含 integrity）
+2. React 18.3.1 UMD
+3. ReactDOM 18.3.1 UMD
+4. Babel Standalone 7.26.4
+5. `<script type="text/babel">` 内联 JSX 块（**必须最后**）
+
+**JSX 文本里的 `<` 必须转义**（**实测踩坑**，否则 Babel parser 报错）：
+- JSX 文本节点（`>...<` 之间的内容）里出现 `<` 开头的字符串（如 `<think>` / `</think>` / 任何 `<xxx>` 模式），Babel parser 会认为开始新 JSX 标签，找不到 closing tag 报错
+- **写法**：把 `<` 字符串包到 `{"..."}` 表达式里
+  ```jsx
+  // 错：❌ 触发 "Expected corresponding JSX closing tag for <think>"
+  <span>无 <think> 块</span>
+  // 对：✅
+  <span>无 {"<think>"} 块</span>
+  // 对：✅（双层嵌套）
+  <><code>string</code>（嵌 {"<think>"} 标记）</>
+  ```
+- 这条规则**只影响 JSX 文本节点**（`>...<` 之间的内容）；JSX attribute / 字符串字面量 / JS 注释里的 `<` **不**触发
+
+#### 5.3.5 后端（koa + @koa/router + koa-static）
+
+```ts
+import Koa from "koa";
+import Router from "@koa/router";
+import serve from "koa-static";
+import { bodyParser } from "@koa/bodyparser";
+import { fileURLToPath } from "node:url";
+
+const app = new Koa();
+const router = new Router();
+
+// 1) bodyparser
+app.use(bodyParser());
+
+// 2) 业务路由
+router.post("/api/...", async (ctx) => {
+  const body = ctx.request.body as unknown;
+  // ... 调 LLM ...
+  ctx.body = { ... };
+});
+
+app.use(router.routes()).use(router.allowedMethods());
+
+const publicDir = fileURLToPath(new URL("./public", import.meta.url));
+app.use(serve(publicDir));
+
+app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
+```
+
+**强制**：
+- **不引**：express / fastify / hapi / polka / 任何非 koa 的 web 框架
+- **不引**：htm / preact / 任何 React 替代品
+- **不引**：vite / webpack / parcel / **esbuild / 任何 JSX transform / 任何打包器**（Babel Standalone 在浏览器跑）
+- **不引**：`@types/react` / `@types/react-dom`（React 代码写在 HTML 内联 `<script type="text/babel">` 块，不走 TS）
+- koa-bodyparser / `@koa/bodyparser` 二选一；**显式声明**，禁止隐式默认
+- React 代码**不**放独立文件（不上 app.tsx / app.js / src/）；**只**放在 HTML 内联 `<script type="text/babel">` 块
+- **`serve` 第一个参数必须绝对路径**（不能用 `"./public"` / `"public"` 相对路径，**实测踩坑**——相对路径是相对 process.cwd()，启动目录不固定时 GET / 会 404）
+  ```ts
+  // 错：❌ 启动目录在 apps/ 时解析为 apps/public（不存在）
+  app.use(serve("./public"));
+  // 对：✅ 永远相对 server.ts 所在文件夹
+  const publicDir = fileURLToPath(new URL("./public", import.meta.url));
+  app.use(serve(publicDir));
+  ```
+- **中间件顺序**（实测踩坑）：bodyParser **必须**在 router 之前；router **必须**在 serve 之前（否则 router 匹配前 serve 已处理 404）
+  ```ts
+  app.use(bodyParser());
+  app.use(router.routes()).use(router.allowedMethods());
+  app.use(serve(publicDir));
+  ```
+- **ctx 类型显式 `Context` / `Next`**（绕开 @koa/router v13 + @types/koa__router v12 的 `Request` 类型不一致；**实测踩坑**）
+  ```ts
+  import type { Context, Next } from "koa";
+  router.get("/api/...", (ctx: Context, _next: Next) => { ... });
+  ```
+- **SSE 端点**必须 `ctx.respond = false`，handler 直接用 `ctx.res.write` / `ctx.res.end` 绕过 koa 响应抽象；`ctx.request.body` 已由 bodyParser 解析
+  ```ts
+  router.post("/api/stream", async (ctx: Context) => {
+    ctx.respond = false;
+    ctx.res.writeHead(200, { "Content-Type": "text/event-stream", /* ... */ });
+    // ... 业务
+    ctx.res.write(`data: ${JSON.stringify(...)}\n\n`);
+    ctx.res.end();
+  });
+  ```
+
+**CORS**：开发期同源（`http://127.0.0.1:{port}` ↔ `{port}`）够用；跨域时显式声明，**不**做 `*`。
+
+#### 5.3.6 React 组件规范（HTML 内联 `<script type="text/babel">` 块）
+
+- **位置**：HTML 内联 `<script type="text/babel">` 块（**唯一**；无 app.tsx / app.js / src/ 等独立文件）。
+- **运行时变量**：浏览器里 `React` / `ReactDOM` 是 UMD 全局变量；**不** import。
+- **状态**：组件内 `React.useState` / `React.useEffect` / `React.useRef`（显式调用 React 前缀；或解构全局 `const { useState } = React;`）；**禁止** Redux / Zustand / Recoil / 任何状态库。
+- **副作用**：直接 `fetch(...)`；**禁止** React Query / SWR / axios。
+- **样式**：Tailwind className 写在 JSX 上；自定义 CSS（要的话）写到 `public/app.css`。
+- **JSX**：直接写 JSX；不要加 `data-presets` / `data-plugins`（§5.3.4：Babel 7.26.4 默认 classic runtime 即可）。
+- **入口**：内联块末尾写（与 §5.3.4 骨架一致）
+  ```js
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(<App />);
+  ```
+- **类型**：HTML 内联 JS 不走 TS；无类型检查。状态/事件处理写注释解释意图。
+
+#### 5.3.7 已落地清单不写在本文件
+
+新建 / 改端口 / 加 yarn 脚本时：同步 [apps/README.md](apps/README.md) 表格 + `apps/package.json`。**不要**把条目抄回本节。**不要**写「参照某某 Demo」。
+
+模块 00 mini-app 的 **CLI** 不在 §5.3 目录骨架范围；**HTTP** 走根目录 `server.ts` + §5.3 HTML，端口按 §5.3.3（小节位 `00` → `50000`）。
 
 ---
 
