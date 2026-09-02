@@ -293,8 +293,8 @@ ai-agents-learning/
 | Node | **最低 22**（`engines: ">=22"`，不设上限）；`apps/.nvmrc` 推荐 22；`@types/node` ^22 |
 | TS | `extends` `apps/tsconfig.base.json`；ESM + NodeNext；`strict: true`；外部数据 Zod 校验；`catch (error: unknown)`；相对导入带 `.js` |
 | 注释 | 文件头职责+数据流；分段 `// ── ... ──`；关键行解释**为什么** |
-| 模型 Key | 只在 `apps/.env`；各入口通过 `apps/load-root-env.ts` 读取 |
-| 选型 | 见 [docs/02-怎么用.md](docs/02-怎么用.md) 1.2：MiniMax 协议 A（`openai`）；协议 B（`@anthropic-ai/sdk`）；RAG→LanceDB |
+| 模型 Key | 只在 `apps/.env`；各入口通过 `apps/load-root-env.ts` 读取。**动态切换**：改顶层 `LLM_PROVIDER` 切家、顶层 `LLM_MODEL` 覆盖该家默认模型；详见 [§5.0.x](#50x-扩展-llm-提供商catalog) |
+| 选型 | 协议 A 用 `openai`（OpenAI Chat Completions）；协议 B 用 `@anthropic-ai/sdk`（Anthropic Messages API）；向量库（学 RAG 时）→LanceDB。**提供商与模型动态可换**——见 [docs/02-怎么用.md](docs/02-怎么用.md) §1.2.1 + [§5.0.x](#50x-扩展-llm-提供商catalog) |
 | HTML | 凡写 `.html`（`apps/` / 其它）必须在 `<head>` **原样**引入下面这段，禁止换版本、换 CDN、自编 `integrity`、改用别的 CSS 框架当默认样式： |
 
 写 HTML 时用的 Tailwind（整段复制，不要改）：
@@ -306,6 +306,23 @@ ai-agents-learning/
 ```
 
 `apps/package.json` 起步依赖：`tsx` `dotenv` `zod` `openai` `typescript` `@types/node@^22`。§5.3 HTTP 另需 `koa` `@koa/router` `koa-static` `@koa/bodyparser` 及对应 `@types/*`（已在 `apps/package.json`，不要每个小节再装一份）。`@anthropic-ai/sdk` 允许在模块 00 作为对照入口超前存在，**模块 02 才对照验收**。不要预装智谱专属 SDK / LangChain / 向量库 / Playwright。
+
+#### §5.0.x 扩展 LLM 提供商（CATALOG）
+
+`apps/llm.ts` 的 `CATALOG` 是事实上的提供商目录。新增 / 修改一家提供商，改两处即可，Demo 代码一律不动：
+
+| 改哪里 | 改什么 |
+| ------ | ------ |
+| `apps/llm.ts` | `PROVIDER_IDS` 数组加新 id；`CATALOG` 加一项（`label` / `keyEnv` / `baseAEnv` / `baseBEnv` / `modelAEnv` / `modelBEnv` / `defaultBaseA` / `defaultBaseB` / `defaultModel`）。**实际 Key 不进本文件**，只写变量名 |
+| `apps/.env.example` | 新增一段该家变量：`{ID}_API_KEY` / `{ID}_BASE_URL` / `{ID}_MODEL` / `{ID}_ANTHROPIC_BASE_URL` / `{ID}_ANTHROPIC_MODEL`；并在文首 `LLM_PROVIDER` 注释里更新允许取值 |
+
+切换：
+
+- **换家**：改顶层 `LLM_PROVIDER`（`minimax` / `zhipu` / `custom` / 你新加的 id）
+- **同家换模型 id**：改顶层 `LLM_MODEL`（非空时协议 A/B 都用它）
+- **同家换 Key / Base URL**：改该家分组变量（`MINIMAX_API_KEY` / `ZHIPU_BASE_URL` / ...）
+
+Demo 只用 `getLlm()` / `getLlmOptional()`，不要再直接读 `PROVIDER_IDS` 或 `MINIMAX_*` 等具体变量；选家由 `apps/.env` 顶层 `LLM_PROVIDER` 决定。
 
 ### 5.1 apps/ 子文件夹结构
 

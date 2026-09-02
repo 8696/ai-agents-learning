@@ -8,7 +8,7 @@
 | - | ------------- |
 | 干什么 | 单条知识点验证 + 模块 00 最小闭环 |
 | 彼此 | 子文件夹互不 import |
-| Key | 只读 `apps/.env`：顶层 `LLM_PROVIDER` + `LLM_MODEL`，各家 Key/Base URL 按提供商分组。Demo 用 `apps/llm.ts` 的 `getLlm()`，不要在小节里写死供应商。 |
+| Key | 只读 `apps/.env`：顶层 `LLM_PROVIDER` 切家、顶层 `LLM_MODEL` 覆盖该家默认模型；各家 Key/Base URL/默认模型按分组（`MINIMAX_*` / `ZHIPU_*` / `CUSTOM_*`）。Demo 用 `apps/llm.ts` 的 `getLlm()` / `getLlmOptional()`，**不要在小节里写死供应商**。新增一家提供商：[AGENTS.md §5.0.x](../AGENTS.md#50x-扩展-llm-提供商catalog)——`apps/llm.ts` 的 `CATALOG` 加项 + `apps/.env.example` 加段 |
 
 **学到该条、判断为「可运行」才建对应文件夹。** 不要提前建空目录。
 

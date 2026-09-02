@@ -48,6 +48,19 @@ yarn app:02-01-streaming-sse       # 例：模块 02 · Streaming/SSE
 
 不抽共享 npm 包（[AGENTS.md §5.0](AGENTS.md#50-代码落点规范node--ts--注释--key--选型)）；新建入口时复制 `apps/load-root-env.ts`。
 
+## 换模型 / 换提供商
+
+模型与提供商是**动态可配**的——不需要改 Demo 代码，只改 `apps/.env`：
+
+| 想做什么 | 改 `apps/.env` 哪一行 |
+| -------- | --------------------- |
+| 换一家提供商（MiniMax / 智谱 / 自定义网关 / 你新加的） | 顶层 `LLM_PROVIDER=...` |
+| 在当前提供商下换一个模型 id（协议 A/B 同时生效） | 顶层 `LLM_MODEL=...`（留空则用该家默认） |
+| 换当前提供商的 Key / Base URL | 改对应分组：`MINIMAX_*` / `ZHIPU_*` / `CUSTOM_*` |
+| 新增一家提供商 | `apps/llm.ts` 的 `CATALOG` 加项 + `apps/.env.example` 加段，详见 [AGENTS.md §5.0.x](AGENTS.md#50x-扩展-llm-提供商catalog) |
+
+完整变量分组 / 默认 Base URL 见 [apps/.env.example](apps/.env.example)；矩阵见 [docs/02-怎么用.md §1.2.1](docs/02-怎么用.md#122-模型供应商速查本仓库固定)。
+
 ## 目录
 
 ```text
