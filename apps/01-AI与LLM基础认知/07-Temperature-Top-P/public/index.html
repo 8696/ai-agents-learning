@@ -137,7 +137,7 @@
     // ── 主组件 App ──
     function App() {
       const [status, setStatus] = useState("idle");
-      const [model, setModel] = useState("MiniMax-M3");
+      const [model, setModel] = useState("");
       const [prompt, setPrompt] = useState(
         "给一间开在海边的咖啡店起一个店名。只回店名四个字以内，不要解释。",
       );
@@ -226,7 +226,7 @@
                   {status === "loading" ? "跑 6 次中…" : "跑 6 次并对照"}
                 </button>
                 <span className="text-xs text-gray-500">
-                  会真调 3 组 × 2 次 = 6 次 MiniMax-M3，Top-P 固定 1，只动温度
+                  会真调 3 组 × 2 次 = 6 次当前配置的模型，Top-P 固定 1，只动温度
                 </span>
               </div>
             </section>
@@ -261,7 +261,7 @@
             id="page-footer"
             className="border-t p-2 text-xs text-gray-500 text-center"
           >
-            端口 50107 · 协议 A · 模型 MiniMax-M3
+            端口 50107 · 协议 A · 模型随 LLM_PROVIDER
           </footer>
         </div>
       );

@@ -115,7 +115,7 @@
               `token: prompt=${usage.prompt_tokens} completion=${usage.completion_tokens} total=${usage.total_tokens} · 帧数=${frameCount}`,
             );
           } else {
-            setMeta(`帧数=${frameCount}（无 usage，去 MiniMax 控制台查）`);
+            setMeta(`帧数=${frameCount}（无 usage，去当前提供商控制台查）`);
           }
           setStatus("ok");
         } catch (e) {
@@ -179,7 +179,7 @@
             id="page-footer"
             className="border-t p-2 text-xs text-gray-500 text-center"
           >
-            端口 50000 · 协议 A · 模型 MiniMax-M3
+            端口 50000 · 协议 A · 模型随 LLM_PROVIDER
           </footer>
         </div>
       );

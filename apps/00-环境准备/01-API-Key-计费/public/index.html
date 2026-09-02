@@ -79,7 +79,7 @@
     // ── 主组件 App ──
     function App() {
       const [status, setStatus] = useState("idle");
-      const [model, setModel] = useState("MiniMax-M3");
+      const [model, setModel] = useState("");
       const [prompt, setPrompt] = useState("只回复一个字：好");
       const [result, setResult] = useState(null);
       const [errorMsg, setErrorMsg] = useState("");
@@ -164,7 +164,7 @@
                   {status === "loading" ? "发送中…" : "发送并计费"}
                 </button>
                 <span className="text-xs text-gray-500">
-                  每次发送会真调一次 MiniMax-M3，账单调 1 次
+                  每次发送会真调一次当前配置的模型，账单调 1 次
                 </span>
               </div>
             </section>
@@ -190,7 +190,7 @@
                 <li><code className="text-blue-700">prompt_tokens</code> 按输入单价计费</li>
                 <li><code className="text-amber-700">completion_tokens</code> 按输出单价计费（通常更贵，3~5 倍）</li>
                 <li><code className="text-green-700">total_tokens</code> = 两者之和</li>
-                <li>订阅网页能聊 ≠ 按量 API Key；账单仍去 MiniMax 控制台看</li>
+                <li>订阅网页能聊 ≠ 按量 API Key；账单仍去当前提供商控制台看</li>
               </ul>
             </section>
           </main>
@@ -199,7 +199,7 @@
             id="page-footer"
             className="border-t p-2 text-xs text-gray-500 text-center"
           >
-            端口 50001 · 协议 A · 模型 MiniMax-M3
+            端口 50001 · 协议 A · 模型随 LLM_PROVIDER
           </footer>
         </div>
       );

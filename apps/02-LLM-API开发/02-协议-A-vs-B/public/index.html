@@ -926,7 +926,7 @@
         bs: "idle",
         bsr: "idle",
       });
-      const [model, setModel] = useState("MiniMax-M3");
+      const [model, setModel] = useState("");
       const [connected, setConnected] = useState(false);
 
       // 启动时 ping /health
@@ -1008,7 +1008,7 @@
             id="page-footer"
             className="border-t border-gray-200 p-2 text-xs text-gray-500 text-center"
           >
-            端口 50202 · 协议 A/B · 模型 MiniMax-M3 · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4
+            端口 50202 · 协议 A/B · 模型随 LLM_PROVIDER · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4
           </footer>
         </div>
       );

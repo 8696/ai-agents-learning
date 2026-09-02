@@ -83,7 +83,7 @@
     function App() {
       const [status, setStatus] = useState("idle");   // idle/busy/ok/aborted/warn/error
       const [statusLabel, setStatusLabel] = useState(""); // busy/ok/aborted 时顶部 pill 的具体文案
-      const [model, setModel] = useState("MiniMax-M3");
+      const [model, setModel] = useState("");
       const [framesN, setFramesN] = useState(5);      // 「收 N 帧就停」的 N
       const [runs, setRuns] = useState([]);           // 已完成 run 卡（按顺序追加）
       const [busy, setBusy] = useState(false);
@@ -93,7 +93,7 @@
       useEffect(() => {
         fetch("/health")
           .then((r) => r.json())
-          .then((d) => setModel(d.model || "MiniMax-M3"))
+          .then((d) => setModel(d.model || ""))
           .catch(() => {
             setStatus("error");
             setStatusLabel("连不上后端");
@@ -333,7 +333,7 @@
             id="page-footer"
             className="border-t p-2 text-xs text-gray-500 text-center"
           >
-            端口 50203 · 协议 A · 模型 MiniMax-M3
+            端口 50203 · 协议 A · 模型随 LLM_PROVIDER
           </footer>
         </div>
       );

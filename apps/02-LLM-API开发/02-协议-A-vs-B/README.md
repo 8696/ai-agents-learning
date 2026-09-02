@@ -211,7 +211,7 @@ yarn app:02-02-protocol-ab    # 等价 tsx 02-LLM-API开发/02-协议-A-vs-B/ser
 | `#page-main` | `<main>` | `#controls` + `#output` |
 | `#controls` | `<section>` | 控制区说明段（4 面板独立按钮 / 输入在 `#output` 各 section 内） |
 | `#output` | `<section>` | 4 个面板 section（从 ThinkPanel 到 BStreamRawPanel） |
-| `#page-footer` | `<footer>` | "端口 50202 · 协议 A/B · 模型 MiniMax-M3 · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4" |
+| `#page-footer` | `<footer>` | "端口 50202 · 协议 A/B · 模型随 LLM_PROVIDER · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4" |
 
 ## 跑前需要
 
