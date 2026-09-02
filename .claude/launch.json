@@ -16,10 +16,6 @@
       "port": 5180,
       "url": "http://127.0.0.1:5180/",
       "autoPort": false
-    },
-    {
-      "name": "dingtoujisuanqi",
-      "url": "http://dingtoujisuanqi.icode.link/"
     }
   ]
 }
