@@ -52,6 +52,8 @@ const bodySchema = z.object({
   system: z.string().optional(),
   // 流式 + thinking 端点的预算（仅 /api/b-thinking-stream 用）
   thinking_budget: z.number().int().positive().optional(),
+  /** 协议 A 是否打 extra_body 开思考；不传默认 false，由各端点自己决定 */
+  enable_thinking: z.boolean().optional(),
 });
 type Body = z.infer<typeof bodySchema>;
 
@@ -69,6 +71,21 @@ function parseBody(ctx: Context): Body {
 
 const aClient = llm.openai;
 const bClient = llm.anthropic;
+
+/** 与 05-思考同一套：协议 A 主动开思考，换模型才看得见 reasoning / think 块 */
+const PROTOCOL_A_THINKING = {
+  temperature: 1,
+  max_tokens: 2048,
+  extra_body: {
+    thinking: { type: "adaptive" as const },
+    reasoning_split: true,
+    service_tier: "standard" as const,
+  },
+};
+
+function protocolAExtras(enableThinking: boolean) {
+  return enableThinking ? PROTOCOL_A_THINKING : {};
+}
 
 // ── 4) koa 框架 ──
 const app = new Koa();
@@ -230,6 +247,7 @@ async function handleA(
       messages,
       stream: true,
       stream_options: { include_usage: true },
+      ...protocolAExtras(body.enable_thinking ?? false),
     });
 
     res.writeHead(200, {
@@ -363,6 +381,7 @@ async function handleCompare(
       model: llm.modelA,
       messages,
       stream: false,
+      ...protocolAExtras(body.enable_thinking ?? false),
     }),
     bClient.messages.create({
       model: llm.modelB,
@@ -410,13 +429,9 @@ async function handleThinkCompare(
 
   // 4 组场景
   const scenarios = [
-    { label: "A · 不带 thinking", protocol: "A" as const, thinking: null },
+    { label: "A · 不带 thinking", protocol: "A" as const, thinking: null as null | { type: "enabled"; budget_tokens: number } | "adaptive" },
+    { label: "A · 带 thinking", protocol: "A" as const, thinking: "adaptive" as const },
     { label: "B · 不带 thinking", protocol: "B" as const, thinking: null },
-    {
-      label: "B · 带 thinking (budget=100)",
-      protocol: "B" as const,
-      thinking: { type: "enabled" as const, budget_tokens: 100 },
-    },
     {
       label: "B · 带 thinking (budget=500)",
       protocol: "B" as const,
@@ -429,27 +444,44 @@ async function handleThinkCompare(
     scenarios.map(async (sc) => {
       try {
         if (sc.protocol === "A") {
-          // 协议 A：不支持 thinking 参数；总是返回 string content（嵌 <think>）
+          const thinkingOn = sc.thinking === "adaptive";
           const r = await aClient.chat.completions.create({
             model: llm.modelA,
             messages,
             stream: false,
+            ...protocolAExtras(thinkingOn),
           });
           const plain = JSON.parse(JSON.stringify(r));
-          const text: string = plain.choices?.[0]?.message?.content ?? "";
+          const message = plain.choices?.[0]?.message ?? {};
+          const text: string = message.content ?? "";
+          const details = Array.isArray(message.reasoning_details)
+            ? message.reasoning_details
+                .map((d: { text?: string }) => d?.text ?? "")
+                .join("")
+            : "";
+          const splitField =
+            details ||
+            (typeof message.reasoning_content === "string" ? message.reasoning_content : "") ||
+            (typeof message.reasoning === "string" ? message.reasoning : "") ||
+            (typeof message.thinking === "string" ? message.thinking : "");
           const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/);
-          const thinkingText = thinkMatch?.[1] ?? "";
+          const thinkingText = splitField || thinkMatch?.[1] || "";
+          const location = splitField
+            ? ("reasoning_field" as const)
+            : thinkMatch
+              ? ("embedded_in_content" as const)
+              : ("none" as const);
           return {
             scenario: sc.label,
             protocol: "A" as const,
-            thinkingParam: null,
+            thinkingParam: thinkingOn ? { type: "adaptive" } : null,
             contentType: "string" as const,
-            textAnswer: text.replace(/<think>[\s\S]*?<\/think>/g, "").trim(),
+            textAnswer: splitField
+              ? text.trim()
+              : text.replace(/<think>[\s\S]*?<\/think>/g, "").trim(),
             thinking: {
-              exists: thinkMatch !== null,
-              location: thinkMatch
-                ? ("embedded_in_content" as const)
-                : ("none" as const),
+              exists: thinkingText.length > 0,
+              location,
               charCount: thinkingText.length,
               preview: thinkingText.slice(0, 300),
             },
@@ -459,12 +491,13 @@ async function handleThinkCompare(
           };
         }
         // 协议 B：thinking 参数控制是否启用 extended thinking block
+        const bThinking =
+          typeof sc.thinking === "object" && sc.thinking !== null ? sc.thinking : null;
         const r = await bClient.messages.create({
           model: llm.modelB,
           system,
-          // Anthropic 协议：max_tokens 必须 >= budget_tokens；学习阶段给够
-          max_tokens: Math.max(sc.thinking?.budget_tokens ?? 0, 2048),
-          ...(sc.thinking ? { thinking: sc.thinking } : {}),
+          max_tokens: Math.max(bThinking?.budget_tokens ?? 0, 2048),
+          ...(bThinking ? { thinking: bThinking, temperature: 1 } : {}),
           messages: [{ role: "user", content: prompt }],
         });
         const plain = JSON.parse(JSON.stringify(r));
@@ -533,8 +566,8 @@ async function handleBThinkingStream(
     const stream = bClient.messages.stream({
       model: llm.modelB,
       system: body.system,
-      // Anthropic 协议：max_tokens ≥ budget_tokens
       max_tokens: Math.max(thinkingBudget, 2048),
+      temperature: 1,
       thinking: { type: "enabled", budget_tokens: thinkingBudget },
       messages: [{ role: "user", content: body.message }],
     });
@@ -609,6 +642,7 @@ async function handleAStreamRaw(
       messages,
       stream: true,
       stream_options: { include_usage: true },
+      ...protocolAExtras(body.enable_thinking ?? false),
     });
 
     res.writeHead(200, {
@@ -633,7 +667,12 @@ async function handleAStreamRaw(
         kind = "usage";
       } else if (finishReason) {
         kind = "finish";
-      } else if (delta?.role && !delta?.content) {
+      } else if (
+        delta?.role &&
+        !delta?.content &&
+        !delta?.reasoning_content &&
+        !(Array.isArray(delta?.reasoning_details) && delta.reasoning_details.length > 0)
+      ) {
         kind = "role";
       }
 
@@ -749,7 +788,7 @@ app.listen(PORT, "127.0.0.1", () => {
   console.log(`  POST /api/a                → 协议 A 流式（MiniMax /v1, openai SDK）`);
   console.log(`  POST /api/b                → 协议 B 流式（MiniMax /anthropic, @anthropic-ai/sdk）`);
   console.log(`  POST /api/compare          → 一次性两侧对照（非流式）`);
-  console.log(`  POST /api/think-compare    → 4 组 thinking 差异对照（A 不带 / B 不带 / B 带 100 / B 带 500）`);
+  console.log(`  POST /api/think-compare    → 4 组 thinking：A 不带 / A 带 / B 不带 / B 带 500`);
   console.log(`  POST /api/b-thinking-stream → 协议 B 流式 + 启用 thinking（看完整事件流：thinking block + text block + message_delta）`);
   console.log(`  POST /api/a-stream-raw     → 协议 A 流式（OpenAI chunk 原样转发 + meta frame：role / chunk / finish / usage）`);
   console.log(`  POST /api/b-stream-raw     → 协议 B 流式（不启用 thinking，原样转发事件流）`);

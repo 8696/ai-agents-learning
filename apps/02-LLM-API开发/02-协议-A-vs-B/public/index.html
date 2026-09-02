@@ -39,20 +39,62 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // ── thought-text → answer split：从累积文本中抽 <think> 部分 ──
-    function extractThink(raw) {
-      const re = /<think>([\s\S]*?)<\/think>/g;
-      let thinking = "";
-      let answer = "";
-      let lastIdx = 0;
-      let m;
-      while ((m = re.exec(raw)) !== null) {
-        answer += raw.slice(lastIdx, m.index);
-        thinking += m[1];
-        lastIdx = m.index + m[0].length;
+    // ── 协议 A 思考：优先独立字段，否则用 content 里的标记状态机 ──
+    function splitProtocolADelta(delta, state) {
+      const details = Array.isArray(delta?.reasoning_details) ? delta.reasoning_details : [];
+      const pieces = [];
+      for (const d of details) {
+        if (d && typeof d.text === "string" && d.text) pieces.push(d.text);
       }
-      answer += raw.slice(lastIdx);
-      return { thinking, answer };
+      if (pieces.length === 0 && typeof delta?.reasoning_content === "string" && delta.reasoning_content) {
+        pieces.push(delta.reasoning_content);
+      } else if (pieces.length === 0 && typeof delta?.reasoning === "string" && delta.reasoning) {
+        pieces.push(delta.reasoning);
+      } else if (pieces.length === 0 && typeof delta?.thinking === "string" && delta.thinking) {
+        pieces.push(delta.thinking);
+      }
+      if (pieces.length > 0) {
+        let thinking = "";
+        for (const piece of pieces) {
+          if (piece.startsWith(state.reasoningSeen)) {
+            thinking += piece.slice(state.reasoningSeen.length);
+            state.reasoningSeen = piece;
+          } else {
+            thinking += piece;
+            state.reasoningSeen += piece;
+          }
+        }
+        return { thinking, content: typeof delta?.content === "string" ? delta.content : "" };
+      }
+      const raw = typeof delta?.content === "string" ? delta.content : "";
+      if (!raw) return { thinking: "", content: "" };
+      const open = "<think>";
+      const close = "</think>";
+      let thinking = "";
+      let content = "";
+      let cursor = 0;
+      while (cursor < raw.length) {
+        if (state.inThink) {
+          const endIdx = raw.indexOf(close, cursor);
+          if (endIdx === -1) {
+            thinking += raw.slice(cursor);
+            break;
+          }
+          thinking += raw.slice(cursor, endIdx);
+          cursor = endIdx + close.length;
+          state.inThink = false;
+        } else {
+          const startIdx = raw.indexOf(open, cursor);
+          if (startIdx === -1) {
+            content += raw.slice(cursor);
+            break;
+          }
+          content += raw.slice(cursor, startIdx);
+          cursor = startIdx + open.length;
+          state.inThink = true;
+        }
+      }
+      return { thinking, content };
     }
 
     // ── SSE 消费器：返回异步迭代，吐 {payload, raw} ──
@@ -111,9 +153,9 @@
 
       return (
         <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
-          <h2 className="text-base font-semibold">thinking 差异对照（4 组场景，跑一次看全 6 个差异点）</h2>
+          <h2 className="text-base font-semibold">thinking 差异对照（A/B × 开/关，跑一次看全差异）</h2>
           <p className="text-xs text-gray-500">
-            4 组：A 不带 thinking / B 不带 thinking / B 带 thinking budget=100 / B 带 thinking budget=500。
+            4 组：A 不带 / A 带（extra_body adaptive）/ B 不带 / B 带 thinking budget=500。
             一次请求同时跑，约 30–60s。
           </p>
           <div className="flex gap-2 items-center flex-wrap">
@@ -146,7 +188,11 @@
                     <div className="flex justify-between items-center font-semibold">
                       <span>{esc(sc.scenario)}</span>
                       <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                        {sc.protocol}{sc.thinkingParam ? `· budget=${sc.thinkingParam.budget_tokens}` : ""}
+                        {sc.protocol}{sc.thinkingParam
+                          ? (sc.thinkingParam.budget_tokens != null
+                            ? `· budget=${sc.thinkingParam.budget_tokens}`
+                            : `· ${sc.thinkingParam.type}`)
+                          : "· 关"}
                       </span>
                     </div>
                     {sc.error ? (
@@ -240,6 +286,7 @@
           values: scenarios.map((sc) => {
             if (!sc.thinking) return "—";
             if (sc.thinking.location === "embedded_in_content") return <span className="text-red-600">嵌在 content 字符串</span>;
+            if (sc.thinking.location === "reasoning_field") return <span className="text-green-700 font-bold">独立 reasoning_content / reasoning_details</span>;
             if (sc.thinking.location === "separate_block") return <span className="text-green-700 font-bold">独立 type=thinking block</span>;
             return <span className="text-red-600">无 thinking</span>;
           }),
@@ -317,6 +364,7 @@
     // ═════════════════════════════════════════════════════════════
     function AStreamRawPanel({ onStart, onEnd }) {
       const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
+      const [enableThinking, setEnableThinking] = useState(true);
       const [status, setStatus] = useState("idle");
       const [errorMsg, setErrorMsg] = useState("");
       const [lines, setLines] = useState([]);
@@ -325,8 +373,7 @@
       const [meta, setMeta] = useState("");
       const [elapsed, setElapsed] = useState(0);
       const t0Ref = useRef(0);
-      const rawAccumRef = useRef("");
-      const consumedRef = useRef(0);
+      const splitStateRef = useRef({ inThink: false, reasoningSeen: "" });
       const thinkingRef = useRef("");
       const answerRef = useRef("");
       const usageRef = useRef(null);
@@ -341,8 +388,7 @@
         setAnswer("");
         setMeta("");
         setElapsed(0);
-        rawAccumRef.current = "";
-        consumedRef.current = 0;
+        splitStateRef.current = { inThink: false, reasoningSeen: "" };
         thinkingRef.current = "";
         answerRef.current = "";
         usageRef.current = null;
@@ -351,17 +397,14 @@
         onStart();
 
         const flushUI = (kind, chunk, frameIdx) => {
-          const delta = chunk.choices?.[0]?.delta;
-          const deltaContent = delta?.content;
+          const delta = chunk.choices?.[0]?.delta || {};
+          const deltaContent = delta.content;
           const finishReason = chunk.choices?.[0]?.finish_reason;
           const usage = chunk.usage;
-          if (deltaContent) {
-            rawAccumRef.current += deltaContent;
-            const newSlice = rawAccumRef.current.slice(consumedRef.current);
-            const { thinking: tk, answer: an } = extractThink(newSlice);
-            if (tk) thinkingRef.current += tk;
-            if (an) answerRef.current += an;
-            consumedRef.current = rawAccumRef.current.length;
+          const split = splitProtocolADelta(delta, splitStateRef.current);
+          if (split.thinking) thinkingRef.current += split.thinking;
+          if (split.content) answerRef.current += split.content;
+          if (split.thinking || split.content) {
             setThinking(thinkingRef.current);
             setAnswer(answerRef.current);
           }
@@ -371,7 +414,13 @@
           setElapsed(now);
           let summary = "";
           if (kind === "role") summary = `delta.role=${delta?.role || "?"}（无 content）`;
-          else if (kind === "chunk") summary = `Δcontent "${(deltaContent || "").slice(0, 60)}${deltaContent && deltaContent.length > 60 ? "…" : ""}"`;
+          else if (kind === "chunk") {
+            const thinkPreview = (split.thinking || "").slice(0, 40);
+            const contentPreview = (split.content || deltaContent || "").slice(0, 40);
+            summary = thinkPreview
+              ? `Δthinking "${thinkPreview}${split.thinking.length > 40 ? "…" : ""}"${contentPreview ? ` · Δcontent "${contentPreview}"` : ""}`
+              : `Δcontent "${(deltaContent || "").slice(0, 60)}${deltaContent && deltaContent.length > 60 ? "…" : ""}"`;
+          }
           else if (kind === "finish") summary = `finish_reason="${finishReason}", delta.role=${delta?.role || "?"}（无 content）`;
           else if (kind === "usage") {
             const u = usage || {};
@@ -387,7 +436,7 @@
           const res = await fetch("/api/a-stream-raw", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg.trim() }),
+            body: JSON.stringify({ message: msg.trim(), enable_thinking: enableThinking }),
           });
           if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
           for await (const evt of consumeSSE(res)) {
@@ -421,8 +470,8 @@
         <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
           <h2 className="text-base font-semibold">流式协议 A（OpenAI chunk 原样转发：看 role / chunk / finish / usage 四类帧）</h2>
           <p className="text-xs text-gray-500">
-            调 <code>/api/a-stream-raw</code>。A 是「字符串帧流」（每帧一个 OpenAI chunk JSON + meta <code>kind</code>），
-            A 的 thinking 嵌在 <code>delta.content</code> 字符串里（<code>{"<think>"}...{"</think>"}</code>），不在独立 block。
+            调 <code>/api/a-stream-raw</code>。勾选「开思考」会打 <code>extra_body</code>（和 05-思考同一套）；不勾则不带思考参数。
+            思考可能在独立字段，也可能嵌在 <code>delta.content</code> 的 <code>{"<think>"}</code> 标记里。
           </p>
           <div className="flex gap-2 items-center flex-wrap">
             <input
@@ -431,6 +480,14 @@
               placeholder="消息（默认数学题）"
               className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
             />
+            <label className="text-sm flex items-center gap-1 whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={enableThinking}
+                onChange={(e) => setEnableThinking(e.target.checked)}
+              />
+              开思考
+            </label>
             <button
               onClick={run}
               disabled={status === "loading"}

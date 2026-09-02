@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>满参数 · 思考 · 协议 A vs B</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+    integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+    crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap）。
+   注：React 19 移除了 UMD bundle 只发 ESM；§5.3.4 用 React 18 UMD。 -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone **锁定 7.26.4**。
+   8.x 默认 preset-react 是 automatic runtime（输出 import { jsx } from "react/jsx-runtime"），
+   与本规则"完全 ESM 禁用"冲突。7.26.4 默认是 classic runtime（输出 React.createElement）。
+   不要在 script type="text/babel" 块上加 data-presets / data-plugins——Babel 默认行为即可。 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function emptySide() {
+      return {
+        sdk: "",
+        method: "",
+        model: "",
+        baseURL: "",
+        thinking: "",
+        content: "",
+        request: null,
+        frames: [],
+        error: "",
+        thinkingExplain: null,
+        thinkingSources: [],
+        returnShape: "",
+      };
+    }
+
+    const SOURCE_LABEL = {
+      reasoning_details: "独立字段 · choices[0].delta.reasoning_details[].text",
+      reasoning_content: "独立字段 · choices[0].delta.reasoning_content",
+      content_think_tag: "嵌在正文 · choices[0].delta.content 里的 think 标记",
+      "delta.thinking": "独立字段 · content_block_delta.delta.thinking",
+    };
+
+    const SHAPE_LABEL = {
+      separate_field: "单独字段（不在正文 content/text 里）",
+      in_content: "嵌在正文里（用 think 标记包住）",
+      both: "这一轮两种都出现了",
+      none: "这一轮没有收到思考增量",
+    };
+
+    function StatusPill({ status }) {
+      const map = {
+        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
+        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
+        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
+        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
+      };
+      const s = map[status] || map.idle;
+      return (
+        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
+          {s.emoji} {s.text}
+        </span>
+      );
+    }
+
+    function StreamArea({ title, text, hint, tone }) {
+      const box = tone === "think"
+        ? "bg-amber-50 border-amber-200 text-amber-950 italic"
+        : "bg-white border-gray-200";
+      return (
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">{title}</h3>
+          <pre className={`text-sm border rounded p-3 min-h-[88px] whitespace-pre-wrap break-words ${box}`}>
+            {text || hint}
+          </pre>
+        </div>
+      );
+    }
+
+    function JsonBlock({ title, value }) {
+      const text = value === null || value === undefined
+        ? "（空）"
+        : typeof value === "string"
+          ? value
+          : JSON.stringify(value, null, 2);
+      return (
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">{title}</h3>
+          <pre className="text-xs bg-gray-50 border rounded p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all">
+            {text}
+          </pre>
+        </div>
+      );
+    }
+
+    function switchSnippet(side) {
+      const req = side.request;
+      if (!req) return null;
+      if (req.extra_body) {
+        return { extra_body: req.extra_body };
+      }
+      if (req.thinking) {
+        return { thinking: req.thinking, temperature: req.temperature };
+      }
+      return null;
+    }
+
+    function ThinkingMap({ side }) {
+      const explain = side.thinkingExplain;
+      const snippet = switchSnippet(side);
+      const sources = side.thinkingSources || [];
+      const shape = side.returnShape ? (SHAPE_LABEL[side.returnShape] || side.returnShape) : "还在收帧 / 尚未判定";
+      return (
+        <div className="space-y-2 border border-indigo-100 bg-indigo-50 rounded p-3">
+          <h3 className="text-sm font-medium">思考怎么开 · 从哪回来</h3>
+          {explain ? (
+            <p className="text-sm">{explain.howEnabled}</p>
+          ) : (
+            <p className="text-sm text-gray-500">发出请求后，这里会写开启方式和返回位置。</p>
+          )}
+          {explain ? (
+            <p className="text-xs text-gray-600">{explain.splitMeaning}</p>
+          ) : null}
+          <JsonBlock title="这次请求里真正打开思考的字段" value={snippet} />
+          <p className="text-sm">
+            <span className="text-xs text-gray-500 mr-2">这次返回</span>
+            {shape}
+          </p>
+          {sources.length ? (
+            <ul className="text-xs list-disc pl-5 space-y-1">
+              {sources.map((s) => (
+                <li key={s}>{SOURCE_LABEL[s] || s}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-gray-500">还没有思考增量。若正文里也没有 think 标记，就是上游没把思考拆出来。</p>
+          )}
+          {explain && explain.possibleReturns ? (
+            <p className="text-xs text-gray-500">
+              这一协议可能出现的位置：{explain.possibleReturns.join("；")}
+            </p>
+          ) : null}
+        </div>
+      );
+    }
+
+    function SideColumn({ title, side }) {
+      return (
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold">{title}</h3>
+          {side.sdk ? (
+            <p className="text-xs text-gray-500">
+              {side.sdk} · {side.method} · {side.model}
+            </p>
+          ) : null}
+          {side.error ? (
+            <p className="text-sm text-red-600 whitespace-pre-wrap">{side.error}</p>
+          ) : null}
+          <ThinkingMap side={side} />
+          <StreamArea title="思考" text={side.thinking} hint="思考会流式写在这里" tone="think" />
+          <StreamArea title="正文" text={side.content} hint="回答会流式写在这里" tone="body" />
+          <JsonBlock title="原始请求" value={side.request} />
+          <JsonBlock title="原始响应帧" value={side.frames} />
+        </div>
+      );
+    }
+
+    function historyFor(turns, key) {
+      const out = [];
+      for (const turn of turns) {
+        out.push({ role: "user", content: turn.user });
+        const side = turn[key];
+        if (side && (side.content || side.thinking)) {
+          out.push({
+            role: "assistant",
+            content: side.content || "",
+            thinking: side.thinking || "",
+          });
+        }
+      }
+      return out;
+    }
+
+    async function readSse(res, onEvent) {
+      if (!res.body) throw new Error("响应没有 body");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const frame = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) continue;
+          const payload = dataLine.slice(5).trim();
+          if (payload === "[DONE]") continue;
+          let obj;
+          try {
+            obj = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+          onEvent(obj);
+        }
+      }
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [system, setSystem] = useState("你是严谨的助手。先想清楚，再给结论。");
+      const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再给出答案。");
+      const [budget, setBudget] = useState(1024);
+      const [error, setError] = useState("");
+      const [busy, setBusy] = useState(false);
+      const [turns, setTurns] = useState([]);
+
+      useEffect(() => {
+        fetch("/health")
+          .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then(() => setStatus("idle"))
+          .catch((e) => {
+            setStatus("error");
+            setError(e instanceof Error ? e.message : String(e));
+          });
+      }, []);
+
+      const patchLast = (key, updater) => {
+        setTurns((prev) => {
+          if (prev.length === 0) return prev;
+          const next = prev.slice();
+          const last = { ...next[next.length - 1] };
+          last[key] = updater(last[key]);
+          next[next.length - 1] = last;
+          return next;
+        });
+      };
+
+      const consume = async (url, key, messages, signal) => {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages,
+            system: system.trim(),
+            thinking_budget: Number(budget) || 1024,
+          }),
+          signal,
+        });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => null);
+          throw new Error((payload && payload.error) || `HTTP ${res.status}`);
+        }
+        let localError = "";
+        await readSse(res, (obj) => {
+          if (obj.type === "error") localError = obj.error || "上游错误";
+          patchLast(key, (prev) => {
+            const next = { ...prev, frames: prev.frames };
+            if (obj.type === "meta") {
+              next.sdk = obj.sdk;
+              next.method = obj.method;
+              next.model = obj.model;
+              next.baseURL = obj.baseURL;
+              next.request = obj.request;
+              next.thinkingExplain = obj.thinkingExplain || null;
+            } else if (obj.type === "thinking") {
+              next.thinking = prev.thinking + (obj.text || "");
+              if (obj.source && next.thinkingSources.indexOf(obj.source) === -1) {
+                next.thinkingSources = next.thinkingSources.concat([obj.source]);
+              }
+            } else if (obj.type === "thinking-map") {
+              next.thinkingSources = obj.sources || next.thinkingSources;
+              next.returnShape = obj.returnShape || "";
+            } else if (obj.type === "content") {
+              next.content = prev.content + (obj.text || "");
+            } else if (obj.type === "raw") {
+              next.frames = prev.frames.concat([obj.frame]);
+            } else if (obj.type === "error") {
+              next.error = obj.error || "上游错误";
+            }
+            return next;
+          });
+        });
+        return localError;
+      };
+
+      const send = async () => {
+        const text = message.trim();
+        if (!text || busy) return;
+        setBusy(true);
+        setStatus("loading");
+        setError("");
+
+        const messagesA = historyFor(turns, "a").concat([{ role: "user", content: text }]);
+        const messagesB = historyFor(turns, "b").concat([{ role: "user", content: text }]);
+
+        setTurns((prev) => prev.concat([{ user: text, a: emptySide(), b: emptySide() }]));
+        setMessage("");
+
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 120000);
+
+        try {
+          const results = await Promise.allSettled([
+            consume("/api/a-stream", "a", messagesA, ac.signal),
+            consume("/api/b-stream", "b", messagesB, ac.signal),
+          ]);
+          const errs = [];
+          for (const r of results) {
+            if (r.status === "rejected") {
+              const e = r.reason;
+              errs.push(e && e.name === "AbortError" ? "请求超时（120s）或网络中断" : (e instanceof Error ? e.message : String(e)));
+            } else if (r.value) {
+              errs.push(r.value);
+            }
+          }
+          if (errs.length) {
+            setError(errs.join(" · "));
+            setStatus("error");
+          } else {
+            setStatus("ok");
+          }
+        } catch (e) {
+          const msg = e && e.name === "AbortError"
+            ? "请求超时（120s）或网络中断"
+            : (e instanceof Error ? e.message : String(e));
+          setError(msg);
+          setStatus("error");
+        } finally {
+          clearTimeout(timer);
+          setBusy(false);
+        }
+      };
+
+      const resetChat = () => {
+        if (busy) return;
+        setTurns([]);
+        setError("");
+        setStatus("idle");
+        setMessage("23 × 47 等于多少？先一步步想，再给出答案。");
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              满参数 · 思考 · 协议 A vs B
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-500">
+                多轮追问：A / B 各自带着自己的历史再请求。协议 A 会把上一轮思考塞回 assistant；协议 B 只回传正文（没有 signature 的思考块不能原样回传）。
+              </p>
+              <div className="text-sm border rounded p-3 bg-gray-50 space-y-2">
+                <p className="font-medium">开启方式 vs 返回位置（先看这里，跑一轮再对实测）</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>
+                    <strong>协议 A 怎么开：</strong>
+                    顶层没有 thinking，写在 <code>extra_body.thinking.type = adaptive</code>。
+                    <code>reasoning_split: true</code> 只决定思考出现在哪，不是开关。
+                  </li>
+                  <li>
+                    <strong>协议 A 从哪回来：</strong>
+                    拆开了就是独立字段 <code>delta.reasoning_content</code> / <code>reasoning_details</code>；
+                    没拆开就嵌在 <code>delta.content</code> 的 {"<think>"} 标记里。
+                  </li>
+                  <li>
+                    <strong>协议 B 怎么开：</strong>
+                    顶层 <code>thinking: {"{ type: \"enabled\", budget_tokens }"}</code>，默认关。
+                  </li>
+                  <li>
+                    <strong>协议 B 从哪回来：</strong>
+                    永远是独立字段 <code>content_block_delta.delta.thinking</code>，正文走 <code>delta.text</code>，不会混进同一段字符串。
+                  </li>
+                </ul>
+              </div>
+              <label className="block text-sm">
+                System
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={system}
+                  disabled={busy || turns.length > 0}
+                  onChange={(e) => setSystem(e.target.value)}
+                />
+              </label>
+              <label className="block text-sm">
+                {turns.length ? "追问" : "第一句"}
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={3}
+                  value={message}
+                  disabled={busy}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+              </label>
+              <label className="block text-sm w-40">
+                B · thinking budget
+                <input
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  type="number"
+                  min={128}
+                  step={128}
+                  value={budget}
+                  disabled={busy}
+                  onChange={(e) => setBudget(e.target.value)}
+                />
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-gray-900 text-white text-sm disabled:opacity-50"
+                  disabled={busy}
+                  onClick={send}
+                >
+                  {busy ? "请求中…" : (turns.length ? "追问 A 和 B" : "同时打 A 和 B")}
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded border text-sm disabled:opacity-50"
+                  disabled={busy || turns.length === 0}
+                  onClick={resetChat}
+                >
+                  新开会话
+                </button>
+              </div>
+              {error ? <p className="text-sm text-red-600 whitespace-pre-wrap">{error}</p> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-6">
+              {turns.length === 0 ? (
+                <p className="text-sm text-gray-500">还没有对话。发出第一句后，可以继续追问。</p>
+              ) : (
+                turns.map((turn, idx) => (
+                  <article key={idx} className="border rounded p-4 space-y-4">
+                    <p className="text-sm">
+                      <span className="text-xs text-gray-500 mr-2">第 {idx + 1} 轮 · User</span>
+                      {turn.user}
+                    </p>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <SideColumn title="协议 A · OpenAI 兼容" side={turn.a} />
+                      <SideColumn title="协议 B · Anthropic 兼容" side={turn.b} />
+                    </div>
+                  </article>
+                ))
+              )}
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            端口 50205 · 协议 A + B · 模型随 LLM_PROVIDER
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

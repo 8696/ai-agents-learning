@@ -31,7 +31,8 @@ const bodySchema = z.object({
   message: z.string().min(1, "message 不能为空"),
   protocol: z.enum(["A", "B"]),
   system: z.string().optional(),
-  thinking_budget: z.number().int().positive().optional(),
+  enable_thinking: z.boolean().default(true),
+  thinking_budget: z.number().int().positive().default(1024),
 });
 
 function toOpts(body: z.infer<typeof bodySchema>) {
@@ -39,14 +40,11 @@ function toOpts(body: z.infer<typeof bodySchema>) {
     protocol: body.protocol as Protocol,
     message: body.message,
     system: body.system,
-    ...(body.thinking_budget !== undefined
-      ? {
-          thinking: {
-            type: "enabled" as const,
-            budget_tokens: body.thinking_budget,
-          },
-        }
-      : {}),
+    enableThinking: body.enable_thinking,
+    thinking: {
+      type: "enabled" as const,
+      budget_tokens: body.thinking_budget,
+    },
   };
 }
 

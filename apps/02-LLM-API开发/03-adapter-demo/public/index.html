@@ -52,8 +52,8 @@
       return lines.join("\n");
     }
 
-    function buildBody(protocol, budget, system, message) {
-      const body = { message, protocol };
+    function buildBody(protocol, budget, system, message, enableThinking) {
+      const body = { message, protocol, enable_thinking: !!enableThinking };
       if (system.trim()) body.system = system.trim();
       const n = parseInt(budget, 10);
       if (n > 0) body.thinking_budget = n;
@@ -66,6 +66,7 @@
       const [error, setError] = useState("");
 
       const [protocol, setProtocol] = useState("A");
+      const [enableThinking, setEnableThinking] = useState(true);
       const [budget, setBudget] = useState("500");
       const [system, setSystem] = useState("");
       const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再回答。");
@@ -75,6 +76,7 @@
       const [raw, setRaw] = useState("（等待请求）");
 
       const [protocolS, setProtocolS] = useState("A");
+      const [enableThinkingS, setEnableThinkingS] = useState(true);
       const [budgetS, setBudgetS] = useState("500");
       const [systemS, setSystemS] = useState("");
       const [messageS, setMessageS] = useState("23 × 47 等于多少？先一步步想，再回答。");
@@ -110,7 +112,7 @@
           const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(buildBody(protocol, budget, system, msg)),
+            body: JSON.stringify(buildBody(protocol, budget, system, msg, enableThinking)),
           });
           if (!res.ok) {
             const errText = await res.text();
@@ -160,7 +162,7 @@
           const res = await fetch("/api/chat-stream", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(buildBody(protocolS, budgetS, systemS, msg)),
+            body: JSON.stringify(buildBody(protocolS, budgetS, systemS, msg, enableThinkingS)),
           });
           if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
           const reader = res.body.getReader();
@@ -246,7 +248,7 @@
 
               <div>
                 <h2 className="font-semibold mb-2">一次性 · adapter.sendMessage</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-2">
                   <label className="text-xs text-gray-600 flex flex-col gap-1">
                     协议
                     <select
@@ -258,16 +260,25 @@
                       <option value="B">B · Anthropic Messages</option>
                     </select>
                   </label>
+                  <label className="text-xs text-gray-600 flex items-center gap-2 mt-5">
+                    <input
+                      type="checkbox"
+                      checked={enableThinking}
+                      onChange={(e) => setEnableThinking(e.target.checked)}
+                    />
+                    开思考
+                  </label>
                   <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    Thinking Budget（仅 B）
+                    Thinking Budget（仅 B · 开思考时）
                     <input
                       type="number"
                       min="100"
                       max="8000"
                       step="100"
                       value={budget}
+                      disabled={!enableThinking}
                       onChange={(e) => setBudget(e.target.value)}
-                      className="border rounded p-2 text-sm"
+                      className="border rounded p-2 text-sm disabled:opacity-50"
                     />
                   </label>
                   <label className="text-xs text-gray-600 flex flex-col gap-1">
@@ -299,7 +310,7 @@
 
               <div>
                 <h2 className="font-semibold mb-2">流式 · adapter.sendMessageStream</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-2">
                   <label className="text-xs text-gray-600 flex flex-col gap-1">
                     协议
                     <select
@@ -311,16 +322,25 @@
                       <option value="B">B · Anthropic Messages</option>
                     </select>
                   </label>
+                  <label className="text-xs text-gray-600 flex items-center gap-2 mt-5">
+                    <input
+                      type="checkbox"
+                      checked={enableThinkingS}
+                      onChange={(e) => setEnableThinkingS(e.target.checked)}
+                    />
+                    开思考
+                  </label>
                   <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    Thinking Budget（仅 B）
+                    Thinking Budget（仅 B · 开思考时）
                     <input
                       type="number"
                       min="100"
                       max="8000"
                       step="100"
                       value={budgetS}
+                      disabled={!enableThinkingS}
                       onChange={(e) => setBudgetS(e.target.value)}
-                      className="border rounded p-2 text-sm"
+                      className="border rounded p-2 text-sm disabled:opacity-50"
                     />
                   </label>
                   <label className="text-xs text-gray-600 flex flex-col gap-1">

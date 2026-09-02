@@ -5,7 +5,7 @@
 [← 01 AI & LLM 基础认知](../01-AI与LLM基础认知/README.md) · [03 Prompt Engineering →](../03-Prompt-Engineering/README.md)
 
 > **小节进度、验收、本地拆步**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/02-LLM-API开发/0X-XX/README.md` 为准。
-> **代码落点**：`apps/02-LLM-API开发/0X-XX-{短名}/` 各小节最小可运行 Demo（[01-Streaming-SSE](../../../apps/02-LLM-API开发/01-Streaming-SSE/) · [02-协议-A-vs-B](../../../apps/02-LLM-API开发/02-协议-A-vs-B/) · [03-AbortController](../../../apps/02-LLM-API开发/03-AbortController/) · [04-Rate-Limit](../../../apps/02-LLM-API开发/04-Rate-Limit/)）
+> **代码落点**：`apps/02-LLM-API开发/0X-XX-{短名}/` 各小节最小可运行 Demo（[01-Streaming-SSE](../../../apps/02-LLM-API开发/01-Streaming-SSE/) · [02-协议-A-vs-B](../../../apps/02-LLM-API开发/02-协议-A-vs-B/) · [03-AbortController](../../../apps/02-LLM-API开发/03-AbortController/) · [04-Rate-Limit](../../../apps/02-LLM-API开发/04-Rate-Limit/) · [05-思考](../../../apps/02-LLM-API开发/05-思考/)）
 
 ## 小节进度
 
@@ -17,7 +17,8 @@
 | ✅ | [**协议 A vs B**：`chat.completions` 与 `messages.create` 的字段、role、usage 位置](./02-协议-A-vs-B.md) | 能对照说出差异，不要求背全字段 | `OpenAI chat completions vs Anthropic messages API` · 资源清单四家文档对照 | 暂无链接 |
 | ✅ | [**AbortController**：取消后客户端停写、服务端可能仍在生成](./03-AbortController.md) | 知道两边各自发生什么 | `AbortController fetch node` `cancel streaming request` · MDN AbortController · Node fetch 文档 | 暂无链接 |
 | ✅ | [**429 / Rate Limit**：为什么要指数退避；哪些错误不该重试](./04-Rate-Limit.md) | 能解释退避动机、区分可重试 / 不可重试 | `OpenAI rate limit exponential backoff` `API 429 retry` · 厂商 Rate Limit 文档 | 暂无链接 |
-| ✅ | [**本地产出**](./05-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./05-本地产出.md) |
+| ✅ | [**思考 / Thinking**：协议里思考和正文怎么分、怎么开、追问时怎么回传](./05-思考.md) | 能讲清思考≠正文、A/B 怎么开、流式拆哪、追问历史怎么拼 | `extended thinking` `reasoning_split` MiniMax thinking · Anthropic thinking | 暂无链接 |
+| ✅ | [**本地产出**](./06-本地产出.md) | 本页验收 + 学习沉淀 | — | [沉淀](./06-本地产出.md) |
 
 ## 验收
 
@@ -50,3 +51,4 @@
 3. AbortController：`apps/02-LLM-API开发/03-AbortController/` 三端点对照（流到底 / 收 N 帧就停 / 故意不传 signal）
 4. 429 / 超时 / 网络错误三条分支：`apps/02-LLM-API开发/04-Rate-Limit/`（可重试 vs 不可重试；mock 五场景 + 真 API 单次）
 5. 跑 `yarn app:02-02-protocol-ab`，对照协议 A vs B（同 MiniMax Key）
+6. 思考 / 正文拆开展示 + 追问：`apps/02-LLM-API开发/05-思考/`（`yarn app:02-05-thinking`）

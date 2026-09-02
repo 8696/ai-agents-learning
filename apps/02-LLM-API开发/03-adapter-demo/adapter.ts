@@ -9,7 +9,7 @@
  *  - system 位置：A 嵌 messages[0]={role:"system"}；B 顶层 system 参数
  *  - max_tokens：A 可选，B 必填
  *  - content 形态：A string（含 <think> 标记），B block[]
- *  - thinking 位置：A 嵌 content 字符串，B 独立 block
+ *  - thinking 位置：A 可能是 reasoning_* 字段或 content 里的标记；B 独立 block
  *  - usage 命名：A prompt/completion，B input/output；thinking 拆分字段位置也不同
  *  - finish/stop 字段：A choices[0].finish_reason，B 顶层 stop_reason
  *
@@ -38,7 +38,12 @@ export type SendMessageOptions = {
   message: string;
   /** system prompt（可选） */
   system?: string;
-  /** 启用 extended thinking（仅 B 端点支持；A 端点传了会被忽略） */
+  /**
+   * 不传或 true：协议 A 打 extra_body 开思考，协议 B 打顶层 thinking。
+   * false：两边都不带思考参数（对照「不加思考」）。
+   */
+  enableThinking?: boolean;
+  /** 启用思考时协议 B 的 budget；A 走 adaptive，不读这个数 */
   thinking?: ThinkingConfig;
 };
 
@@ -72,12 +77,22 @@ export type UnifiedResponse = {
   model: string;
 };
 
-// ── 4. helper：从 A 端点 string content 里抽 thinking ──
+const THINK_OPEN = "<think>";
+const THINK_CLOSE = "</think>";
+
+type ProtocolADelta = {
+  content?: string | null;
+  reasoning?: string;
+  reasoning_content?: string;
+  reasoning_details?: Array<{ text?: string }>;
+  thinking?: string;
+};
+
+// ── 4. helper：协议 A 思考可能在独立字段，也可能嵌在 content 的标记里 ──
 function extractThinkFromString(content: string): {
   thinking?: string;
   answer: string;
 } {
-  // A 端点：MiniMax-M3 把 thinking 嵌在 content 字符串里用 <think>...</think> 标记
   const thinkRe = /<think>([\s\S]*?)<\/think>/g;
   let thinking = "";
   let answer = "";
@@ -93,6 +108,97 @@ function extractThinkFromString(content: string): {
     thinking: thinking || undefined,
     answer: answer.trim(),
   };
+}
+
+function reasoningTextFromDelta(delta: ProtocolADelta): string {
+  const fromDetails: string[] = [];
+  if (Array.isArray(delta.reasoning_details)) {
+    for (const detail of delta.reasoning_details) {
+      if (typeof detail?.text === "string" && detail.text) fromDetails.push(detail.text);
+    }
+  }
+  if (fromDetails.length > 0) return fromDetails.join("");
+  if (typeof delta.reasoning_content === "string" && delta.reasoning_content) {
+    return delta.reasoning_content;
+  }
+  if (typeof delta.reasoning === "string" && delta.reasoning) return delta.reasoning;
+  if (typeof delta.thinking === "string" && delta.thinking) return delta.thinking;
+  return "";
+}
+
+function extractThinkFromProtocolAMessage(message: ProtocolADelta): {
+  thinking?: string;
+  answer: string;
+} {
+  const split = reasoningTextFromDelta(message);
+  const content = typeof message.content === "string" ? message.content : "";
+  if (split) {
+    return { thinking: split, answer: content.trim() };
+  }
+  return extractThinkFromString(content);
+}
+
+/** 流式：有拆分字段时 content 当正文；没有时才用标记状态机切 content。 */
+function splitProtocolADelta(
+  delta: ProtocolADelta,
+  state: { inThink: boolean; reasoningSeen: string },
+): { thinking: string; content: string } {
+  const split = reasoningTextFromDelta(delta);
+  if (split) {
+    let thinking = "";
+    if (split.startsWith(state.reasoningSeen)) {
+      thinking = split.slice(state.reasoningSeen.length);
+      state.reasoningSeen = split;
+    } else {
+      thinking = split;
+      state.reasoningSeen += split;
+    }
+    return { thinking, content: typeof delta.content === "string" ? delta.content : "" };
+  }
+
+  const raw = typeof delta.content === "string" ? delta.content : "";
+  if (!raw) return { thinking: "", content: "" };
+
+  let thinking = "";
+  let content = "";
+  let cursor = 0;
+  while (cursor < raw.length) {
+    if (state.inThink) {
+      const endIdx = raw.indexOf(THINK_CLOSE, cursor);
+      if (endIdx === -1) {
+        thinking += raw.slice(cursor);
+        break;
+      }
+      thinking += raw.slice(cursor, endIdx);
+      cursor = endIdx + THINK_CLOSE.length;
+      state.inThink = false;
+    } else {
+      const startIdx = raw.indexOf(THINK_OPEN, cursor);
+      if (startIdx === -1) {
+        content += raw.slice(cursor);
+        break;
+      }
+      content += raw.slice(cursor, startIdx);
+      cursor = startIdx + THINK_OPEN.length;
+      state.inThink = true;
+    }
+  }
+  return { thinking, content };
+}
+
+/** 与 05-思考同一套：协议 A 主动开思考并拆字段。不传 budget 也要开，否则换模型就看不见思考。 */
+const PROTOCOL_A_THINKING = {
+  temperature: 1,
+  max_tokens: 2048,
+  extra_body: {
+    thinking: { type: "adaptive" as const },
+    reasoning_split: true,
+    service_tier: "standard" as const,
+  },
+};
+
+function thinkingEnabled(opts: SendMessageOptions): boolean {
+  return opts.enableThinking !== false;
 }
 
 // ── 5. adapter 入口（业务代码只调这个）──
@@ -120,14 +226,14 @@ async function sendViaA(opts: SendMessageOptions): Promise<UnifiedResponse> {
   const r = await aClient.chat.completions.create({
     model: llm.modelA,
     messages,
-    // 协议 A 的 thinking 是 MiniMax 自己实现的"嵌字符串"模式，无需 thinking 参数
     stream: false,
+    ...(thinkingEnabled(opts) ? PROTOCOL_A_THINKING : {}),
   });
 
   // plain 化（zod 实例）
   const plain = JSON.parse(JSON.stringify(r));
-  const text: string = plain.choices?.[0]?.message?.content ?? "";
-  const { thinking, answer } = extractThinkFromString(text);
+  const message = (plain.choices?.[0]?.message ?? {}) as ProtocolADelta;
+  const { thinking, answer } = extractThinkFromProtocolAMessage(message);
   const u = plain.usage ?? {};
 
   return {
@@ -158,16 +264,17 @@ async function sendViaA(opts: SendMessageOptions): Promise<UnifiedResponse> {
 //   - stop_reason 在顶层
 //   - thinking 拆分字段：output_tokens_details.thinking_tokens（MiniMax 兼容端点位置）
 async function sendViaB(opts: SendMessageOptions): Promise<UnifiedResponse> {
-  // Anthropic 协议：max_tokens 必须 ≥ budget_tokens（启用 thinking 时）
-  const maxTokens = opts.thinking
-    ? Math.max(opts.thinking.budget_tokens, 2048)
+  const thinkingOn = thinkingEnabled(opts);
+  const thinkingCfg = opts.thinking ?? { type: "enabled" as const, budget_tokens: 1024 };
+  const maxTokens = thinkingOn
+    ? Math.max(thinkingCfg.budget_tokens + 1024, llm.maxTokensB, 2048)
     : llm.maxTokensB;
 
   const r = await bClient.messages.create({
     model: llm.modelB,
     system: opts.system,
     max_tokens: maxTokens,
-    ...(opts.thinking ? { thinking: opts.thinking } : {}),
+    ...(thinkingOn ? { temperature: 1 as const, thinking: thinkingCfg } : {}),
     messages: [{ role: "user", content: opts.message }],
   });
 
@@ -251,11 +358,10 @@ async function* sendViaAStream(
     messages,
     stream: true,
     stream_options: { include_usage: true },
+    ...(thinkingEnabled(opts) ? PROTOCOL_A_THINKING : {}),
   });
 
-  let rawAccum = "";
-  let consumedLen = 0;
-  let inThink = false; // 状态机：当前是否在 <think>...</think> 块内
+  const state = { inThink: false, reasoningSeen: "" };
   let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number;
     completion_tokens_details?: { reasoning_tokens?: number };
     prompt_tokens_details?: { cached_tokens?: number } } | null = null;
@@ -263,54 +369,14 @@ async function* sendViaAStream(
 
   for await (const chunk of stream) {
     const plain = JSON.parse(JSON.stringify(chunk));
-    const delta = plain.choices?.[0]?.delta?.content;
+    const delta = (plain.choices?.[0]?.delta ?? {}) as ProtocolADelta;
     const finishReason = plain.choices?.[0]?.finish_reason;
     if (plain.usage) usage = plain.usage;
     if (finishReason) stopReason = finishReason;
 
-    if (delta) {
-      rawAccum += delta;
-      // 用状态机扫描 [consumedLen..rawAccum.length]，按 <think>...</think> 切分 yield
-      // 跨 chunk 的 <<think> 和 </think> 必须能正确处理（标记可能跨多帧）
-      let cursor = consumedLen;
-      while (cursor < rawAccum.length) {
-        if (inThink) {
-          // 在 thinking 块内，找 </think>
-          const endIdx = rawAccum.indexOf("</think>", cursor);
-          if (endIdx === -1) {
-            // 还没遇到结束符，把 cursor..end 都当 thinking 待 yield
-            const thinkText = rawAccum.slice(cursor);
-            if (thinkText) yield { type: "thinking", text: thinkText };
-            cursor = rawAccum.length;
-            break;
-          } else {
-            const thinkText = rawAccum.slice(cursor, endIdx);
-            if (thinkText) yield { type: "thinking", text: thinkText };
-            cursor = endIdx + "</think>".length;
-            inThink = false;
-          }
-        } else {
-          // 不在 thinking 块内，找 <<think>
-          const startIdx = rawAccum.indexOf("<think>", cursor);
-          if (startIdx === -1) {
-            // 没找到，全部当 content
-            const contentText = rawAccum.slice(cursor);
-            if (contentText) yield { type: "content", text: contentText };
-            cursor = rawAccum.length;
-            break;
-          } else {
-            // 找到 <<think>，前面是 content
-            if (startIdx > cursor) {
-              const contentText = rawAccum.slice(cursor, startIdx);
-              if (contentText) yield { type: "content", text: contentText };
-            }
-            cursor = startIdx + "<think>".length;
-            inThink = true;
-          }
-        }
-      }
-      consumedLen = rawAccum.length;
-    }
+    const split = splitProtocolADelta(delta, state);
+    if (split.thinking) yield { type: "thinking", text: split.thinking };
+    if (split.content) yield { type: "content", text: split.content };
   }
 
   if (usage) {
@@ -342,15 +408,17 @@ async function* sendViaAStream(
 async function* sendViaBStream(
   opts: SendMessageOptions,
 ): AsyncGenerator<UnifiedDelta> {
-  const maxTokens = opts.thinking
-    ? Math.max(opts.thinking.budget_tokens, 2048)
+  const thinkingOn = thinkingEnabled(opts);
+  const thinkingCfg = opts.thinking ?? { type: "enabled" as const, budget_tokens: 1024 };
+  const maxTokens = thinkingOn
+    ? Math.max(thinkingCfg.budget_tokens + 1024, llm.maxTokensB, 2048)
     : llm.maxTokensB;
 
   const stream = bClient.messages.stream({
     model: llm.modelB,
     system: opts.system,
     max_tokens: maxTokens,
-    ...(opts.thinking ? { thinking: opts.thinking } : {}),
+    ...(thinkingOn ? { temperature: 1 as const, thinking: thinkingCfg } : {}),
     messages: [{ role: "user", content: opts.message }],
   });
 

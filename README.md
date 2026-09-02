@@ -79,7 +79,7 @@ ai-agents-learning/
 | ---- | ---- | ---- |
 | 00 | ✅ 完成 | 环境准备 / Key 安全 / Node ≥22 / 本地产出 |
 | 01 | ✅ 完成 | Token / Context / Transformer / 幻觉 |
-| 02 | ✅ 完成 | Streaming · 协议 A/B · AbortController · Rate-Limit |
+| 02 | ✅ 完成 | Streaming · 协议 A/B · AbortController · Rate-Limit · 思考 |
 | 03 ~ 23 | ⬜ | 见 [docs/06-学习总览.md](docs/06-学习总览.md) |
 
 ## 关键链接

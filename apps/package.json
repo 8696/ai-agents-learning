@@ -20,6 +20,7 @@
     "app:02-03-adapter": "tsx 02-LLM-API开发/03-adapter-demo/server.ts",
     "app:02-03-abort-controller": "tsx 02-LLM-API开发/03-AbortController/server.ts",
     "app:02-04-rate-limit": "tsx 02-LLM-API开发/04-Rate-Limit/server.ts",
+    "app:02-05-thinking": "tsx 02-LLM-API开发/05-思考/server.ts",
     "app:03-01-system-user-assistant-priority": "tsx 03-Prompt-Engineering/01-System-User-Assistant-优先级/server.ts",
     "app:03-02-few-shot-zero-shot": "tsx 03-Prompt-Engineering/02-Few-shot-Zero-shot/server.ts"
   },

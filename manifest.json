@@ -147,8 +147,12 @@
                 "path": "docs/学习模块/02-LLM-API开发/04-Rate-Limit.md"
               },
               {
-                "label": "05-本地产出.md",
-                "path": "docs/学习模块/02-LLM-API开发/05-本地产出.md"
+                "label": "05-思考.md",
+                "path": "docs/学习模块/02-LLM-API开发/05-思考.md"
+              },
+              {
+                "label": "06-本地产出.md",
+                "path": "docs/学习模块/02-LLM-API开发/06-本地产出.md"
               },
               {
                 "label": "README.md",

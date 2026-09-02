@@ -30,6 +30,7 @@
 | `yarn app:02-03-adapter` | `50213` | 适配层：业务只调 sendMessage（同小节第二份 HTTP Demo） |
 | `yarn app:02-03-abort-controller` | `50203` | AbortController 三端点对照 |
 | `yarn app:02-04-rate-limit` | `50204` | 429 / Rate Limit 五场景时间线 |
+| `yarn app:02-05-thinking` | `50205` | 思考 vs 正文流式拆分 + 双协议追问 |
 | `yarn app:03-01-system-user-assistant-priority` | `50301` | System / User / Assistant 优先级 + 多轮 |
 | `yarn app:03-02-few-shot-zero-shot` | `50302` | 同一评价任务：Zero-shot vs Few-shot |
 
