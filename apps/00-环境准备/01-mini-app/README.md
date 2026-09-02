@@ -30,11 +30,11 @@ Node ≥ 22（`apps/.nvmrc` 推荐 22；更高版本也可以）。
 
 ## 三个入口
 
-| 入口 | 文件 | 类型 | 协议 | SDK | 端点 |
-| ---- | ---- | ---- | ---- | --- | ---- |
-| `app:00-01-mini-cli-a` | `src/index.ts` | CLI 流式 | A · OpenAI Chat Completions | `openai` | `api.minimaxi.com/v1` |
-| `app:00-01-mini-cli-b` | `src/index-anthropic.ts` | CLI 流式 | B · Anthropic Messages API | `@anthropic-ai/sdk` | `api.minimaxi.com/anthropic` |
-| `app:00-01-mini-server` | `server.ts` | HTTP + SSE（§5.3 React + koa） | A · OpenAI Chat Completions | `openai` | `api.minimaxi.com/v1` |
+| 入口 | 文件 | 类型 | 协议 | SDK | 端点                               |
+| ---- | ---- | ---- | ---- | --- |------------------------------------|
+| `app:00-01-mini-cli-a` | `src/index.ts` | CLI 流式 | A · OpenAI Chat Completions | `openai` | 当前提供商 Base URL（`apps/.env`） |
+| `app:00-01-mini-cli-b` | `src/index-anthropic.ts` | CLI 流式 | B · Anthropic Messages API | `@anthropic-ai/sdk` | 模型提供商 Base URL（`apps/.env`） |
+| `app:00-01-mini-server` | `server.ts` | HTTP + SSE（§5.3 React + koa） | A · OpenAI Chat Completions | `openai` | 模型提供商 Base URL（`apps/.env`）     |
 
 自定义问题：
 

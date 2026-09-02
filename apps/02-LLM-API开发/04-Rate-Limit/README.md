@@ -39,7 +39,7 @@ BURST=1 yarn app:02-04-rate-limit                          # 上面 + 并发 20 
 
 | 端点 | 行为 | 看什么 | 成本 |
 | --- | --- | --- | --- |
-| `GET /api/real` | 单次真调 MiniMax，套 retry | 真网络耗时（~100~500ms vs mock 的 1ms）/ 真错误结构 / 偶发 retry | ~0.001 元 |
+| `GET /api/real` | 单次真调当前提供商，套 retry | 真网络耗时（~100~500ms vs mock 的 1ms）/ 真错误结构 / 偶发 retry | ~0.001 元 |
 | `GET /api/real-burst?concurrency=20` | 并发 N 个真请求，每个独立套 retry；统计成功/失败/状态码分布 | **真 429 + 真 Retry-After 头** | ~0.02 元（默认 CLI 不跑，浏览器按钮 / `BURST=1` 才跑） |
 
 ## CLI 输出示例（截一段）
@@ -56,15 +56,15 @@ BURST=1 yarn app:02-04-rate-limit                          # 上面 + 并发 20 
 
 ## 浏览器页面看什么
 
-| 按钮 | 看什么 |
-| --- | --- |
-| ① easy | attempt 1 / 2 = 429（黄），attempt 3 = 200（绿）；waitBefore ≥ 500ms（因为 Retry-After: 0.5） |
+| 按钮 | 看什么                                                                                              |
+| --- |-----------------------------------------------------------------------------------------------------|
+| ① easy | attempt 1 / 2 = 429（黄），attempt 3 = 200（绿）；waitBefore ≥ 500ms（因为 Retry-After: 0.5）       |
 | ② chaos × 6 | 6 次连跑，**对比每行的 waitBefore**——jitter 让每次的等待时长带随机偏移；同一 attempt 序号也会不一样 |
-| ③ auth | 只 1 行 attempt，401（蓝），立刻 `NonRetryableError` |
-| ④ forever | 4 行全 429（黄），最终 `RetryExhaustedError`（红） |
-| ⑤ ok | 1 行 200（绿），waitBefore=0 |
-| ⑥ 真 API 单次 | 调一次 MiniMax；通常直接 200 + 真实耗时；偶发网络抖动看到 retry |
-| ⑦ 真 API 并发 20 | 看真 429 + 真 Retry-After 头；每次消耗 token（按需点） |
+| ③ auth | 只 1 行 attempt，401（蓝），立刻 `NonRetryableError`                                                |
+| ④ forever | 4 行全 429（黄），最终 `RetryExhaustedError`（红）                                                  |
+| ⑤ ok | 1 行 200（绿），waitBefore=0                                                                        |
+| ⑥ 真 API 单次 | 调一次模型；通常直接 200 + 真实耗时；偶发网络抖动看到 retry                                         |
+| ⑦ 真 API 并发 20 | 看真 429 + 真 Retry-After 头；每次消耗 token（按需点）                                              |
 
 ## 关键代码
 

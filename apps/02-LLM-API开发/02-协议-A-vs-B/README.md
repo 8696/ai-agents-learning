@@ -39,8 +39,8 @@ yarn app:02-02-protocol-ab    # 等价 tsx 02-LLM-API开发/02-协议-A-vs-B/ser
 
 | 端点 | 协议 | SDK | 流式 | 调 API | 用法 |
 | ---- | ---- | --- | ---- | ------ | ---- |
-| `POST /api/a` | A · OpenAI Chat Completions | `openai` | ✅ SSE | ✅ MiniMax-M3 | 单边流式（curl 直接调；前端面板未展示） |
-| `POST /api/b` | B · Anthropic Messages | `@anthropic-ai/sdk` | ✅ SSE | ✅ MiniMax-M3 | 单边流式（curl 直接调；前端面板未展示） |
+| `POST /api/a` | A · OpenAI Chat Completions | `openai` | ✅ SSE | 当前模型（`llm.modelA`） | 单边流式（curl 直接调；前端面板未展示） |
+| `POST /api/b` | B · Anthropic Messages | `@anthropic-ai/sdk` | ✅ SSE | 当前模型（`llm.modelB`） | 单边流式（curl 直接调；前端面板未展示） |
 | `POST /api/compare` | A + B 同时 | 两个 SDK | ❌ 一次性 | ✅ | 一次性两侧完整 JSON（curl 直接调；前端面板未展示） |
 | `POST /api/think-compare` | **A 不带 + B 不带 + B 带 100 + B 带 500** | 两个 SDK | ❌ 一次性 | ✅ | **thinking 差异对照（4 组一次性，看 6 维度差异）** ← 面板 1 |
 | **`POST /api/a-stream-raw`** | **A 流式** | `openai` | ✅ SSE | ✅ | **协议 A 流式原样转发（role/chunk/finish/usage 四类帧）** ← 面板 2 |

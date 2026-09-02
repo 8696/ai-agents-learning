@@ -66,8 +66,7 @@ async function main() {
     });
   } else {
     console.log(
-      "提示：未返回 usage。可在 MiniMax 国内控制台查看用量：",
-      "https://platform.minimaxi.com/user-center/payment/balance",
+      "提示：未返回 usage。在当前模型提供商对应的控制台查看用量（提供商见 docs/02-怎么用.md §1.2.1）。",
     );
   }
 }

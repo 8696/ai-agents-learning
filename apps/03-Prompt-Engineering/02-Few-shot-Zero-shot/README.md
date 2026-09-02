@@ -24,7 +24,7 @@ yarn app:03-02-few-shot-zero-shot
   → 同一 SYSTEM_PROMPT
      Zero：messages = system + 当前 user
      Few ：messages = system + 4 对假 user/assistant + 当前 user
-  → MiniMax 协议 A（temperature 0）
+  → 模型协议 A（temperature 0）
   → 服务端先剥思考块，再 Zod 判 {label, reason}
   → #output 左右两栏覆盖显示最新一次；hadThinking 标明嘴边是否夹了思考
 ```

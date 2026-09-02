@@ -24,7 +24,7 @@ yarn app:03-04-prompt-versioning-diff
   → 同一 SYSTEM_PROMPT
      v1.0.0：User = body.prompts.v1 + "\n\n问题：" + body.text
      v1.1.0：User = body.prompts.v2 + "\n\n问题：" + body.text
-  → MiniMax 协议 A（temperature 0）
+  → 模型协议 A（temperature 0）
   → 服务端算字符长度 / 是否含推理标记 / 首段 preview
   → #output 左右两栏覆盖显示最新对比 + 顶部黄底提示输出字符数差
 ```

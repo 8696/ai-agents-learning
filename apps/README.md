@@ -26,7 +26,7 @@
 | `yarn app:01-06-embedding` | — | 玩具向量：Token ID 减不出远近，余弦能排出谁近（不调 API） |
 | `yarn app:01-07-temperature` | `50107` | 同一 prompt，温度 0 vs 1.2 |
 | `yarn app:02-01-streaming-sse` | `50201` | SSE 帧长什么样 + 流式 vs 一次性 TTFT 对照 |
-| `yarn app:02-02-protocol-ab` | `50202` | MiniMax-M3 同 Key 跑协议 A vs B |
+| `yarn app:02-02-protocol-ab` | `50202` | 同 Key 跑协议 A vs B（具体模型看 `apps/.env` 的 `LLM_MODEL`） |
 | `yarn app:02-03-adapter` | `50213` | 适配层：业务只调 sendMessage（同小节第二份 HTTP Demo） |
 | `yarn app:02-03-abort-controller` | `50203` | AbortController 三端点对照 |
 | `yarn app:02-04-rate-limit` | `50204` | 429 / Rate Limit 五场景时间线 |
