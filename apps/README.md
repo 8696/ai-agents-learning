@@ -8,7 +8,7 @@
 | - | ------------- |
 | 干什么 | 单条知识点验证 + 模块 00 最小闭环 |
 | 彼此 | 子文件夹互不 import |
-| Key | 只读 `apps/.env` |
+| Key | 只读 `apps/.env`：顶层 `LLM_PROVIDER` + `LLM_MODEL`，各家 Key/Base URL 按提供商分组。Demo 用 `apps/llm.ts` 的 `getLlm()`，不要在小节里写死供应商。 |
 
 **学到该条、判断为「可运行」才建对应文件夹。** 不要提前建空目录。
 
@@ -31,6 +31,7 @@
 | `yarn app:02-03-abort-controller` | `50203` | AbortController 三端点对照 |
 | `yarn app:02-04-rate-limit` | `50204` | 429 / Rate Limit 五场景时间线 |
 | `yarn app:03-01-system-user-assistant-priority` | `50301` | System / User / Assistant 优先级 + 多轮 |
+| `yarn app:03-02-few-shot-zero-shot` | `50302` | 同一评价任务：Zero-shot vs Few-shot |
 
 HTTP 端口公式见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：`5{模块两位}{小节两位}`。不要把 `PORT` 写进共享 `apps/.env`。
 
