@@ -12,26 +12,34 @@ yarn install
 yarn app:02-05-thinking
 ```
 
-需要 `apps/.env` 里当前 `LLM_PROVIDER` 的 Key。不要把 Key 写进本目录。
+需要 `apps/.env` 里 MiniMax / 智谱 / DeepSeek / 千问 **各自**分组的 Key。不跟顶层 `LLM_PROVIDER` 走——四家可以同时打。不要把 Key 写进本目录。
 
 ## 数据流
 
 ```text
-人：第一句 / 追问 → 点发送
-  → 浏览器按协议各自拼 messages（A 含上一轮思考，B 只含正文）
-  → 并发 POST /api/a-stream 与 POST /api/b-stream
-  → SSE：meta + thinking/content 增量 + raw 帧
-  → #output 按轮追加，不覆盖上一轮
+页上官方方言表 ← GET /health（四家 × 协议 A/B：怎么开、怎么关、回哪个字段）
+人：勾选模型 + 开/关思考 → 点发送
+  → 每家并发 POST /api/stream 协议 A 与协议 B
+  → 服务端按该家官方方言组请求（不是写死 MiniMax extra_body）
+  → SSE：meta（这次开关字段）+ thinking/content 增量 + 实测来源
+  → #output 按轮、按模型追加
 ```
 
 ## 当前能做什么
 
-- **Happy path**：同 prompt 流式对照 A/B；每列有「思考怎么开 · 从哪回来」（请求开关字段 + 这次是独立字段还是嵌在正文）；思考区和正文区分开追加；可追问（A/B 各自历史）；原始请求 + 每一帧 JSON 仍可见。
-- **错误处理**：空消息 / 最后一轮不是 user → HTTP 400；上游错误进该列红字；浏览器 120s abort → `#status-pill` 红色。
+- **Happy path**：对照 MiniMax-M3 / glm-5.3 / deepseek-v4-pro / qwen3.8-max 在协议 A、B 上怎么开思考、怎么关、思考在独立字段还是正文。流式拆开思考区 / 正文区；可追问（A/B 各记历史）。顶层 `LLM_PROVIDER` 不用改。
+- **错误处理**：空消息 / 最后一轮不是 user → HTTP 400；该家没 Key → 400；上游错误进该列红字；浏览器 180s abort → `#status-pill` 红色。
 - **Loading**：请求中 pill = 🔄请求中，按钮 `disabled`。
 - **单会话输出区**：`#output` 按轮追加；「新开会话」才清空。
 
-协议 A 的思考可能来自 `reasoning_content` / `reasoning_details`，或 content 里的 think 标记。协议 B 来自 `content_block_delta.delta.thinking`。
+官方要点（页上也有表）：
+
+| 模型 | 协议 A 开/关 | 协议 A 思考回哪 | 协议 B 开/关 | 协议 B 思考回哪 |
+| ---- | ------------ | --------------- | ------------ | --------------- |
+| MiniMax-M3 | `extra_body.thinking`：`adaptive` 开 / `disabled` 关（默认开） | `reasoning_split: true` → 官方应走 `reasoning_details` / `reasoning_content`；否则嵌 `content` 的 think 标记。国内站实测这两键都可能不生效，以页上「这次实测」为准 | 默认关；`thinking.type = adaptive` 开 | 独立块 `delta.thinking` |
+| glm-5.3 | 强制开；`disabled` 会失败，Demo 关思考时跳过 | `delta.reasoning_content` | 强制开；关思考时跳过 | 独立块 `delta.thinking` |
+| deepseek-v4-pro | `extra_body.thinking`：`enabled` / `disabled`（默认开） | `delta.reasoning_content` | 官方 Anthropic 格式没有开关；强度 `output_config.effort` | 独立块 `delta.thinking` |
+| qwen3.8-max | `extra_body.enable_thinking`：true / false（默认开） | `delta.reasoning_content` | `thinking.type = enabled` + `budget_tokens` 开；`disabled` 关 | 独立块 `delta.thinking` |
 
 ## 对应学习沉淀
 

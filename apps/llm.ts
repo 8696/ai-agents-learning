@@ -5,14 +5,14 @@
  *
  * 数据流：
  *   loadRootEnv() 读 apps/.env
- *     → LLM_PROVIDER（minimax | zhipu | custom）选出目录里的一组变量
+ *     → LLM_PROVIDER（minimax | zhipu | deepseek | qwen | custom）选出目录里的一组变量
  *     → LLM_MODEL 可选覆盖该组默认模型
  *     → new OpenAI({ apiKey, baseURL })     协议 A · Chat Completions
  *     → new Anthropic({ apiKey, baseURL })  协议 B · Messages API
  *     → Demo 只用 llm.openai / llm.anthropic / llm.modelA / llm.modelB
  *
  * 为什么存在：
- *   MiniMax、智谱、自定义网关本质都是「一家 Key、两套协议」。
+ *   MiniMax、智谱、DeepSeek、千问、自定义网关本质都是「一家 Key、两套协议」。
  *   SSE / Prompt / 取消这类 Demo 讲的是协议行为，不该在每个 server.ts 里写死 MiniMax。
  *   换线路只改 .env 的 LLM_PROVIDER，不要改小节代码。
  *
@@ -30,7 +30,7 @@ import { z } from "zod";
 import { loadRootEnv } from "./load-root-env.js";
 
 // ── 提供商 id：必须和 apps/.env 里 LLM_PROVIDER 的取值一致 ──
-export const PROVIDER_IDS = ["minimax", "zhipu", "custom"] as const;
+export const PROVIDER_IDS = ["minimax", "zhipu", "deepseek", "qwen", "custom"] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 /**
@@ -92,6 +92,30 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     defaultBaseB: "https://open.bigmodel.cn/api/anthropic",
     defaultModel: "glm-4-flash",
   },
+  deepseek: {
+    label: "DeepSeek",
+    keyEnv: "DEEPSEEK_API_KEY",
+    baseAEnv: "DEEPSEEK_BASE_URL",
+    baseBEnv: "DEEPSEEK_ANTHROPIC_BASE_URL",
+    modelAEnv: "DEEPSEEK_MODEL",
+    modelBEnv: "DEEPSEEK_ANTHROPIC_MODEL",
+    // 官方文档写的是不带 /v1；OpenAI SDK 会拼 /chat/completions
+    defaultBaseA: "https://api.deepseek.com",
+    defaultBaseB: "https://api.deepseek.com/anthropic",
+    defaultModel: "deepseek-v4-flash",
+  },
+  qwen: {
+    label: "千问 DashScope",
+    keyEnv: "QWEN_API_KEY",
+    baseAEnv: "QWEN_BASE_URL",
+    baseBEnv: "QWEN_ANTHROPIC_BASE_URL",
+    modelAEnv: "QWEN_MODEL",
+    modelBEnv: "QWEN_ANTHROPIC_MODEL",
+    // 国内百炼；协议 A 带 /compatible-mode/v1，协议 B 停在 /apps/anthropic（不要再加 /v1）
+    defaultBaseA: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    defaultBaseB: "https://dashscope.aliyuncs.com/apps/anthropic",
+    defaultModel: "qwen-plus",
+  },
   custom: {
     label: "自定义网关",
     keyEnv: "CUSTOM_API_KEY",
@@ -114,8 +138,14 @@ const selectorSchema = z.object({
   LLM_ANTHROPIC_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
 });
 
-// 单次进程只建一套客户端。Demo 里 getLlm() 调多次（health + 业务路由）不该 new 两次 SDK。
+/** 生产线路（不含 custom）。思考 Demo 按家各建客户端，不跟顶层 LLM_PROVIDER。 */
+export const PRODUCTION_PROVIDER_IDS = ["minimax", "zhipu", "deepseek", "qwen"] as const;
+export type ProductionProviderId = (typeof PRODUCTION_PROVIDER_IDS)[number];
+
+// 单次进程只建一套「当前选用」客户端。Demo 里 getLlm() 调多次不该 new 两次 SDK。
 let cached: Llm | undefined;
+/** 按提供商缓存：思考 Demo 要同时打三家，不能和 getLlm() 抢同一个单槽。 */
+const cachedByProvider = new Map<ProviderId, Llm>();
 let loadedEnv = false;
 
 function envTrim(name: string): string {
@@ -153,10 +183,7 @@ function resolveProvider(id: ProviderId): {
  * requireKey=false → 没 Key 返回 null，让 mock 端点仍能起服务（Streaming / Rate-Limit）
  */
 function buildLlm(requireKey: boolean): Llm | null {
-  if (!loadedEnv) {
-    loadRootEnv();
-    loadedEnv = true;
-  }
+  ensureEnvLoaded();
 
   const selector = selectorSchema.parse(process.env);
   const resolved = resolveProvider(selector.LLM_PROVIDER);
@@ -179,11 +206,27 @@ function buildLlm(requireKey: boolean): Llm | null {
     );
   }
 
-  const llm: Llm = {
-    provider: selector.LLM_PROVIDER,
+  return makeLlm(
+    selector.LLM_PROVIDER,
+    resolved,
+    modelA,
+    modelB || modelA,
+    selector.LLM_ANTHROPIC_MAX_TOKENS,
+  );
+}
+
+function makeLlm(
+  id: ProviderId,
+  resolved: ReturnType<typeof resolveProvider>,
+  modelA: string,
+  modelB: string,
+  maxTokensB: number,
+): Llm {
+  return {
+    provider: id,
     model: modelA,
     modelA,
-    modelB: modelB || modelA,
+    modelB,
     // 同 Key 只换 baseURL：这就是「一家提供商、两套协议」
     openai: new OpenAI({
       apiKey: resolved.apiKey,
@@ -196,10 +239,51 @@ function buildLlm(requireKey: boolean): Llm | null {
     baseUrlA: resolved.baseUrlA,
     baseUrlB: resolved.baseUrlB,
     apiKey: resolved.apiKey,
-    maxTokensB: selector.LLM_ANTHROPIC_MAX_TOKENS,
+    maxTokensB,
   };
+}
 
+function ensureEnvLoaded(): void {
+  if (!loadedEnv) {
+    loadRootEnv();
+    loadedEnv = true;
+  }
+}
+
+/** 目录里的显示名（MiniMax / 智谱 GLM / DeepSeek）。 */
+export function getCatalogLabel(id: ProviderId): string {
+  return CATALOG[id].label;
+}
+
+/**
+ * 按提供商建客户端，**不**吃顶层 LLM_MODEL。
+ * 思考 Demo 要同时打 MiniMax / 智谱 / DeepSeek / 千问，不能被 LLM_PROVIDER 拧成一家。
+ * 没 Key / 没模型 id → null，不抛。
+ */
+export function getLlmForProvider(id: ProviderId): Llm | null {
+  ensureEnvLoaded();
+  const hit = cachedByProvider.get(id);
+  if (hit) return hit;
+
+  const selector = selectorSchema.parse(process.env);
+  const resolved = resolveProvider(id);
+  const modelA = resolved.defaultModelA;
+  const modelB = resolved.defaultModelB || modelA;
+  if (!resolved.apiKey || !modelA) return null;
+
+  const llm = makeLlm(id, resolved, modelA, modelB, selector.LLM_ANTHROPIC_MAX_TOKENS);
+  cachedByProvider.set(id, llm);
   return llm;
+}
+
+/** MiniMax / 智谱 / DeepSeek / 千问 里已经填了 Key 的，按目录顺序返回。 */
+export function listProductionLlms(): Llm[] {
+  const out: Llm[] = [];
+  for (const id of PRODUCTION_PROVIDER_IDS) {
+    const llm = getLlmForProvider(id);
+    if (llm) out.push(llm);
+  }
+  return out;
 }
 
 /**

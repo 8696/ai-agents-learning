@@ -8,7 +8,7 @@
  *   本文件位于 apps/load-root-env.ts
  *     → 算出 apps/ 绝对路径
  *     → dotenv 读 apps/.env
- *     → 写入 process.env（MINIMAX_* / ZHIPU_* / CUSTOM_* / LLM_PROVIDER …）
+ *     → 写入 process.env（MINIMAX_* / ZHIPU_* / DEEPSEEK_* / QWEN_* / CUSTOM_* / LLM_PROVIDER …）
  *     → getLlm() 再按 LLM_PROVIDER 挑选其中一组
  *
  * 为什么单独拆这一层：

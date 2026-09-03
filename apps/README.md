@@ -8,7 +8,7 @@
 | - | ------------- |
 | 干什么 | 单条知识点验证 + 模块 00 最小闭环 |
 | 彼此 | 子文件夹互不 import |
-| Key | 只读 `apps/.env`：顶层 `LLM_PROVIDER` 切家、顶层 `LLM_MODEL` 覆盖该家默认模型；各家 Key/Base URL/默认模型按分组（`MINIMAX_*` / `ZHIPU_*` / `CUSTOM_*`）。Demo 用 `apps/llm.ts` 的 `getLlm()` / `getLlmOptional()`，**不要在小节里写死供应商**。新增一家提供商：[AGENTS.md §5.0.x](../AGENTS.md#50x-扩展-llm-提供商catalog)——`apps/llm.ts` 的 `CATALOG` 加项 + `apps/.env.example` 加段 |
+| Key | 只读 `apps/.env`：顶层 `LLM_PROVIDER` 切家、顶层 `LLM_MODEL` 覆盖该家默认模型；各家 Key/Base URL/默认模型按分组（`MINIMAX_*` / `ZHIPU_*` / `DEEPSEEK_*` / `QWEN_*` / `CUSTOM_*`）。Demo 用 `apps/llm.ts` 的 `getLlm()` / `getLlmOptional()`，**不要在小节里写死供应商**。新增一家提供商：[AGENTS.md §5.0.x](../AGENTS.md#50x-扩展-llm-提供商catalog)——`apps/llm.ts` 的 `CATALOG` 加项 + `apps/.env.example` 加段 |
 
 **学到该条、判断为「可运行」才建对应文件夹。** 不要提前建空目录。
 
@@ -30,7 +30,7 @@
 | `yarn app:02-03-adapter` | `50213` | 适配层：业务只调 sendMessage（同小节第二份 HTTP Demo） |
 | `yarn app:02-03-abort-controller` | `50203` | AbortController 三端点对照 |
 | `yarn app:02-04-rate-limit` | `50204` | 429 / Rate Limit 五场景时间线 |
-| `yarn app:02-05-thinking` | `50205` | 思考 vs 正文流式拆分 + 双协议追问 |
+| `yarn app:02-05-thinking` | `50205` | 四家官方思考方言（MiniMax / 智谱 / DeepSeek / 千问）× 协议 A/B：怎么开、怎么关、回哪个字段 |
 | `yarn app:03-01-system-user-assistant-priority` | `50301` | System / User / Assistant 优先级 + 多轮 |
 | `yarn app:03-02-few-shot-zero-shot` | `50302` | 同一评价任务：Zero-shot vs Few-shot |
 | `yarn app:03-04-prompt-versioning-diff` | `50304` | 一字之差：v1.0.0 vs v1.1.0 看行为影响 |

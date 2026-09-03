@@ -146,8 +146,7 @@ router.post("/api/json-mode", async (ctx: Context) => {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`  /api/json-mode error: ${msg}`);
-    ctx.status = 500;
-    ctx.body = { error: msg };
+    writeUpstreamError(ctx, err);
   }
 });
 
@@ -181,7 +180,6 @@ router.post("/api/structured-output", async (ctx: Context) => {
       model: llm.modelA,
       response_format: {
         type: "json_schema",
-        // OpenAI strict 的 json_schema 容器：name + schema + strict
         json_schema: {
           name: "Intent",
           schema: IntentJsonSchema,
@@ -191,7 +189,8 @@ router.post("/api/structured-output", async (ctx: Context) => {
       messages: [
         {
           role: "system",
-          content: "按用户的意图返回结构化结果。",
+          // 显式含 "JSON"——兼容 DeepSeek 的 A2 prompt-must-contain-json 规则
+          content: "请以 JSON 格式返回结构化结果。",
         },
         { role: "user", content: prompt },
       ],
@@ -216,8 +215,7 @@ router.post("/api/structured-output", async (ctx: Context) => {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`  /api/structured-output error: ${msg}`);
-    ctx.status = 500;
-    ctx.body = { error: msg };
+    writeUpstreamError(ctx, err);
   }
 });
 
@@ -263,13 +261,11 @@ router.post("/api/strict-rejected", async (_ctx: Context) => {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.log(`  /api/strict-rejected 拿到预期 400: ${msg.slice(0, 300)}`);
-    _ctx.status = 400;
-    _ctx.body = {
+    writeUpstreamError(_ctx, err, {
       mode: "json_schema_strict",
       rejected: true,
       // 把 OpenAI 报错原文回前端——它写得非常具体，会精确列出"哪条属性违反哪条 strict 规则"
-      error: msg,
-    };
+    });
   }
 });
 
@@ -344,6 +340,25 @@ function analyze(
 }
 
 // ── 7) 启动 ────────────────────────────────────────────────────────────────────
+// ── 7) helpers ────────────────────────────────────────────────────────────────
+// 错误回写：OpenAI / Anthropic SDK 抛错时都带 .status（HTTP 状态码）。
+// 之前一律 ctx.status = 500 把上游 400/401/429 全包了，watchdog 看不到真错。
+// 透传上游状态码，并把 upstreamStatus 一并返回给前端。
+function writeUpstreamError(
+  ctx: Context,
+  err: unknown,
+  extraBody: Record<string, unknown> = {},
+): void {
+  const msg = err instanceof Error ? err.message : String(err);
+  const upstreamStatus =
+    typeof err === "object" && err !== null && "status" in err &&
+    typeof (err as { status?: unknown }).status === "number"
+      ? (err as { status: number }).status
+      : undefined;
+  ctx.status = upstreamStatus ?? 500;
+  ctx.body = { error: msg, upstreamStatus: upstreamStatus ?? null, ...extraBody };
+}
+
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));

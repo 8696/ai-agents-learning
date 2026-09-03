@@ -171,8 +171,7 @@ router.post("/api/text", async (ctx: Context) => {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`  /api/text error: ${msg}`);
-    ctx.status = 500;
-    ctx.body = { error: msg };
+    writeUpstreamError(ctx, err);
   }
 });
 
@@ -253,8 +252,7 @@ router.post("/api/tool-use", async (ctx: Context) => {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`  /api/tool-use error: ${msg}`);
-    ctx.status = 500;
-    ctx.body = { error: msg };
+    writeUpstreamError(ctx, err);
   }
 });
 
@@ -274,6 +272,7 @@ router.post("/api/tool-rejected", async (_ctx: Context) => {
   );
 
   try {
+    // ⑥ 是 diagnostic endpoint：故意走最强档，看 provider 怎么拒 / 怎么过
     const res = await llm.anthropic.messages.create({
       model: llm.modelB,
       max_tokens: llm.maxTokensB,
@@ -315,12 +314,33 @@ router.post("/api/tool-rejected", async (_ctx: Context) => {
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    _ctx.status = 500;
-    _ctx.body = { mode: "tool_use_forced", error: msg };
+    console.log(`  /api/tool-rejected 拿到错: ${msg.slice(0, 300)}`);
+    writeUpstreamError(_ctx, err, {
+      mode: "tool_use_forced",
+      rejected: true,
+    });
   }
 });
 
 // ── 6) helpers ────────────────────────────────────────────────────────────────
+// ── 6) helpers ────────────────────────────────────────────────────────────────
+// 错误回写：OpenAI / Anthropic SDK 抛错时都带 .status（HTTP 状态码）。
+// 之前一律 ctx.status = 500 把上游 400/401/429 全包了，watchdog 看不到真错。
+// 透传上游状态码，并把 upstreamStatus 一并返回给前端。
+function writeUpstreamError(
+  ctx: Context,
+  err: unknown,
+  extraBody: Record<string, unknown> = {},
+): void {
+  const msg = err instanceof Error ? err.message : String(err);
+  const upstreamStatus =
+    typeof err === "object" && err !== null && "status" in err &&
+    typeof (err as { status?: unknown }).status === "number"
+      ? (err as { status: number }).status
+      : undefined;
+  ctx.status = upstreamStatus ?? 500;
+  ctx.body = { error: msg, upstreamStatus: upstreamStatus ?? null, ...extraBody };
+}
 function stripWrap(raw: string): string {
   // 与协议 A 那侧共用的剥离链：剥掉 <think> / ```fence / 末尾省略号
   let s = raw.trim();

@@ -9,10 +9,10 @@
   - [Anthropic Messages API · tool_use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
   - [Anthropic 协议 A 兼容 base URL 实测](https://api.minimaxi.com/anthropic)
   - [json-schema.org](https://json-schema.org) · 上一条沉淀复习用
-- **状态**：Demo 已落（协议 A + 协议 B 两条） / 沉淀已写（2026-09-03）· 待勾 ✅
+- **状态**：Demo 已落（协议 A + 协议 B 两条）/ 沉淀已写（2026-09-03）· 待勾 ✅
 - **Demo**：
-  - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/`（CLI / 端口 `50402`，`yarn app:04-02-json-mode-vs-structured-output`）
-  - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/`（CLI / 端口 `50412`，`yarn app:04-02-anthropic-tool-use`；与上一份 HTTP Demo 错开 +10）
+  - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/`（端口 `50402`，`yarn app:04-02-json-mode-vs-structured-output`）
+  - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/`（端口 `50412`，`yarn app:04-02-anthropic-tool-use`；与上一份 HTTP Demo 错开 +10）
   - 详见 §5.2 Demo 判断块
 
 > 章节随这条知识切，不套固定九节。覆盖：协议 A/B 全景 → 机制数据怎么走 → 翻车点 → 6 路例子 → 易混 → 怎么选用 → 取舍 → 踩坑（本 demo 实测数据）→ 仓库内约定 → 追问过 → 过关自检 → 还没搞懂。
@@ -366,38 +366,34 @@ const IntentAnthropicSchema = {
 
 **反模式**：每个 provider 各维护一份 schema → 改一处漏五处 → 上线后模型按"过时"schema 输出 → 跟你 Zod 永远对不上。
 
-### 4. Provider Profile（关键的工程产物）
+### 4. 生产经验：跨 provider / 跨协议时的"隐藏规则"
 
-```ts
-type ModelTier = "A1" | "A2" | "A3" | "B1" | "B2" | "B3";
+> 这一节保留**踩坑后总结出的"经验"**——不做独立模块、不写"Provider Profile"代码。server 当前端点直接 hardcode 端点参数，按本节 + §踩坑 #14-#16 反着查"必须避开的雷"。生产上落地 Provider Profile 是不是要的另说，但 demo 这层先保持简单。
 
-const MODEL_PROFILES: Record<string, {
-  protocol: "A" | "B";
-  maxUsefulTier: ModelTier;   // 实际能用的最强档（不是文档说的）
-  fallback: ModelTier;        // 该档失败时降级到
-  notes?: string;
-}> = {
-  "gpt-4o-2024-08-06":     { protocol: "A", maxUsefulTier: "A3", fallback: "A2" },
-  "o3-mini":               { protocol: "A", maxUsefulTier: "A3", fallback: "A2", notes: "夹 <think>" },
-  "claude-3-7-sonnet":     { protocol: "B", maxUsefulTier: "B3", fallback: "B2" },
-  "deepseek-chat":         { protocol: "A", maxUsefulTier: "A2", fallback: "A1", notes: "reasoner 必夹 <think>" },
-  "minimax-M3":            { protocol: "A", maxUsefulTier: "A2", fallback: "A1", notes: "strict 被 silently ignored；可切 B" },
-  "minimax-M3-anthropic":  { protocol: "B", maxUsefulTier: "B3", fallback: "B2", notes: "5/5 ✓（本 demo 实证）" },
-  "qwen-max":              { protocol: "A", maxUsefulTier: "A2", fallback: "A1" },
-};
+#### 4.1 system prompt 必须含协议专属关键词
 
-// 选档
-function pickTier(model: string, opts: { strict: boolean }): ModelTier {
-  const p = MODEL_PROFILES[model];
-  if (!p) return "A2";                                                  // 未知 model 不强求 strict
-  if (!opts.strict) return p.maxUsefulTier;
-  return p.maxUsefulTier === "A3" || p.maxUsefulTier === "B3"
-    ? p.maxUsefulTier
-    : p.fallback;
-}
-```
+两协议都有"看似无关、实则必需"的关键词要求：
 
-> **原则**：未知 model **默认降到 A2**——别给没验证过的 provider 强档。
+| 协议 | 关键词 | 缺失时表现 | 修法 |
+| --- | --- | --- | --- |
+| **协议 A** | system message 含 `json` 字样（"JSON" 也算；中文"JSON" 也算） | DeepSeek-V4-Pro 实测：HTTP 400 `Prompt must contain the word 'json' in some form to use 'response_format' of type 'json_object'` | 显式写一句 `"请以 JSON 格式返回结构化结果。"` |
+| **协议 B**（Anthropic SDK） | `thinking: { type: "disabled" }`（如果模型是 reasoning-capable） | DeepSeek-Reasoner 实测：HTTP 400 `Thinking mode does not support this tool_choice` | 调用 `messages.create` 时显式加这一行 |
+
+#### 4.2 两协议 A3 / B3 的"物理不可用"清单（不需要 Provider Profile 也记住）
+
+- **协议 A** `response_format: { type: "json_schema", strict: true }` —— DeepSeek 返 400 "type is unavailable now"；MiniMax-M3 silently ignored；只有 OpenAI 自己做真 token-mask。
+- **协议 B** `tool_choice: { type: "tool", name }` 强制调工具 —— DeepSeek-Reasoner 返 400 "Thinking mode does not support this tool_choice"；其它 reasoning 模型类似。
+
+**结果**：在不能控制 provider 的前提下，**这两个最强档**几乎一定失败，落到 A2 / B2 已经是上限；要真守 schema 仍需 Zod 后置（[§踩坑 #3](#踩坑本-demo-实证数据逐条编号)）。
+
+#### 4.3 MiniMax-M3 silent ignore 比 DeepSeek loud reject 更危险
+
+| Provider | A3 strict 失败行为 | 信号强度 |
+| --- | --- | --- |
+| **MiniMax-M3** | API 返 HTTP 200，模型自由发挥——schema 完全没校验 | ❌ **silent ignore**——最危险 |
+| **DeepSeek** | API 返 HTTP 400 `"type is unavailable now"` | ✅ **loud reject**——好 |
+
+**判断**："silent ignore 比 loud reject 危险 100 倍"——loud reject 立刻知道路径不通降级；silent ignore 看上去"成功"实际 schema 没校验。所以 **MiniMax-M3 经验**值得单独记（§踩坑 #4）。
 
 ### 5. 多模型同时用 · 4 种范式
 
@@ -481,6 +477,9 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 11. **JSX 文本里 `<` 必须 `{"<"}` 转义**。 Babel 把 `<think>` 当成新 JSX 标签，找不到 closing tag 直接 break。`apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/index.html` 的 `夹 <think>` 第一次实测踩坑——按 §5.3.4 规则改成 `{"<think>"}` 即可。
 12. **条二份 HTTP Demo 的端口 vs 脚本名规则**。 §5.3.3 那句"小节两位 `+10`"措辞模糊——读起来像脚本名也要带 `+10`，**实际仓库既有样本（`02-03-abort-controller` + `02-03-adapter`，端口 `50203` + `50213`）证明脚本名沿用真实小节号**，**只有端口错开**。本 demo 第二份 HTTP Demo 原本命名为 `app:04-12-anthropic-tool-use`，已修正为 `app:04-02-anthropic-tool-use`，端口仍 `50412`。
 13. **协议 B 没有"JSON Mode"等价字段**。 协议 A 的 `json_object` 在 B 上没有对位字段。协议 B 唯一进入结构化路径的方法是 `tools + tool_choice`。**`tools` 是协议 B 的"闸的容器"**，不是一个开关。
+14. **thinking 模式与 tool_choice 是物理冲突**。 OpenAI o 系列 / DeepSeek-Reasoner / Anthropic extended thinking 等 **reasoning 模型** 在 thinking 路径下，**B3 强制 tool_choice 会被 HTTP 400 拒绝**，原文 `Thinking mode does not support this tool_choice`（DeepSeek-Reasoner 实证）。A3 strict 同理受 token-mask 限制，reasoning 模型一般拿不到 A3。**修法**：(a) 协议 B 显式 `thinking: { type: "disabled" }`（Anthropic SDK 顶层字段）；(b) 协议 A 没法关，只能换非 reasoning 模型；(c) 生产上落地 Provider Profile 时要标 `thinking` 字段、reasoning 模型上把 A3/B3 自动降档到 A2/B2。**§4.1 / §4.2** 是这条对应的代码与判定清单。
+15. **adapter 不能把上游 4xx 都包成 500**。 `ctx.status = 500` 把上游 HTTP 400 / 401 / 429 全掩盖了，watchdog 看到的全是 500、看不到真正失败。**修法**：catch 块从上游 SDK 错误对象上读 `.status` 字段（OpenAI `APIError.status` / Anthropic `APIError.status`），透传 `ctx.status = upstreamStatus ?? 500`，**body 加 `upstreamStatus` 字段给前端**。本 demo 两个 server.ts 已加 `writeUpstreamError()` helper 并替换所有 6 个 catch 块。
+16. **DeepSeek A2 隐藏规则：prompt must contain "json"**。 即便 `response_format: { type: "json_object" }` 已经被 provider 接受，DeepSeek-V4-Pro 实测会再校验一层：**请求的 messages 里必须出现 "json" 字样**（"JSON"、"json" 都算，**中文"JSON"也算**），否则返 `HTTP 400 Prompt must contain the word 'json' in some form to use 'response_format' of type 'json_object'`。**修法**：保证 `system` 消息含 "JSON" 二字（"按用户的意图返回 JSON" 即可；不写也几乎所有 prompt 自然带，但生产代码还是显式）。这是**第 5 类 Provider 隐藏规则**（与 strict 不可用、thinking 冲突、protocol B3 模型拒调、`thinking` 字段未配是并列）；前两类由 profile 治理（参见 §4 经验），这一类要在 `system` 内容里**契约式**含关键词——不能只靠 profile。
 
 ---
 
@@ -527,6 +526,8 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 - **「这个 script 为什么写成 `04-12-...`」** → 这是 §5.3.3 措辞模糊踩坑：本应 `app:04-02-...`，**只有端口错开**——印证既有 `02-03-abort-controller` + `02-03-adapter` / `50203` + `50213` 样本。
 - **「总结一下这两个协议的各种方式……」** → 沉淀的核心内容：6 路全景（A1/A2/A3 + B1/B2/B3）；协议 A vs B 根本差异；决策树 + 矩阵；各 Provider 实测；prompt-only 路单独说明；本 demo 实测数据并入踩坑。
 - **「不同模型不同国产/海外差异更大，生产多个模型怎么办」** → 沉淀「延伸 · 多协议 × 多模型 · 生产的层叠防御」整节：5 层防御（每层假设上一层失败）+ Schema 单一来源 + Provider Profile 表 + 多模型 4 范式 + Protocol Adapter 抽象 + Repair loop 示例 + 8 条生产清单 + 仓库位置地图。**这是当前条之外**但与本条强相关的内容——主轴答案在模块 23，本节立骨架 + 指路。
+- **「DeepSeek 模型 协议 A：`response_format.json_schema` HTTP 400 `"type is unavailable now"`」+ 「协议 B：`tool_choice` HTTP 400 `"Thinking mode does not support this tool_choice"`」** → 两错一起沉淀：(a) Provider Profile 必须有 `thinking: "always_on" | "off_by_default" | "configurable"` 字段；`pickTier()` 在 `always_on` 模型上自动降一档；(b) `MODEL_PROFILES` 行更新：`deepseek-chat` 标 `off_by_default` + notes `"reasoning strict 暂未开放"`；`deepseek-reasoner` 标 `always_on` + notes `"HTTP 400 'Thinking mode does not support this tool_choice'"`；`claude-3-7-sonnet` 标 `configurable` + notes `"用 tool_choice 时显式 thinking:{type:'disabled'}"`；(c) §4.1 增加协议 B 显式关 thinking 的代码示例；(d) `apps/.../*/server.ts` 加 `writeUpstreamError(ctx, err)` helper，所有 6 个 catch 块透传 `upstreamStatus` 字段而不是包 500。这条实证直接进了踩坑 #14 和 #15。
+- **（历史）Provider Profile 真接 + DeepSeek 实证：0 个 400（已撤回 2026-09-03）** → 一度把 `apps/model-profile.ts` 共享模块（含 `MODEL_PROFILES` 13 行 / `FUZZY` 9 条 / `pickTier` / `planProtocolA` / `planProtocolB`）+ A→B tier mapping helper 都接进两端 server，并加 `/api/profile` 端点；实测 A 列 5/5 Zod ✓、B 列 8/10 Zod ✓，0 个 400。后来按"回到最简单版本"撤回——`apps/model-profile.ts` 删除、两端 server 回到 hardcode `response_format` / `tools` + `tool_choice`、剖面见 §4 经验列表。**仍保留的实证结论**：DeepSeek A2 prompt-must-contain-json（[踩坑 #16](#踩坑本-demo-实证数据逐条编号)）+ 思考模式与 tool_choice 不兼容（[踩坑 #14](#踩坑本-demo-实证数据逐条编号)）+ 上游 4xx 别都包 500（[踩坑 #15](#踩坑本-demo-实证数据逐条编号)）——这三条作为 Provider Profile 概念的心智模型保留，不再写独立代码模块。
 
 ---
 
@@ -566,8 +567,14 @@ Demo 判断
 - 理由：要看见"两协议 × 6 档"的可观察对照——同 5 用例 × 同 prompt × 双协议；
        还要看见协议 A3 ⑥ schema 不严格 → API 400 的实装差异；
        和协议 B3 ⑥ prompt 诱导模型拒调工具这个失败行为的实装。
+- 错误传播：所有 catch 走 `writeUpstreamError(ctx, err)` helper，透传上游 HTTP 状态码（[踩坑 #15](#踩坑本-demo-实证数据逐条编号)）
+- DeepSeek 兼容：协议 A system prompt 含 "JSON" 关键字（[踩坑 #16](#踩坑本-demo-实证数据逐条编号)）
 - yarn typecheck：✅ 过
-- 浏览器验证：50402 / 50412 各自跑过 5 用例 + ⑥
+- 浏览器验证：
+  · 50402（MiniMax-M3 原跑）：5 用例 × 2 mode；JSON Mode 5/5 Zod ✓；Structured Output strict 0 个 Zod ✓（MiniMax-M3 silently ignored strict，模型自由发挥）
+  · 50412（MiniMax-M3 原跑）：5 用例 × 2 mode；text 路径 5/5 Zod ✓；tool-use 路径 4/5 Zod ✓（① 5/5、⑤ 5/5 OK，② ③ ④ 模型层输给 prompt）
+  · 50402（DeepSeek-V4-Pro 实跑）：JSON Mode 5/5 Zod ✓；Structured Output 0/5 Zod ✓（A3 strict 不可用被 400 拒，⑥ strict-rejected 同样返 400）
+  · 50412（DeepSeek-V4-Pro 实跑）：text 路径 4/5 Zod ✓；tool-use 路径 5/5 Zod ✓（B3 强 tool_choice 仍 OK）；⑥ tool-rejected 返 400 'Thinking mode does not support this tool_choice'
 - 与 start 预告：一致
 ```
 

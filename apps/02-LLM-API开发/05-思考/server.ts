@@ -1,12 +1,11 @@
 /**
  * 模块 02 · 05 思考 · Demo（§5.3 React + koa）
  *
- * 职责：同 prompt 并发打满两套协议参数并开启思考；流式把思考 / 正文拆开推到页面，
- *       同时把发给 SDK 的请求体和每一帧原始 JSON 摊开；支持按协议分历史追问。
+ * 职责：按 MiniMax-M3 / glm-5.3 / deepseek-v4-pro 各自官方方言开/关思考，
+ *       协议 A、B 流式把思考 / 正文拆开推到页面；UI 先展示官方字段，再标这一轮实测位置。
  *   GET  /                 public/index.html
- *   GET  /health           { ok, a, b, port }
- *   POST /api/a-stream     协议 A SSE（messages 含多轮）
- *   POST /api/b-stream     协议 B SSE（messages 含多轮）
+ *   GET  /health           四家是否就绪 + 官方方言卡片
+ *   POST /api/stream       { provider, protocol, thinking_on, messages, … } SSE
  *
  * 入口：yarn app:02-05-thinking → tsx server.ts
  */
@@ -18,9 +17,21 @@ import type { Context, Next } from "koa";
 import type { ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { getLlm, logLlmConfig } from "../../llm.js";
+import {
+  getCatalogLabel,
+  getLlmForProvider,
+  listProductionLlms,
+  PRODUCTION_PROVIDER_IDS,
+  type Llm,
+  type ProductionProviderId,
+} from "../../llm.js";
+import {
+  officialCards,
+  planProtocolA,
+  planProtocolB,
+  type DialectCard,
+} from "./thinking-dialect.js";
 
-const llm = getLlm();
 const PORT = z.coerce.number().int().positive().default(50205).parse(process.env.PORT);
 
 const turnSchema = z.object({
@@ -30,15 +41,24 @@ const turnSchema = z.object({
 });
 
 const bodySchema = z.object({
-  /** 兼容第一轮只发一句；有 messages 时以 messages 为准 */
+  provider: z.enum(PRODUCTION_PROVIDER_IDS),
+  protocol: z.enum(["A", "B"]),
+  thinking_on: z.boolean().default(true),
+  reasoning_split: z.boolean().default(true),
   message: z.string().optional(),
   system: z.string().optional(),
-  thinking_budget: z.number().int().positive().default(1024),
   messages: z.array(turnSchema).optional(),
 });
 
 type ChatTurn = z.infer<typeof turnSchema>;
-type Body = { system: string; thinking_budget: number; messages: ChatTurn[] };
+type StreamBody = {
+  provider: ProductionProviderId;
+  protocol: "A" | "B";
+  thinkingOn: boolean;
+  reasoningSplit: boolean;
+  system: string;
+  messages: ChatTurn[];
+};
 
 const THINK_OPEN = "<think>";
 const THINK_CLOSE = "</think>";
@@ -56,7 +76,7 @@ function toPlain(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value));
 }
 
-function parseBody(ctx: Context): Body | null {
+function parseBody(ctx: Context): StreamBody | null {
   const parsed = bodySchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
@@ -70,8 +90,11 @@ function parseBody(ctx: Context): Body | null {
     return null;
   }
   return {
+    provider: parsed.data.provider,
+    protocol: parsed.data.protocol,
+    thinkingOn: parsed.data.thinking_on,
+    reasoningSplit: parsed.data.reasoning_split,
     system: parsed.data.system?.trim() || "你是严谨的助手。先想清楚，再给结论。",
-    thinking_budget: parsed.data.thinking_budget,
     messages,
   };
 }
@@ -108,32 +131,43 @@ const router = new Router();
 app.use(bodyParser());
 
 router.get("/health", (ctx: Context) => {
+  const ready = listProductionLlms();
+  const readyIds = new Set(ready.map((item) => item.provider));
   ctx.body = {
     ok: true,
     port: PORT,
-    provider: llm.provider,
-    a: { model: llm.modelA, baseURL: llm.baseUrlA, sdk: "openai" },
-    b: {
-      model: llm.modelB,
-      baseURL: llm.baseUrlB,
-      sdk: "@anthropic-ai/sdk",
-      maxTokens: llm.maxTokensB,
-    },
+    providers: PRODUCTION_PROVIDER_IDS.map((id) => {
+      const llm = getLlmForProvider(id);
+      const cards = officialCards(id);
+      return {
+        id,
+        label: getCatalogLabel(id),
+        ready: readyIds.has(id),
+        modelA: llm?.modelA ?? "",
+        modelB: llm?.modelB ?? "",
+        baseUrlA: llm?.baseUrlA ?? "",
+        baseUrlB: llm?.baseUrlB ?? "",
+        dialect: { a: cards.a, b: cards.b },
+      };
+    }),
   };
 });
 
-router.post("/api/a-stream", async (ctx: Context, _next: Next) => {
+router.post("/api/stream", async (ctx: Context, _next: Next) => {
   const body = parseBody(ctx);
   if (!body) return;
+  const llm = getLlmForProvider(body.provider);
+  if (!llm) {
+    ctx.status = 400;
+    ctx.body = { error: `提供商 ${body.provider} 没有 Key 或模型 id，请检查 apps/.env 对应分组` };
+    return;
+  }
   ctx.respond = false;
-  await streamProtocolA(body, ctx.res);
-});
-
-router.post("/api/b-stream", async (ctx: Context, _next: Next) => {
-  const body = parseBody(ctx);
-  if (!body) return;
-  ctx.respond = false;
-  await streamProtocolB(body, ctx.res);
+  if (body.protocol === "A") {
+    await streamProtocolA(llm, body, ctx.res);
+  } else {
+    await streamProtocolB(llm, body, ctx.res);
+  }
 });
 
 app.use(router.routes()).use(router.allowedMethods());
@@ -141,66 +175,60 @@ app.use(router.routes()).use(router.allowedMethods());
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
-function assistantContentForA(turn: ChatTurn): string {
+function assistantMessageA(provider: ProductionProviderId, turn: ChatTurn): Record<string, unknown> {
   const thinking = turn.thinking?.trim() ?? "";
   const content = turn.content.trim() || "（这一轮没有正文）";
-  if (!thinking) return content;
-  return `${THINK_OPEN}${thinking}${THINK_CLOSE}\n${content}`;
+  if (provider === "minimax") {
+    if (!thinking) return { role: "assistant", content };
+    return {
+      role: "assistant",
+      content: `${THINK_OPEN}${thinking}${THINK_CLOSE}\n${content}`,
+      reasoning_content: thinking,
+    };
+  }
+  return {
+    role: "assistant",
+    content,
+    ...(thinking ? { reasoning_content: thinking } : {}),
+  };
 }
 
-function buildRequestA(system: string, turns: ChatTurn[]) {
-  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-    { role: "system", content: system },
-  ];
+function buildMessagesA(provider: ProductionProviderId, system: string, turns: ChatTurn[]) {
+  const messages: Array<Record<string, unknown>> = [{ role: "system", content: system }];
   for (const turn of turns) {
     if (turn.role === "user") {
       messages.push({ role: "user", content: turn.content });
     } else {
-      messages.push({ role: "assistant", content: assistantContentForA(turn) });
+      messages.push(assistantMessageA(provider, turn));
     }
   }
-  return {
-    model: llm.modelA,
-    messages,
-    stream: true as const,
-    stream_options: { include_usage: true },
-    n: 1,
-    temperature: 1,
-    top_p: 0.95,
-    max_tokens: 2048,
-    max_completion_tokens: 2048,
-    presence_penalty: 0,
-    frequency_penalty: 0,
-    user: "full-params-think-demo",
-    extra_body: {
-      thinking: { type: "adaptive" as const },
-      reasoning_split: true,
-      service_tier: "standard" as const,
-    },
-  };
+  return messages;
 }
 
-function buildRequestB(system: string, turns: ChatTurn[], thinkingBudget: number) {
-  const maxTokens = Math.max(thinkingBudget + 1024, llm.maxTokensB, 2048);
-  return {
-    model: llm.modelB,
-    max_tokens: maxTokens,
-    temperature: 1,
-    system,
-    thinking: { type: "enabled" as const, budget_tokens: thinkingBudget },
-    metadata: { user_id: "full-params-think-demo" },
-    // 协议 B 追问：历史 assistant 只回传正文。没有 signature 的 thinking block 再塞回去会被拒。
-    messages: turns.map((turn) => ({
-      role: turn.role,
-      content: turn.role === "assistant" ? (turn.content.trim() || "（这一轮没有正文）") : turn.content,
-    })),
-  };
+function buildMessagesB(turns: ChatTurn[]) {
+  return turns.map((turn) => ({
+    role: turn.role,
+    content: turn.role === "assistant" ? (turn.content.trim() || "（这一轮没有正文）") : turn.content,
+  }));
+}
+
+function switchSnippetA(extraBody: Record<string, unknown> | undefined): unknown {
+  return extraBody ?? null;
+}
+
+function switchSnippetB(plan: { thinking?: Record<string, unknown>; outputConfig?: { effort: string } }): unknown {
+  const out: Record<string, unknown> = {};
+  if (plan.thinking) out.thinking = plan.thinking;
+  if (plan.outputConfig) out.output_config = plan.outputConfig;
+  return Object.keys(out).length > 0 ? out : { "(未传思考字段)": "靠这家默认行为" };
 }
 
 type ThinkingSourceA = "reasoning_details" | "reasoning_content" | "content_think_tag";
 
 function classifyReturnShape(sources: string[]): "separate_field" | "in_content" | "both" | "none" {
-  const separate = sources.some((s) => s === "reasoning_details" || s === "reasoning_content" || s === "delta.thinking");
+  const separate = sources.some(
+    (s) => s === "reasoning_details" || s === "reasoning_content" || s === "delta.thinking",
+  );
   const inContent = sources.includes("content_think_tag");
   if (separate && inContent) return "both";
   if (separate) return "separate_field";
@@ -255,68 +283,116 @@ function splitProtocolADelta(
 
   let content = "";
   let cursor = 0;
-  const open = THINK_OPEN;
-  const close = THINK_CLOSE;
   while (cursor < raw.length) {
     if (state.inThink) {
-      const endIdx = raw.indexOf(close, cursor);
+      const endIdx = raw.indexOf(THINK_CLOSE, cursor);
       if (endIdx === -1) {
         thinking += raw.slice(cursor);
         break;
       }
       thinking += raw.slice(cursor, endIdx);
-      cursor = endIdx + close.length;
+      cursor = endIdx + THINK_CLOSE.length;
       state.inThink = false;
     } else {
-      const startIdx = raw.indexOf(open, cursor);
+      const startIdx = raw.indexOf(THINK_OPEN, cursor);
       if (startIdx === -1) {
         content += raw.slice(cursor);
         break;
       }
       content += raw.slice(cursor, startIdx);
-      cursor = startIdx + open.length;
+      cursor = startIdx + THINK_OPEN.length;
       state.inThink = true;
     }
   }
   return { thinking, content, source: thinking ? "content_think_tag" : null };
 }
 
-async function streamProtocolA(body: Body, res: ServerResponse): Promise<void> {
-  const request = buildRequestA(body.system, body.messages);
-  openSse(res);
-  if (!writeSse(res, {
+function writeMeta(
+  res: ServerResponse,
+  opts: {
+    llm: Llm;
+    protocol: "A" | "B";
+    request: unknown;
+    explain: DialectCard;
+    switchSnippet: unknown;
+    skipped?: string;
+  },
+): boolean {
+  return writeSse(res, {
     type: "meta",
-    protocol: "A",
-    sdk: "openai",
-    method: "chat.completions.create",
-    baseURL: llm.baseUrlA,
-    model: llm.modelA,
-    request,
+    protocol: opts.protocol,
+    provider: opts.llm.provider,
+    label: getCatalogLabel(opts.llm.provider),
+    sdk: opts.protocol === "A" ? "openai" : "@anthropic-ai/sdk",
+    method: opts.protocol === "A" ? "chat.completions.create" : "messages.stream",
+    baseURL: opts.protocol === "A" ? opts.llm.baseUrlA : opts.llm.baseUrlB,
+    model: opts.protocol === "A" ? opts.llm.modelA : opts.llm.modelB,
+    request: opts.request,
+    skipped: Boolean(opts.skipped),
+    skipReason: opts.skipped ?? "",
     thinkingExplain: {
-      howEnabled: "Chat Completions 顶层没有 thinking。MiniMax 走 extra_body：thinking.type = adaptive。",
-      switchPath: "request.extra_body.thinking",
-      splitPath: "request.extra_body.reasoning_split",
-      splitMeaning: "true = 思考应出现在独立字段；false / 网关不拆分 = 可能嵌在 content 的 think 标记里。",
-      possibleReturns: [
-        "choices[0].delta.reasoning_details[].text（独立字段）",
-        "choices[0].delta.reasoning_content（独立字段）",
-        "choices[0].delta.content 里的 <think>…</think>（嵌在正文）",
-      ],
+      howEnabled: opts.explain.howOn,
+      howDisabled: opts.explain.howOff,
+      defaultOn: opts.explain.defaultOn,
+      canDisable: opts.explain.canDisable,
+      returnField: opts.explain.returnField,
+      notes: opts.explain.notes,
     },
+    switchSnippet: opts.switchSnippet,
+  });
+}
+
+async function streamProtocolA(llm: Llm, body: StreamBody, res: ServerResponse): Promise<void> {
+  const plan = planProtocolA(body.provider, body.thinkingOn, body.reasoningSplit);
+  const messages = buildMessagesA(body.provider, body.system, body.messages);
+  const request: Record<string, unknown> = {
+    model: llm.modelA,
+    messages,
+    stream: true,
+    stream_options: { include_usage: true },
+    max_tokens: 4096,
+  };
+  if (!plan.omitSampling) {
+    request.temperature = 1;
+  }
+  if (plan.extraBody) {
+    request.extra_body = plan.extraBody;
+  }
+
+  openSse(res);
+  if (!writeMeta(res, {
+    llm,
+    protocol: "A",
+    request,
+    explain: plan.explain,
+    switchSnippet: switchSnippetA(plan.extraBody),
+    skipped: plan.skip,
   })) {
+    return;
+  }
+  if (plan.skip) {
+    writeSse(res, { type: "thinking-map", sources: [], returnShape: "none", skipped: true });
+    endSse(res);
     return;
   }
 
   const state = { inThink: false, reasoningSeen: "" };
   const sources: string[] = [];
   try {
-    const stream = await llm.openai.chat.completions.create(request);
+    const stream = (await llm.openai.chat.completions.create(request as never)) as unknown as AsyncIterable<unknown>;
     for await (const chunk of stream) {
       const plain = toPlain(chunk);
       if (!writeSse(res, { type: "raw", frame: plain })) return;
       const rec = plain as {
         usage?: unknown;
-        choices?: Array<{ delta?: { content?: string; reasoning_content?: string; reasoning_details?: Array<{ text?: string }> }; finish_reason?: string }>;
+        choices?: Array<{
+          delta?: {
+            content?: string;
+            reasoning_content?: string;
+            reasoning_details?: Array<{ text?: string }>;
+          };
+          finish_reason?: string;
+        }>;
       };
       const delta = rec.choices?.[0]?.delta ?? {};
       const split = splitProtocolADelta(delta, state);
@@ -340,34 +416,41 @@ async function streamProtocolA(body: Body, res: ServerResponse): Promise<void> {
   }
 }
 
-async function streamProtocolB(body: Body, res: ServerResponse): Promise<void> {
-  const request = buildRequestB(body.system, body.messages, body.thinking_budget);
-  openSse(res);
-  if (!writeSse(res, {
-    type: "meta",
-    protocol: "B",
-    sdk: "@anthropic-ai/sdk",
-    method: "messages.stream",
-    baseURL: llm.baseUrlB,
+async function streamProtocolB(llm: Llm, body: StreamBody, res: ServerResponse): Promise<void> {
+  const plan = planProtocolB(body.provider, body.thinkingOn);
+  const maxTokens = Math.max(llm.maxTokensB, 4096);
+  const request: Record<string, unknown> = {
     model: llm.modelB,
+    max_tokens: maxTokens,
+    temperature: 1,
+    system: body.system,
+    messages: buildMessagesB(body.messages),
+  };
+  if (plan.thinking) request.thinking = plan.thinking;
+  if (plan.outputConfig) request.output_config = plan.outputConfig;
+
+  openSse(res);
+  if (!writeMeta(res, {
+    llm,
+    protocol: "B",
     request,
-    thinkingExplain: {
-      howEnabled: "顶层 thinking: { type: enabled, budget_tokens }。默认关；temperature 必须是 1。",
-      switchPath: "request.thinking",
-      splitPath: null,
-      splitMeaning: "协议 B 没有 reasoning_split：思考永远是独立 content block，不会嵌进 text。",
-      possibleReturns: [
-        "content_block_delta.delta.thinking（独立字段）",
-        "content_block_delta.delta.text（正文，另一条增量）",
-      ],
-    },
+    explain: plan.explain,
+    switchSnippet: switchSnippetB(plan),
+    skipped: plan.skip,
   })) {
+    return;
+  }
+  if (plan.skip) {
+    writeSse(res, { type: "thinking-map", sources: [], returnShape: "none", skipped: true });
+    endSse(res);
     return;
   }
 
   const sources: string[] = [];
   try {
-    const stream = llm.anthropic.messages.stream(request);
+    const stream = llm.anthropic.messages.stream(
+      request as unknown as Parameters<Llm["anthropic"]["messages"]["stream"]>[0],
+    );
     stream.on("streamEvent", (evt: unknown) => {
       const plain = toPlain(evt) as {
         type?: string;
@@ -400,10 +483,16 @@ async function streamProtocolB(body: Body, res: ServerResponse): Promise<void> {
 }
 
 app.listen(PORT, "127.0.0.1", () => {
-  console.log("──── 02 · 05 思考 · 协议 A vs B 流式（§5.3 React + koa）────");
+  console.log("──── 02 · 05 思考 · 四家官方方言 × 协议 A/B（§5.3 React + koa）────");
   console.log(`  浏览器打开: http://127.0.0.1:${PORT}/`);
-  console.log("  POST /api/a-stream  POST /api/b-stream  Body: { messages:[{role,content,thinking?}], system?, thinking_budget? }");
-  console.log("  GET  /health");
-  logLlmConfig(llm);
+  console.log("  POST /api/stream  GET /health");
+  const ready = listProductionLlms();
+  if (ready.length === 0) {
+    console.log("  未检测到 MiniMax / 智谱 / DeepSeek 的 Key");
+  } else {
+    for (const llm of ready) {
+      console.log(`  ${getCatalogLabel(llm.provider)}  A ${llm.modelA}  B ${llm.modelB}`);
+    }
+  }
   console.log("  Ctrl+C 退出");
 });
