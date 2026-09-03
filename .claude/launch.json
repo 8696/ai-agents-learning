@@ -40,6 +40,14 @@
       "port": 50412,
       "url": "http://127.0.0.1:50412/",
       "autoPort": false
+    },
+    {
+      "name": "05-01-function-calling-protocol",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-01-function-calling-protocol"],
+      "port": 50501,
+      "url": "http://127.0.0.1:50501/",
+      "autoPort": false
     }
   ]
 }

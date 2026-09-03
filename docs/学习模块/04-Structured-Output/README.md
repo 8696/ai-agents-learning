@@ -14,8 +14,8 @@
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**JSON Schema**：类型、optional、enum；Zod 和 Schema 的关系](./01-JSON-Schema.md) | 能读一份 Schema，知道必填 / 枚举 | `JSON Schema tutorial` `zod to json schema` · [json-schema.org](https://json-schema.org) · [Zod 文档](https://zod.dev) | 暂无链接 |
-| ⬜ | [**JSON Mode vs Structured Output**：前者保证合法 JSON，后者保证符合 schema](./02-JSON-Mode-vs-Structured-Output.md) | 能说清严格模式多保证了什么 | `OpenAI structured outputs vs json mode` · OpenAI Structured Outputs 文档 | — |
-| ⬜ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
+| ✅ | [**JSON Mode vs Structured Output**：前者保证合法 JSON，后者保证符合 schema](./02-JSON-Mode-vs-Structured-Output.md) | 能说清严格模式多保证了什么 | `OpenAI structured outputs vs json mode` · OpenAI Structured Outputs 文档 | [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create) · [OpenAI Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs) · [Anthropic Messages API · tool_use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) · [Anthropic 协议 A 兼容 base URL 实测](https://api.minimaxi.com/anthropic) |
+| ✅ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
 
 ## 验收
 
