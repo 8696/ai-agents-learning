@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSON Mode（语法闸）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/presets.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/mode-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：json_object 只保「能 JSON.parse」。字段漂移 / enum 自由发挥 / 夹 fence 仍会发生。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点按钮 → POST /api/json-mode { prompt }",
+      "服务端带 response_format: { type: \"json_object\" } 调协议 A",
+      "模型把 JSON 写在 content 字符串里（可能夹 markdown fence 或 think 块）",
+      "服务端剥壳 → JSON.parse → Zod。parse 过了不等于 Intent 对",
+      "盯徽标：Zod ✗ / 夹 fence / extraKeys —— 这些就是语法闸保不住的东西",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "CaseResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, CaseResult, ErrorBanner } =
+          window.DemoUI;
+        const { callEndpoint, describeFailure, PRESETS } = window.DemoUtils;
+
+        function App() {
+          // env：GET /health → 页脚 #env-info；没 Key 时锁按钮
+          const { env, envError } = useEnvInfo();
+          // status：#status-pill 四态
+          const [status, setStatus] = useState("idle");
+          // busy：请求中禁用全部按钮，防重复提交
+          const [busy, setBusy] = useState(false);
+          // error：fetch reject（服务没起）或本页级失败
+          const [error, setError] = useState(null);
+          // prompt：自定义输入
+          const [prompt, setPrompt] = useState("");
+          // cases：历史结果，最新在顶
+          const [cases, setCases] = useState([]);
+
+          const blocked = busy || !env.hasKey;
+
+          /**
+           * 两类失败分开（§5.3.2 第 2 项）：
+           *   1) HTTP 非 200（空 prompt 400 / 没 Key 503 / 上游 5xx）→ 进卡片红框
+           *   2) fetch reject → 进页面级 ErrorBanner
+           */
+          const runOne = async function (title, p, expect, key) {
+            if (blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const res = await callEndpoint("/api/json-mode", { prompt: p });
+              const payload =
+                res.status === 200
+                  ? { ok: true, body: res.data }
+                  : {
+                      ok: false,
+                      status: res.status,
+                      error: describeFailure(res.status, res.data),
+                    };
+              setCases(function (prev) {
+                return [
+                  { key: key, title: title, prompt: p, expect: expect, payload: payload },
+                ].concat(prev);
+              });
+              setStatus(res.status === 200 ? "ok" : "error");
+            } catch (e) {
+              setError({
+                title: "网络错误（fetch 没发出去）",
+                detail: e.message,
+                httpStatus: null,
+              });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          };
+
+          const runAll = async function () {
+            if (blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const results = [];
+              for (var i = 0; i < PRESETS.length; i++) {
+                var p = PRESETS[i];
+                var res = await callEndpoint("/api/json-mode", { prompt: p.prompt });
+                var payload =
+                  res.status === 200
+                    ? { ok: true, body: res.data }
+                    : {
+                        ok: false,
+                        status: res.status,
+                        error: describeFailure(res.status, res.data),
+                      };
+                results.push({
+                  key: p.key + "-" + Date.now(),
+                  title: p.title,
+                  prompt: p.prompt,
+                  expect: p.expect,
+                  payload: payload,
+                });
+              }
+              setCases(function (prev) {
+                return results.concat(prev);
+              });
+              setStatus("ok");
+            } catch (e) {
+              setError({
+                title: "网络错误（fetch 没发出去）",
+                detail: e.message,
+                httpStatus: null,
+              });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">JSON Mode（语法闸）</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary={'response_format: { type: "json_object" } 只保证吐出来的是合法 JSON，不保证符合 Intent schema。'}
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && (
+                    <p className="text-xs text-red-600">
+                      未检测到 Key，按钮已禁用。先在 apps/.env 配置 LLM_PROVIDER 对应的 Key。
+                    </p>
+                  )}
+
+                  <div className="space-y-1">
+                    <div className="flex gap-2 items-start">
+                      <textarea
+                        className="flex-1 border rounded p-2 text-sm"
+                        rows={2}
+                        placeholder="输入任意 prompt，或用下方 5 个诱导用例"
+                        value={prompt}
+                        onChange={function (e) {
+                          setPrompt(e.target.value);
+                        }}
+                      />
+                      <button
+                        className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
+                        disabled={blocked || !prompt.trim()}
+                        onClick={function () {
+                          runOne(
+                            "自定义：" + prompt.trim().slice(0, 18),
+                            prompt.trim(),
+                            "(自由 prompt)",
+                            "free-" + Date.now(),
+                          );
+                        }}
+                      >
+                        跑自定义
+                      </button>
+                      <button
+                        className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
+                        disabled={blocked}
+                        onClick={runAll}
+                      >
+                        一键跑 5 用例
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      点「跑自定义」→ 只发 JSON Mode 这一道闸。同一条 prompt 再到 Structured 页跑一遍才叫对照。
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {PRESETS.map(function (p) {
+                      return (
+                        <div key={p.key} className="space-y-1">
+                          <button
+                            className="w-full border border-gray-300 hover:border-blue-500 rounded p-2 text-left text-sm disabled:opacity-50"
+                            disabled={blocked}
+                            onClick={function () {
+                              runOne(p.title, p.prompt, p.expect, p.key + "-" + Date.now());
+                            }}
+                          >
+                            <div className="font-semibold">{p.title}</div>
+                            <div className="text-xs text-gray-500">prompt: {p.prompt}</div>
+                          </button>
+                          <p className="text-xs text-gray-500">{p.hint}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {(error || envError) && (
+                  error ? (
+                    <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />
+                  ) : (
+                    <ErrorBanner title="拉 /health 失败" detail={envError} httpStatus={null} />
+                  )
+                )}
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  <div className="text-sm text-gray-500">
+                    {cases.length === 0
+                      ? "还没有结果。跑上面任一用例；JSON Mode 过了语法闸，字段名仍可能漂。"
+                      : "共 " + cases.length + " 条（最新在顶）"}
+                  </div>
+                  {cases.map(function (c) {
+                    return (
+                      <CaseResult
+                        key={c.key}
+                        entry={c}
+                        label="JSON Mode（语法闸 · json_object）"
+                      />
+                    );
+                  })}
+                </section>
+              </main>
+
+              <EnvFooter env={env} protocol="A" />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>issues → repair · JSON Schema</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/schema-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：issues 的 path/code/message 怎么拼成 repair prompt。本页不调模型。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "默认贴非法样例，点「生成 repair」→ POST /api/repair { raw }",
+      "红卡是逐条 issues；绿卡是拼好的一段中文，可以直接回灌 prompt",
+      "如果贴的是合法 JSON，会提示没有 issues，不会假装修",
+      "空 raw → HTTP 400，和「schema 没过」不是同一类失败",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "RepairResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, RepairResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [raw, setRaw] = useState('{"action":"BLOW_UP","query":""}');
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (env.samples) setRaw(JSON.stringify(env.samples.bad, null, 2));
+          }, [env.samples]);
+
+          async function run(body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/repair", body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">issues → repair</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="ZodError.issues 的每一条都能拼进 prompt。真正回灌模型看 02 / 05。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">
+                    raw（JSON 文本）
+                    <span className="block text-xs text-gray-500">期望 action 不在枚举里、query 为空，才会出现两条 issues。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm font-mono"
+                      rows={6}
+                      value={raw}
+                      disabled={busy}
+                      onChange={function (e) { setRaw(e.target.value); }}
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ raw: raw }); }}
+                    >
+                      生成 repair
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ raw: "这不是 JSON" }); }}
+                    >
+                      故意发非法 JSON（期望 HTTP 400）
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={async function () {
+                        setBusy(true);
+                        setStatus("loading");
+                        setError(null);
+                        try {
+                          await triggerNetworkError();
+                        } catch (e) {
+                          setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+                          setStatus("error");
+                          setData(null);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      故意断网（期望 fetch reject）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点「生成 repair」后会出现 issues 和一段可复制文本。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <RepairResult data={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

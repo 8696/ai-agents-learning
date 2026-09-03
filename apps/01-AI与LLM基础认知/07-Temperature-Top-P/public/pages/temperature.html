@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>温度对照 · Temperature / Top-P</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/group-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：只动 temperature，Top-P 固定 1。三档并排才能看见「低稳高飘」。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「跑温度对照」→ POST /api/sweep/temperature { prompt, runs }",
+      "服务端三档并发（T=0 / 0.7 / 1.2），每档默认 2 次，Top-P 固定 1",
+      "绿卡 = 两次逐字相同（抽取常用）；黄卡 = 分叉（创意才加）",
+      "单次失败不会让整组消失，那张卡会标 PARTIAL / FAILED",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "SweepResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, SweepResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [prompt, setPrompt] = useState("");
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (env.defaults && !prompt) setPrompt(env.defaults.prompt);
+          }, [env.defaults]);
+
+          const blocked = busy || !env.hasKey;
+
+          async function run(body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/sweep/temperature", body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">温度对照</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="同一句 prompt，T=0 应稳、T=1.2 更易分叉。Top-P 固定为 1，差异只能来自温度。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">
+                    prompt
+                    <span className="block text-xs text-gray-500">点了会连跑 6 次真实调用（3 档 × 2）。答案短才容易逐字比对。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={2}
+                      value={prompt}
+                      disabled={busy}
+                      onChange={function (e) { setPrompt(e.target.value); }}
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={blocked}
+                      onClick={function () { run({ prompt: prompt }); }}
+                    >
+                      跑温度对照
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ prompt: "", runs: 2 }); }}
+                    >
+                      故意发空 prompt（期望 HTTP 400）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点按钮后会出现三张并排卡片。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <SweepResult data={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

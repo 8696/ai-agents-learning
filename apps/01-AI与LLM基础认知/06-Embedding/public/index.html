@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Embedding · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：Token 是代号、Embedding 才有远近。本页不算向量。
+     */
+    const { useState } = React;
+
+    const SCENES = [
+      {
+        href: "/pages/token-id.html",
+        title: "Token ID 反例",
+        desc: "四个词的 id 相减。石头的差值可能更「近」，纯属巧合。",
+      },
+      {
+        href: "/pages/cosine.html",
+        title: "余弦正例",
+        desc: "同一批词换成 2 维坐标，按夹角排序。宠物→猫/狗高、→石头低。",
+      },
+    ];
+
+    const INTRO_STEPS = [
+      "GET /health 带回玩具表，页面不写死坐标",
+      "反例页：POST /api/token-id { query }，只做整数相减",
+      "正例页：POST /api/rank { query }，按余弦从高到低排",
+      "零向量按钮会 400：没有方向就除不去",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+
+          React.useEffect(function () {
+            if (envError) setStatus("error");
+            else if (env.port) setStatus("ok");
+          }, [env, envError]);
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">Embedding</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="Token 管「哪个号」，Embedding 管「哪边近」。不是同一层。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`① Token ID 相减 → 差值无语义
+② 2 维玩具向量 → 余弦排序 → 宠物近猫/狗、远石头
+坐标是编的，只为能看见「近/远」。后面 RAG 检索就是这套排序放到百万条上。`}
+                    </pre>
+                  }
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {SCENES.map(function (s) {
+                      return (
+                        <a key={s.href} href={s.href} className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                          <div className="font-semibold text-sm">{s.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600">
+                  {envError && <p className="text-red-700">{envError}</p>}
+                  <p>本页不算向量。先进反例页，再进正例页，对照才记得住。</p>
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

@@ -3,471 +3,160 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Function Calling 协议 · Demo</title>
+  <title>Function Calling 协议 · 总览</title>
 
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <!-- §5.3.8 加载顺序：utils（无 JSX）→ components（JSX）→ 本页内联 -->
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/tools-panel.js"></script>
+
   <script type="text/babel">
+    /**
+     * 本页教学点：先认识「模型能调什么」——Registry 里 4 个 Tool 的 name / description / JSON Schema。
+     * 本页不跑闭环，跑闭环在 /pages/*。
+     */
     const { useState, useEffect } = React;
 
-    // ── §5.3.4 状态 pill 四态 ──
-    const STATUS_MAP = {
-      idle:    { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-      loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-      ok:      { emoji: "✅", text: "完成",   cls: "bg-green-100" },
-      error:   { emoji: "❌", text: "错误",   cls: "bg-red-100" },
-    };
-
-    function StatusPill({ status }) {
-      const s = STATUS_MAP[status] || STATUS_MAP.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    // ── 5 个预设用例（单/并行/串行/Zod 错误/工具错误）──
-    // 演示「同一组 Tool，5 种 prompt 走向会触发什么」
-    const PRESETS = [
+    // ── 四个场景各自的一句话教学点；与 components/layout.js 的导航一一对应 ──
+    const SCENES = [
       {
-        key: "case1",
-        title: "① 单 tool 调用",
-        prompt: "北京今天天气怎么样？",
-        expect: "期望：1 个 tool_call(get_weather) → Round 2 直接给 stop",
-        endpoint: "/api/run",
+        href: "/pages/run.html",
+        title: "① / ② 单 tool 与并行",
+        desc: "同一个 /api/run：问一件事 → 1 个 tool_call；问两件无关的事 → 一次返回 2 个，服务端 Promise.all。",
       },
       {
-        key: "case2",
-        title: "② 并行 tool 调用（Promise.all）",
-        prompt: "北京今天天气怎么样？另外 100 加 200 等于多少？",
-        expect: "期望：2 个 tool_call 一次返回，并行执行（get_weather + add）",
-        endpoint: "/api/run",
+        href: "/pages/serial.html",
+        title: "③ 串行数据依赖",
+        desc: "/api/run-serial：第二轮的入参来自第一轮的结果，只能一轮一轮来，看得见「循环」而不是「并行」。",
       },
       {
-        key: "case3",
-        title: "③ 串行数据依赖（多轮）",
-        prompt: "查 u001 的用户，把他的 level 加 7，结果告诉我",
-        expect: "期望：Round 1 lookup_user → Round 2 add(level, 7) → Round 3 stop",
-        endpoint: "/api/run-serial",
+        href: "/pages/zod-error.html",
+        title: "④ Zod 校验 + repair",
+        desc: "服务端故意把参数改错 → Zod 拦下 → 错误当 tool_result 回灌 → 模型自己改对再发一次。",
       },
       {
-        key: "case4",
-        title: "④ Zod 校验失败 + repair（独立按钮）",
-        prompt: "算 5 加 3",
-        expect: "期望：服务端篡改 arguments → Zod ✗ → 错误回灌 → 模型修对 → Zod ✓",
-        endpoint: "/api/simulate-zod-error",
-      },
-      {
-        key: "case5",
-        title: "⑤ 工具执行失败（独立按钮）",
-        prompt: "查 u999 的用户信息",
-        expect: "期望：handler 抛错 → 错误信息进 tool_result → 模型收到错误并自然回复",
-        endpoint: "/api/run",
+        href: "/pages/tool-error.html",
+        title: "⑤ 工具执行失败",
+        desc: "handler 抛异常时，错误变成 tool_result 而不是 500，模型据此说人话，循环不中断。",
       },
     ];
 
-    // ── 跑单个端点（不抛错，便于 React state 接管） ──
-    async function callEndpoint(url, body) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body || {}),
-      });
-      const text = await res.text();
-      let data = null;
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        data = { error: `响应不是合法 JSON：${text.slice(0, 200)}` };
-      }
-      return { status: res.status, data };
-    }
+    const INTRO_STEPS = [
+      "页面加载 → GET /health（环境）+ GET /tools（Registry 全貌）",
+      "服务端把每个 Tool 的 Zod schema 转成 JSON Schema —— 这份 schema 就是等下发给模型的 tools 字段",
+      "模型看到的只有 name / description / JSON Schema 三样，它靠这三样决定「要不要调、怎么填参数」",
+      "所以 description 写得含糊 = 模型乱调；schema 不严 = 参数乱填（下一条小节会专门讲）",
+    ];
 
-    // ── 工具描述标记（绿色：✓ 合法；红色：✗）──
-    function ResultTag({ ok, label }) {
-      const cls = ok
-        ? "bg-green-100 text-green-800"
-        : "bg-red-100 text-red-800";
-      return (
-        <span className={`text-xs px-2 py-0.5 rounded ${cls}`}>{label}</span>
-      );
-    }
+    // waitDemoUI：等 components/*.js 被 Babel 转译并挂到 window.DemoUI 之后再渲染
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "ToolsPanel"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, ToolsPanel } = window.DemoUI;
 
-    // ── 单个 tool_call 卡片 ──
-    function ToolCallCard({ tc }) {
-      let parsedArgs = null;
-      let argsOk = true;
-      try {
-        parsedArgs = JSON.parse(tc.function.arguments);
-      } catch {
-        argsOk = false;
-      }
-      return (
-        <div className="border border-gray-300 rounded p-2 text-xs space-y-1 bg-white">
-          <div className="flex items-center gap-2">
-            <span className="font-mono font-semibold">{tc.function.name}</span>
-            <span className="text-gray-500">id={tc.id}</span>
-            {!argsOk && <ResultTag ok={false} label="JSON.parse ✗" />}
-            {argsOk && <ResultTag ok={true} label="JSON.parse ✓" />}
-          </div>
-          <div className="text-gray-500">arguments：</div>
-          <pre className="whitespace-pre-wrap bg-gray-50 p-1 rounded max-h-32 overflow-auto">
-{parsedArgs ? JSON.stringify(parsedArgs, null, 2) : tc.function.arguments}
-          </pre>
-        </div>
-      );
-    }
+        function App() {
+          const { env, envError } = useEnvInfo(); // GET /health → 页脚 #env-info
+          const [tools, setTools] = useState([]); // GET /tools → Registry 卡片
+          const [error, setError] = useState("");
+          const [status, setStatus] = useState("idle");
 
-    // ── 单个 tool_result 卡片 ──
-    function ToolResultCard({ r }) {
-      return (
-        <div className={`border rounded p-2 text-xs space-y-1 ${
-          r.executeOk ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
-        }`}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono font-semibold">{r.toolName}</span>
-            <span className="text-gray-500">id={r.tool_call_id}</span>
-            <ResultTag ok={r.parseOk} label={r.parseOk ? "Zod ✓" : "Zod ✗"} />
-            {r.parseOk && (
-              <ResultTag ok={r.executeOk} label={r.executeOk ? "执行 ✓" : "执行 ✗"} />
-            )}
-            <span className="text-gray-500">{r.durationMs}ms</span>
-          </div>
-          <div className="text-gray-500">content（喂回模型的 tool_result）：</div>
-          <pre className="whitespace-pre-wrap bg-white p-1 rounded max-h-32 overflow-auto">
-{r.content}
-          </pre>
-        </div>
-      );
-    }
+          // 本页的 happy path = Registry 拉取成功（本页不调模型，所以没有 busy 状态）
+          useEffect(function () {
+            setStatus("loading");
+            fetch("/tools")
+              .then(function (r) {
+                if (!r.ok) throw new Error("GET /tools HTTP " + r.status);
+                return r.json();
+              })
+              .then(function (list) {
+                setTools(list);
+                setStatus("ok");
+              })
+              .catch(function (e) {
+                setError(e.message);
+                setStatus("error");
+              });
+          }, []);
 
-    // ── 单个 round 卡片（Round 1 / 2 / 3 / ...）──
-    function RoundCard({ round }) {
-      const fr = round.finish_reason;
-      const frBadge = {
-          tool_calls: "bg-blue-100 text-blue-800",
-          stop: "bg-green-100 text-green-800",
-          length: "bg-yellow-100 text-yellow-800",
-          content_filter: "bg-orange-100 text-orange-800",
-        }[fr] || "bg-gray-100 text-gray-800";
-      return (
-        <div className="border border-gray-400 rounded p-3 bg-gray-50 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold">Round {round.round}</span>
-            <span className={`text-xs px-2 py-0.5 rounded ${frBadge}`}>
-              finish_reason={fr}
-            </span>
-            {round.tampered && (
-              <ResultTag ok={false} label="⚠ 服务端篡改 arguments" />
-            )}
-            {round.tool_calls.length > 0 && (
-              <span className="text-xs text-gray-500">
-                · {round.tool_calls.length} 个 tool_call
-              </span>
-            )}
-            {round.toolResults.length > 0 && (
-              <span className="text-xs text-gray-500">
-                · {round.toolResults.length} 个 tool_result
-              </span>
-            )}
-          </div>
-          {round.content && (
-            <div>
-              <div className="text-xs text-gray-500 mb-1">model content：</div>
-              <pre className="whitespace-pre-wrap bg-white p-2 rounded text-xs border max-h-32 overflow-auto">
-{round.content}
-              </pre>
-            </div>
-          )}
-          {round.tool_calls.length > 0 && (
-            <div>
-              <div className="text-xs text-gray-500 mb-1">tool_calls（模型发出的指令）：</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {round.tool_calls.map((tc, i) => (
-                  <ToolCallCard key={i} tc={tc} />
-                ))}
-              </div>
-            </div>
-          )}
-          {round.toolResults.length > 0 && (
-            <div>
-              <div className="text-xs text-gray-500 mb-1">
-                tool_result（执行结果 → 回灌模型）：
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {round.toolResults.map((r, i) => (
-                  <ToolResultCard key={i} r={r} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">05 · 01 · Function Calling 协议</h1>
+                <StatusPill status={status} />
+              </header>
 
-    // ── 单个用例结果 ──
-    function CaseResult({ entry }) {
-      const d = entry.data;
-      if (!d) {
-        return (
-          <div className="border border-red-300 bg-red-50 rounded p-3 text-sm">
-            <div className="font-semibold text-red-700">{entry.title} · HTTP {entry.status}</div>
-            <pre className="whitespace-pre-wrap text-xs text-red-600 mt-1">
-{String(entry.error || "(无响应)")}
-            </pre>
-          </div>
-        );
-      }
-      return (
-        <div className="border border-gray-400 rounded p-3 bg-white space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <div className="font-semibold">{entry.title}</div>
-              <div className="text-xs text-gray-500">prompt: {entry.prompt}</div>
-              <div className="text-xs italic text-gray-500">{entry.expect}</div>
-            </div>
-            <div className="text-xs text-gray-500">
-              {d.totalRounds} 轮 · {d.elapsedMs}ms · mode={d.mode}
-            </div>
-          </div>
-          {d.error && (
-            <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
-              {d.error}{d.upstreamStatus ? ` · upstreamStatus=${d.upstreamStatus}` : ""}
-            </div>
-          )}
-          <div className="space-y-2">
-            {d.rounds && d.rounds.map((round, i) => (
-              <RoundCard key={i} round={round} />
-            ))}
-          </div>
-          {d.finalContent && (
-            <div>
-              <div className="text-xs text-gray-500 mb-1">🎯 final content（给用户看的终态）：</div>
-              <pre className="whitespace-pre-wrap bg-green-50 p-3 rounded text-sm border border-green-300 max-h-48 overflow-auto">
-{d.finalContent}
-              </pre>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [busy, setBusy] = useState(false);
-      const [error, setError] = useState("");
-      const [prompt, setPrompt] = useState("");
-      const [cases, setCases] = useState([]);
-      const [modelInfo, setModelInfo] = useState({ model: "(待连接)", provider: "(?)", hasKey: false });
-      const [tools, setTools] = useState([]);
-
-      // ── 启动时打 /health + /tools ──
-      useEffect(() => {
-        Promise.all([
-          fetch("/health").then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))),
-          fetch("/tools").then((r) => (r.ok ? r.json() : [])),
-        ])
-          .then(([h, t]) => {
-            setModelInfo({
-              model: h.model || "(未指定)",
-              provider: h.provider || "(?)",
-              hasKey: Boolean(h.hasKey),
-            });
-            setTools(t);
-            setStatus("idle");
-          })
-          .catch((e) => {
-            setError(e.message);
-            setStatus("error");
-          });
-      }, []);
-
-      const runPreset = async (preset) => {
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const res = await callEndpoint(preset.endpoint, { prompt: preset.prompt });
-          const entry = res.status === 200
-            ? { title: preset.title, prompt: preset.prompt, expect: preset.expect, status: 200, data: res.data }
-            : { title: preset.title, prompt: preset.prompt, expect: preset.expect, status: res.status, error: res.data?.error ?? `HTTP ${res.status}`, data: null };
-          setCases((prev) => [{ key: preset.key, ...entry }, ...prev]);
-          setStatus(res.status === 200 ? "ok" : "error");
-        } catch (e) {
-          setError(e.message);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      const runFree = async () => {
-        const p = prompt.trim();
-        if (!p) return;
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const res = await callEndpoint("/api/run", { prompt: p });
-          const entry = res.status === 200
-            ? { title: `自定义：${p.slice(0, 18)}`, prompt: p, expect: "(自由 prompt)", status: 200, data: res.data }
-            : { title: `自定义：${p.slice(0, 18)}`, prompt: p, expect: "(自由 prompt)", status: res.status, error: res.data?.error ?? `HTTP ${res.status}`, data: null };
-          setCases((prev) => [{ key: "free-" + Date.now(), ...entry }, ...prev]);
-          setStatus(res.status === 200 ? "ok" : "error");
-        } catch (e) {
-          setError(e.message);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      const runAll = async () => {
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const results = [];
-          for (const preset of PRESETS) {
-            const res = await callEndpoint(preset.endpoint, { prompt: preset.prompt });
-            const entry = res.status === 200
-              ? { title: preset.title, prompt: preset.prompt, expect: preset.expect, status: 200, data: res.data }
-              : { title: preset.title, prompt: preset.prompt, expect: preset.expect, status: res.status, error: res.data?.error ?? `HTTP ${res.status}`, data: null };
-            results.push({ key: preset.key, ...entry });
-          }
-          setCases((prev) => [...results, ...prev]);
-          setStatus("ok");
-        } catch (e) {
-          setError(e.message);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
-            <h1 id="page-title" className="text-xl font-semibold">
-              05 · 01 · Function Calling 协议
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            {/* ── §5.3.4 强制：controls + output ── */}
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <div className="text-sm">
-                模型：<span className="font-mono">{modelInfo.model}</span>
-                {" · "} provider：<span className="font-mono">{modelInfo.provider}</span>
-                {" · "} Key：{modelInfo.hasKey ? "✅" : "❌（需在 apps/.env 填对应 Key）"}
-              </div>
-
-              {/* Registry 展示 */}
-              <div className="text-sm border-t pt-3">
-                <div className="font-semibold mb-1">Tool Registry（共 {tools.length} 个）</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {tools.map((t) => (
-                    <div key={t.name} className="border border-gray-200 rounded p-2 text-xs space-y-1">
-                      <div className="font-mono font-semibold">{t.name}</div>
-                      <div className="text-gray-600">{t.description}</div>
-                      <details>
-                        <summary className="cursor-pointer text-gray-500">JSON Schema（Zod 派生）</summary>
-                        <pre className="whitespace-pre-wrap bg-gray-50 p-1 rounded mt-1 max-h-32 overflow-auto">
-{JSON.stringify(t.jsonSchema, null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 自由 prompt */}
-              <div className="flex gap-2 items-start border-t pt-3">
-                <textarea
-                  className="flex-1 border rounded p-2 text-sm"
-                  rows={2}
-                  placeholder="输入任意 prompt，跑 /api/run（也可用下方 5 个预设）"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="模型「能调什么」是怎么被告知的：Registry → JSON Schema → 请求里的 tools 字段。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`全局数据流（四个场景页共用这一圈）
+  ① 浏览器 POST /api/run…    { prompt }
+  ② 服务端把 Registry 转成 tools 字段，连同 messages 发给模型
+  ③ 模型回 tool_calls（要调哪个工具、参数是什么）—— 它只是"请求"，还没执行
+  ④ 服务端 JSON.parse → Zod 校验 → handler 执行（失败也写成 tool_result）
+  ⑤ tool_result 追加进 messages 再发一次 → 模型给出 finish_reason=stop 的终态回答`}
+                    </pre>
+                  }
                 />
-                <button
-                  className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
-                  disabled={busy || !prompt.trim()}
-                  onClick={runFree}
-                >
-                  跑自定义
-                </button>
-                <button
-                  className="bg-gray-800 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
-                  disabled={busy}
-                  onClick={runAll}
-                >
-                  一键跑 5 用例
-                </button>
-              </div>
 
-              {/* 预设 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.key}
-                    className="border border-gray-300 hover:border-blue-500 rounded p-2 text-left text-sm disabled:opacity-50"
-                    disabled={busy}
-                    onClick={() => runPreset(p)}
-                  >
-                    <div className="font-semibold">{p.title}</div>
-                    <div className="text-xs text-gray-500">prompt: {p.prompt}</div>
-                    <div className="text-xs text-gray-400">endpoint: {p.endpoint}</div>
-                  </button>
-                ))}
-              </div>
-            </section>
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-sm text-gray-600">
+                    总览页不发起模型请求。选一个场景进去跑，每页只演示一个教学点。
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {SCENES.map(function (s) {
+                      return (
+                        <a
+                          key={s.href}
+                          href={s.href}
+                          className="border border-gray-300 hover:border-blue-500 rounded p-3 text-left"
+                        >
+                          <div className="font-semibold text-sm">{s.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </section>
 
-            {error && (
-              <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+                {(error || envError) && (
+                  <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                    {error || envError}
+                  </div>
+                )}
 
-            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
-              <div className="text-sm text-gray-500">
-                {cases.length === 0
-                  ? "尚无结果。运行上方任一用例，新结果追加在上方。"
-                  : `共 ${cases.length} 个用例（最新在顶）`}
-              </div>
-              {cases.map((c) => (
-                <CaseResult key={c.key} entry={c} />
-              ))}
-            </section>
-          </main>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+                  <div className="text-sm text-gray-500">
+                    {tools.length === 0
+                      ? "正在读取 Registry…（若长时间空白，看页脚 Key 是否配置）"
+                      : "下面就是模型这一轮「看得见的全部工具」，展开可见 Zod 派生出的 JSON Schema。"}
+                  </div>
+                  <ToolsPanel tools={tools} />
+                </section>
+              </main>
 
-          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
-            端口 50501 · 协议 A · 模型随 LLM_PROVIDER · 详情见 docs/学习模块/05-Tool-Calling/01-Function-Calling-协议.md
-          </footer>
-        </div>
-      );
-    }
+              <EnvFooter env={env} protocol="A" />
+            </div>
+          );
+        }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
   </script>
 </body>
 </html>

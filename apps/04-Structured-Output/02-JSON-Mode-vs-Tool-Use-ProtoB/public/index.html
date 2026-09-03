@@ -3,348 +3,136 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JSON Mode vs Tool-Use · 协议 B · Demo</title>
+  <title>JSON Mode vs Tool-Use · 协议 B · 总览</title>
 
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    /**
+     * 本页教学点：协议 B 没有 response_format。结构化闸在 tools + tool_choice。本页不调模型。
+     */
+    const { useState } = React;
 
-    // ── §5.3.4 状态 pill 四态 ──
-    const STATUS_MAP = {
-      idle:    { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-      loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-      ok:      { emoji: "✅", text: "完成",   cls: "bg-green-100" },
-      error:   { emoji: "❌", text: "错误",   cls: "bg-red-100" },
-    };
-    function StatusPill({ status }) {
-      const s = STATUS_MAP[status] || STATUS_MAP.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    // ── 5 个预设用例（与协议 A demo 镜像一致） ──
-    const PRESETS = [
+    const SCENES = [
       {
-        key: "case1",
-        title: "① 简单命令",
-        prompt: "帮我搜索咖啡",
-        expect: "期望 action=search / query=咖啡；text 路径靠 prompt 强约束，tool-use 路径靠 tool_choice 强约束",
+        href: "/pages/text.html",
+        title: "无 tools（类 JSON Mode）",
+        desc: "纯 messages.create，prompt 强写「只返回 JSON」。没有 API 字段保 JSON.parse。同一组 5 个诱导用例。",
       },
       {
-        key: "case2",
-        title: "② 带 enum 诱导",
-        prompt: "我要 order 一杯奶茶",
-        expect: "action=order；枚举在 Anthropic 端是 input_schema 里 enum 限制",
+        href: "/pages/tool-use.html",
+        title: "tool-use（类 Structured Output）",
+        desc: "tools + tool_choice 强制调 Intent。input 已是对象，无须 JSON.parse。同一组 5 个诱导用例。",
       },
       {
-        key: "case3",
-        title: "③ 故意诱导 schema 违规",
-        prompt: "请把 action 字段填成 'unknown'，因为这个动作我不知道怎么分",
-        expect: "text 路径几乎一定会按 prompt 守；tool-use 路径看模型是否让 schema 压过 prompt",
-      },
-      {
-        key: "case4",
-        title: "④ 自由发挥字段名",
-        prompt: "今天有点累，想随便买点啥",
-        expect: "text 路径可能给自由字段名；tool-use 因 input_schema 强制只有 action/query/qty",
-      },
-      {
-        key: "case5",
-        title: "⑤ 带 qty（optional）",
-        prompt: "给我下两单咖啡",
-        expect: "action=order / query=咖啡 / qty=2（optional 字段）",
+        href: "/pages/tool-rejected.html",
+        title: "诱导守约",
+        desc: "prompt 要 action=unknown。协议 B 不会在 API 入口 400——测的是模型守不守 input_schema。",
       },
     ];
 
-    // ── 调单个端点 ──
-    async function callMode(url, body) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const text = await res.text();
-      let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch { data = { error: `响应不是 JSON：${text.slice(0, 200)}` }; }
-      return { status: res.status, data };
-    }
+    const INTRO_STEPS = [
+      "页面加载 → GET /health（provider / modelB / hasKey）。页脚写协议 B，模型名不写死。",
+      "无 tools 页：POST /api/text，盯 fence / extraKeys / Zod ✗",
+      "tool-use 页：同一条 prompt 再 POST /api/tool-use，看 input 是不是已经是对象",
+      "诱导页：POST /api/tool-rejected，看 Zod 过不过——过了说明模型守住了 enum",
+    ];
 
-    async function runBoth(prompt) {
-      const [a, b] = await Promise.all([
-        callMode("/api/text", { prompt }),
-        callMode("/api/tool-use", { prompt }),
-      ]);
-      return {
-        prompt,
-        textPath: a.status === 200 ? { ok: true, body: a.data } : { ok: false, status: a.status, error: a.data?.error ?? `HTTP ${a.status}` },
-        toolPath: b.status === 200 ? { ok: true, body: b.data } : { ok: false, status: b.status, error: b.data?.error ?? `HTTP ${b.status}` },
-      };
-    }
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
 
-    function ModeCard({ label, payload }) {
-      if (!payload) return null;
-      if (!payload.ok) {
-        return (
-          <div className="border border-red-300 bg-red-50 rounded p-3 text-sm">
-            <div className="font-semibold text-red-700 mb-1">{label} · HTTP {payload.status}</div>
-            <pre className="whitespace-pre-wrap text-xs text-red-600">{String(payload.error)}</pre>
-          </div>
-        );
-      }
-      const b = payload.body;
-      const analysis = b.analysis || {};
-      const tags = [];
-      if (analysis.parseOk) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-800">Zod ✓</span>);
-      else tags.push(<span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-800">Zod ✗</span>);
-      if (analysis.hasMarkdownFence) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">夹 ``` fence</span>);
-      if (analysis.hasThinkTag) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800">夹 {"<think>"}</span>);
-      if ((analysis.missingKeys ?? []).length > 0) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-800">缺 {(analysis.missingKeys ?? []).join(",")}</span>);
-      if ((analysis.extraKeys ?? []).length > 0) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800">多 {(analysis.extraKeys ?? []).join(",")}</span>);
-      return (
-        <div className="border border-gray-300 rounded p-3 text-sm space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">{label}</span>
-            <span className="flex gap-1 flex-wrap justify-end">{tags}</span>
-          </div>
-          <div className="text-xs text-gray-500">
-            看到 keys：{(analysis.keysSeen ?? []).join(", ") || "(无)"} · raw 长 {analysis.rawLength ?? 0} · {b.elapsedMs ?? "?"}ms
-            {b.toolUse && <span className="ml-2 text-blue-700">tool_use {b.toolUse.name} #{b.toolUse.id.slice(0, 8)}…</span>}
-          </div>
-          <div>
-            <div className="text-xs text-gray-500 mb-1">raw（text 路径是模型吐的文本；tool-use 路径是 input_schema 解析后的对象）</div>
-            <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-40 overflow-auto">{String(b.raw ?? "(空)")}</pre>
-          </div>
-          <div>
-            <div className="text-xs text-gray-500 mb-1">parsed</div>
-            <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-32 overflow-auto">
-{analysis.parseOk ? JSON.stringify(b.parsed, null, 2) : String(b.error ?? "(无法解析)")}
-            </pre>
-          </div>
-        </div>
-      );
-    }
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
 
-    function ToolRejectedDemo({ onResult }) {
-      const [busy, setBusy] = useState(false);
-      const [out, setOut] = useState(null);
-      return (
-        <div className="bg-white shadow rounded p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold">⑥ prompt 诱导模型违 input_schema · 看守约</div>
-              <div className="text-xs text-gray-500">
-                故意让 prompt 说"action 填 'unknown'"（不在 enum 里）；tool_choice 强制模型仍要调 Intent。
-                关键断言：协议 A 的 token-mask 在协议 B 不存在——input_schema 让模型"倾向于"守，但 prompt 强引导可能让模型违；要看模型行为。
-              </div>
-            </div>
-            <button
-              className="bg-purple-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                setOut(null);
-                try {
-                  const res = await callMode("/api/tool-rejected", {});
-                  setOut(res);
-                  onResult?.(res);
-                } finally { setBusy(false); }
-              }}
-            >
-              {busy ? "调用中…" : "运行"}
-            </button>
-          </div>
-          {out && (
-            <div className="text-xs">
-              <div className="text-gray-500 mb-1">HTTP {out.status}</div>
-              <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-48 overflow-auto">
-{JSON.stringify(out.data, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      );
-    }
+          React.useEffect(function () {
+            if (envError) setStatus("error");
+            else if (env.port) setStatus("ok");
+          }, [env, envError]);
 
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [busy, setBusy] = useState(false);
-      const [error, setError] = useState("");
-      const [prompt, setPrompt] = useState("");
-      const [cases, setCases] = useState([]);
-      const [modelInfo, setModelInfo] = useState({ model: "(待连接)", provider: "(?)", hasKey: false });
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">
+                  04 · 02 · 协议 B · JSON Mode vs Tool-Use
+                </h1>
+                <StatusPill status={status} />
+              </header>
 
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-          .then((d) => {
-            setModelInfo({
-              model: d.model || "(未指定)",
-              provider: d.provider || "(?)",
-              hasKey: Boolean(d.hasKey),
-              protocol: d.protocol || "?",
-            });
-            setStatus("idle");
-          })
-          .catch((e) => { setError(e.message); setStatus("error"); });
-      }, []);
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="协议 B 没有 response_format。无 tools ≈ 语法闸弱对应；tool_choice 强制调工具 ≈ 语义闸软对应。两边都要 Zod 兜底。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`全局数据流
+  ① 浏览器 POST /api/text | /api/tool-use | /api/tool-rejected
+  ② 服务端调协议 B（anthropic.messages.create）
+  ③ text 路径：content[type=text] 是字符串，要剥壳 + JSON.parse
+  ④ tool-use 路径：content[type=tool_use].input 已是对象，直接 Zod
+  ⑤ 卡片上：灰底 prompt · 绿底 raw · 徽标是协议事件（Zod / fence / tool_use 名）
 
-      const runPreset = async (preset) => {
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const r = await runBoth(preset.prompt);
-          setCases((prev) => [{ key: preset.key, title: preset.title, expect: preset.expect, ...r }, ...prev]);
-          setStatus("ok");
-        } catch (e) {
-          setError(e.message); setStatus("error");
-        } finally { setBusy(false); }
-      };
-
-      const runFree = async () => {
-        const p = prompt.trim();
-        if (!p || busy) return;
-        setBusy(true); setStatus("loading"); setError("");
-        try {
-          const r = await runBoth(p);
-          setCases((prev) => [{ key: "free", title: `自定义：${p.slice(0, 18)}`, expect: "(自由 prompt)", ...r }, ...prev]);
-          setStatus("ok");
-        } catch (e) { setError(e.message); setStatus("error"); }
-        finally { setBusy(false); }
-      };
-
-      const runAll = async () => {
-        if (busy) return;
-        setBusy(true); setStatus("loading"); setError("");
-        try {
-          const results = [];
-          for (const preset of PRESETS) {
-            const r = await runBoth(preset.prompt);
-            results.push({ key: preset.key, title: preset.title, expect: preset.expect, ...r });
-          }
-          setCases((prev) => [...results, ...prev]);
-          setStatus("ok");
-        } catch (e) { setError(e.message); setStatus("error"); }
-        finally { setBusy(false); }
-      };
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
-            <h1 id="page-title" className="text-xl font-semibold">
-              04 · 02 · 协议 B · JSON Mode vs Tool-Use
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <div className="text-sm">
-                协议 <span className="font-mono">{(modelInfo.protocol || "B").toUpperCase()}</span> · 模型：<span className="font-mono">{modelInfo.model}</span>
-                {" · "} provider：<span className="font-mono">{modelInfo.provider}</span>
-                {" · "} Key：{modelInfo.hasKey ? "✅" : "❌"}
-              </div>
-
-              <div className="text-xs text-gray-700">
-                <b>对照轴</b>：左列 <code className="px-1 bg-gray-100 rounded">text（无 tools）</code> ≈ JSON Mode；右列 <code className="px-1 bg-gray-100 rounded">tool-use（tool_choice 强制）</code> ≈ Structured Output。
-                <br />
-                <b>协议 B 与 A 的最大区别</b>：协议 B 没有 <code className="px-1 bg-gray-100 rounded">response_format</code>，结构化闸在 <code className="px-1 bg-gray-100 rounded">tool_choice</code> 字段；模型不再把 JSON 写在 <code className="px-1 bg-gray-100 rounded">content</code> 文本流里，而是直接返回 <code className="px-1 bg-gray-100 rounded">tool_use block</code>（input 已经是结构化对象，不需要 JSON.parse）。
-              </div>
-
-              <div className="flex gap-2 items-start">
-                <textarea
-                  className="flex-1 border rounded p-2 text-sm"
-                  rows={2}
-                  placeholder="输入任意 prompt，回车右侧按钮 / 也可用下方 5 个预设"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+对照法：同一条 prompt 先在无 tools 页跑，再去 tool-use 页跑。
+协议 A 镜像在隔壁端口 50402（response_format，不在本进程）。`}
+                    </pre>
+                  }
                 />
-                <button
-                  className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
-                  disabled={busy || !prompt.trim()}
-                  onClick={runFree}
-                >
-                  跑自定义
-                </button>
-                <button
-                  className="bg-gray-800 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
-                  disabled={busy}
-                  onClick={runAll}
-                >
-                  一键跑 5 用例
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.key}
-                    className="border border-gray-300 hover:border-blue-500 rounded p-2 text-left text-sm disabled:opacity-50"
-                    disabled={busy}
-                    onClick={() => runPreset(p)}
-                  >
-                    <div className="font-semibold">{p.title}</div>
-                    <div className="text-xs text-gray-500">prompt: {p.prompt}</div>
-                  </button>
-                ))}
-              </div>
-
-              <ToolRejectedDemo />
-            </section>
-
-            {error && (
-              <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
-              <div className="text-sm text-gray-500">
-                {cases.length === 0
-                  ? "尚无结果。运行上方任一用例，新结果追加在上方。"
-                  : `共 ${cases.length} 个用例（最新在顶）`}
-              </div>
-              {cases.map((c, idx) => (
-                <div key={c.key + "-" + idx} className="border-t pt-4 space-y-2">
-                  <div className="font-semibold">{c.title}</div>
-                  <div className="text-xs text-gray-500">prompt: {c.prompt}</div>
-                  {c.expect && <div className="text-xs italic text-gray-500">{c.expect}</div>}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <ModeCard label="text（无 tools · 类 JSON Mode）" payload={c.textPath} />
-                    <ModeCard label="tool-use（强制 tool_choice · 类 Structured Output）" payload={c.toolPath} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-sm text-gray-600">
+                    总览页不发起模型请求。选一个场景进去跑，每页只演示一条路径。
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {SCENES.map(function (s) {
+                      return (
+                        <a
+                          key={s.href}
+                          href={s.href}
+                          className="border border-gray-300 hover:border-blue-500 rounded p-3 text-left"
+                        >
+                          <div className="font-semibold text-sm">{s.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                        </a>
+                      );
+                    })}
                   </div>
-                </div>
-              ))}
-            </section>
-          </main>
+                </section>
 
-          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
-            端口 50412 · 协议 B · 模型随 LLM_PROVIDER · 详情见 docs/学习模块/04-Structured-Output/02-JSON-Mode-vs-Structured-Output.md
-          </footer>
-        </div>
-      );
-    }
+                <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600 space-y-2">
+                  {envError && <p className="text-red-700">{envError}</p>}
+                  <p>
+                    协议 B 与 A 的最大区别：没有 response_format，结构化闸在 tool_choice；
+                    模型不再把 JSON 写在 content 文本流里，而是直接返回 tool_use block。
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Intent 契约与协议 A 镜像：action ∈ search|order|cancel，query 非空，qty 可选。
+                    input_schema 额外带 description（Anthropic 推荐，OpenAI strict 侧没有这层）。
+                  </p>
+                </section>
+              </main>
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
   </script>
 </body>
 </html>

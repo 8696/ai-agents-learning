@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流到底 · Abort</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/abort-cards.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "AnswerCard", "UsageBar", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, AnswerCard, UsageBar, ErrorBanner } = window.DemoUI;
+        const { streamAbortCase } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [message, setMessage] = useState("用 80 字介绍你自己。");
+          const [last, setLast] = useState("");
+          const [content, setContent] = useState("");
+          const [meta, setMeta] = useState(null);
+          const [error, setError] = useState(null);
+          const blocked = busy || !env.hasKey;
+
+          async function run(msg) {
+            setBusy(true); setStatus("loading"); setError(null); setContent(""); setMeta(null); setLast(msg);
+            var t0 = Date.now();
+            try {
+              const r = await streamAbortCase({
+                url: "/api/full",
+                body: { message: msg },
+                onEvent: function (evt) {
+                  if (evt.event === "delta") setContent(function (c) { return c + (evt.content || ""); });
+                },
+              });
+              var elapsed = Date.now() - t0;
+              if (!r.ok) { setError({ title: "请求被拒绝", detail: r.error, httpStatus: r.httpStatus }); setStatus("error"); return; }
+              setMeta({ frameIdx: r.frameIdx, usage: r.usage, doneSeen: r.doneSeen, elapsedMs: elapsed });
+              if (r.streamError) { setError({ title: "流中途失败", detail: r.streamError, httpStatus: 200 }); setStatus("error"); return; }
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null }); setStatus("error");
+            } finally { setBusy(false); }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">流到底（基线）</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="不取消。用来对照「完整跑完时长 / 帧数 / usage」。"
+                  steps={["点发送 → POST /api/full", "服务端不传 AbortSignal，一直写到 [DONE]", "期望绿卡片写完，usage 有 total_tokens"]} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">message
+                    <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={2} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={function () { run(message); }}>跑到底</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={function () { run(""); }}>空消息（期望 400）</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!last && !error && <p className="text-sm text-gray-500">还没跑过。这是对照基线，先跑一次再去取消页比帧数。</p>}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {last && <PromptCard prompt={last} extra="POST /api/full · 无 signal" />}
+                  {last && <AnswerCard text={content} streaming={busy} />}
+                  {meta && <UsageBar usage={meta.usage} frameIdx={meta.frameIdx} elapsedMs={meta.elapsedMs} doneSeen={meta.doneSeen} />}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

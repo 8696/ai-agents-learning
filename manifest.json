@@ -727,17 +727,121 @@
             "label": "01-API-Key-计费",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "billing",
+                    "children": [
+                      {
+                        "label": "pricing.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/billing/pricing.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "compare-input-output.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/flow/compare-input-output.ts"
+                      },
+                      {
+                        "label": "measure-one-call.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/flow/measure-one-call.ts"
+                      },
+                      {
+                        "label": "measure-types.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/flow/measure-types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/00-环境准备/01-API-Key-计费/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "billing-cards.js",
+                        "path": "apps/00-环境准备/01-API-Key-计费/public/components/billing-cards.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/00-环境准备/01-API-Key-计费/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/00-环境准备/01-API-Key-计费/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "compare.html",
+                        "path": "apps/00-环境准备/01-API-Key-计费/public/pages/compare.html"
+                      },
+                      {
+                        "label": "usage.html",
+                        "path": "apps/00-环境准备/01-API-Key-计费/public/pages/usage.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/00-环境准备/01-API-Key-计费/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/00-环境准备/01-API-Key-计费/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/00-环境准备/01-API-Key-计费/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "billing-compare.ts",
+                    "path": "apps/00-环境准备/01-API-Key-计费/routes/billing-compare.ts"
+                  },
+                  {
+                    "label": "billing.ts",
+                    "path": "apps/00-环境准备/01-API-Key-计费/routes/billing.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/00-环境准备/01-API-Key-计费/routes/health.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -749,11 +853,86 @@
             "label": "01-mini-app",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "stream-chat.ts",
+                        "path": "apps/00-环境准备/01-mini-app/lib/flow/stream-chat.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/00-环境准备/01-mini-app/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/00-环境准备/01-mini-app/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "sse",
+                    "children": [
+                      {
+                        "label": "sse-writer.ts",
+                        "path": "apps/00-环境准备/01-mini-app/lib/sse/sse-writer.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/00-环境准备/01-mini-app/public/components/layout.js"
+                      },
+                      {
+                        "label": "stream-cards.js",
+                        "path": "apps/00-环境准备/01-mini-app/public/components/stream-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/00-环境准备/01-mini-app/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "chat.html",
+                        "path": "apps/00-环境准备/01-mini-app/public/pages/chat.html"
+                      },
+                      {
+                        "label": "frames.html",
+                        "path": "apps/00-环境准备/01-mini-app/public/pages/frames.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "sse-client.js",
+                        "path": "apps/00-环境准备/01-mini-app/public/utils/sse-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/00-环境准备/01-mini-app/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
@@ -762,21 +941,21 @@
                 "path": "apps/00-环境准备/01-mini-app/README.md"
               },
               {
-                "label": "server.ts",
-                "path": "apps/00-环境准备/01-mini-app/server.ts"
-              },
-              {
-                "label": "src",
+                "label": "routes",
                 "children": [
                   {
-                    "label": "index-anthropic.ts",
-                    "path": "apps/00-环境准备/01-mini-app/src/index-anthropic.ts"
+                    "label": "chat.ts",
+                    "path": "apps/00-环境准备/01-mini-app/routes/chat.ts"
                   },
                   {
-                    "label": "index.ts",
-                    "path": "apps/00-环境准备/01-mini-app/src/index.ts"
+                    "label": "health.ts",
+                    "path": "apps/00-环境准备/01-mini-app/routes/health.ts"
                   }
                 ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/00-环境准备/01-mini-app/server.ts"
               }
             ]
           }
@@ -789,12 +968,104 @@
             "label": "02-Token",
             "children": [
               {
-                "label": "index.ts",
-                "path": "apps/01-AI与LLM基础认知/02-Token/index.ts"
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "tokenize",
+                    "children": [
+                      {
+                        "label": "encode-text.ts",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/lib/tokenize/encode-text.ts"
+                      },
+                      {
+                        "label": "presets.ts",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/lib/tokenize/presets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/public/components/layout.js"
+                      },
+                      {
+                        "label": "token-cards.js",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/public/components/token-cards.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/01-AI与LLM基础认知/02-Token/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "compare.html",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/public/pages/compare.html"
+                      },
+                      {
+                        "label": "encode.html",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/public/pages/encode.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/01-AI与LLM基础认知/02-Token/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
               },
               {
                 "label": "README.md",
                 "path": "apps/01-AI与LLM基础认知/02-Token/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "encode.ts",
+                    "path": "apps/01-AI与LLM基础认知/02-Token/routes/encode.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/01-AI与LLM基础认知/02-Token/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/01-AI与LLM基础认知/02-Token/server.ts"
               }
             ]
           },
@@ -802,12 +1073,112 @@
             "label": "06-Embedding",
             "children": [
               {
-                "label": "index.ts",
-                "path": "apps/01-AI与LLM基础认知/06-Embedding/index.ts"
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "vec",
+                    "children": [
+                      {
+                        "label": "compare.ts",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/lib/vec/compare.ts"
+                      },
+                      {
+                        "label": "cosine.ts",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/lib/vec/cosine.ts"
+                      },
+                      {
+                        "label": "tables.ts",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/lib/vec/tables.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/public/components/layout.js"
+                      },
+                      {
+                        "label": "vec-cards.js",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/public/components/vec-cards.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/01-AI与LLM基础认知/06-Embedding/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "cosine.html",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/public/pages/cosine.html"
+                      },
+                      {
+                        "label": "token-id.html",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/public/pages/token-id.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
               },
               {
                 "label": "README.md",
                 "path": "apps/01-AI与LLM基础认知/06-Embedding/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/01-AI与LLM基础认知/06-Embedding/routes/health.ts"
+                  },
+                  {
+                    "label": "rank.ts",
+                    "path": "apps/01-AI与LLM基础认知/06-Embedding/routes/rank.ts"
+                  },
+                  {
+                    "label": "token-id.ts",
+                    "path": "apps/01-AI与LLM基础认知/06-Embedding/routes/token-id.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/01-AI与LLM基础认知/06-Embedding/server.ts"
               }
             ]
           },
@@ -815,17 +1186,133 @@
             "label": "07-Temperature-Top-P",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "run-group.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/flow/run-group.ts"
+                      },
+                      {
+                        "label": "run-repeat.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/flow/run-repeat.ts"
+                      },
+                      {
+                        "label": "run-sweep.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/flow/run-sweep.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "sampling",
+                    "children": [
+                      {
+                        "label": "call-once.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/sampling/call-once.ts"
+                      },
+                      {
+                        "label": "presets.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/sampling/presets.ts"
+                      },
+                      {
+                        "label": "sampling-types.ts",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/lib/sampling/sampling-types.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "group-cards.js",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/components/group-cards.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "repeat.html",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/pages/repeat.html"
+                      },
+                      {
+                        "label": "temperature.html",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/pages/temperature.html"
+                      },
+                      {
+                        "label": "top-p.html",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/pages/top-p.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/routes/health.ts"
+                  },
+                  {
+                    "label": "repeat.ts",
+                    "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/routes/repeat.ts"
+                  },
+                  {
+                    "label": "sweep.ts",
+                    "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P/routes/sweep.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -842,17 +1329,125 @@
             "label": "01-Streaming-SSE",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "simulate.ts",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/lib/flow/simulate.ts"
+                      },
+                      {
+                        "label": "stream-real.ts",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/lib/flow/stream-real.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "sse",
+                    "children": [
+                      {
+                        "label": "sse-writer.ts",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/lib/sse/sse-writer.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/components/layout.js"
+                      },
+                      {
+                        "label": "stream-cards.js",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/components/stream-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "blocking.html",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/pages/blocking.html"
+                      },
+                      {
+                        "label": "real.html",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/pages/real.html"
+                      },
+                      {
+                        "label": "simulated.html",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/pages/simulated.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "sse-client.js",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/utils/sse-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/01-Streaming-SSE/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "blocking.ts",
+                    "path": "apps/02-LLM-API开发/01-Streaming-SSE/routes/blocking.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/02-LLM-API开发/01-Streaming-SSE/routes/health.ts"
+                  },
+                  {
+                    "label": "real.ts",
+                    "path": "apps/02-LLM-API开发/01-Streaming-SSE/routes/real.ts"
+                  },
+                  {
+                    "label": "stream.ts",
+                    "path": "apps/02-LLM-API开发/01-Streaming-SSE/routes/stream.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -864,11 +1459,143 @@
             "label": "02-协议-A-vs-B",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "compare",
+                    "children": [
+                      {
+                        "label": "shape-once.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/compare/shape-once.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/compare/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "sse-writer.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/http/sse-writer.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-a",
+                    "children": [
+                      {
+                        "label": "send-once.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-a/send-once.ts"
+                      },
+                      {
+                        "label": "send-stream-raw.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-a/send-stream-raw.ts"
+                      },
+                      {
+                        "label": "send-stream.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-a/send-stream.ts"
+                      },
+                      {
+                        "label": "think-extract.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-a/think-extract.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-b",
+                    "children": [
+                      {
+                        "label": "send-once.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-b/send-once.ts"
+                      },
+                      {
+                        "label": "send-stream-raw.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-b/send-stream-raw.ts"
+                      },
+                      {
+                        "label": "send-stream.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-b/send-stream.ts"
+                      },
+                      {
+                        "label": "send-thinking-stream.ts",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/lib/protocol-b/send-thinking-stream.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "compare-cards.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/components/compare-cards.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/components/layout.js"
+                      },
+                      {
+                        "label": "stream-cards.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/components/stream-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "once.html",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/pages/once.html"
+                      },
+                      {
+                        "label": "stream-a.html",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/pages/stream-a.html"
+                      },
+                      {
+                        "label": "stream-b.html",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/pages/stream-b.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "sse-client.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/utils/sse-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
@@ -877,12 +1604,45 @@
                 "path": "apps/02-LLM-API开发/02-协议-A-vs-B/README.md"
               },
               {
-                "label": "server.ts",
-                "path": "apps/02-LLM-API开发/02-协议-A-vs-B/server.ts"
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "a-stream-raw.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/a-stream-raw.ts"
+                  },
+                  {
+                    "label": "a.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/a.ts"
+                  },
+                  {
+                    "label": "b-stream-raw.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/b-stream-raw.ts"
+                  },
+                  {
+                    "label": "b-thinking-stream.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/b-thinking-stream.ts"
+                  },
+                  {
+                    "label": "b.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/b.ts"
+                  },
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/health.ts"
+                  },
+                  {
+                    "label": "think-compare.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B/routes/think-compare.ts"
+                  }
+                ]
               },
               {
-                "label": "think-test.ts",
-                "path": "apps/02-LLM-API开发/02-协议-A-vs-B/think-test.ts"
+                "label": "server.ts",
+                "path": "apps/02-LLM-API开发/02-协议-A-vs-B/server.ts"
               }
             ]
           },
@@ -890,17 +1650,129 @@
             "label": "03-AbortController",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "run-cancel.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/flow/run-cancel.ts"
+                      },
+                      {
+                        "label": "run-full.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/flow/run-full.ts"
+                      },
+                      {
+                        "label": "run-no-signal.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/flow/run-no-signal.ts"
+                      },
+                      {
+                        "label": "stream-llm.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/flow/stream-llm.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "sse",
+                    "children": [
+                      {
+                        "label": "sse-writer.ts",
+                        "path": "apps/02-LLM-API开发/03-AbortController/lib/sse/sse-writer.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "abort-cards.js",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/components/abort-cards.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/02-LLM-API开发/03-AbortController/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "cancel.html",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/pages/cancel.html"
+                      },
+                      {
+                        "label": "full.html",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/pages/full.html"
+                      },
+                      {
+                        "label": "no-signal.html",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/pages/no-signal.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "sse-client.js",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/utils/sse-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/02-LLM-API开发/03-AbortController/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/03-AbortController/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "cancel.ts",
+                    "path": "apps/02-LLM-API开发/03-AbortController/routes/cancel.ts"
+                  },
+                  {
+                    "label": "full.ts",
+                    "path": "apps/02-LLM-API开发/03-AbortController/routes/full.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/02-LLM-API开发/03-AbortController/routes/health.ts"
+                  },
+                  {
+                    "label": "no-signal.ts",
+                    "path": "apps/02-LLM-API开发/03-AbortController/routes/no-signal.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -912,21 +1784,142 @@
             "label": "03-adapter-demo",
             "children": [
               {
-                "label": "adapter.ts",
-                "path": "apps/02-LLM-API开发/03-adapter-demo/adapter.ts"
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "adapter",
+                    "children": [
+                      {
+                        "label": "send-message.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/adapter/send-message.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/adapter/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "sse-writer.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/http/sse-writer.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-a",
+                    "children": [
+                      {
+                        "label": "send-once.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/protocol-a/send-once.ts"
+                      },
+                      {
+                        "label": "send-stream.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/protocol-a/send-stream.ts"
+                      },
+                      {
+                        "label": "think-extract.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/protocol-a/think-extract.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-b",
+                    "children": [
+                      {
+                        "label": "send-once.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/protocol-b/send-once.ts"
+                      },
+                      {
+                        "label": "send-stream.ts",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/lib/protocol-b/send-stream.ts"
+                      }
+                    ]
+                  }
+                ]
               },
               {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/components/layout.js"
+                      },
+                      {
+                        "label": "unified-cards.js",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/components/unified-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/02-LLM-API开发/03-adapter-demo/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "once.html",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/pages/once.html"
+                      },
+                      {
+                        "label": "stream.html",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/pages/stream.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "sse-client.js",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/utils/sse-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/03-adapter-demo/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat-stream.ts",
+                    "path": "apps/02-LLM-API开发/03-adapter-demo/routes/chat-stream.ts"
+                  },
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/02-LLM-API开发/03-adapter-demo/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/02-LLM-API开发/03-adapter-demo/routes/health.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -938,11 +1931,99 @@
             "label": "04-Rate-Limit",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "run-with-retry.ts",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/lib/flow/run-with-retry.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "mock",
+                    "children": [
+                      {
+                        "label": "mock-responses.ts",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/lib/mock/mock-responses.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "retry",
+                    "children": [
+                      {
+                        "label": "retry.ts",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/lib/retry/retry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/public/components/layout.js"
+                      },
+                      {
+                        "label": "timeline.js",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/public/components/timeline.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/02-LLM-API开发/04-Rate-Limit/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "mock.html",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/public/pages/mock.html"
+                      },
+                      {
+                        "label": "real.html",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/public/pages/real.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
@@ -951,8 +2032,21 @@
                 "path": "apps/02-LLM-API开发/04-Rate-Limit/README.md"
               },
               {
-                "label": "retry.ts",
-                "path": "apps/02-LLM-API开发/04-Rate-Limit/retry.ts"
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/02-LLM-API开发/04-Rate-Limit/routes/health.ts"
+                  },
+                  {
+                    "label": "mock.ts",
+                    "path": "apps/02-LLM-API开发/04-Rate-Limit/routes/mock.ts"
+                  },
+                  {
+                    "label": "real.ts",
+                    "path": "apps/02-LLM-API开发/04-Rate-Limit/routes/real.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -964,17 +2058,139 @@
             "label": "05-思考",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "compare",
+                    "children": [
+                      {
+                        "label": "stream-types.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/compare/stream-types.ts"
+                      },
+                      {
+                        "label": "thinking-meta.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/compare/thinking-meta.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "dialect",
+                    "children": [
+                      {
+                        "label": "thinking-dialect.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/dialect/thinking-dialect.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "sse-writer.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/http/sse-writer.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-a",
+                    "children": [
+                      {
+                        "label": "send-stream.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/protocol-a/send-stream.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-b",
+                    "children": [
+                      {
+                        "label": "send-stream.ts",
+                        "path": "apps/02-LLM-API开发/05-思考/lib/protocol-b/send-stream.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "dialect-table.js",
+                        "path": "apps/02-LLM-API开发/05-思考/public/components/dialect-table.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/02-LLM-API开发/05-思考/public/components/layout.js"
+                      },
+                      {
+                        "label": "stream-cards.js",
+                        "path": "apps/02-LLM-API开发/05-思考/public/components/stream-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/02-LLM-API开发/05-思考/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "stream.html",
+                        "path": "apps/02-LLM-API开发/05-思考/public/pages/stream.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "sse-client.js",
+                        "path": "apps/02-LLM-API开发/05-思考/public/utils/sse-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/02-LLM-API开发/05-思考/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/02-LLM-API开发/05-思考/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/02-LLM-API开发/05-思考/routes/health.ts"
+                  },
+                  {
+                    "label": "stream-a.ts",
+                    "path": "apps/02-LLM-API开发/05-思考/routes/stream-a.ts"
+                  },
+                  {
+                    "label": "stream-b.ts",
+                    "path": "apps/02-LLM-API开发/05-思考/routes/stream-b.ts"
+                  },
+                  {
+                    "label": "stream.ts",
+                    "path": "apps/02-LLM-API开发/05-思考/routes/stream.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -991,17 +2207,142 @@
             "label": "01-System-User-Assistant-优先级",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "assemble-case.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/flow/assemble-case.ts"
+                      },
+                      {
+                        "label": "cases.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/flow/cases.ts"
+                      },
+                      {
+                        "label": "judge.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/flow/judge.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-a",
+                    "children": [
+                      {
+                        "label": "send-once.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/protocol-a/send-once.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "protocol-b",
+                    "children": [
+                      {
+                        "label": "send-once.ts",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/lib/protocol-b/send-once.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/components/layout.js"
+                      },
+                      {
+                        "label": "side-cards.js",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/components/side-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "no-history.html",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/pages/no-history.html"
+                      },
+                      {
+                        "label": "priority.html",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/pages/priority.html"
+                      },
+                      {
+                        "label": "with-history.html",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/pages/with-history.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "case1-priority.ts",
+                    "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/routes/case1-priority.ts"
+                  },
+                  {
+                    "label": "case2-with-history.ts",
+                    "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/routes/case2-with-history.ts"
+                  },
+                  {
+                    "label": "case3-no-history.ts",
+                    "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/routes/case3-no-history.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/routes/health.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -1013,17 +2354,117 @@
             "label": "02-Few-shot-Zero-shot",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "classify",
+                    "children": [
+                      {
+                        "label": "judge.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/classify/judge.ts"
+                      },
+                      {
+                        "label": "presets.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/classify/presets.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/classify/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "classify-modes.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/flow/classify-modes.ts"
+                      },
+                      {
+                        "label": "classify-one.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/flow/classify-one.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/components/layout.js"
+                      },
+                      {
+                        "label": "result-cards.js",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/components/result-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "compare.html",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/pages/compare.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
               {
                 "label": "README.md",
                 "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "classify.ts",
+                    "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/routes/classify.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot/routes/health.ts"
+                  }
+                ]
               },
               {
                 "label": "server.ts",
@@ -1035,11 +2476,94 @@
             "label": "04-Prompt-版本管理",
             "children": [
               {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "compare-versions.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/flow/compare-versions.ts"
+                      },
+                      {
+                        "label": "run-one.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/flow/run-one.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "version",
+                    "children": [
+                      {
+                        "label": "detect.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/version/detect.ts"
+                      },
+                      {
+                        "label": "presets.ts",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/lib/version/presets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/components/layout.js"
+                      },
+                      {
+                        "label": "result-cards.js",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/components/result-cards.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "compare.html",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/pages/compare.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/public/utils/wait-demo-ui.js"
+                      }
+                    ]
                   }
                 ]
               },
@@ -1048,8 +2572,611 @@
                 "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/README.md"
               },
               {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/routes/health.ts"
+                  }
+                ]
+              },
+              {
                 "label": "server.ts",
                 "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "04-Structured-Output",
+        "children": [
+          {
+            "label": "01-JSON-Schema",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "schema",
+                    "children": [
+                      {
+                        "label": "intent.ts",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/lib/schema/intent.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/components/layout.js"
+                      },
+                      {
+                        "label": "schema-cards.js",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/components/schema-cards.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/04-Structured-Output/01-JSON-Schema/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "parse.html",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/pages/parse.html"
+                      },
+                      {
+                        "label": "repair.html",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/pages/repair.html"
+                      },
+                      {
+                        "label": "transform.html",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/pages/transform.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/04-Structured-Output/01-JSON-Schema/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/04-Structured-Output/01-JSON-Schema/routes/health.ts"
+                  },
+                  {
+                    "label": "parse.ts",
+                    "path": "apps/04-Structured-Output/01-JSON-Schema/routes/parse.ts"
+                  },
+                  {
+                    "label": "repair.ts",
+                    "path": "apps/04-Structured-Output/01-JSON-Schema/routes/repair.ts"
+                  },
+                  {
+                    "label": "transform.ts",
+                    "path": "apps/04-Structured-Output/01-JSON-Schema/routes/transform.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/04-Structured-Output/01-JSON-Schema/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-JSON-Mode-vs-Structured-Output",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "measure-types.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/flow/measure-types.ts"
+                      },
+                      {
+                        "label": "parse-and-analyze.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/flow/parse-and-analyze.ts"
+                      },
+                      {
+                        "label": "run-json-mode.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/flow/run-json-mode.ts"
+                      },
+                      {
+                        "label": "run-strict-rejected.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/flow/run-strict-rejected.ts"
+                      },
+                      {
+                        "label": "run-structured.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/flow/run-structured.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "schema",
+                    "children": [
+                      {
+                        "label": "intent.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/lib/schema/intent.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/components/layout.js"
+                      },
+                      {
+                        "label": "mode-cards.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/components/mode-cards.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "json-mode.html",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/pages/json-mode.html"
+                      },
+                      {
+                        "label": "strict-rejected.html",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/pages/strict-rejected.html"
+                      },
+                      {
+                        "label": "structured.html",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/pages/structured.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "presets.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/utils/presets.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/routes/health.ts"
+                  },
+                  {
+                    "label": "json-mode.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/routes/json-mode.ts"
+                  },
+                  {
+                    "label": "strict-rejected.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/routes/strict-rejected.ts"
+                  },
+                  {
+                    "label": "structured-output.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/routes/structured-output.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-JSON-Mode-vs-Tool-Use-ProtoB",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "measure-types.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/flow/measure-types.ts"
+                      },
+                      {
+                        "label": "parse-and-analyze.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/flow/parse-and-analyze.ts"
+                      },
+                      {
+                        "label": "run-text.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/flow/run-text.ts"
+                      },
+                      {
+                        "label": "run-tool-rejected.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/flow/run-tool-rejected.ts"
+                      },
+                      {
+                        "label": "run-tool-use.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/flow/run-tool-use.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "schema",
+                    "children": [
+                      {
+                        "label": "intent.ts",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/lib/schema/intent.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/components/layout.js"
+                      },
+                      {
+                        "label": "mode-cards.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/components/mode-cards.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "text.html",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/pages/text.html"
+                      },
+                      {
+                        "label": "tool-rejected.html",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/pages/tool-rejected.html"
+                      },
+                      {
+                        "label": "tool-use.html",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/pages/tool-use.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "presets.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/utils/presets.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/routes/health.ts"
+                  },
+                  {
+                    "label": "text.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/routes/text.ts"
+                  },
+                  {
+                    "label": "tool-rejected.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/routes/tool-rejected.ts"
+                  },
+                  {
+                    "label": "tool-use.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/routes/tool-use.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "05-Tool-Calling",
+        "children": [
+          {
+            "label": "01-Function-Calling-协议",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "build-tool-result.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/build-tool-result.ts"
+                      },
+                      {
+                        "label": "execute-one-tool-call.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/execute-one-tool-call.ts"
+                      },
+                      {
+                        "label": "execute-tool-calls.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/execute-tool-calls.ts"
+                      },
+                      {
+                        "label": "parse-and-validate-args.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/parse-and-validate-args.ts"
+                      },
+                      {
+                        "label": "round-types.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/round-types.ts"
+                      },
+                      {
+                        "label": "run-tool-loop.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/run-tool-loop.ts"
+                      },
+                      {
+                        "label": "simulate-zod-repair.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/flow/simulate-zod-repair.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "request-guards.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/http/request-guards.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "write-upstream-error.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/http/write-upstream-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "schema",
+                    "children": [
+                      {
+                        "label": "zod-to-json-schema.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/schema/zod-to-json-schema.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/tools/registry.ts"
+                      },
+                      {
+                        "label": "tool-defs.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/tools/tool-defs.ts"
+                      },
+                      {
+                        "label": "tool-types.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/lib/tools/tool-types.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/components/layout.js"
+                      },
+                      {
+                        "label": "rounds.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/components/rounds.js"
+                      },
+                      {
+                        "label": "tools-panel.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/components/tools-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "run.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/pages/run.html"
+                      },
+                      {
+                        "label": "serial.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/pages/serial.html"
+                      },
+                      {
+                        "label": "tool-error.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/pages/tool-error.html"
+                      },
+                      {
+                        "label": "zod-error.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/pages/zod-error.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/utils/api-client.js"
+                      },
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议/routes/health.ts"
+                  },
+                  {
+                    "label": "run-serial.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议/routes/run-serial.ts"
+                  },
+                  {
+                    "label": "run.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议/routes/run.ts"
+                  },
+                  {
+                    "label": "simulate-zod-error.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议/routes/simulate-zod-error.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议/server.ts"
               }
             ]
           }

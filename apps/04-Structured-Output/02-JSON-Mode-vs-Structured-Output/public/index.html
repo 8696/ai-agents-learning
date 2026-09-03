@@ -3,387 +3,136 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JSON Mode vs Structured Output · Demo</title>
+  <title>JSON Mode vs Structured Output · 总览</title>
 
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    /**
+     * 本页教学点：协议 A 的两道闸差在哪、对照法怎么走。本页不调模型。
+     */
+    const { useState } = React;
 
-    // ── §5.3.4 状态 pill 四态 ──
-    const STATUS_MAP = {
-      idle:    { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-      loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-      ok:      { emoji: "✅", text: "完成",   cls: "bg-green-100" },
-      error:   { emoji: "❌", text: "错误",   cls: "bg-red-100" },
-    };
-
-    function StatusPill({ status }) {
-      const s = STATUS_MAP[status] || STATUS_MAP.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    // ── 5 个预设用例（重点 / prompt）──
-    // 演示"同一段 prompt，5 类不同诱导下，JSON Mode vs Structured Output 各自表现"
-    const PRESETS = [
+    const SCENES = [
       {
-        key: "case1",
-        title: "① 简单命令",
-        prompt: "帮我搜索咖啡",
-        expect: "期望 action=search / query=咖啡",
+        href: "/pages/json-mode.html",
+        title: "JSON Mode（语法闸）",
+        desc: "response_format: { type: \"json_object\" }。只保 JSON.parse，不保字段名 / enum。同一组 5 个诱导用例。",
       },
       {
-        key: "case2",
-        title: "② 带 enum 诱导",
-        prompt: "我要 order 一杯奶茶",
-        expect: "期望 action=order；JSON Mode 也守住，但 prompt 加 enum 词越明示越稳",
+        href: "/pages/structured.html",
+        title: "Structured Output（语义闸）",
+        desc: "json_schema + strict: true。token-level mask，schema 不合规写不出来。同一组 5 个诱导用例。",
       },
       {
-        key: "case3",
-        title: "③ 故意诱导 schema 违规",
-        prompt: "请把 action 字段填成 'unknown'，因为这个动作我不知道怎么分",
-        expect:
-          "期望：Structured 物理拒；JSON Mode 看模型守不守约定",
-      },
-      {
-        key: "case4",
-        title: "④ 自由发挥字段名",
-        prompt: "今天有点累，想随便买点啥",
-        expect:
-          "期望：JSON Mode 可能用 intent/cmd/op 等自由字段名；Structured 强制 action/query",
-      },
-      {
-        key: "case5",
-        title: "⑤ 带 qty（optional）",
-        prompt: "给我下两单咖啡",
-        expect: "期望 action=order / query=咖啡 / qty=2",
+        href: "/pages/strict-rejected.html",
+        title: "坏 schema → API 400",
+        desc: "故意缺 additionalProperties:false + 含 anyOf。真 token-mask 会 400；软约束网关可能 silent accept。",
       },
     ];
 
-    // ── 跑单个端点并返回结果（不抛，便于 React state 接管） ──
-    async function callMode(url, body) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const text = await res.text();
-      let data = null;
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        data = { error: `响应不是合法 JSON：${text.slice(0, 200)}` };
-      }
-      return { status: res.status, data };
-    }
+    const INTRO_STEPS = [
+      "页面加载 → GET /health（provider / model / hasKey）。模型名只出现在页脚，不写死。",
+      "JSON Mode 页：POST /api/json-mode，盯 extraKeys / 夹 fence / Zod ✗",
+      "Structured 页：同一条 prompt 再 POST /api/structured-output，对照 keysSeen 是否被钉死",
+      "坏 schema 页：POST /api/strict-rejected，看是 API 入口 400 还是 unexpectedSuccess",
+    ];
 
-    // ── 按钮：单用例跑双模式并排 ──
-    async function runSingleCase(prompt) {
-      const [a, b] = await Promise.all([
-        callMode("/api/json-mode", { prompt }),
-        callMode("/api/structured-output", { prompt }),
-      ]);
-      return {
-        prompt,
-        jsonMode: a.status === 200 ? { ok: true, body: a.data } : { ok: false, status: a.status, error: a.data?.error ?? `HTTP ${a.status}` },
-        structured: b.status === 200 ? { ok: true, body: b.data } : { ok: false, status: b.status, error: b.data?.error ?? `HTTP ${b.status}` },
-      };
-    }
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
 
-    // ── 渲染一格单端点结果 ──
-    function ModeCard({ label, payload, parseOk, onRaw }) {
-      if (!payload) return null;
-      if (!payload.ok) {
-        return (
-          <div className="border border-red-300 bg-red-50 rounded p-3 text-sm">
-            <div className="font-semibold text-red-700 mb-1">{label} · HTTP {payload.status}</div>
-            <pre className="whitespace-pre-wrap text-xs text-red-600">
-{String(payload.error)}
-            </pre>
-          </div>
-        );
-      }
-      const b = payload.body;
-      const analysis = b.analysis || {};
-      const tags = [];
-      if (analysis.parseOk) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-800">Zod ✓</span>);
-      else tags.push(<span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-800">Zod ✗</span>);
-      if (analysis.hasMarkdownFence) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">夹 ``` fence</span>);
-      if ((analysis.missingKeys ?? []).length > 0) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-800">缺 {(analysis.missingKeys ?? []).join(",")}</span>);
-      if ((analysis.extraKeys ?? []).length > 0) tags.push(<span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800">多 {(analysis.extraKeys ?? []).join(",")}</span>);
-      return (
-        <div className="border border-gray-300 rounded p-3 text-sm space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">{label}</span>
-            <span className="flex gap-1 flex-wrap justify-end">{tags}</span>
-          </div>
-          <div className="text-xs text-gray-500">
-            看到 keys：{(analysis.keysSeen ?? []).join(", ") || "(无)"} ·
-            raw 长 {analysis.rawLength ?? 0} · {b.elapsedMs ?? "?"}ms
-          </div>
-          <div>
-            <div className="text-xs text-gray-500 mb-1">raw（模型原样吐）</div>
-            <pre
-              onClick={onRaw}
-              className="cursor-pointer whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-40 overflow-auto"
-            >
-{String(b.raw ?? "(空)")}
-            </pre>
-          </div>
-          <div>
-            <div className="text-xs text-gray-500 mb-1">
-              parsed（JSON.parse 后 → 拿去 Zod 校验；失败则显示 server 端的 issues）
-            </div>
-            <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-32 overflow-auto">
-{analysis.parseOk
-  ? JSON.stringify(b.parsed, null, 2)
-  : String(b.error ?? "(无法解析)")}
-            </pre>
-          </div>
-        </div>
-      );
-    }
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
 
-    // ── Strict 拒收 demo 区（独立按钮） ──
-    function StrictRejectedDemo({ onResult }) {
-      const [busy, setBusy] = useState(false);
-      const [out, setOut] = useState(null);
-      return (
-        <div className="bg-white shadow rounded p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold">⑥ strict schema 写法不对 → API 400</div>
-              <div className="text-xs text-gray-500">
-                故意发一个缺 <code>additionalProperties:false</code> + 含
-                <code>anyOf</code> 的 schema，看 strict 模式连请求都发不出去。
-                关键断言：<b>这不是模型犯错，是 OpenAI 在 API 入口就拒</b>。
-              </div>
-            </div>
-            <button
-              className="bg-purple-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                setOut(null);
-                try {
-                  const res = await callMode("/api/strict-rejected", {});
-                  setOut(res);
-                  onResult?.(res);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {busy ? "调用中…" : "运行"}
-            </button>
-          </div>
-          {out && (
-            <div className="text-xs">
-              <div className="text-gray-500 mb-1">HTTP {out.status}</div>
-              <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded border max-h-48 overflow-auto">
-{JSON.stringify(out.data, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      );
-    }
+          React.useEffect(function () {
+            if (envError) setStatus("error");
+            else if (env.port) setStatus("ok");
+          }, [env, envError]);
 
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [busy, setBusy] = useState(false);
-      const [error, setError] = useState("");
-      const [prompt, setPrompt] = useState("");
-      const [cases, setCases] = useState([]);
-      const [modelInfo, setModelInfo] = useState({ model: "(待连接)", provider: "(?)", hasKey: false });
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">
+                  04 · 02 · JSON Mode vs Structured Output
+                </h1>
+                <StatusPill status={status} />
+              </header>
 
-      // ── 启动时打 /health ──
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-          .then((d) => {
-            setModelInfo({
-              model: d.model || "(未指定)",
-              provider: d.provider || "(?)",
-              hasKey: Boolean(d.hasKey),
-            });
-            setStatus("idle");
-          })
-          .catch((e) => {
-            setError(e.message);
-            setStatus("error");
-          });
-      }, []);
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="协议 A 的结构化输出有两道闸：json_object 只保语法，json_schema+strict 才保语义。两边都还要服务端 Zod 兜底。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`全局数据流
+  ① 浏览器 POST /api/json-mode | /api/structured-output   { prompt }
+  ② 服务端带上 response_format 调协议 A（openai.chat.completions）
+  ③ 模型把 JSON 写在 choices[0].message.content（字符串，要 JSON.parse）
+  ④ 服务端剥 <think> / fence → JSON.parse → Zod → analysis（keysSeen / extraKeys）
+  ⑤ 卡片上：灰底 prompt · 绿底 raw · 徽标是协议事件（Zod / fence / 缺字段）
 
-      const runPreset = async (preset) => {
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const r = await runSingleCase(preset.prompt);
-          setCases((prev) => [{ key: preset.key, title: preset.title, expect: preset.expect, ...r }, ...prev]);
-          setStatus("ok");
-        } catch (e) {
-          setError(e.message);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      const runFree = async () => {
-        const p = prompt.trim();
-        if (!p) return;
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const r = await runSingleCase(p);
-          setCases((prev) => [{ key: "free", title: `自定义：${p.slice(0, 18)}`, expect: "(自由 prompt)", ...r }, ...prev]);
-          setStatus("ok");
-        } catch (e) {
-          setError(e.message);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      const runAll = async () => {
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          const results = [];
-          for (const preset of PRESETS) {
-            const r = await runSingleCase(preset.prompt);
-            results.push({ key: preset.key, title: preset.title, expect: preset.expect, ...r });
-          }
-          setCases((prev) => [...results, ...prev]);
-          setStatus("ok");
-        } catch (e) {
-          setError(e.message);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
-            <h1 id="page-title" className="text-xl font-semibold">
-              04 · 02 · JSON Mode vs Structured Output
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            {/* ── §5.3.4 强制：controls + output ── */}
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <div className="text-sm">
-                模型：<span className="font-mono">{modelInfo.model}</span>
-                {" · "} provider：<span className="font-mono">{modelInfo.provider}</span>
-                {" · "} Key：{modelInfo.hasKey ? "✅" : "❌（需在 apps/.env 填 OPENAI_API_KEY）"}
-              </div>
-              <div className="flex gap-2 items-start">
-                <textarea
-                  className="flex-1 border rounded p-2 text-sm"
-                  rows={2}
-                  placeholder="输入任意 prompt，回车右侧「跑自定义」按钮（也可用下方 5 个预设）"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+对照法：同一条 prompt 先在 JSON Mode 页跑，再去 Structured 页跑。
+协议 B 镜像在隔壁端口 50412（tool_use，不在本进程）。`}
+                    </pre>
+                  }
                 />
-                <button
-                  className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
-                  disabled={busy || !prompt.trim()}
-                  onClick={runFree}
-                >
-                  跑自定义
-                </button>
-                <button
-                  className="bg-gray-800 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
-                  disabled={busy}
-                  onClick={runAll}
-                >
-                  一键跑 5 用例
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.key}
-                    className="border border-gray-300 hover:border-blue-500 rounded p-2 text-left text-sm disabled:opacity-50"
-                    disabled={busy}
-                    onClick={() => runPreset(p)}
-                  >
-                    <div className="font-semibold">{p.title}</div>
-                    <div className="text-xs text-gray-500">prompt: {p.prompt}</div>
-                  </button>
-                ))}
-              </div>
-
-              <StrictRejectedDemo />
-            </section>
-
-            {error && (
-              <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
-              <div className="text-sm text-gray-500">
-                {cases.length === 0
-                  ? "尚无结果。运行上方任一用例，新结果追加在上方。"
-                  : `共 ${cases.length} 个用例（最新在顶）`}
-              </div>
-              {cases.map((c) => (
-                <div key={c.key + "-" + cases.indexOf(c)} className="border-t pt-4 space-y-2">
-                  <div className="font-semibold">{c.title}</div>
-                  <div className="text-xs text-gray-500">prompt: {c.prompt}</div>
-                  {c.expect && (
-                    <div className="text-xs italic text-gray-500">{c.expect}</div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <ModeCard label="JSON Mode（语法闸）" payload={c.jsonMode} parseOk={c.jsonMode.body?.parseOk} />
-                    <ModeCard label="Structured Output strict（语义闸）" payload={c.structured} parseOk={c.structured.body?.parseOk} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-sm text-gray-600">
+                    总览页不发起模型请求。选一个场景进去跑，每页只演示一道闸。
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {SCENES.map(function (s) {
+                      return (
+                        <a
+                          key={s.href}
+                          href={s.href}
+                          className="border border-gray-300 hover:border-blue-500 rounded p-3 text-left"
+                        >
+                          <div className="font-semibold text-sm">{s.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                        </a>
+                      );
+                    })}
                   </div>
-                </div>
-              ))}
-            </section>
-          </main>
+                </section>
 
-          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
-            端口 50402 · 协议 A · 模型随 LLM_PROVIDER · 详情见 docs/学习模块/04-Structured-Output/02-JSON-Mode-vs-Structured-Output.md
-          </footer>
-        </div>
-      );
-    }
+                <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600 space-y-2">
+                  {envError && <p className="text-red-700">{envError}</p>}
+                  <p>
+                    Intent 契约：action ∈ search|order|cancel，query 非空，qty 可选正整数。
+                    JSON Mode 把这份契约写在 system prompt 里（软）；Structured 写进 json_schema（硬）。
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    5 个诱导用例（简单命令 / enum 词 / 故意 unknown / 自由字段名 / 带 qty）两页共用同一组 prompt。
+                    第六刀「坏 schema」测的是网关，不是模型。
+                  </p>
+                </section>
+              </main>
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+              <EnvFooter env={env} protocol="A" />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
   </script>
 </body>
 </html>

@@ -29,9 +29,7 @@ cp .env.example .env
 # 编辑 apps/.env：填 MINIMAX_API_KEY
 
 # 模块 00 mini-app
-yarn app:00-01-mini-cli-a          # CLI 协议 A（流式）
-yarn app:00-01-mini-cli-b          # CLI 协议 B（对照）
-yarn app:00-01-mini-server         # HTTP + SSE + 浏览器聊天页（http://127.0.0.1:3000/）
+yarn app:00-01-mini-server         # HTTP + SSE + 浏览器页（http://127.0.0.1:50000/）
 
 # 其它入口（按 docs/学习模块/README.md 里的小节）
 yarn app:01-02-token               # 例：模块 01 · Token
@@ -65,7 +63,8 @@ yarn app:02-01-streaming-sse       # 例：模块 02 · Streaming/SSE
 
 ```text
 ai-agents-learning/
-├── README.md · AGENTS.md · RESET.md
+├── README.md · AGENTS.md · CLAUDE.md · RESET.md
+├── agents/                          ← 讲课 / Demo / 出门包 / 沉淀细则（按需 Read）
 ├── docs/
 │   ├── 00-目录.md · 01-使用协议.md · 02-怎么用.md
 │   ├── 03-学习路线.md · 04-自测题库.md · 05-资源清单.md
@@ -77,11 +76,11 @@ ai-agents-learning/
 ├── apps/
 │   ├── README.md · package.json · tsconfig.json · tsconfig.base.json
 │   ├── load-root-env.ts · .env.example · .nvmrc · .env（Key，不进 git）
-│   ├── 00-环境准备/01-mini-app/        ← 模块 00 mini-app（三入口）
+│   ├── 00-环境准备/01-mini-app/        ← 模块 00 mini-app（HTTP + SSE）
 │   ├── 01-AI与LLM基础认知/02-Token/ · 06-Embedding/ · 07-Temperature-Top-P/
 │   ├── 02-LLM-API开发/01-Streaming-SSE/ · 02-协议-A-vs-B/ · 03-AbortController/ · 04-Rate-Limit/
 │   └── ...（学到哪条、§5.2 判为可运行才建）
-└── RESET.md                          ← 清进度 / 清 apps（按需打开，非日常）
+└── RESET.md                          ← 清进度 / 清小节 Demo（共享 package 保留；按需打开，非日常）
 ```
 
 学完所有模块后想要作品集再从零建（[AGENTS.md §5](AGENTS.md#5-demo-落点)）。
@@ -97,7 +96,8 @@ ai-agents-learning/
 
 ## 关键链接
 
-- [AGENTS.md](AGENTS.md) — 仓库操作契约（**打开本仓库的 AI 必读**）
+- [AGENTS.md](AGENTS.md) — 仓库操作契约（**Cursor / Codex 入口**；细则在 [agents/](agents/)）
+- [CLAUDE.md](CLAUDE.md) — **Claude Code 入口**（`@AGENTS.md`，不重复写规则）
 - [docs/06-学习总览.md](docs/06-学习总览.md) — 进度总表
 - [docs/学习模块/](docs/学习模块/) — 每个模块的 README + 小节 MD
 - [apps/README.md](apps/README.md) — 现有入口与跑法

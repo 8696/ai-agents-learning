@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>重复稳定性 · Temperature / Top-P</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/group-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：同一组参数连跑 N 次。抽取任务看「去重后几种说法」，不是看平均值。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「连跑」→ POST /api/repeat { prompt, temperature, topP, runs }",
+      "服务端用同一组旋钮并发 N 次，判定 STABLE / DIVERGED",
+      "默认 T=1、top_p=1、5 次：更容易看见分叉",
+      "把 T 改成 0 再跑：期望每次都一样，这才适合做抽取",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "RepeatResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, RepeatResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [prompt, setPrompt] = useState("");
+          const [temperature, setTemperature] = useState(1);
+          const [topP, setTopP] = useState(1);
+          const [runs, setRuns] = useState(5);
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (env.defaults && !prompt) {
+              setPrompt(env.defaults.prompt);
+              if (env.defaults.repeatRuns) setRuns(env.defaults.repeatRuns);
+            }
+          }, [env.defaults]);
+
+          const blocked = busy || !env.hasKey;
+
+          async function run() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/repeat", {
+                prompt: prompt,
+                temperature: temperature,
+                topP: topP,
+                runs: runs,
+              });
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">重复稳定性</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="参数不变、连跑多次。去重后只剩一种说法，才谈得上「这档能做抽取」。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">
+                    prompt
+                    <span className="block text-xs text-gray-500">点了会按下面的 T / top_p / 次数真实调用。次数 2~6。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={2}
+                      value={prompt}
+                      disabled={busy}
+                      onChange={function (e) { setPrompt(e.target.value); }}
+                    />
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <label>
+                      temperature
+                      <input
+                        className="mt-1 w-full border rounded p-2"
+                        type="number"
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        value={temperature}
+                        disabled={busy}
+                        onChange={function (e) { setTemperature(Number(e.target.value)); }}
+                      />
+                    </label>
+                    <label>
+                      top_p
+                      <input
+                        className="mt-1 w-full border rounded p-2"
+                        type="number"
+                        min={0.01}
+                        max={1}
+                        step={0.01}
+                        value={topP}
+                        disabled={busy}
+                        onChange={function (e) { setTopP(Number(e.target.value)); }}
+                      />
+                    </label>
+                    <label>
+                      次数
+                      <input
+                        className="mt-1 w-full border rounded p-2"
+                        type="number"
+                        min={2}
+                        max={6}
+                        value={runs}
+                        disabled={busy}
+                        onChange={function (e) { setRuns(Number(e.target.value)); }}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                    disabled={blocked}
+                    onClick={run}
+                  >
+                    连跑看稳定性
+                  </button>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点按钮后会出现一张带 N 次结果的判定卡。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <RepeatResult data={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

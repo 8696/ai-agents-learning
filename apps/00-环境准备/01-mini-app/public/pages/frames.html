@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>原始帧 · mini-app</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：同一条 POST /api/chat，但每一帧一张卡片。
+     * 看清 delta / finish_reason / usage / [DONE] 分别长什么样。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「拉一帧流」→ 还是 POST /api/chat，和对话页同一条接口",
+      "每一帧按 \\n\\n 切开后原样显示，不拼成一段话",
+      "白卡片 = 正文增量或空元信息；绿卡片 = 结束信号（finish_reason / usage / [DONE]）",
+      "红卡片 = 流里的 error 帧。注意响应头已经是 200，所以错误只能靠帧内容报",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "FrameCard", "UsageBar", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, FrameCard, UsageBar, ErrorBanner } = window.DemoUI;
+        const { streamChat } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [message, setMessage] = useState("只回复两个字：你好");
+          const [lastPrompt, setLastPrompt] = useState("");
+          const [frames, setFrames] = useState([]);
+          const [usage, setUsage] = useState(null);
+          const [elapsedMs, setElapsedMs] = useState(0);
+          const [doneSeen, setDoneSeen] = useState(false);
+          const [error, setError] = useState(null);
+
+          const blocked = busy || !env.hasKey;
+
+          async function pull() {
+            const prompt = message.trim();
+            if (!prompt || blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setLastPrompt(prompt);
+            setFrames([]);
+            setUsage(null);
+            setDoneSeen(false);
+            const t0 = Date.now();
+            try {
+              const result = await streamChat(prompt, {
+                onFrame: function (frame) {
+                  setFrames(function (prev) { return prev.concat([frame]); });
+                },
+              });
+              setElapsedMs(Date.now() - t0);
+              if (!result.ok) {
+                setError({ title: "请求被拒绝", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setUsage(result.usage);
+              setDoneSeen(result.doneSeen);
+              if (result.streamError) {
+                setError({ title: "流中途失败", detail: result.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              setStatus("ok");
+            } catch (e) {
+              setElapsedMs(Date.now() - t0);
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">原始帧</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="SSE 的每一帧对应协议里的一个字段。本页不拼回复，只摊开帧。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm text-gray-700">
+                    用户消息（建议短，帧才少、好数）
+                    <span className="block text-xs text-gray-500 mt-0.5">点了会发出和对话页完全相同的请求，只是展示粒度不同。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={2}
+                      value={message}
+                      onChange={function (e) { setMessage(e.target.value); }}
+                      disabled={busy}
+                    />
+                  </label>
+                  <button
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                    disabled={blocked}
+                    onClick={pull}
+                  >
+                    拉一帧流
+                  </button>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!lastPrompt && !error && (
+                    <p className="text-sm text-gray-500">还没拉过。点按钮后，每一帧会出现一张带徽标的卡片。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {lastPrompt && <PromptCard prompt={lastPrompt} />}
+                  {lastPrompt && (
+                    <UsageBar usage={usage} frameCount={frames.length} elapsedMs={elapsedMs} doneSeen={doneSeen} />
+                  )}
+                  {frames.map(function (f) {
+                    return <FrameCard key={f.index} frame={f} />;
+                  })}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

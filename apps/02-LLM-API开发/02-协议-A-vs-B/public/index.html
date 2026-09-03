@@ -3,1019 +3,145 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>协议 A vs B · 对照 Demo</title>
-  <!-- §5.0 / §5.3.4 强制：原样引入，禁止换 CDN / 版本 / integrity -->
+  <title>协议 A vs B · 总览</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <!-- Babel Standalone：在浏览器运行时转译 JSX（§5.3.4 强制锁定 7.x；8.x 默认 preset-react 是
-       automatic runtime，与本规则"完全 ESM 禁用"冲突） -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
-  <style>
-    /* 互补样式（无法纯 tailwind 表达的小调整） */
-    .think { color: #999; font-style: italic; }
-    .bs-event-line.thinking-event .type { color: #6b46c1; }
-    .bs-event-line.text-event .type { color: #2b6cb0; }
-    .bs-event-line.message-delta .type { color: #c05621; }
-    .bs-event-line.message-stop .type { color: #2f855a; }
-    .bs-event-line.as-kind-role .type { color: #2b6cb0; }
-    .bs-event-line.as-kind-chunk .type { color: #4a5568; }
-    .bs-event-line.as-kind-finish .type { color: #c05621; }
-    .bs-event-line.as-kind-usage .type { color: #2f855a; }
-  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
-
-    // ── HTML escape（防 XSS；react 默认 escape 文本节点，但 innerHTML 注入需要手动） ──
-    const esc = (s) => String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    // ── 协议 A 思考：优先独立字段，否则用 content 里的标记状态机 ──
-    function splitProtocolADelta(delta, state) {
-      const details = Array.isArray(delta?.reasoning_details) ? delta.reasoning_details : [];
-      const pieces = [];
-      for (const d of details) {
-        if (d && typeof d.text === "string" && d.text) pieces.push(d.text);
-      }
-      if (pieces.length === 0 && typeof delta?.reasoning_content === "string" && delta.reasoning_content) {
-        pieces.push(delta.reasoning_content);
-      } else if (pieces.length === 0 && typeof delta?.reasoning === "string" && delta.reasoning) {
-        pieces.push(delta.reasoning);
-      } else if (pieces.length === 0 && typeof delta?.thinking === "string" && delta.thinking) {
-        pieces.push(delta.thinking);
-      }
-      if (pieces.length > 0) {
-        let thinking = "";
-        for (const piece of pieces) {
-          if (piece.startsWith(state.reasoningSeen)) {
-            thinking += piece.slice(state.reasoningSeen.length);
-            state.reasoningSeen = piece;
-          } else {
-            thinking += piece;
-            state.reasoningSeen += piece;
+    /**
+     * 本页教学点：字段映射速查。本页不调模型，对照发生在 /pages/*。
+     */
+    const { useState } = React;
+    const INTRO_STEPS = [
+      "同一把 Key、同一 prompt，协议 A 走 openai Chat Completions，协议 B 走 Anthropic Messages",
+      "差异全在字段：system 位置、content 形态、usage 命名、流式是字符串帧还是事件流",
+      "一次性对照看完整 JSON；流式 A 看 kind；流式 B 看有/无 thinking block",
+      "本页不调模型。Key ❌ 时场景页主按钮会 disabled",
+    ];
+    const SCENES = [
+      {
+        href: "/pages/once.html",
+        title: "一次性对照",
+        desc: "/api/compare 并排完整 JSON；/api/think-compare 四组 × 六个差异点（含 thinking 计费字段位置）。",
+      },
+      {
+        href: "/pages/stream-a.html",
+        title: "流式协议 A",
+        desc: "/api/a-stream-raw：每帧带 kind（role / chunk / finish / usage）。curl 也可用 /api/a（无 kind 包装）。",
+      },
+      {
+        href: "/pages/stream-b.html",
+        title: "流式协议 B",
+        desc: "有 thinking：/api/b-thinking-stream（双 block + signature_delta）；无 thinking：/api/b-stream-raw。",
+      },
+    ];
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
+      function App() {
+        const { env, envError } = useEnvInfo();
+        const [status, setStatus] = useState("idle");
+        const [netErr, setNetErr] = useState("");
+        React.useEffect(function () {
+          if (envError) setStatus("error");
+          else if (env.port) setStatus("ok");
+        }, [env, envError]);
+        async function pingNetworkFail() {
+          setNetErr("");
+          setStatus("loading");
+          try {
+            await window.DemoUtils.triggerNetworkError();
+          } catch (e) {
+            setNetErr(e.message || String(e));
+            setStatus("error");
           }
         }
-        return { thinking, content: typeof delta?.content === "string" ? delta.content : "" };
-      }
-      const raw = typeof delta?.content === "string" ? delta.content : "";
-      if (!raw) return { thinking: "", content: "" };
-      const open = "<think>";
-      const close = "</think>";
-      let thinking = "";
-      let content = "";
-      let cursor = 0;
-      while (cursor < raw.length) {
-        if (state.inThink) {
-          const endIdx = raw.indexOf(close, cursor);
-          if (endIdx === -1) {
-            thinking += raw.slice(cursor);
-            break;
-          }
-          thinking += raw.slice(cursor, endIdx);
-          cursor = endIdx + close.length;
-          state.inThink = false;
-        } else {
-          const startIdx = raw.indexOf(open, cursor);
-          if (startIdx === -1) {
-            content += raw.slice(cursor);
-            break;
-          }
-          content += raw.slice(cursor, startIdx);
-          cursor = startIdx + open.length;
-          state.inThink = true;
-        }
-      }
-      return { thinking, content };
-    }
+        return (
+          <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+            <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+              <h1 id="page-title" className="text-xl font-semibold">协议 A vs B · 总览</h1>
+              <StatusPill status={status} />
+            </header>
+            <main id="page-main" className="container mx-auto p-4 space-y-4">
+              <PageIntro
+                summary="同一模型、两套 API 壳：字段怎么映射。本页只放速查表和导航。"
+                steps={INTRO_STEPS}
+                extra={
+                  <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`请求
+  system     A: messages[0].role=system          B: 顶层 system
+  入口       A: chat.completions.create          B: messages.create / .stream
+  max_tokens A: 可选                             B: 必填
+  流式       A: stream:true                      B: 换 .stream() 方法
+  thinking   A: extra_body.thinking              B: 顶层 thinking.budget_tokens
 
-    // ── SSE 消费器：返回异步迭代，吐 {payload, raw} ──
-    async function* consumeSSE(res) {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = buffer.indexOf("\n\n")) >= 0) {
-          const frame = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
-          const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
-          if (!dataLine) continue;
-          const payload = dataLine.slice(5).trim();
-          if (payload === "[DONE]") continue;
-          let obj;
-          try { obj = JSON.parse(payload); } catch { continue; }
-          yield obj;
-        }
-      }
-    }
+一次性响应
+  正文       A: choices[0].message.content (string)   B: content[].text (block[])
+  停         A: finish_reason                         B: stop_reason
+  usage 入   A: prompt_tokens                         B: input_tokens
+  usage 出   A: completion_tokens                     B: output_tokens
+  思考计费   A: completion_tokens_details.reasoning_tokens
+             B: output_tokens_details.thinking_tokens（扩展字段，不是顶层 reasoning_tokens）
 
-    // ═════════════════════════════════════════════════════════════
-    // 面板 1：thinking 差异对照
-    // ═════════════════════════════════════════════════════════════
-    function ThinkPanel({ onStart, onEnd }) {
-      const [status, setStatus] = useState("idle"); // idle | loading | ok | error
-      const [errorMsg, setErrorMsg] = useState("");
-      const [scenarios, setScenarios] = useState(null);
-
-      const run = async (promptText) => {
-        setStatus("loading");
-        setErrorMsg("");
-        onStart();
-        try {
-          const r = await fetch("/api/think-compare", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: promptText }),
-          });
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          const data = await r.json();
-          setScenarios(data.scenarios);
-          setStatus("ok");
-          onEnd(true);
-        } catch (e) {
-          setErrorMsg(String(e.message || e));
-          setStatus("error");
-          onEnd(false);
-        }
-      };
-
-      return (
-        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
-          <h2 className="text-base font-semibold">thinking 差异对照（A/B × 开/关，跑一次看全差异）</h2>
-          <p className="text-xs text-gray-500">
-            4 组：A 不带 / A 带（extra_body adaptive）/ B 不带 / B 带 thinking budget=500。
-            一次请求同时跑，约 30–60s。
-          </p>
-          <div className="flex gap-2 items-center flex-wrap">
-            <button
-              onClick={() => run("用一句话介绍你自己，10 字以内。")}
-              disabled={status === "loading"}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
-            >
-              跑 thinking 差异对照
-            </button>
-            <button
-              onClick={() => run("23 × 47 等于多少？先一步步想，再回答。")}
-              disabled={status === "loading"}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
-            >
-              跑数学题（看 thinking 内容）
-            </button>
-            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
-              {status === "loading" && "请求中...（4 组，约 30–60s）"}
-              {status === "error" && `失败: ${errorMsg}`}
-              {status === "ok" && scenarios && `完成 · ${scenarios.length} 组`}
-            </span>
-          </div>
-
-          {scenarios && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
-                {scenarios.map((sc, i) => (
-                  <div key={i} className="border border-gray-300 rounded p-2 text-xs space-y-1">
-                    <div className="flex justify-between items-center font-semibold">
-                      <span>{esc(sc.scenario)}</span>
-                      <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                        {sc.protocol}{sc.thinkingParam
-                          ? (sc.thinkingParam.budget_tokens != null
-                            ? `· budget=${sc.thinkingParam.budget_tokens}`
-                            : `· ${sc.thinkingParam.type}`)
-                          : "· 关"}
-                      </span>
-                    </div>
-                    {sc.error ? (
-                      <div className="text-red-600 italic">{esc(sc.error)}</div>
-                    ) : (
-                      <>
-                        <div className="text-[11px] text-gray-500 font-bold mt-2">answer ({sc.textAnswer.length} 字符)</div>
-                        <div className="bg-gray-50 p-1.5 rounded max-h-40 overflow-auto whitespace-pre-wrap break-words">
-                          {esc(sc.textAnswer)}
-                        </div>
-                        <div className="text-[11px] text-gray-500 font-bold mt-2">
-                          thinking{sc.thinking && sc.thinking.exists && ` (${sc.thinking.location} · ${sc.thinking.charCount} 字符)`}
-                        </div>
-                        <div className={"p-1.5 rounded max-h-32 overflow-auto whitespace-pre-wrap break-words " + (sc.thinking && sc.thinking.exists ? "bg-purple-50 text-gray-600 italic" : "text-gray-400 italic")}>
-                          {sc.thinking && sc.thinking.exists
-                            ? esc(sc.thinking.preview) + (sc.thinking.charCount > 300 ? "…" : "")
-                            : <>无独立 thinking block{sc.protocol === "A" ? "（嵌在 answer 字符串里）" : ""}</>}
-                        </div>
-                        <div className="text-[11px] text-gray-500 font-bold mt-2">usage</div>
-                        <UsageLines scenario={sc} />
-                        {(sc.finishReason || sc.stopReason) && (
-                          <div className="font-mono text-[11px] text-gray-700 mt-1">
-                            {sc.finishReason
-                              ? <>finish_reason: <code className="bg-gray-100 px-1 rounded">{esc(sc.finishReason)}</code></>
-                              : sc.stopReason
-                                ? <>stop_reason: <code className="bg-gray-100 px-1 rounded">{esc(sc.stopReason)}</code></>
-                                : null}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <DiffTable scenarios={scenarios} />
-            </>
-          )}
-        </section>
-      );
-    }
-
-    // ── Usage 行渲染：A / B 字段命名差异处理 ──
-    function UsageLines({ scenario }) {
-      const u = scenario.usage;
-      if (!u || Object.keys(u).length === 0) return <div className="font-mono text-[11px] text-gray-400">（无）</div>;
-      const lines = [];
-      if (scenario.protocol === "A") {
-        if (u.prompt_tokens != null) lines.push(`prompt_tokens: ${u.prompt_tokens}`);
-        if (u.completion_tokens != null) lines.push(`completion_tokens: ${u.completion_tokens}`);
-        if (u.total_tokens != null) lines.push(`total_tokens: ${u.total_tokens}`);
-        if (u.completion_tokens_details?.reasoning_tokens != null) {
-          lines.push(<span key="r" className="text-green-700 font-bold">✓ reasoning_tokens: {u.completion_tokens_details.reasoning_tokens}</span>);
-        }
-        if (u.prompt_tokens_details?.cached_tokens != null) {
-          lines.push(`cached_tokens: ${u.prompt_tokens_details.cached_tokens}`);
-        }
-      } else {
-        if (u.input_tokens != null) lines.push(`input_tokens: ${u.input_tokens}`);
-        if (u.output_tokens != null) lines.push(`output_tokens: ${u.output_tokens}`);
-        if ("reasoning_tokens" in u) {
-          lines.push(<span key="r" className="text-green-700 font-bold">✓ reasoning_tokens: {u.reasoning_tokens}</span>);
-        } else {
-          lines.push(<span key="r" className="text-red-600">✗ reasoning_tokens: 无顶层字段</span>);
-        }
-        if (u.output_tokens_details?.thinking_tokens != null) {
-          lines.push(<span key="t" className="text-green-700 font-bold">✓ output_tokens_details.thinking_tokens: {u.output_tokens_details.thinking_tokens}</span>);
-        }
-        if (u.cache_read_input_tokens != null) {
-          lines.push(`cache_read_input_tokens: ${u.cache_read_input_tokens}`);
-        }
-      }
-      return (
-        <div className="font-mono text-[11px] text-gray-700 space-y-0.5">
-          {lines.map((l, i) => <div key={i}>{l}</div>)}
-        </div>
-      );
-    }
-
-    // ── 6 行差异对照表 ──
-    function DiffTable({ scenarios }) {
-      const headers = ["差异点", ...scenarios.map((s) => s.scenario)];
-      const rows = [
-        {
-          label: "1. content 形态",
-          values: scenarios.map((sc) => sc.contentType === "string"
-            ? <><code>string</code>（嵌 {"<think>"} 标记）</>
-            : <><code>block[]</code>（每个元素有 type）</>),
-        },
-        {
-          label: "2. thinking 位置",
-          values: scenarios.map((sc) => {
-            if (!sc.thinking) return "—";
-            if (sc.thinking.location === "embedded_in_content") return <span className="text-red-600">嵌在 content 字符串</span>;
-            if (sc.thinking.location === "reasoning_field") return <span className="text-green-700 font-bold">独立 reasoning_content / reasoning_details</span>;
-            if (sc.thinking.location === "separate_block") return <span className="text-green-700 font-bold">独立 type=thinking block</span>;
-            return <span className="text-red-600">无 thinking</span>;
-          }),
-        },
-        {
-          label: "3. usage 字段命名",
-          values: scenarios.map((sc) => sc.protocol === "A"
-            ? <><code>prompt_tokens</code> / <code>completion_tokens</code></>
-            : <><code>input_tokens</code> / <code>output_tokens</code></>),
-        },
-        {
-          label: "4. thinking 单独计费？",
-          highlight: true,
-          values: scenarios.map((sc) => {
-            if (sc.protocol === "A") {
-              return sc.usage?.completion_tokens_details?.reasoning_tokens != null
-                ? <span className="text-green-700 font-bold">✓ reasoning_tokens: {sc.usage.completion_tokens_details.reasoning_tokens}</span>
-                : <span className="text-red-600">✗ 无 reasoning_tokens</span>;
-            }
-            const t = sc.usage?.output_tokens_details?.thinking_tokens;
-            if (t != null) {
-              return (
-                <>
-                  <span className="text-green-700 font-bold">✓ output_tokens_details.thinking_tokens: {t}</span>
-                  <br /><span className="text-[10px] text-gray-500">（非顶层 reasoning_tokens）</span>
-                </>
-              );
-            }
-            if ("reasoning_tokens" in (sc.usage || {})) {
-              return <span className="text-green-700 font-bold">✓ reasoning_tokens: {sc.usage.reasoning_tokens}</span>;
-            }
-            return <span className="text-red-600">✗ 无字段（输出太短，未触发 thinking）</span>;
-          }),
-        },
-        {
-          label: "5. 答案长度（字符）",
-          values: scenarios.map((sc) => <code>{sc.textAnswer.length}</code>),
-        },
-        {
-          label: "6. finish/stop 字段",
-          values: scenarios.map((sc) => sc.finishReason
-            ? <code>finish_reason: "{esc(sc.finishReason)}"</code>
-            : sc.stopReason ? <code>stop_reason: "{esc(sc.stopReason)}"</code> : "—"),
-        },
-      ];
-      return (
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr>
-              {headers.map((h, i) => (
-                <th key={i} className="border border-gray-300 bg-gray-100 px-2 py-1 text-left font-bold">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, ri) => (
-              <tr key={ri}>
-                <td className={"border border-gray-300 bg-gray-50 px-2 py-1 font-bold " + (row.highlight ? "bg-yellow-100" : "")}>
-                  {row.label}
-                </td>
-                {row.values.map((v, vi) => (
-                  <td key={vi} className={"border border-gray-300 px-2 py-1 align-top " + (row.highlight ? "bg-yellow-100" : "")}>
-                    {v}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-    }
-
-    // ═════════════════════════════════════════════════════════════
-    // 面板 2：流式协议 A（OpenAI chunk 原样转发）
-    // ═════════════════════════════════════════════════════════════
-    function AStreamRawPanel({ onStart, onEnd }) {
-      const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
-      const [enableThinking, setEnableThinking] = useState(true);
-      const [status, setStatus] = useState("idle");
-      const [errorMsg, setErrorMsg] = useState("");
-      const [lines, setLines] = useState([]);
-      const [thinking, setThinking] = useState("");
-      const [answer, setAnswer] = useState("");
-      const [meta, setMeta] = useState("");
-      const [elapsed, setElapsed] = useState(0);
-      const t0Ref = useRef(0);
-      const splitStateRef = useRef({ inThink: false, reasoningSeen: "" });
-      const thinkingRef = useRef("");
-      const answerRef = useRef("");
-      const usageRef = useRef(null);
-      const finishRef = useRef(null);
-
-      const run = async () => {
-        if (!msg.trim()) return;
-        setStatus("loading");
-        setErrorMsg("");
-        setLines([]);
-        setThinking("");
-        setAnswer("");
-        setMeta("");
-        setElapsed(0);
-        splitStateRef.current = { inThink: false, reasoningSeen: "" };
-        thinkingRef.current = "";
-        answerRef.current = "";
-        usageRef.current = null;
-        finishRef.current = null;
-        t0Ref.current = performance.now();
-        onStart();
-
-        const flushUI = (kind, chunk, frameIdx) => {
-          const delta = chunk.choices?.[0]?.delta || {};
-          const deltaContent = delta.content;
-          const finishReason = chunk.choices?.[0]?.finish_reason;
-          const usage = chunk.usage;
-          const split = splitProtocolADelta(delta, splitStateRef.current);
-          if (split.thinking) thinkingRef.current += split.thinking;
-          if (split.content) answerRef.current += split.content;
-          if (split.thinking || split.content) {
-            setThinking(thinkingRef.current);
-            setAnswer(answerRef.current);
-          }
-          if (usage) { usageRef.current = usage; }
-          if (finishReason) { finishRef.current = finishReason; }
-          const now = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
-          setElapsed(now);
-          let summary = "";
-          if (kind === "role") summary = `delta.role=${delta?.role || "?"}（无 content）`;
-          else if (kind === "chunk") {
-            const thinkPreview = (split.thinking || "").slice(0, 40);
-            const contentPreview = (split.content || deltaContent || "").slice(0, 40);
-            summary = thinkPreview
-              ? `Δthinking "${thinkPreview}${split.thinking.length > 40 ? "…" : ""}"${contentPreview ? ` · Δcontent "${contentPreview}"` : ""}`
-              : `Δcontent "${(deltaContent || "").slice(0, 60)}${deltaContent && deltaContent.length > 60 ? "…" : ""}"`;
-          }
-          else if (kind === "finish") summary = `finish_reason="${finishReason}", delta.role=${delta?.role || "?"}（无 content）`;
-          else if (kind === "usage") {
-            const u = usage || {};
-            summary = `prompt_tokens=${u.prompt_tokens ?? "?"}, completion_tokens=${u.completion_tokens ?? "?"}`;
-            if (u.completion_tokens_details?.reasoning_tokens != null) {
-              summary += `, reasoning_tokens=${u.completion_tokens_details.reasoning_tokens}`;
-            }
-          } else summary = JSON.stringify(chunk).slice(0, 80);
-          setLines((prev) => [...prev, { kind, summary, frameIdx }]);
-        };
-
-        try {
-          const res = await fetch("/api/a-stream-raw", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg.trim(), enable_thinking: enableThinking }),
-          });
-          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-          for await (const evt of consumeSSE(res)) {
-            if (evt.type === "openai_chunk") {
-              flushUI(evt.kind, evt.chunk, evt.frameIdx);
-            }
-          }
-          const totalElapsed = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
-          let metaText = `${lines.length + 1} frames · ${totalElapsed}s · finish_reason=${finishRef.current || "?"}`; // +1 因为 lines 是闭包旧值
-          const u = usageRef.current;
-          if (u) {
-            metaText += ` · prompt_tokens=${u.prompt_tokens ?? "?"}, completion_tokens=${u.completion_tokens ?? "?"}`;
-            if (u.completion_tokens_details?.reasoning_tokens != null) {
-              metaText += `, reasoning_tokens=${u.completion_tokens_details.reasoning_tokens}`;
-            }
-            if (u.prompt_tokens_details?.cached_tokens != null) {
-              metaText += `, cached_tokens=${u.prompt_tokens_details.cached_tokens}`;
-            }
-          }
-          setMeta(metaText);
-          setStatus("ok");
-          onEnd(true);
-        } catch (e) {
-          setErrorMsg(String(e.message || e));
-          setStatus("error");
-          onEnd(false);
-        }
-      };
-
-      return (
-        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
-          <h2 className="text-base font-semibold">流式协议 A（OpenAI chunk 原样转发：看 role / chunk / finish / usage 四类帧）</h2>
-          <p className="text-xs text-gray-500">
-            调 <code>/api/a-stream-raw</code>。勾选「开思考」会打 <code>extra_body</code>（和 05-思考同一套）；不勾则不带思考参数。
-            思考可能在独立字段，也可能嵌在 <code>delta.content</code> 的 <code>{"<think>"}</code> 标记里。
-          </p>
-          <div className="flex gap-2 items-center flex-wrap">
-            <input
-              value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              placeholder="消息（默认数学题）"
-              className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
-            />
-            <label className="text-sm flex items-center gap-1 whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={enableThinking}
-                onChange={(e) => setEnableThinking(e.target.checked)}
+流式
+  单元       A: 1 帧 = 1 个 OpenAI chunk JSON    B: 1 事件 = 1 个 Anthropic event
+  文本       A: delta.content                    B: delta.text（type=text_delta）
+  思考位置   A: 嵌 content 的 <think> 或独立字段  B: 独立 type=thinking block
+  结束       A: data: [DONE]                     B: message_stop + [DONE]`}
+                  </pre>
+                }
               />
-              开思考
-            </label>
-            <button
-              onClick={run}
-              disabled={status === "loading"}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
-            >
-              发流式请求
-            </button>
-            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
-              {status === "loading" && `请求中… ${elapsed}s`}
-              {status === "error" && `失败: ${errorMsg}`}
-              {status === "ok" && `完成 · 共 ${lines.length} 帧`}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>事件流（按顺序）</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
-                  {lines.length} frames · {elapsed}s
-                </span>
-              </h3>
-              <div className="flex-1 overflow-auto max-h-[360px] font-mono text-[11px] leading-snug">
-                {lines.map((l, i) => (
-                  <div key={i} className={`bs-event-line as-kind-${l.kind} py-0.5 px-1 border-b border-dotted border-gray-200 flex gap-2 items-baseline`}>
-                    <span className="text-gray-500 min-w-[32px]">#{l.frameIdx}</span>
-                    <span className="font-bold min-w-[60px]">{esc(l.kind)}</span>
-                    <span className="text-gray-700 flex-1 truncate">{esc(l.summary)}</span>
+              <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                <PageNav />
+                <p className="text-sm text-gray-600">
+                  总览页不发起模型请求。选一个场景进去跑。点「故意网络错误」只为对照 fetch reject 和 HTTP 4xx 长得不一样。
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {SCENES.map(function (s) {
+                    return (
+                      <a key={s.href} href={s.href} className="border border-gray-300 hover:border-blue-500 rounded p-3 text-left">
+                        <div className="font-semibold text-sm">{s.title}</div>
+                        <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+                <button
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={status === "loading"}
+                  onClick={pingNetworkFail}
+                >
+                  故意网络错误（期望 fetch reject）
+                </button>
+              </section>
+              <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+                {(envError || netErr) && (
+                  <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                    {envError || netErr}
+                    {netErr ? <span className="block text-xs text-gray-500 mt-1">请求未送达（不是 HTTP 状态码）</span> : null}
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>thinking 累加（从 {"<think>"} 提取）</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{thinking.length} 字符</span>
-              </h3>
-              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-purple-50 rounded text-gray-600 italic">
-                {thinking || <span className="text-gray-400 not-italic">（无 {"<think>"}…{"</think>"} 块）</span>}
-              </div>
-            </div>
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>answer 累加（剥 {"<think>"} 后）</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{answer.length} 字符</span>
-              </h3>
-              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-gray-50 rounded">
-                {answer || <span className="text-gray-400">（等待事件流…）</span>}
-              </div>
-              <div className="mt-2 text-gray-600 text-xs border-t border-dashed border-gray-200 pt-1.5 break-all">
-                {meta && <code>{meta}</code>}
-              </div>
-            </div>
+                )}
+                <p className="text-sm text-gray-500">
+                  {env.port
+                    ? "环境已从 GET /health 填进页脚。上面 ASCII 就是写适配层时要对照的字段。"
+                    : "正在读 GET /health…（若长时间空白，看页脚或上面错误）"}
+                </p>
+              </section>
+            </main>
+            <EnvFooter env={env} />
           </div>
-        </section>
-      );
-    }
-
-    // ═════════════════════════════════════════════════════════════
-    // 面板 3：流式协议 B + 启用 thinking
-    // ═════════════════════════════════════════════════════════════
-    function BThinkingStreamPanel({ onStart, onEnd }) {
-      const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
-      const [budget, setBudget] = useState("500");
-      const [status, setStatus] = useState("idle");
-      const [errorMsg, setErrorMsg] = useState("");
-      const [lines, setLines] = useState([]);
-      const [thinking, setThinking] = useState("");
-      const [answer, setAnswer] = useState("");
-      const [meta, setMeta] = useState("");
-      const [elapsed, setElapsed] = useState(0);
-      const t0Ref = useRef(0);
-      const thinkingRef = useRef("");
-      const answerRef = useRef("");
-      const usageRef = useRef(null);
-      const stopReasonRef = useRef(null);
-
-      const flushEvent = (evt, evIdx) => {
-        const t = evt.type || "(no type)";
-        const now = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
-        setElapsed(now);
-        let summary = "";
-        let eventClass = "";
-        if (t === "content_block_delta") {
-          const d = evt.delta || {};
-          if (d.thinking != null) {
-            eventClass = "thinking-event";
-            thinkingRef.current += d.thinking;
-            setThinking(thinkingRef.current);
-            summary = `Δthinking ${(d.thinking).slice(0, 60)}${d.thinking.length > 60 ? "…" : ""}`;
-          } else if (d.text != null) {
-            eventClass = "text-event";
-            answerRef.current += d.text;
-            setAnswer(answerRef.current);
-            summary = `Δtext "${(d.text).slice(0, 60)}${d.text.length > 60 ? "…" : ""}"`;
-          } else if (d.type === "signature_delta") {
-            summary = "signature_delta（thinking 验证签名）";
-          } else {
-            summary = JSON.stringify(d).slice(0, 80);
-          }
-        } else if (t === "content_block_start") {
-          const cb = evt.content_block || {};
-          summary = `block.type=${cb.type || "?"}`;
-          if (cb.type === "thinking") eventClass = "thinking-event";
-          if (cb.type === "text") eventClass = "text-event";
-        } else if (t === "message_delta") {
-          eventClass = "message-delta";
-          if (evt.delta?.stop_reason) stopReasonRef.current = evt.delta.stop_reason;
-          if (evt.usage) {
-            usageRef.current = { ...(usageRef.current || {}), ...evt.usage };
-          }
-          summary = `stop_reason=${evt.delta?.stop_reason || "?"}, output_tokens=${evt.usage?.output_tokens ?? "?"}`;
-        } else if (t === "message_stop") {
-          eventClass = "message-stop";
-          summary = "（流结束）";
-        } else if (t === "message_start") {
-          summary = `model=${evt.message?.model || "?"}, id=${(evt.message?.id || "").slice(0, 16)}…`;
-        } else if (t === "content_block_stop") {
-          summary = "（块结束）";
-        } else {
-          summary = JSON.stringify(evt).slice(0, 80);
-        }
-        setLines((prev) => [...prev, { type: t, summary, eventClass, evIdx }]);
-      };
-
-      const run = async () => {
-        if (!msg.trim()) return;
-        const thinkingBudget = parseInt(budget, 10) || 500;
-        setStatus("loading");
-        setErrorMsg("");
-        setLines([]);
-        setThinking("");
-        setAnswer("");
-        setMeta("");
-        setElapsed(0);
-        thinkingRef.current = "";
-        answerRef.current = "";
-        usageRef.current = null;
-        stopReasonRef.current = null;
-        t0Ref.current = performance.now();
-        onStart();
-
-        try {
-          const res = await fetch("/api/b-thinking-stream", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg.trim(), thinking_budget: thinkingBudget }),
-          });
-          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-          for await (const evt of consumeSSE(res)) {
-            flushEvent(evt);
-          }
-          const totalElapsed = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
-          let metaText = `${lines.length + 1} events · ${totalElapsed}s · stop_reason=${stopReasonRef.current || "?"}`;
-          const u = usageRef.current;
-          if (u) {
-            metaText += ` · output_tokens=${u.output_tokens ?? "?"}`;
-            if (u.input_tokens != null) metaText += ` · input_tokens=${u.input_tokens}`;
-            if (u.cache_read_input_tokens != null) metaText += ` · cache_read_input_tokens=${u.cache_read_input_tokens}`;
-            metaText += "（流式 message_delta 不报 thinking 拆分，要拆分得用一次性）";
-          }
-          setMeta(metaText);
-          setStatus("ok");
-          onEnd(true);
-        } catch (e) {
-          setErrorMsg(String(e.message || e));
-          setStatus("error");
-          onEnd(false);
-        }
-      };
-
-      return (
-        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
-          <h2 className="text-base font-semibold">流式协议 B + 启用 thinking（看完整事件流：thinking block + text block + message_delta）</h2>
-          <p className="text-xs text-gray-500">
-            调 <code>/api/b-thinking-stream</code>。事件序列应是：<code>message_start → content_block_start(thinking) → ...</code>。
-            thinking 与 text 是两个独立 block，<strong>不是嵌在 answer 里</strong>。
-          </p>
-          <div className="flex gap-2 items-center flex-wrap">
-            <input
-              value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              placeholder="消息（默认数学题）"
-              className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
-            />
-            <select
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              className="border border-gray-300 rounded p-2 text-sm"
-            >
-              <option value="100">budget=100</option>
-              <option value="500">budget=500</option>
-              <option value="1000">budget=1000</option>
-            </select>
-            <button
-              onClick={run}
-              disabled={status === "loading"}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
-            >
-              发流式请求
-            </button>
-            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
-              {status === "loading" && `请求中… ${elapsed}s`}
-              {status === "error" && `失败: ${errorMsg}`}
-              {status === "ok" && `完成 · budget=${budget} · 共 ${lines.length} 个事件`}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>事件流（按顺序）</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
-                  {lines.length} events · {elapsed}s
-                </span>
-              </h3>
-              <div className="flex-1 overflow-auto max-h-[360px] font-mono text-[11px] leading-snug">
-                {lines.map((l, i) => (
-                  <div key={i} className={`bs-event-line ${l.eventClass} py-0.5 px-1 border-b border-dotted border-gray-200 flex gap-2 items-baseline`}>
-                    <span className="text-gray-500 min-w-[32px]">#{l.evIdx}</span>
-                    <span className="font-bold min-w-[130px]">{esc(l.type)}</span>
-                    <span className="text-gray-700 flex-1 truncate">{esc(l.summary)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>thinking 累加</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{thinking.length} 字符</span>
-              </h3>
-              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-purple-50 rounded text-gray-600 italic">
-                {thinking || <span className="text-gray-400 not-italic">（未触发 thinking）</span>}
-              </div>
-            </div>
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>answer 累加</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{answer.length} 字符</span>
-              </h3>
-              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-gray-50 rounded">
-                {answer || <span className="text-gray-400">（等待事件流…）</span>}
-              </div>
-              <div className="mt-2 text-gray-600 text-xs border-t border-dashed border-gray-200 pt-1.5 break-all">
-                {meta && <code>{meta}</code>}
-              </div>
-            </div>
-          </div>
-        </section>
-      );
-    }
-
-    // ═════════════════════════════════════════════════════════════
-    // 面板 4：流式协议 B 不启用 thinking
-    // ═════════════════════════════════════════════════════════════
-    function BStreamRawPanel({ onStart, onEnd }) {
-      const [msg, setMsg] = useState("23 × 47 等于多少？先一步步想，再回答。");
-      const [status, setStatus] = useState("idle");
-      const [errorMsg, setErrorMsg] = useState("");
-      const [lines, setLines] = useState([]);
-      const [answer, setAnswer] = useState("");
-      const [meta, setMeta] = useState("");
-      const [elapsed, setElapsed] = useState(0);
-      const t0Ref = useRef(0);
-      const answerRef = useRef("");
-      const usageRef = useRef(null);
-      const stopReasonRef = useRef(null);
-
-      const flushEvent = (evt, evIdx) => {
-        const t = evt.type || "(no type)";
-        const now = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
-        setElapsed(now);
-        let summary = "";
-        let eventClass = "";
-        if (t === "content_block_delta") {
-          const d = evt.delta || {};
-          if (d.text != null) {
-            eventClass = "text-event";
-            answerRef.current += d.text;
-            setAnswer(answerRef.current);
-            summary = `Δtext "${(d.text).slice(0, 60)}${d.text.length > 60 ? "…" : ""}"`;
-          } else if (d.thinking != null) {
-            eventClass = "thinking-event";
-            summary = "Δthinking（不启用 thinking 时不应出现）";
-          } else {
-            summary = JSON.stringify(d).slice(0, 80);
-          }
-        } else if (t === "content_block_start") {
-          const cb = evt.content_block || {};
-          summary = `block.type=${cb.type || "?"}`;
-          if (cb.type === "thinking") eventClass = "thinking-event";
-          if (cb.type === "text") eventClass = "text-event";
-        } else if (t === "message_delta") {
-          eventClass = "message-delta";
-          if (evt.delta?.stop_reason) stopReasonRef.current = evt.delta.stop_reason;
-          if (evt.usage) {
-            usageRef.current = { ...(usageRef.current || {}), ...evt.usage };
-          }
-          summary = `stop_reason=${evt.delta?.stop_reason || "?"}, output_tokens=${evt.usage?.output_tokens ?? "?"}`;
-        } else if (t === "message_stop") {
-          eventClass = "message-stop";
-          summary = "（流结束）";
-        } else if (t === "message_start") {
-          summary = `model=${evt.message?.model || "?"}, id=${(evt.message?.id || "").slice(0, 16)}…`;
-        } else if (t === "content_block_stop") {
-          summary = "（块结束）";
-        } else {
-          summary = JSON.stringify(evt).slice(0, 80);
-        }
-        setLines((prev) => [...prev, { type: t, summary, eventClass, evIdx }]);
-      };
-
-      const run = async () => {
-        if (!msg.trim()) return;
-        setStatus("loading");
-        setErrorMsg("");
-        setLines([]);
-        setAnswer("");
-        setMeta("");
-        setElapsed(0);
-        answerRef.current = "";
-        usageRef.current = null;
-        stopReasonRef.current = null;
-        t0Ref.current = performance.now();
-        onStart();
-
-        try {
-          const res = await fetch("/api/b-stream-raw", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg.trim() }),
-          });
-          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-          for await (const evt of consumeSSE(res)) {
-            if (evt.type === "anthropic_event") flushEvent(evt.event, evt.eventIdx);
-          }
-          const totalElapsed = ((performance.now() - t0Ref.current) / 1000).toFixed(2);
-          let metaText = `${lines.length + 1} events · ${totalElapsed}s · stop_reason=${stopReasonRef.current || "?"}`;
-          const u = usageRef.current;
-          if (u) {
-            metaText += ` · output_tokens=${u.output_tokens ?? "?"}`;
-            if (u.input_tokens != null) metaText += ` · input_tokens=${u.input_tokens}`;
-            if (u.cache_read_input_tokens != null) metaText += ` · cache_read_input_tokens=${u.cache_read_input_tokens}`;
-            metaText += "（不启用 thinking，无 thinking 拆分字段）";
-          }
-          setMeta(metaText);
-          setStatus("ok");
-          onEnd(true);
-        } catch (e) {
-          setErrorMsg(String(e.message || e));
-          setStatus("error");
-          onEnd(false);
-        }
-      };
-
-      return (
-        <section className="border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
-          <h2 className="text-base font-semibold">流式协议 B（不启用 thinking：原样转发事件流）</h2>
-          <p className="text-xs text-gray-500">
-            调 <code>/api/b-stream-raw</code>。与上面三个端点形成四向对照：A/B × 带/不带 thinking。
-            这次 B <strong>不启用 thinking</strong>，事件序列里应<strong>没有 thinking block</strong>。
-          </p>
-          <div className="flex gap-2 items-center flex-wrap">
-            <input
-              value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              placeholder="消息（默认数学题）"
-              className="flex-1 min-w-[240px] border border-gray-300 rounded p-2 text-sm"
-            />
-            <button
-              onClick={run}
-              disabled={status === "loading"}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded disabled:opacity-50"
-            >
-              发流式请求
-            </button>
-            <span className={"text-xs " + (status === "error" ? "text-red-600" : "text-gray-600")}>
-              {status === "loading" && `请求中… ${elapsed}s`}
-              {status === "error" && `失败: ${errorMsg}`}
-              {status === "ok" && `完成 · 共 ${lines.length} 个事件`}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>事件流（按顺序）</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
-                  {lines.length} events · {elapsed}s
-                </span>
-              </h3>
-              <div className="flex-1 overflow-auto max-h-[360px] font-mono text-[11px] leading-snug">
-                {lines.map((l, i) => (
-                  <div key={i} className={`bs-event-line ${l.eventClass} py-0.5 px-1 border-b border-dotted border-gray-200 flex gap-2 items-baseline`}>
-                    <span className="text-gray-500 min-w-[32px]">#{l.evIdx}</span>
-                    <span className="font-bold min-w-[130px]">{esc(l.type)}</span>
-                    <span className="text-gray-700 flex-1 truncate">{esc(l.summary)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>thinking 累加</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">0 字符</span>
-              </h3>
-              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-purple-50 rounded text-gray-400 not-italic">
-                （不启用 thinking，此面板永远为空）
-              </div>
-            </div>
-            <div className="border border-gray-300 rounded p-2 flex flex-col min-h-[280px]">
-              <h3 className="m-0 mb-2 text-xs flex justify-between items-center font-semibold">
-                <span>answer 累加</span>
-                <span className="font-normal text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">{answer.length} 字符</span>
-              </h3>
-              <div className="flex-1 whitespace-pre-wrap break-words leading-relaxed text-[13px] overflow-auto max-h-[360px] p-1.5 bg-gray-50 rounded">
-                {answer || <span className="text-gray-400">（等待事件流…）</span>}
-              </div>
-              <div className="mt-2 text-gray-600 text-xs border-t border-dashed border-gray-200 pt-1.5 break-all">
-                {meta && <code>{meta}</code>}
-              </div>
-            </div>
-          </div>
-        </section>
-      );
-    }
-
-    // ═════════════════════════════════════════════════════════════
-    // 主组件 App：全局 status-pill + 4 面板
-    // ═════════════════════════════════════════════════════════════
-    function App() {
-      // 4 个面板的运行状态：'idle' | 'loading' | 'ok' | 'error'
-      const [panels, setPanels] = useState({
-        think: "idle",
-        as: "idle",
-        bs: "idle",
-        bsr: "idle",
-      });
-      const [model, setModel] = useState("");
-      const [connected, setConnected] = useState(false);
-
-      // 启动时 ping /health
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => r.json())
-          .then((d) => {
-            setModel(d.a?.model ?? d.model);
-            setConnected(true);
-          })
-          .catch(() => setConnected(false));
-      }, []);
-
-      // 全局 status-pill 计算
-      const values = Object.values(panels);
-      const runningCount = values.filter((v) => v === "loading").length;
-      const failedCount = values.filter((v) => v === "error").length;
-      let pillState = "idle";
-      let pillBg = "bg-gray-200";
-      let pillText = "⏸ 待连接";
-      if (!connected) {
-        pillText = "❌ 连不上后端";
-        pillBg = "bg-red-100";
-        pillState = "error";
-      } else if (failedCount > 0) {
-        pillText = `❌ ${failedCount} 个面板失败`;
-        pillBg = "bg-red-100";
-        pillState = "error";
-      } else if (runningCount > 0) {
-        pillText = `🔄 ${runningCount} 个面板运行中…`;
-        pillBg = "bg-blue-100";
-        pillState = "loading";
-      } else {
-        pillText = `✅ 全部完成`;
-        pillBg = "bg-green-100";
-        pillState = "ok";
+        );
       }
-
-      const panelStart = (id) => setPanels((p) => ({ ...p, [id]: "loading" }));
-      const panelEnd = (id, ok) =>
-        setPanels((p) => ({ ...p, [id]: ok ? "ok" : "error" }));
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header
-            id="page-header"
-            className="border-b border-gray-200 p-4 flex items-center justify-between bg-white"
-          >
-            <h1 id="page-title" className="text-xl font-semibold">
-              协议 A vs B 对照 Demo（{model}，同 Key，同 prompt）
-            </h1>
-            <span
-              id="status-pill"
-              className={`text-xs px-2 py-1 rounded ${pillBg}`}
-              data-state={pillState}
-            >
-              {pillText}
-            </span>
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-2">
-              <p className="text-xs text-gray-500">
-                下方 4 个面板都跑「同一 prompt」（默认数学题 <code>23 × 47</code>）。
-                每个面板独立按钮 + 输入；全局 <code>#status-pill</code> 跟踪 4 个面板的运行状态
-                （任一运行中 → 🔄；任一失败 → ❌；全部完成 → ✅；未连上后端 → ❌）。
-              </p>
-            </section>
-
-            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-6">
-              <ThinkPanel onStart={() => panelStart("think")} onEnd={(ok) => panelEnd("think", ok)} />
-              <AStreamRawPanel onStart={() => panelStart("as")} onEnd={(ok) => panelEnd("as", ok)} />
-              <BThinkingStreamPanel onStart={() => panelStart("bs")} onEnd={(ok) => panelEnd("bs", ok)} />
-              <BStreamRawPanel onStart={() => panelStart("bsr")} onEnd={(ok) => panelEnd("bsr", ok)} />
-            </section>
-          </main>
-
-          <footer
-            id="page-footer"
-            className="border-t border-gray-200 p-2 text-xs text-gray-500 text-center"
-          >
-            端口 50202 · 协议 A/B · 模型随 LLM_PROVIDER · §5.3 React + koa · HTML 内联块 + Babel Standalone 7.26.4
-          </footer>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    });
   </script>
 </body>
 </html>

@@ -39,7 +39,7 @@ Agent 从第一天就要盯用量。后面多轮对话把历史塞进 prompt、T
 
 | 容易当成 | 其实是 |
 |----------|--------|
-| 网页能聊天 = 代码能调 API | 会员 Key ≠ 按量接口密钥。能进网页 ≠ `yarn app:00-01-mini-cli-a` 能过鉴权。 |
+| 网页能聊天 = 代码能调 API | 会员 Key ≠ 按量接口密钥。能进网页 ≠ `yarn app:00-01-mini-server` 能过鉴权。 |
 | Token Plan 订阅 Key | 填进 `MINIMAX_API_KEY` 会 401，不是 `baseURL` 写错。 |
 | 「发一条消息 = 收一次固定费」 | 按这条消息里的 Token 数算；同样意思中文通常件数更多（→ Token 那条）。 |
 | 国内站 / 海外站同一把环境 | 国内 `api.minimaxi.com`，海外 `*.minimax.io`。抄错域名 = 进错店。 |
@@ -66,7 +66,7 @@ Agent 从第一天就要盯用量。后面多轮对话把历史塞进 prompt、T
 
 **5. usage 和小票：口袋心算 vs 收银台扫描枪**
 
-跑 `yarn app:00-01-mini-cli-a "你好"`，流结束后类似：
+打开流式对话页发一句「你好」，结束后类似：
 
 ```text
 prompt_tokens: …      ← 你送进去的

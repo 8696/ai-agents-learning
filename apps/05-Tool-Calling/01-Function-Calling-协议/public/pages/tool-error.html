@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>工具执行失败 · Function Calling</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/rounds.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：工具自己炸了（超时 / 下游 500）时，循环不能跟着炸。
+     * 参数是合法的、Zod 也过了，失败发生在 handler 内部 —— 与上一页的「参数非法」是两回事。
+     */
+    const { useState } = React;
+
+    const PRESET = {
+      title: "⑤ 工具执行失败",
+      prompt: "查 u999 的用户信息",
+      expect: "期望：Zod ✓ 但执行 ✗，tool_result 里是「数据库连接超时」，模型据此说人话，HTTP 仍是 200",
+    };
+
+    const INTRO_STEPS = [
+      "点按钮 → POST /api/run { prompt: \"查 u999 的用户信息\" }",
+      "u999 符合 /^u\\d+$/，Zod 校验通过 —— 所以这一页的红色出现在「执行」而不是「Zod」",
+      "handler 内部 throw「数据库连接超时」；executeOneToolCall 捕获，写成 executeOk=false 的 tool_result",
+      "错误文本当作普通 tool_result 回灌，模型据此回复用户（而不是整个请求 500）",
+      "对照上一页：Zod ✗ 是参数问题，执行 ✗ 是下游问题，两种失败都要能回到模型手里",
+    ];
+
+    // waitDemoUI：等 components/*.js 被 Babel 转译并挂到 window.DemoUI 之后再渲染
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "CaseResult"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, CaseResult } = window.DemoUI;
+        const { callEndpoint } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo(); // 页脚环境 + Key 闸门
+          const [status, setStatus] = useState("idle"); // #status-pill 四态
+          const [busy, setBusy] = useState(false); // 防重复提交
+          const [error, setError] = useState(""); // fetch 层失败
+          const [cases, setCases] = useState([]); // 历史结果，最新在顶
+
+          const blocked = busy || !env.hasKey;
+
+          /**
+           * 失败用例和对照用例共用这一个函数：同一个 /api/run，只有 prompt 不同。
+           * 参数化而不是复制两份 handler —— 这样「只有输入不同」这件事在代码里也看得见。
+           */
+          const run = async function (prompt, title, expect, keyPrefix) {
+            if (blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError("");
+            try {
+              const res = await callEndpoint("/api/run", { prompt: prompt });
+              const entry =
+                res.status === 200
+                  ? { title: title, prompt: prompt, expect: expect, status: 200, data: res.data }
+                  : {
+                      title: title,
+                      prompt: prompt,
+                      expect: expect,
+                      status: res.status,
+                      error: (res.data && res.data.error) || ("HTTP " + res.status),
+                      data: null,
+                    };
+              setCases(function (prev) {
+                return [{ key: keyPrefix + Date.now(), ...entry }].concat(prev);
+              });
+              // 注意：工具执行失败时 HTTP 仍是 200，pill 变绿——失败信息在 tool_result 卡片里
+              setStatus(res.status === 200 ? "ok" : "error");
+            } catch (e) {
+              // fetch reject（服务没起 / 网络断）→ 页面级红块
+              setError("请求发不出去：" + e.message);
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">⑤ 工具执行失败</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                {/* §5.3.11 说明区 */}
+                <PageIntro
+                  summary="handler 抛异常时，错误变成 tool_result 回给模型；HTTP 保持 200，循环继续往下走。"
+                  steps={INTRO_STEPS}
+                />
+
+                {/* §5.3.10 功能区：失败用例 + 成功对照，红绿两张卡片放一起才看得清 */}
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && (
+                    <p className="text-xs text-red-600">
+                      未检测到 Key，按钮已禁用。先在 apps/.env 配置 LLM_PROVIDER 对应的 Key。
+                    </p>
+                  )}
+
+                  <div className="space-y-1">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
+                      disabled={blocked}
+                      onClick={function () {
+                        run(PRESET.prompt, PRESET.title, PRESET.expect, "e-");
+                      }}
+                    >
+                      查 u999（会失败）
+                    </button>
+                    <p className="text-xs text-gray-500">
+                      点它 → tool_result 卡片是红底，徽标为「Zod ✓ + 执行 ✗」。
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <button
+                      className="border border-gray-300 hover:border-blue-500 px-3 py-2 rounded text-sm disabled:opacity-50"
+                      disabled={blocked}
+                      onClick={function () {
+                        run(
+                          "查 u001 的用户信息",
+                          "对照：正常用户 u001",
+                          "期望：Zod ✓ + 执行 ✓，绿色卡片",
+                          "ok-",
+                        );
+                      }}
+                    >
+                      对照：查 u001（会成功）
+                    </button>
+                    <p className="text-xs text-gray-500">
+                      同一个工具、同样合法的参数，只是 handler 没抛错 —— 用来对比红绿两种 tool_result。
+                    </p>
+                  </div>
+                </section>
+
+                {/* 页面级错误：连不上服务 / 拉不到 /health */}
+                {(error || envError) && (
+                  <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                    {error || envError}
+                  </div>
+                )}
+
+                {/* §5.3.10 输出区：u999 红底「Zod ✓ + 执行 ✗」，u001 绿底「双 ✓」 */}
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  <div className="text-sm text-gray-500">
+                    {cases.length === 0
+                      ? "还没有结果。建议先跑 u999 再跑 u001，两张卡片放一起看差别。"
+                      : "共 " + cases.length + " 条（最新在顶）"}
+                  </div>
+                  {cases.map(function (c) {
+                    return <CaseResult key={c.key} entry={c} />;
+                  })}
+                </section>
+              </main>
+
+              <EnvFooter env={env} protocol="A" />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

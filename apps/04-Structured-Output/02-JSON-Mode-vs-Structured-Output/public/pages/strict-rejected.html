@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>坏 schema → API 400</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/mode-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：strict 对 schema 写法本身也有闸。这不是模型犯错，是 API 入口拒收。
+     * 期望 400；若 200 + unexpectedSuccess，说明这家网关没做真 token-mask。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「运行」→ POST /api/strict-rejected（无 prompt）",
+      "服务端故意发一份缺 additionalProperties:false、且含 anyOf 的 schema",
+      "真 token-mask 的网关：HTTP 400，报错原文会点名哪条属性违规",
+      "软约束网关：可能 200 + unexpectedSuccess —— 这是诊断结果，不是 Demo 写错了",
+      "和「诱导 unknown」不是一回事：那一刀测模型守约，这一刀测网关有没有硬闸",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [error, setError] = useState(null);
+          const [result, setResult] = useState(null);
+
+          const blocked = busy || !env.hasKey;
+
+          const run = async function () {
+            if (blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setResult(null);
+            try {
+              const res = await callEndpoint("/api/strict-rejected", {});
+              setResult({ status: res.status, data: res.data });
+              // 期望 400 也算「跑通了这一刀」；只有 fetch 失败才进 ErrorBanner
+              setStatus(res.status === 0 ? "error" : "ok");
+            } catch (e) {
+              setError({
+                title: "网络错误（fetch 没发出去）",
+                detail: e.message,
+                httpStatus: null,
+              });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          };
+
+          var unexpected = result && result.data && result.data.unexpectedSuccess;
+          var rejected = result && result.data && result.data.rejected;
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">⑥ 坏 schema → API 400</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="strict 模式对 schema 写法本身严格：缺 additionalProperties:false 或含 anyOf，API 入口就该拒。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && (
+                    <p className="text-xs text-red-600">
+                      未检测到 Key，按钮已禁用。先在 apps/.env 配置 LLM_PROVIDER 对应的 Key。
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    点「运行」会发出一份故意写坏的 schema。关键断言：<b>这不是模型犯错，是网关在 API 入口拒不拒。</b>
+                  </p>
+                  <button
+                    className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
+                    disabled={blocked}
+                    onClick={run}
+                  >
+                    {busy ? "调用中…" : "运行坏 schema"}
+                  </button>
+                </section>
+
+                {(error || envError) && (
+                  error ? (
+                    <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />
+                  ) : (
+                    <ErrorBanner title="拉 /health 失败" detail={envError} httpStatus={null} />
+                  )
+                )}
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!result && !error && (
+                    <p className="text-sm text-gray-500">
+                      还没有结果。点「运行坏 schema」。期望看到 HTTP 400 + 上游报错原文。
+                    </p>
+                  )}
+                  {result && (
+                    <div
+                      className={
+                        unexpected
+                          ? "rounded border border-orange-300 bg-orange-50 p-3 space-y-2"
+                          : rejected
+                            ? "rounded border border-green-300 bg-green-50 p-3 space-y-2"
+                            : "rounded border border-gray-300 bg-white p-3 space-y-2"
+                      }
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">
+                          {unexpected
+                            ? "unexpectedSuccess：网关吞下了坏 schema（软约束，没有真 token-mask）"
+                            : rejected
+                              ? "rejected：API 入口拒收（这才是 strict 硬闸）"
+                              : "HTTP " + result.status}
+                        </span>
+                        <span className="text-xs text-gray-500">HTTP {result.status}</span>
+                      </div>
+                      {result.data && result.data.upstreamStatus && (
+                        <p className="text-xs text-gray-500">
+                          上游 {result.data.upstreamStatus} · {describeFailure(result.status, result.data)}
+                        </p>
+                      )}
+                      <pre className="whitespace-pre-wrap text-xs max-h-48 overflow-auto bg-white/60 p-2 rounded">
+                        {JSON.stringify(result.data, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </section>
+              </main>
+
+              <EnvFooter env={env} protocol="A" />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

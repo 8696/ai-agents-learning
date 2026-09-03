@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>输入/输出对照 · API Key</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/billing-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：Token 总量多 ≠ 更贵。落在输出侧的 Token 更烧钱。
+     * preset 写死在服务端，本页不传 prompt，否则对照条件会漂。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「跑对照」→ POST /api/billing-compare，没有 body",
+      "服务端顺序调两次：① 长输入短输出 ② 短输入长输出（不用并行，避开新 Key 的 429）",
+      "两张账单并排：看 total_tokens 更大的是谁，再看 totalCny 更大的是谁",
+      "若两者不是同一个 case，结论就是：总量不能直接当账单",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "BillingCard", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, BillingCard, ErrorBanner } = window.DemoUI;
+        const { callEndpoint } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [result, setResult] = useState(null);
+          const [error, setError] = useState(null);
+
+          const blocked = busy || !env.hasKey;
+
+          async function run() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/billing-compare", {});
+              if (r.status >= 400) {
+                var msg = (r.data && (r.data.error || r.data.detail)) || JSON.stringify(r.data);
+                setError({ title: "对照失败（可能只跑成了一次，钱已经花了）", detail: String(msg), httpStatus: r.status });
+                setStatus("error");
+                setResult(null);
+                return;
+              }
+              setResult(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setResult(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">输入 / 输出对照</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="同样一次调用，Token 落在输出侧比落在输入侧更贵。本页用两次固定 preset 对照。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-xs text-gray-500">
+                    点了会连续调两次模型。prompt 不在页面改——对照实验的条件必须两边一致。
+                  </p>
+                  <button
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                    disabled={blocked}
+                    onClick={run}
+                  >
+                    跑对照（两次真实调用）
+                  </button>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!result && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点按钮后会出现两张并排账单和一句结论。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {result && result.verdict && (
+                    <div className="rounded border border-green-300 bg-green-50 p-3 text-sm">
+                      <div className="text-xs text-green-800 mb-1">结论（系统事件，不是模型原文）</div>
+                      <p>{result.verdict.text}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Token 更多：{result.verdict.moreTokensLabel} · 更贵：{result.verdict.moreCostLabel} · 倍数 {result.verdict.costRatio}
+                      </p>
+                    </div>
+                  )}
+                  {result && result.cases && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {result.cases.map(function (c) {
+                        return <BillingCard key={c.label} measurement={c} expect={c.expect} />;
+                      })}
+                    </div>
+                  )}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

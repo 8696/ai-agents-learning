@@ -1,0 +1,44 @@
+/**
+ * 职责：/api/compare 的入参闸门（Key、问题文本、两版 Prompt、modes）。
+ * 数据流：ctx.request.body → 通过则返回对象；失败已写 ctx.status / ctx.body，返回 null。
+ */
+import type { Context } from "koa";
+import type { Llm } from "../../../../llm.js";
+import { z } from "zod";
+import { llm } from "./runtime-ctx.js";
+
+const bodySchema = z.object({
+  text: z.string().trim().min(1).max(2000),
+  modes: z.array(z.enum(["v1", "v2"])).min(1).max(2),
+  prompts: z.object({
+    v1: z.string().min(1).max(2000),
+    v2: z.string().min(1).max(2000),
+  }),
+});
+
+export type CompareBody = z.infer<typeof bodySchema>;
+
+export function requireLlm(ctx: Context): Llm | null {
+  if (!llm) {
+    ctx.status = 503;
+    ctx.body = {
+      error: "当前 LLM_PROVIDER 没有 Key，无法真实调用（见 apps/.env.example）。",
+    };
+    return null;
+  }
+  return llm;
+}
+
+export function readCompareBody(ctx: Context): CompareBody | null {
+  const parsed = bodySchema.safeParse(ctx.request.body ?? {});
+  if (!parsed.success) {
+    ctx.status = 400;
+    ctx.body = {
+      error: "参数错误",
+      details: parsed.error.flatten(),
+      hint: "text 不能为空；modes 至少含 v1 或 v2",
+    };
+    return null;
+  }
+  return parsed.data;
+}

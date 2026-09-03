@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Top-P 对照 · Temperature / Top-P</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/group-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：只动 top_p。默认 T=1 才能看见差异；T=0 是反例（三档应一样）。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「跑 Top-P 对照」→ POST /api/sweep/top-p { prompt, temperature }",
+      "服务端扫 1 / 0.9 / 0.3，温度由下面的选项固定住",
+      "默认 T=1：候选集大小会影响结果",
+      "改成 T=0 再跑：贪心解码永远挑最高概率 token，三档应逐字相同",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "SweepResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, SweepResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [prompt, setPrompt] = useState("");
+          const [temperature, setTemperature] = useState(1);
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (env.defaults && !prompt) {
+              setPrompt(env.defaults.prompt);
+              if (typeof env.defaults.sweepTemperature === "number") {
+                setTemperature(env.defaults.sweepTemperature);
+              }
+            }
+          }, [env.defaults]);
+
+          const blocked = busy || !env.hasKey;
+
+          async function run() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/sweep/top-p", { prompt: prompt, temperature: temperature });
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">Top-P 对照</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="只动 top_p，温度固定。T=0 时三档应当一样——那是验证「贪心解码下候选集大小不起作用」。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">
+                    prompt
+                    <span className="block text-xs text-gray-500">点了同样是 3 档 × 2 次真实调用。卡片标题会写清被固定的温度。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={2}
+                      value={prompt}
+                      disabled={busy}
+                      onChange={function (e) { setPrompt(e.target.value); }}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    固定温度
+                    <span className="block text-xs text-gray-500">T=1 看差异；T=0 验证反例。</span>
+                    <select
+                      className="mt-1 border rounded p-2 text-sm"
+                      value={temperature}
+                      disabled={busy}
+                      onChange={function (e) { setTemperature(Number(e.target.value)); }}
+                    >
+                      <option value={1}>T = 1（默认，能看见 Top-P 差异）</option>
+                      <option value={0}>T = 0（贪心解码，三档应相同）</option>
+                    </select>
+                  </label>
+                  <button
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                    disabled={blocked}
+                    onClick={run}
+                  >
+                    跑 Top-P 对照
+                  </button>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点按钮后会出现三张 top_p 卡片。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <SweepResult data={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

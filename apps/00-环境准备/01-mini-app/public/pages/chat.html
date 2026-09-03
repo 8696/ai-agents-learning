@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流式对话 · mini-app</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：用户最终看到的那句话，是由每一帧 delta.content 拼出来的。
+     * 原始协议字段请去 /pages/frames.html。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「发送」→ POST /api/chat { message }，Content-Type 是 application/json",
+      "服务端开 SSE（ctx.respond=false），把上游每个 chunk 写成 data: {json}",
+      "浏览器按空行切帧，把 delta.content 追加到下面绿卡片",
+      "最后一帧是字符串 [DONE]（不是 JSON）。没收到它，读循环会一直等到超时",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "AnswerCard", "UsageBar", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, AnswerCard, UsageBar, ErrorBanner } = window.DemoUI;
+        const { streamChat } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [message, setMessage] = useState("用一句话介绍你自己。");
+          const [lastPrompt, setLastPrompt] = useState("");
+          const [content, setContent] = useState("");
+          const [streaming, setStreaming] = useState(false);
+          const [usage, setUsage] = useState(null);
+          const [frameCount, setFrameCount] = useState(0);
+          const [elapsedMs, setElapsedMs] = useState(0);
+          const [doneSeen, setDoneSeen] = useState(false);
+          const [error, setError] = useState(null);
+
+          const blocked = busy || !env.hasKey;
+
+          async function send() {
+            const prompt = message.trim();
+            if (!prompt || blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setLastPrompt(prompt);
+            setContent("");
+            setUsage(null);
+            setFrameCount(0);
+            setDoneSeen(false);
+            setStreaming(true);
+            const t0 = Date.now();
+            try {
+              const result = await streamChat(prompt, {
+                onDelta: function (_delta, full) {
+                  setContent(full);
+                },
+                onFrame: function (frame) {
+                  setFrameCount(frame.index);
+                },
+              });
+              setElapsedMs(Date.now() - t0);
+              setStreaming(false);
+              if (!result.ok) {
+                setError({ title: "请求被拒绝", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setUsage(result.usage);
+              setDoneSeen(result.doneSeen);
+              if (result.streamError) {
+                setError({ title: "流中途失败（响应头已是 200，只能靠错误帧）", detail: result.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              setStatus("ok");
+            } catch (e) {
+              setElapsedMs(Date.now() - t0);
+              setStreaming(false);
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">流式对话</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="SSE 把模型回复一帧一帧送到浏览器，绿卡片上的字是 delta.content 拼起来的终态。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm text-gray-700">
+                    用户消息
+                    <span className="block text-xs text-gray-500 mt-0.5">点发送会 POST /api/chat。期望绿卡片逐字变长，页脚 Key ❌ 时按钮会锁住。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={3}
+                      value={message}
+                      onChange={function (e) { setMessage(e.target.value); }}
+                      disabled={busy}
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={blocked}
+                      onClick={send}
+                    >
+                      发送（流式上屏）
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { setMessage(""); }}
+                    >
+                      清空再发（期望 HTTP 400）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                  {!env.hasKey && env.port && (
+                    <p className="text-xs text-red-600">Key ❌：先在 apps/.env 配当前家的 API Key 再重启。</p>
+                  )}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!lastPrompt && !error && (
+                    <p className="text-sm text-gray-500">还没发过。点发送后，这里会出现请求参数、绿底回复、Token 用量。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {lastPrompt && <PromptCard prompt={lastPrompt} />}
+                  {lastPrompt && <AnswerCard text={content} streaming={streaming} />}
+                  {lastPrompt && <UsageBar usage={usage} frameCount={frameCount} elapsedMs={elapsedMs} doneSeen={doneSeen} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

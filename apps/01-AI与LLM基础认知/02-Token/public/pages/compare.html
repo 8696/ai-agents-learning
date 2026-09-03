@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中英对照 · Token</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/token-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：同一句意思，中文 Token 数往往多于英文。服务端用固定样本，页面不写死。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「对照中英」→ POST /api/compare（无 body）",
+      "服务端对两句硬编码样本各跑一次 encode()",
+      "绿卡并排：字符数 vs Token 数 + 前 5 个 id",
+      "期望：中文 Token 数更接近甚至超过字符数",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "CompareResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, CompareResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          async function run(url, body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint(url, body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">中英对照</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="同一句人话换成中文，往往被切得更碎。这就是「中文输入更贵」的来源。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {env.samples && (
+                    <p className="text-xs text-gray-500">
+                      英文 {JSON.stringify(env.samples.english)} · 中文 {JSON.stringify(env.samples.chinese)}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run("/api/compare", {}); }}
+                    >
+                      对照中英
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run("/api/encode", { text: "" }); }}
+                    >
+                      故意发空文本（期望 HTTP 400）
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={async function () {
+                        setBusy(true);
+                        setStatus("loading");
+                        setError(null);
+                        try {
+                          await triggerNetworkError();
+                        } catch (e) {
+                          setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+                          setStatus("error");
+                          setData(null);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      故意断网（期望 fetch reject）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点「对照中英」后会出现两张并排绿卡。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && data.english && <CompareResult data={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

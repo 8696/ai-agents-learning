@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>收 N 帧停 · Abort</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/abort-cards.js"></script>
+  <script type="text/babel">
+    const { useState, useRef } = React;
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "AnswerCard", "AbortEventCard", "UsageBar", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, AnswerCard, AbortEventCard, UsageBar, ErrorBanner } = window.DemoUI;
+        const { streamAbortCase } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [message, setMessage] = useState("用 200 字介绍你自己。");
+          const [n, setN] = useState(5);
+          const [last, setLast] = useState("");
+          const [content, setContent] = useState("");
+          const [aborted, setAborted] = useState(null);
+          const [meta, setMeta] = useState(null);
+          const [error, setError] = useState(null);
+          const acRef = useRef(null);
+          const blocked = busy || !env.hasKey;
+
+          async function run() {
+            var controller = new AbortController();
+            acRef.current = controller;
+            setBusy(true); setStatus("loading"); setError(null); setContent(""); setAborted(null); setMeta(null);
+            setLast(message);
+            var t0 = Date.now();
+            try {
+              const r = await streamAbortCase({
+                url: "/api/cancel-after-frames",
+                body: { message: message, abortAfterFrames: n },
+                signal: controller.signal,
+                onEvent: function (evt) {
+                  if (evt.event === "delta") setContent(function (c) { return c + (evt.content || ""); });
+                  if (evt.event === "aborted") setAborted(evt);
+                },
+              });
+              var elapsed = Date.now() - t0;
+              if (!r.ok) { setError({ title: "请求被拒绝", detail: r.error, httpStatus: r.httpStatus }); setStatus("error"); return; }
+              setMeta({ frameIdx: r.frameIdx, usage: r.usage, doneSeen: r.doneSeen, elapsedMs: elapsed });
+              if (r.aborted) setAborted(r.aborted);
+              if (r.streamError) { setError({ title: "流中途失败", detail: r.streamError, httpStatus: 200 }); setStatus("error"); return; }
+              setStatus("ok");
+            } catch (e) {
+              if (e && e.name === "AbortError") {
+                setAborted({ reason: "client-close", frameIdx: "?" });
+                setStatus("ok");
+              } else {
+                setError({ title: "网络错误", detail: e.message, httpStatus: null });
+                setStatus("error");
+              }
+            } finally { setBusy(false); acRef.current = null; }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">收 N 帧停</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="SDK 带 AbortSignal。服务端收到 N 帧后 abort；你也可以提前掐 fetch。"
+                  steps={["点跑 → POST /api/cancel-after-frames", "服务端把 signal 传给 openai SDK", "到 N 帧 → AbortError → 发 event=aborted", "点立即取消会关浏览器 fetch，服务端 req.close 也会 abort"]} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">message
+                    <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={2} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
+                  </label>
+                  <label className="block text-sm">abortAfterFrames
+                    <span className="block text-xs text-gray-500">期望红卡片 reason=frames，帧数约等于这个数。</span>
+                    <input className="mt-1 border rounded p-2 w-28" type="number" min={1} max={200} value={n} disabled={busy} onChange={function (e) { setN(Number(e.target.value)); }} />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={run}>收 N 帧后停</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={!busy} onClick={function () { if (acRef.current) acRef.current.abort(); }}>立即取消（掐 fetch）</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!last && !error && <p className="text-sm text-gray-500">还没跑过。先跑「流到底」再来这里比帧数。</p>}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {last && <PromptCard prompt={last} extra={"abortAfterFrames=" + n} />}
+                  {last && <AnswerCard text={content} streaming={busy} />}
+                  {aborted && <AbortEventCard kind="aborted" reason={aborted.reason} frameIdx={aborted.frameIdx} />}
+                  {meta && <UsageBar usage={meta.usage} frameIdx={meta.frameIdx} elapsedMs={meta.elapsedMs} doneSeen={meta.doneSeen} />}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

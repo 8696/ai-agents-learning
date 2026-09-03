@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>串行数据依赖 · Function Calling</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/rounds.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：数据依赖时为什么不能并行 —— 第二个工具的入参来自第一个工具的返回。
+     * 接口 POST /api/run-serial（同一个 runToolLoop，maxRounds 放宽到 5）。
+     */
+    const { useState } = React;
+
+    const PRESET = {
+      title: "③ 串行数据依赖",
+      prompt: "查 u001 的用户，把他的 level 加 7，结果告诉我",
+      expect: "期望：Round 1 lookup_user → Round 2 add(level, 7) → Round 3 finish_reason=stop",
+    };
+
+    const INTRO_STEPS = [
+      "点按钮 → POST /api/run-serial { prompt }",
+      "Round 1：模型只能先调 lookup_user —— 它还不知道 level 是多少，没法同时调 add",
+      "服务端执行后把 { level: 3 } 写进 tool_result 追加到 messages",
+      "Round 2：模型看到 level，才发得出 add(3, 7)；这一步依赖上一步，所以是串行不是并行",
+      "Round 3：没有新的 tool_call，finish_reason=stop，循环退出（上限 5 轮防跑飞）",
+    ];
+
+    // waitDemoUI：等 components/*.js 被 Babel 转译并挂到 window.DemoUI 之后再渲染
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "CaseResult"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, CaseResult } = window.DemoUI;
+        const { callEndpoint } = window.DemoUtils;
+
+        function App() {
+          // env：页脚 #env-info 用；hasKey=false 时锁按钮
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle"); // #status-pill 四态
+          const [busy, setBusy] = useState(false); // 请求中 → 禁用按钮
+          const [error, setError] = useState(""); // fetch 层失败
+          // prompt 默认填好串行用例：改成两件无关的事就能对照出「并行 vs 串行」
+          const [prompt, setPrompt] = useState(PRESET.prompt);
+          const [cases, setCases] = useState([]); // 历史结果，最新在顶
+
+          const blocked = busy || !env.hasKey;
+
+          /**
+           * POST /api/run-serial：服务端 maxRounds=5。
+           * 轮数就是本页要看的东西 —— 有数据依赖时模型没法一轮做完。
+           */
+          const run = async function () {
+            const p = prompt.trim();
+            if (!p || blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError("");
+            try {
+              const res = await callEndpoint("/api/run-serial", { prompt: p });
+              const entry =
+                res.status === 200
+                  ? { title: PRESET.title, prompt: p, expect: PRESET.expect, status: 200, data: res.data }
+                  : {
+                      title: PRESET.title,
+                      prompt: p,
+                      expect: PRESET.expect,
+                      status: res.status,
+                      error: (res.data && res.data.error) || ("HTTP " + res.status),
+                      data: null,
+                    };
+              setCases(function (prev) {
+                return [{ key: "s-" + Date.now(), ...entry }].concat(prev);
+              });
+              setStatus(res.status === 200 ? "ok" : "error");
+            } catch (e) {
+              // fetch reject（服务没起 / 网络断）→ 页面级红块
+              setError("请求发不出去：" + e.message);
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">③ 串行数据依赖</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                {/* §5.3.11 说明区 */}
+                <PageIntro
+                  summary="后一个工具的参数来自前一个工具的结果时，只能一轮一轮走 —— 这就是 Agent 循环的雏形。"
+                  steps={INTRO_STEPS}
+                />
+
+                {/* §5.3.10 功能区 */}
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && (
+                    <p className="text-xs text-red-600">
+                      未检测到 Key，按钮已禁用。先在 apps/.env 配置 LLM_PROVIDER 对应的 Key。
+                    </p>
+                  )}
+                  <div className="space-y-1">
+                    <div className="flex gap-2 items-start">
+                      <textarea
+                        className="flex-1 border rounded p-2 text-sm"
+                        rows={2}
+                        value={prompt}
+                        onChange={function (e) {
+                          setPrompt(e.target.value);
+                        }}
+                      />
+                      <button
+                        className="bg-blue-600 text-white px-3 py-2 rounded text-sm disabled:opacity-50"
+                        disabled={blocked || !prompt.trim()}
+                        onClick={run}
+                      >
+                        跑串行
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      点「跑串行」→ POST /api/run-serial；数一下下面出现了几个 Round，以及第 2 轮 add 的参数是不是第 1 轮查出来的 level。
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      想看对照：把 prompt 改成两件无关的事（如「北京天气 + 1 加 2」），轮数会退回并行的样子。
+                    </p>
+                  </div>
+                </section>
+
+                {/* 页面级错误：连不上服务 / 拉不到 /health */}
+                {(error || envError) && (
+                  <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                    {error || envError}
+                  </div>
+                )}
+
+                {/* §5.3.10 输出区：重点看 Round 数量与 Round 2 的 arguments 来源 */}
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  <div className="text-sm text-gray-500">
+                    {cases.length === 0
+                      ? "还没有结果。跑一次后重点看：Round 2 的 arguments 是否用上了 Round 1 的返回值。"
+                      : "共 " + cases.length + " 条（最新在顶）"}
+                  </div>
+                  {cases.map(function (c) {
+                    return <CaseResult key={c.key} entry={c} />;
+                  })}
+                </section>
+              </main>
+
+              <EnvFooter env={env} protocol="A" />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

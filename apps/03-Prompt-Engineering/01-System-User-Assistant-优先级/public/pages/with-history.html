@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Case 2 · 有历史</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/side-cards.js"></script>
+  <script type="text/babel">
+    /**
+     * 本页教学点：3 轮里把 assistant 塞回去，模型才「记得」北京。
+     */
+    const { useState } = React;
+    const TURNS = [
+      { role: "user", content: "我住北京。" },
+      { role: "assistant", content: "好的，已记录。" },
+      { role: "user", content: "我刚才说的城市今天天气怎么样？" },
+    ];
+    const INTRO_STEPS = [
+      "点「跑对照」→ POST /api/case2-with-history（文案在服务端写死）",
+      "route 同时调协议 A 和协议 B，messages 里包含那条 assistant",
+      "本地判定：回复里出现「北京」→ REMEMBERED，否则 FORGOT",
+      "这才是多轮：历史要你自己塞回去，不是网关自动记得",
+    ];
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "ComparePair", "PromptBlock", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, ComparePair, PromptBlock, ErrorBanner } = window.DemoUI;
+        const { callEndpoint } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+          const blocked = busy || !env.hasKey;
+
+          async function runHappy() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/case2-with-history", {});
+              if (r.status >= 400) {
+                setError({ title: "服务端错误", detail: (r.data && r.data.error) || JSON.stringify(r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function runMissing() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/no-such-endpoint", {});
+              setError({
+                title: "故意打不存在的路径",
+                detail: (r.data && (r.data.error || r.data.message)) || "未匹配到路由",
+                httpStatus: r.status,
+              });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">Case 2 · 有 assistant 历史</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="三轮 user / assistant / user。期望提到「北京」→ REMEMBERED。" steps={INTRO_STEPS} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && (
+                    <p className="text-xs text-red-600">未检测到 Key，主按钮已禁用。先在 apps/.env 配置对应 Key。</p>
+                  )}
+                  <PromptBlock system={null} turns={TURNS} />
+                  <p className="text-xs text-gray-500">
+                    点「跑对照」：期望两边 REMEMBERED。若 FORGOT，先看 messages 里那条 assistant 有没有真的发出去。
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={runHappy}>
+                      跑对照（协议 A + B）
+                    </button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runMissing}>
+                      故意打不存在的接口（期望 HTTP 404）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点「跑对照」后左侧 A、右侧 B。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <ComparePair a={data.a} b={data.b} />}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

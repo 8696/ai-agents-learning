@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>parse / safeParse · JSON Schema</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/schema-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：parse 成功有 typed 值；safeParse 失败永不抛，success=false 时没有 data。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "把 JSON 贴进框，点「跑 parse」→ POST /api/parse { raw }",
+      "合法：绿卡是 typed 对象；灰卡是 { success: true, data }",
+      "非法：不会 500，灰卡是 { success: false, issues }，没有 data",
+      "空 raw 或非法 JSON 字符串才是 HTTP 400（闸门），和 schema 校验失败要分开看",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "ParseResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, ParseResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [raw, setRaw] = useState('{"action":"order","query":"奶茶","qty":2}');
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (env.samples) setRaw(JSON.stringify(env.samples.ok, null, 2));
+          }, [env.samples]);
+
+          async function run(body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/parse", body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">parse / safeParse</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="同一份 payload 看成功值和失败形状。schema 校验失败走 200 + success=false，不是 500。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">
+                    raw（JSON 文本）
+                    <span className="block text-xs text-gray-500">点了会 POST /api/parse。可先点「换成非法样例」。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm font-mono"
+                      rows={6}
+                      value={raw}
+                      disabled={busy}
+                      onChange={function (e) { setRaw(e.target.value); }}
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ raw: raw }); }}
+                    >
+                      跑 parse
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy || !env.samples}
+                      onClick={function () {
+                        if (!env.samples) return;
+                        setRaw(JSON.stringify(env.samples.bad, null, 2));
+                      }}
+                    >
+                      换成非法样例
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ raw: "" }); }}
+                    >
+                      故意发空 raw（期望 HTTP 400）
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={async function () {
+                        setBusy(true);
+                        setStatus("loading");
+                        setError(null);
+                        try {
+                          await triggerNetworkError();
+                        } catch (e) {
+                          setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+                          setStatus("error");
+                          setData(null);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      故意断网（期望 fetch reject）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点「跑 parse」后左边是值、右边是 safeParse 形状。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <ParseResult data={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

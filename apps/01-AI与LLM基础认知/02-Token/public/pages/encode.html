@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自定义文本 · Token</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/token-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：任意一段文本都能切出 id 列表。空串被闸门 400，不是「0 个 Token」。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "在框里贴一段话，点「切成 Token」→ POST /api/encode { text }",
+      "服务端 gpt-tokenizer encode()，返回字符数 / Token 数 / 前 5 个 id",
+      "空串或只空格 → HTTP 400（闸门，不是 encode 结果为 0）",
+      "「故意断网」打一个没人听的端口，#status-pill 变红",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "EncodeCard", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, EncodeCard, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [text, setText] = useState("你好，我喜欢吃苹果。");
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (env.samples && text === "你好，我喜欢吃苹果。") {
+              setText(env.samples.chinese);
+            }
+          }, [env.samples]);
+
+          async function run(body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/encode", body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">自定义文本</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="自己贴一段，看 cl100k 切出几个 id。空串会被服务端闸门拦下。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">
+                    text
+                    <span className="block text-xs text-gray-500">点了会走 POST /api/encode。不调 LLM，缺 Key 也能跑。</span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={3}
+                      value={text}
+                      disabled={busy}
+                      onChange={function (e) { setText(e.target.value); }}
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ text: text }); }}
+                    >
+                      切成 Token
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { run({ text: "" }); }}
+                    >
+                      故意发空文本（期望 HTTP 400）
+                    </button>
+                    <button
+                      className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                      disabled={busy}
+                      onClick={async function () {
+                        setBusy(true);
+                        setStatus("loading");
+                        setError(null);
+                        try {
+                          await triggerNetworkError();
+                        } catch (e) {
+                          setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+                          setStatus("error");
+                          setData(null);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      故意断网（期望 fetch reject）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点「切成 Token」后会出现一张绿卡。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <EncodeCard title="encode 结果" row={data} />}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

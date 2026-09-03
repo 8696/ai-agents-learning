@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>真 API · Rate-Limit</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/timeline.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "TimelineBlock", "BurstBlock", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, TimelineBlock, BurstBlock, ErrorBanner } = window.DemoUI;
+        const { callGet, describeFailure } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [single, setSingle] = useState(null);
+          const [burst, setBurst] = useState(null);
+          const [error, setError] = useState("");
+          const blocked = busy || !env.hasKey;
+
+          async function runSingle() {
+            setBusy(true); setStatus("loading"); setError("");
+            try {
+              const r = await callGet("/api/real");
+              if (r.status >= 400 && !(r.data && r.data.attempts)) {
+                setError(describeFailure(r.status, r.data));
+                setStatus("error");
+                setSingle(null);
+                return;
+              }
+              setSingle(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError("网络错误：" + e.message);
+              setStatus("error");
+            } finally { setBusy(false); }
+          }
+
+          async function runBurst() {
+            setBusy(true); setStatus("loading"); setError("");
+            try {
+              const r = await callGet("/api/real-burst?concurrency=8");
+              if (r.status >= 400 && !(r.data && r.data.results)) {
+                setError(describeFailure(r.status, r.data));
+                setStatus("error");
+                setBurst(null);
+                return;
+              }
+              setBurst(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError("网络错误：" + e.message);
+              setStatus("error");
+            } finally { setBusy(false); }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">真 API</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="同一套 retry 套在真模型外面。burst 会烧多次 Token，按需点。"
+                  steps={["单次 → GET /api/real，看真实延迟和错误形状", "burst → GET /api/real-burst，并发里可能出现真 429", "没 Key 时按钮 disabled"]} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={runSingle}>真 API 单次</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={runBurst}>并发 8（可能撞 429）</button>
+                  </div>
+                  {!env.hasKey && env.port && <p className="text-xs text-red-600">Key ❌：真 API 按钮已禁用，去 mock 页即可。</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!single && !burst && !error && <p className="text-sm text-gray-500">还没跑过。单次便宜；burst 会连打多次。</p>}
+                  <ErrorBanner error={error} envError={envError} />
+                  {single && <TimelineBlock label="单次 /api/real" data={single} />}
+                  {burst && <BurstBlock data={burst} />}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

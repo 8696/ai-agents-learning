@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock 五场景 · Rate-Limit</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/timeline.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    const CASES = [
+      { target: "easy", title: "easy", desc: "前 2 次 429 + Retry-After，第 3 次 200。看听头等待。" },
+      { target: "chaos", title: "chaos", desc: "随机 429/500/200。连点几次看 waitBefore 抖动（jitter）。" },
+      { target: "auth", title: "auth", desc: "永远 401。只应有 1 行 attempt，立刻 NonRetryable。" },
+      { target: "forever", title: "forever", desc: "永远 429。打到上限抛 RetryExhausted。" },
+      { target: "ok", title: "ok", desc: "永远 200。成功路径不重试。" },
+    ];
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "TimelineBlock", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, TimelineBlock, ErrorBanner } = window.DemoUI;
+        const { callGet, describeFailure } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [results, setResults] = useState({});
+          const [error, setError] = useState("");
+
+          async function run(target) {
+            setBusy(true); setStatus("loading"); setError("");
+            try {
+              const r = await callGet("/api/proxy?target=" + target);
+              if (r.status >= 400 && !(r.data && r.data.attempts)) {
+                setError(describeFailure(r.status, r.data));
+                setStatus("error");
+                return;
+              }
+              setResults(function (prev) {
+                var next = Object.assign({}, prev);
+                next[target] = r.data;
+                return next;
+              });
+              setStatus(r.data && r.data.ok === false ? "ok" : "ok");
+            } catch (e) {
+              setError("网络错误：" + e.message);
+              setStatus("error");
+            } finally { setBusy(false); }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">Mock 五场景</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="零成本 mock。每个按钮走 GET /api/proxy?target=…，套同一套 retry。"
+                  steps={["点某个场景 → 服务端 retryWithBackoff 打对应 mock", "看 attempts 表：status / waitBefore / Retry-After", "auth 只有一行；forever 打满上限；easy 第 3 次成功"]} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-xs text-gray-500">不需要 Key。点了会发请求，按钮在请求中 disabled。</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {CASES.map(function (c) {
+                      return (
+                        <button key={c.target} className="text-left border border-gray-300 hover:border-blue-500 rounded p-3 disabled:opacity-50" disabled={busy} onClick={function () { run(c.target); }}>
+                          <div className="font-semibold text-sm">{c.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{c.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {Object.keys(results).length === 0 && !error && <p className="text-sm text-gray-500">还没跑过。点一个场景，时间线会出现在这里。</p>}
+                  <ErrorBanner error={error} envError={envError} />
+                  {CASES.map(function (c) {
+                    if (!results[c.target]) return null;
+                    return <TimelineBlock key={c.target} label={c.title} data={results[c.target]} />;
+                  })}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

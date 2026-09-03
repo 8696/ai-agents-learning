@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一次性 · Adapter</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/unified-cards.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    const INTRO_STEPS = [
+      "选协议 A 或 B，点发送 → POST /api/chat { protocol, message, enable_thinking }",
+      "route 只调 sendMessage，不碰 SDK",
+      "回来的字段永远是 content / thinking / inputTokens，与协议无关",
+      "A 的 reasoning_tokens 与 B 的 thinking_tokens 都会出现在 thinkingTokens",
+    ];
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "UnifiedCard", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, UnifiedCard, ErrorBanner } = window.DemoUI;
+        const { callEndpoint } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [protocol, setProtocol] = useState("A");
+          const [enableThinking, setEnableThinking] = useState(true);
+          const [budget, setBudget] = useState(500);
+          const [system, setSystem] = useState("");
+          const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再回答。");
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+          const blocked = busy || !env.hasKey;
+
+          async function run(body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const r = await callEndpoint("/api/chat", body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: (r.data && r.data.error) || JSON.stringify(r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">一次性 sendMessage</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="业务拿到的永远是 UnifiedResponse。换协议只改一个下拉框。" steps={INTRO_STEPS} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">协议
+                    <span className="block text-xs text-gray-500">A 走 openai；B 走 Anthropic。页面字段名不变。</span>
+                    <select className="mt-1 border rounded p-2" value={protocol} disabled={busy} onChange={function (e) { setProtocol(e.target.value); }}>
+                      <option value="A">A · Chat Completions</option>
+                      <option value="B">B · Messages</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={enableThinking} disabled={busy} onChange={function (e) { setEnableThinking(e.target.checked); }} />
+                    开思考（A=extra_body.thinking；B=顶层 thinking.budget）
+                  </label>
+                  <label className="block text-sm">thinking_budget（仅 B 使用）
+                    <input className="mt-1 border rounded p-2 w-28" type="number" min={1} value={budget} disabled={busy} onChange={function (e) { setBudget(Number(e.target.value)); }} />
+                  </label>
+                  <label className="block text-sm">system（可选）
+                    <input className="mt-1 w-full border rounded p-2" value={system} disabled={busy} onChange={function (e) { setSystem(e.target.value); }} />
+                  </label>
+                  <label className="block text-sm">message
+                    <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={3} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={function () {
+                      run({ message: message, protocol: protocol, enable_thinking: enableThinking, thinking_budget: budget, system: system || undefined });
+                    }}>发送（一次性）</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={function () {
+                      run({ message: "", protocol: protocol });
+                    }}>故意发空消息（期望 HTTP 400）</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && <p className="text-sm text-gray-500">还没跑过。点发送后会出现统一后的 thinking / content / usage。</p>}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && <UnifiedCard data={data} />}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

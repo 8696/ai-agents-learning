@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adapter Demo · 协议 A vs B 统一调用</title>
-
+  <title>Adapter · 总览</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
@@ -14,414 +13,68 @@
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
   <script type="text/babel">
-    const { useState, useEffect } = React;
-
-    function StatusPill({ status }) {
-      const map = {
-        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
-        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
-      };
-      const s = map[status] || map.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    function usageLines(u) {
-      if (!u || !u.usage) return "（等待请求）";
-      const lines = [
-        `protocol: ${u.protocol}    model: ${u.model}`,
-        `stopReason: ${u.stopReason}`,
-        `usage:`,
-        `  inputTokens = ${u.usage.inputTokens}`,
-        `  outputTokens = ${u.usage.outputTokens}`,
-        `  totalTokens = ${u.usage.totalTokens}`,
-      ];
-      if (u.usage.thinkingTokens != null) {
-        lines.push(`  thinkingTokens = ${u.usage.thinkingTokens}  （adapter 从三处字段位置统一提取）`);
-      }
-      if (u.usage.cachedTokens != null) {
-        lines.push(`  cachedTokens = ${u.usage.cachedTokens}`);
-      }
-      return lines.join("\n");
-    }
-
-    function buildBody(protocol, budget, system, message, enableThinking) {
-      const body = { message, protocol, enable_thinking: !!enableThinking };
-      if (system.trim()) body.system = system.trim();
-      const n = parseInt(budget, 10);
-      if (n > 0) body.thinking_budget = n;
-      return body;
-    }
-
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [busy, setBusy] = useState(false);
-      const [error, setError] = useState("");
-
-      const [protocol, setProtocol] = useState("A");
-      const [enableThinking, setEnableThinking] = useState(true);
-      const [budget, setBudget] = useState("500");
-      const [system, setSystem] = useState("");
-      const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再回答。");
-      const [thinking, setThinking] = useState("（暂无）");
-      const [answer, setAnswer] = useState("（暂无）");
-      const [meta, setMeta] = useState("（等待请求）");
-      const [raw, setRaw] = useState("（等待请求）");
-
-      const [protocolS, setProtocolS] = useState("A");
-      const [enableThinkingS, setEnableThinkingS] = useState(true);
-      const [budgetS, setBudgetS] = useState("500");
-      const [systemS, setSystemS] = useState("");
-      const [messageS, setMessageS] = useState("23 × 47 等于多少？先一步步想，再回答。");
-      const [thinkingS, setThinkingS] = useState("（暂无）");
-      const [answerS, setAnswerS] = useState("（暂无）");
-      const [metaS, setMetaS] = useState("（等待请求）");
-      const [streamLog, setStreamLog] = useState("（等待请求）");
-
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          })
-          .then(() => setStatus("idle"))
-          .catch((e) => {
-            setStatus("error");
-            setError(e instanceof Error ? e.message : String(e));
-          });
-      }, []);
-
-      const runOnce = async () => {
-        const msg = message.trim();
-        if (!msg || busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        setThinking("（请求中...）");
-        setAnswer("（请求中...）");
-        setMeta("（请求中...）");
-        setRaw("（请求中...）");
-        try {
-          const res = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(buildBody(protocol, budget, system, msg, enableThinking)),
-          });
-          if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`HTTP ${res.status}: ${errText}`);
-          }
-          const unified = await res.json();
-          setThinking(
-            unified.thinking ||
-              "（端点未返回 thinking —— A 端点可能有但需正则提取；不传 budget 时 B 端点默认无）",
-          );
-          setAnswer(unified.content || "（空）");
-          setMeta(usageLines(unified));
-          setRaw(JSON.stringify(unified, null, 2));
-          setStatus("ok");
-        } catch (e) {
-          const m = e instanceof Error ? e.message : String(e);
-          setError(m);
-          setStatus("error");
-          setThinking("—");
-          setAnswer("—");
-          setMeta("—");
-          setRaw("—");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      const runStream = async () => {
-        const msg = messageS.trim();
-        if (!msg || busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        setThinkingS("（请求中...）");
-        setAnswerS("（请求中...）");
-        setMetaS("（请求中...）");
-        setStreamLog("");
-
-        const t0 = performance.now();
-        let buffer = "";
-        let deltaCount = 0;
-        let thinkingAcc = "";
-        let answerAcc = "";
-        let lastUsage = null;
-
-        try {
-          const res = await fetch("/api/chat-stream", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(buildBody(protocolS, budgetS, systemS, msg, enableThinkingS)),
-          });
-          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            let idx;
-            while ((idx = buffer.indexOf("\n\n")) >= 0) {
-              const frame = buffer.slice(0, idx);
-              buffer = buffer.slice(idx + 2);
-              const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
-              if (!dataLine) continue;
-              const payload = dataLine.slice(5).trim();
-              if (payload === "[DONE]") continue;
-              let delta;
-              try {
-                delta = JSON.parse(payload);
-              } catch {
-                continue;
-              }
-              if (delta.type === "_error") throw new Error(delta.error || "stream error");
-              deltaCount += 1;
-              if (delta.type === "thinking") {
-                thinkingAcc += delta.text;
-                setThinkingS(thinkingAcc);
-                setStreamLog((prev) => prev + `#${deltaCount} thinking (${delta.text.length} chars)\n`);
-              } else if (delta.type === "content") {
-                answerAcc += delta.text;
-                setAnswerS(answerAcc);
-                const preview = delta.text.slice(0, 40).replace(/\n/g, "\\n");
-                setStreamLog(
-                  (prev) =>
-                    prev +
-                    `#${deltaCount} content (${delta.text.length} chars) "${preview}${delta.text.length > 40 ? "..." : ""}"\n`,
-                );
-              } else if (delta.type === "usage") {
-                lastUsage = delta;
-                setMetaS(usageLines(delta));
-                setStreamLog((prev) => prev + `#${deltaCount} usage → ${JSON.stringify(delta.usage)}\n`);
-              } else if (delta.type === "done") {
-                setStreamLog((prev) => prev + `#${deltaCount} done\n`);
-              }
-            }
-          }
-
-          const totalElapsed = ((performance.now() - t0) / 1000).toFixed(2);
-          if (!lastUsage) {
-            setMetaS(`完成 · 共 ${deltaCount} 个 unified delta · ${totalElapsed}s`);
-          }
-          setStreamLog(
-            (prev) => prev + `\n── 流结束 · ${totalElapsed}s · 共 ${deltaCount} 个 unified delta ──`,
-          );
-          setStatus("ok");
-        } catch (e) {
-          const m = e instanceof Error ? e.message : String(e);
-          setError(m);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header
-            id="page-header"
-            className="border-b p-4 flex items-center justify-between bg-white"
-          >
-            <h1 id="page-title" className="text-xl font-semibold">
-              Adapter · 协议 A vs B 统一调用
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-6">
-              <p className="text-sm text-gray-500">
-                前端只调 <code>POST /api/chat</code> 传 protocol A/B；服务端 <code>sendMessage</code> 路由到对应 SDK；返回统一格式。
-              </p>
-
-              <div>
-                <h2 className="font-semibold mb-2">一次性 · adapter.sendMessage</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-2">
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    协议
-                    <select
-                      value={protocol}
-                      onChange={(e) => setProtocol(e.target.value)}
-                      className="border rounded p-2 text-sm"
-                    >
-                      <option value="A">A · OpenAI Chat Completions</option>
-                      <option value="B">B · Anthropic Messages</option>
-                    </select>
-                  </label>
-                  <label className="text-xs text-gray-600 flex items-center gap-2 mt-5">
-                    <input
-                      type="checkbox"
-                      checked={enableThinking}
-                      onChange={(e) => setEnableThinking(e.target.checked)}
-                    />
-                    开思考
-                  </label>
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    Thinking Budget（仅 B · 开思考时）
-                    <input
-                      type="number"
-                      min="100"
-                      max="8000"
-                      step="100"
-                      value={budget}
-                      disabled={!enableThinking}
-                      onChange={(e) => setBudget(e.target.value)}
-                      className="border rounded p-2 text-sm disabled:opacity-50"
-                    />
-                  </label>
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    System（可选）
-                    <input
-                      value={system}
-                      onChange={(e) => setSystem(e.target.value)}
-                      placeholder="例如：你是简洁的助手。"
-                      className="border rounded p-2 text-sm"
-                    />
-                  </label>
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    消息
-                    <input
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className="border rounded p-2 text-sm"
-                    />
-                  </label>
+    const { useState } = React;
+    const INTRO_STEPS = [
+      "业务只调 sendMessage({ protocol, message })，不 import openai / Anthropic SDK",
+      "adapter 按 protocol 走进 lib/protocol-a 或 lib/protocol-b",
+      "两边都翻成同一份 UnifiedResponse：content / thinking / inputTokens / outputTokens",
+      "流式版 yield UnifiedDelta，业务 for await switch type，仍然不知道是哪家 SDK",
+    ];
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
+      function App() {
+        const { env, envError } = useEnvInfo();
+        const [status, setStatus] = useState("idle");
+        React.useEffect(function () {
+          if (envError) setStatus("error");
+          else if (env.port) setStatus("ok");
+        }, [env, envError]);
+        return (
+          <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+            <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+              <h1 id="page-title" className="text-xl font-semibold">Adapter 层</h1>
+              <StatusPill status={status} />
+            </header>
+            <main id="page-main" className="container mx-auto p-4 space-y-4">
+              <PageIntro
+                summary="用一层 adapter 把协议 A/B 的字段差异挡在业务外面。本页不调模型。"
+                steps={INTRO_STEPS}
+                extra={
+                  <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`业务 → sendMessage(opts)
+         ├ protocol=A → openai Chat Completions → UnifiedResponse
+         └ protocol=B → Anthropic Messages     → UnifiedResponse
+system / max_tokens / usage 命名 / thinking 位置，全部在协议目录里翻译`}
+                  </pre>
+                }
+              />
+              <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                <PageNav />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <a href="/pages/once.html" className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                    <div className="font-semibold text-sm">一次性</div>
+                    <div className="text-xs text-gray-500 mt-1">POST /api/chat，看统一后的 thinking / content / usage。</div>
+                  </a>
+                  <a href="/pages/stream.html" className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                    <div className="font-semibold text-sm">流式</div>
+                    <div className="text-xs text-gray-500 mt-1">POST /api/chat-stream，逐条 UnifiedDelta。</div>
+                  </a>
                 </div>
-                <button
-                  onClick={runOnce}
-                  disabled={busy}
-                  className="px-4 py-2 rounded bg-indigo-600 text-white text-sm disabled:opacity-50"
-                >
-                  调用 adapter.sendMessage
-                </button>
-              </div>
-
-              <div>
-                <h2 className="font-semibold mb-2">流式 · adapter.sendMessageStream</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-2">
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    协议
-                    <select
-                      value={protocolS}
-                      onChange={(e) => setProtocolS(e.target.value)}
-                      className="border rounded p-2 text-sm"
-                    >
-                      <option value="A">A · OpenAI Chat Completions</option>
-                      <option value="B">B · Anthropic Messages</option>
-                    </select>
-                  </label>
-                  <label className="text-xs text-gray-600 flex items-center gap-2 mt-5">
-                    <input
-                      type="checkbox"
-                      checked={enableThinkingS}
-                      onChange={(e) => setEnableThinkingS(e.target.checked)}
-                    />
-                    开思考
-                  </label>
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    Thinking Budget（仅 B · 开思考时）
-                    <input
-                      type="number"
-                      min="100"
-                      max="8000"
-                      step="100"
-                      value={budgetS}
-                      disabled={!enableThinkingS}
-                      onChange={(e) => setBudgetS(e.target.value)}
-                      className="border rounded p-2 text-sm disabled:opacity-50"
-                    />
-                  </label>
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    System（可选）
-                    <input
-                      value={systemS}
-                      onChange={(e) => setSystemS(e.target.value)}
-                      className="border rounded p-2 text-sm"
-                    />
-                  </label>
-                  <label className="text-xs text-gray-600 flex flex-col gap-1">
-                    消息
-                    <input
-                      value={messageS}
-                      onChange={(e) => setMessageS(e.target.value)}
-                      className="border rounded p-2 text-sm"
-                    />
-                  </label>
-                </div>
-                <button
-                  onClick={runStream}
-                  disabled={busy}
-                  className="px-4 py-2 rounded bg-indigo-600 text-white text-sm disabled:opacity-50"
-                >
-                  流式调用 adapter.sendMessageStream
-                </button>
-              </div>
-              {error ? (
-                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">⚠️ {error}</div>
-              ) : null}
-            </section>
-
-            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">thinking（一次性）</div>
-                <pre className="bg-slate-100 italic p-3 rounded whitespace-pre-wrap text-sm">{thinking}</pre>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">content / answer（一次性）</div>
-                <pre className="bg-gray-50 p-3 rounded whitespace-pre-wrap text-sm">{answer}</pre>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">usage（一次性）</div>
-                <pre className="bg-gray-50 p-3 rounded text-xs font-mono whitespace-pre-wrap">{meta}</pre>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">原始 unified JSON</div>
-                <pre className="bg-gray-50 p-3 rounded text-xs overflow-auto max-h-64">{raw}</pre>
-              </div>
-              <hr />
-              <div>
-                <div className="text-xs text-gray-500 mb-1">thinking 累加（流式）</div>
-                <pre className="bg-slate-100 italic p-3 rounded whitespace-pre-wrap text-sm">{thinkingS}</pre>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">content 累加（流式）</div>
-                <pre className="bg-gray-50 p-3 rounded whitespace-pre-wrap text-sm">{answerS}</pre>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">usage（流式末帧）</div>
-                <pre className="bg-gray-50 p-3 rounded text-xs font-mono whitespace-pre-wrap">{metaS}</pre>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500 mb-1">unified delta 流</div>
-                <pre className="bg-gray-50 p-3 rounded text-xs overflow-auto max-h-64 whitespace-pre-wrap">{streamLog}</pre>
-              </div>
-            </section>
-          </main>
-
-          <footer
-            id="page-footer"
-            className="border-t p-2 text-xs text-gray-500 text-center"
-          >
-            端口 50213 · 协议 A/B · 模型随 LLM_PROVIDER
-          </footer>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+              </section>
+              <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600">
+                {envError && <p className="text-red-700">{envError}</p>}
+                <p>切换协议下拉框时，页面字段名不变——这就是 adapter 存在的理由。</p>
+              </section>
+            </main>
+            <EnvFooter env={env} />
+          </div>
+        );
+      }
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    });
   </script>
 </body>
 </html>

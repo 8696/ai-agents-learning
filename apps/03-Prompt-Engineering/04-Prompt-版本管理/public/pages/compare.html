@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一字之差 · Prompt 版本管理</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/result-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：可编辑的两版 User 末尾，跑出来才知道行为差在哪。
+     * useState：text / v1Prompt / v2Prompt 是实验变量；busy 防重复提交。
+     */
+    const { useState } = React;
+
+    const FALLBACK_V1 = "请回答下列问题，直接给出最终答案，不要解释、不要列出推理步骤。";
+    const FALLBACK_V2 = "请回答下列问题。Let's think step by step, then give the final answer.";
+    const FALLBACK_SAMPLES = [
+      { id: "math", title: "追击问题（数学）", text: "火车 A 以 60 km/h 出发 2 小时后，火车 B 以 90 km/h 从同一地点出发。多久后 B 追上 A？" },
+      { id: "subj", title: "含混分类", text: "产品不错，但物流太慢了，两周才到。" },
+      { id: "prime", title: "质数拆分", text: "把 24 写成三个素数之和，按升序列出来。" },
+      { id: "sort", title: "数字排序", text: "把这组数从大到小排序：3.14、π 的近似 3.14159、e 的近似 2.71828。" },
+      { id: "irony", title: "反讽判断", text: "太精彩了，我都看哭了。这家餐厅的服务真是'一流'。" },
+    ];
+
+    const INTRO_STEPS = [
+      "编辑两版 User 末尾（或保留默认）→ 选问题 → 点并排对比",
+      "POST /api/compare { text, modes, prompts: { v1, v2 } }",
+      "服务端同一 System，只换 suffix",
+      "看输出长度 / 是否含推理 / 首段 preview；黄底提示字符数差",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "CompareResult", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, CompareResult, ErrorBanner } = window.DemoUI;
+        const { callEndpoint, describeFailure } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [text, setText] = useState(FALLBACK_SAMPLES[0].text);
+          const [v1Prompt, setV1Prompt] = useState(FALLBACK_V1);
+          const [v2Prompt, setV2Prompt] = useState(FALLBACK_V2);
+          const [hydrated, setHydrated] = useState(false);
+          const [data, setData] = useState(null);
+          const [error, setError] = useState(null);
+
+          React.useEffect(function () {
+            if (hydrated) return;
+            if (env.defaults) {
+              setV1Prompt(env.defaults.v1);
+              setV2Prompt(env.defaults.v2);
+              setHydrated(true);
+            }
+            if (env.samples && env.samples[0] && !hydrated) {
+              setText(env.samples[0].text);
+            }
+          }, [env, hydrated]);
+
+          const samples = env.samples || FALLBACK_SAMPLES;
+          const identical = v1Prompt.trim() === v2Prompt.trim();
+          const blocked = busy || !env.hasKey;
+          const lenDelta = v2Prompt.length - v1Prompt.length;
+
+          async function run(modes, overrideText) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            const bodyText = overrideText !== undefined ? overrideText : text;
+            try {
+              const r = await callEndpoint("/api/compare", {
+                text: bodyText,
+                modes: modes,
+                prompts: { v1: v1Prompt, v2: v2Prompt },
+              });
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: describeFailure(r.status, r.data), httpStatus: r.status });
+                setStatus("error");
+                setData(r.data && r.data.results ? r.data : null);
+                return;
+              }
+              setData(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+              setData(null);
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">一字之差对照</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="System 两版共用；区别只在 User 末尾。两栏可编辑，改完立刻能回归。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <div className="flex flex-wrap gap-2">
+                    {samples.map(function (s) {
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          disabled={busy}
+                          className="text-xs px-2 py-1 rounded border border-gray-300 bg-white disabled:opacity-50"
+                          onClick={function () { setText(s.text); }}
+                        >
+                          {s.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500">点样本只会改问题，不会发请求。</p>
+                  <label className="block text-sm">
+                    当前问题
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm min-h-[80px] font-mono"
+                      value={text}
+                      disabled={busy}
+                      onChange={function (e) { setText(e.target.value); }}
+                    />
+                  </label>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium">Prompt 编辑（两版的唯一变量）</h2>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="text-xs px-2 py-1 rounded border border-gray-300 bg-white disabled:opacity-50"
+                        onClick={function () {
+                          var d = env.defaults || { v1: FALLBACK_V1, v2: FALLBACK_V2 };
+                          setV1Prompt(d.v1);
+                          setV2Prompt(d.v2);
+                        }}
+                      >
+                        重置为默认
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="text-xs px-2 py-1 rounded border border-gray-300 bg-white disabled:opacity-50"
+                        onClick={function () {
+                          var tmp = v1Prompt;
+                          setV1Prompt(v2Prompt);
+                          setV2Prompt(tmp);
+                        }}
+                      >
+                        交换两版
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="block text-sm">
+                      <span className="flex items-center justify-between">
+                        <span><code>v1.0.0</code> User 末尾</span>
+                        <span className="text-xs text-gray-500">长度 {v1Prompt.length}</span>
+                      </span>
+                      <textarea
+                        className="mt-1 w-full border rounded p-2 text-sm min-h-[100px] font-mono"
+                        value={v1Prompt}
+                        disabled={busy}
+                        onChange={function (e) { setV1Prompt(e.target.value); }}
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="flex items-center justify-between">
+                        <span><code>v1.1.0</code> User 末尾</span>
+                        <span className="text-xs text-gray-500">长度 {v2Prompt.length}</span>
+                      </span>
+                      <textarea
+                        className="mt-1 w-full border rounded p-2 text-sm min-h-[100px] font-mono"
+                        value={v2Prompt}
+                        disabled={busy}
+                        onChange={function (e) { setV2Prompt(e.target.value); }}
+                      />
+                    </label>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Prompt 字符差 v2 − v1 = <strong>{lenDelta >= 0 ? "+" : ""}{lenDelta}</strong>
+                    {identical ? (
+                      <span className="ml-2 text-red-700">两版一样，对比将看不出行为差，请改其中一边。</span>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={blocked || identical}
+                      className="px-3 py-2 rounded bg-blue-600 text-white text-sm disabled:opacity-50"
+                      onClick={function () { run(["v1", "v2"]); }}
+                    >
+                      并排对比
+                    </button>
+                    <button
+                      type="button"
+                      disabled={blocked}
+                      className="px-3 py-2 rounded border border-gray-300 text-sm disabled:opacity-50"
+                      onClick={function () { run(["v1"]); }}
+                    >
+                      只跑 v1.0.0
+                    </button>
+                    <button
+                      type="button"
+                      disabled={blocked}
+                      className="px-3 py-2 rounded border border-gray-300 text-sm disabled:opacity-50"
+                      onClick={function () { run(["v2"]); }}
+                    >
+                      只跑 v1.1.0
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="px-3 py-2 rounded border border-gray-300 text-sm text-red-700 disabled:opacity-50"
+                      onClick={function () {
+                        setText("");
+                        run(["v1", "v2"], "");
+                      }}
+                    >
+                      空输入（看 400）
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                  {!env.hasKey && env.port && (
+                    <p className="text-xs text-red-700">Key ❌，主按钮已禁用。把 Key 写进 apps/.env 再刷新。</p>
+                  )}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!data && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点并排后左右两栏覆盖显示最新对照。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {data && data.results && (
+                    <CompareResult data={data} fallbackSuffixes={{ v1: v1Prompt, v2: v2Prompt }} />
+                  )}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

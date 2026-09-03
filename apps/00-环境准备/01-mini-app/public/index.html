@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>01 ChatGPT Mini · SSE Chat</title>
+  <title>模块 00 · mini-app 总览</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
@@ -15,178 +15,119 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    /**
+     * 本页教学点：模块 00 这一条 HTTP 流怎么走。
+     * 本页不调模型；对话和原始帧在 /pages/*。
+     */
+    const { useState } = React;
 
-    function StatusPill({ status }) {
-      const map = {
-        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
-        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
-      };
-      const s = map[status] || map.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
+    const SCENES = [
+      {
+        href: "/pages/chat.html",
+        title: "流式对话",
+        desc: "POST /api/chat → SSE 逐帧上屏。看的是「用户最终看到的那句话」怎么一点一点长出来。",
+      },
+      {
+        href: "/pages/frames.html",
+        title: "原始帧",
+        desc: "同一条流，但每一帧一张卡片。看的是协议字段：delta / finish_reason / usage / [DONE]。",
+      },
+    ];
 
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [message, setMessage] = useState("用一句话介绍你自己。");
-      const [output, setOutput] = useState("");
-      const [meta, setMeta] = useState("");
-      const [error, setError] = useState("");
-      const [busy, setBusy] = useState(false);
+    const INTRO_STEPS = [
+      "页面加载 → GET /health：读出当前 provider / model / 有没有 Key（不调模型、不花钱）",
+      "点「流式对话」→ 浏览器 POST /api/chat，服务端把上游 chunk 原样转成 SSE 帧",
+      "点「原始帧」→ 还是同一条接口，只是把每一帧摊开，而不是拼成一段文字",
+    ];
 
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          })
-          .then(() => setStatus("idle"))
-          .catch((e) => {
-            setStatus("error");
-            setError(e instanceof Error ? e.message : String(e));
-          });
-      }, []);
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
 
-      const send = async () => {
-        const text = message.trim();
-        if (!text || busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        setOutput("");
-        setMeta("");
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
 
-        let buffer = "";
-        let content = "";
-        let usage = null;
-        let frameCount = 0;
+          React.useEffect(function () {
+            if (envError) setStatus("error");
+            else if (env.port) setStatus("ok");
+          }, [env, envError]);
 
-        try {
-          const res = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text }),
-          });
-          if (!res.ok || !res.body) {
-            const t = await res.text();
-            throw new Error(t || `HTTP ${res.status}`);
-          }
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">模块 00 · mini-app</h1>
+                <StatusPill status={status} />
+              </header>
 
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            let idx;
-            while ((idx = buffer.indexOf("\n\n")) >= 0) {
-              const frame = buffer.slice(0, idx);
-              buffer = buffer.slice(idx + 2);
-              const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
-              if (!dataLine) continue;
-              const payload = dataLine.slice(5).trim();
-              if (payload === "[DONE]") continue;
-              let obj;
-              try {
-                obj = JSON.parse(payload);
-              } catch {
-                continue;
-              }
-              if (obj.error) throw new Error(obj.error);
-              frameCount += 1;
-              const delta = obj.choices?.[0]?.delta?.content;
-              if (delta) {
-                content += delta;
-                setOutput(content);
-              }
-              if (obj.usage) usage = obj.usage;
-            }
-          }
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="模块 00 的代码落点：一个 HTTP 进程。只跑协议 A 的流式对话。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`yarn app:00-01-mini-server     HTTP + SSE · 端口 50000 · 仅协议 A
 
-          if (usage) {
-            setMeta(
-              `token: prompt=${usage.prompt_tokens} completion=${usage.completion_tokens} total=${usage.total_tokens} · 帧数=${frameCount}`,
-            );
-          } else {
-            setMeta(`帧数=${frameCount}（无 usage，去当前提供商控制台查）`);
-          }
-          setStatus("ok");
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          setError(msg);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header
-            id="page-header"
-            className="border-b p-4 flex items-center justify-between bg-white"
-          >
-            <h1 id="page-title" className="text-xl font-semibold">
-              ChatGPT Mini · SSE Chat
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <p className="text-sm text-gray-500">
-                POST <code>/api/chat</code> · 协议 A 流式。取消 / 限流 / 协议对照在模块 02 对应小节，不塞进本入口。
-              </p>
-              <div className="flex gap-2">
-                <input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") send();
-                  }}
-                  className="flex-1 border rounded p-2 text-sm"
-                  placeholder="输入消息，回车或点发送"
+HTTP 数据流
+  浏览器 POST /api/chat { message }
+    → 闸门（400 / 503 必须在开流之前）
+    → 上游 stream:true
+    → 每个 chunk 写成 SSE「data: {json}\\n\\n」
+    → 最后一帧 data: [DONE]`}
+                    </pre>
+                  }
                 />
-                <button
-                  onClick={send}
-                  disabled={busy}
-                  className="px-4 py-2 rounded bg-indigo-600 text-white text-sm disabled:opacity-50"
-                >
-                  {busy ? "发送中…" : "发送"}
-                </button>
-              </div>
-              {error ? (
-                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">⚠️ {error}</div>
-              ) : null}
-            </section>
 
-            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-2">
-              <pre className="whitespace-pre-wrap break-words text-sm min-h-[140px]">
-                {output || "（回复会出现在这里）"}
-              </pre>
-              <div className="text-xs text-gray-500">{meta}</div>
-            </section>
-          </main>
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-sm text-gray-600">
+                    总览页不发起模型请求。选一个场景进去跑。页脚的 Key 状态来自 GET /health。
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {SCENES.map(function (s) {
+                      return (
+                        <a
+                          key={s.href}
+                          href={s.href}
+                          className="border border-gray-300 hover:border-blue-500 rounded p-3 text-left"
+                        >
+                          <div className="font-semibold text-sm">{s.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </section>
 
-          <footer
-            id="page-footer"
-            className="border-t p-2 text-xs text-gray-500 text-center"
-          >
-            端口 50000 · 协议 A · 模型随 LLM_PROVIDER
-          </footer>
-        </div>
-      );
-    }
+                {envError && (
+                  <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                    {envError}
+                  </div>
+                )}
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+                <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-2 text-sm text-gray-600">
+                  <p>环境自检（不调模型）：</p>
+                  <ul className="list-disc pl-5 text-xs space-y-1">
+                    <li>provider / model 必须跟 apps/.env 的 LLM_PROVIDER 对上，不能写死在页面里</li>
+                    <li>Key ❌ 时两个场景页的发送按钮都会 disabled，不用等 503</li>
+                    <li>取消、限流、协议对照不在本入口——那些在模块 02 各小节</li>
+                  </ul>
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
   </script>
 </body>
 </html>

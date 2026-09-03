@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模拟 SSE · Streaming / SSE</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：一帧 = data: … + 空行；浏览器按空行切帧，累加 delta.content，直到 [DONE]。
+     * 不需要 Key。真实模型的 batching 去 /pages/real.html。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「开始模拟流」→ GET /api/stream（本地 TOKENS，每 200ms 一帧）",
+      "服务端写 data: { choices:[{ delta:{ content } }] } 再空一行；第一帧立刻发，所以 TTFT 很小",
+      "浏览器 getReader 按空行切帧，绿卡片逐字变成「你好，我是 AI 助手。」",
+      "最后一帧是字符串 [DONE]（不是 JSON）。没收到它，读循环会一直等到超时",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "AnswerCard", "TimingBar", "FrameCard", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, AnswerCard, TimingBar, FrameCard, ErrorBanner } = window.DemoUI;
+        const { consumeSse, fetchHttpError, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [ran, setRan] = useState(false);
+          const [content, setContent] = useState("");
+          const [streaming, setStreaming] = useState(false);
+          const [frames, setFrames] = useState([]);
+          const [ttftMs, setTtftMs] = useState(null);
+          const [totalMs, setTotalMs] = useState(null);
+          const [doneSeen, setDoneSeen] = useState(false);
+          const [error, setError] = useState(null);
+
+          async function runStream() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setRan(true);
+            setContent("");
+            setFrames([]);
+            setTtftMs(null);
+            setTotalMs(null);
+            setDoneSeen(false);
+            setStreaming(true);
+            try {
+              const result = await consumeSse("/api/stream", {
+                onDelta: function (_delta, full) { setContent(full); },
+                onFrame: function (frame) {
+                  setFrames(function (prev) { return prev.concat([frame]); });
+                },
+              });
+              setStreaming(false);
+              if (!result.ok) {
+                setError({ title: "请求被拒绝", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setTtftMs(result.firstFrameMs);
+              setTotalMs(result.totalMs);
+              setDoneSeen(result.doneSeen);
+              if (result.streamError) {
+                setError({ title: "流中途失败", detail: result.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              setStatus("ok");
+            } catch (e) {
+              setStreaming(false);
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function run400() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const result = await fetchHttpError("/api/stream");
+              setError({ title: "故意 400（query fail=1）", detail: result.error, httpStatus: result.httpStatus });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function runNetwork() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              await triggerNetworkError();
+              setError({ title: "网络错误（fetch 没发出去）", detail: "请求打到了没人听的端口", httpStatus: null });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">模拟 SSE</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="本地按固定 TOKENS 每 200ms 推一帧。看清帧格式和打字机效果，不花模型额度。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-xs text-gray-500">
+                    点「开始模拟流」：期望绿卡片逐字变成「你好，我是 AI 助手。」，下面出现 11 张 delta 卡 + 一张 [DONE]。不需要 Key。
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runStream}>开始模拟流</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={run400}>故意 400</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runNetwork}>模拟网络失败</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!ran && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点按钮后，这里会出现请求说明、绿底正文、每一帧一张卡。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {ran && <PromptCard label="GET /api/stream" value="本地 TOKENS · 每帧 1 字符（教学简化）" />}
+                  {ran && <AnswerCard text={content} streaming={streaming} />}
+                  {ran && (
+                    <TimingBar ttftMs={ttftMs} totalMs={totalMs} frameCount={frames.length} doneSeen={doneSeen} />
+                  )}
+                  {frames.map(function (f) {
+                    return <FrameCard key={f.index} frame={f} />;
+                  })}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

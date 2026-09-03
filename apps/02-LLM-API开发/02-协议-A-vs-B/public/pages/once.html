@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一次性对照 · 协议 A vs B</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/compare-cards.js"></script>
+  <script type="text/babel">
+    /**
+     * 本页教学点：同 prompt 一次性跑 A 和 B。
+     * compare = 完整 JSON 并排；think-compare = 4 组 × 6 个差异点。
+     */
+    const { useState } = React;
+    const INTRO_STEPS = [
+      "点「一次性对照」→ POST /api/compare { message }，route 里 Promise.allSettled(sendOnceA, sendOnceB)",
+      "回来 { a, b }：左边 choices[0].message.content / finish_reason / prompt_tokens，右边 content[].text / stop_reason / input_tokens",
+      "点「thinking 差异」→ POST /api/think-compare，四组：A 关 / A 开 extra_body / B 关 / B 开 budget=500",
+      "对照表第 4 行：A 的 reasoning_tokens vs B 的 output_tokens_details.thinking_tokens（不是顶层 reasoning_tokens）",
+    ];
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "ErrorBanner", "ScenarioGrid", "DiffTable", "ComparePairView"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, ErrorBanner, ScenarioGrid, DiffTable, ComparePairView } = window.DemoUI;
+        const { callEndpoint, triggerNetworkError } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再回答。");
+          const [system, setSystem] = useState("");
+          const [enableThinking, setEnableThinking] = useState(false);
+          const [pair, setPair] = useState(null);
+          const [scenarios, setScenarios] = useState(null);
+          const [error, setError] = useState(null);
+          const blocked = busy || !env.hasKey;
+
+          async function run(url, body) {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setPair(null);
+            setScenarios(null);
+            try {
+              const r = await callEndpoint(url, body);
+              if (r.status >= 400) {
+                setError({ title: "请求失败", detail: (r.data && r.data.error) || JSON.stringify(r.data), httpStatus: r.status });
+                setStatus("error");
+                return;
+              }
+              if (url.indexOf("think-compare") >= 0) setScenarios(r.data.scenarios);
+              else setPair(r.data);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">一次性对照</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="同 prompt 一次性跑两侧：完整 JSON 并排，或四组 thinking 差异表。" steps={INTRO_STEPS} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">message
+                    <span className="block text-xs text-gray-500">点了按钮会原样放进 A 的 user content 和 B 的 messages[0]。</span>
+                    <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={3} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
+                  </label>
+                  <label className="block text-sm">system（可选）
+                    <span className="block text-xs text-gray-500">A 会放进 messages[]；B 放顶层 system。空则两侧都不带。</span>
+                    <input className="mt-1 w-full border rounded p-2 text-sm" value={system} disabled={busy} onChange={function (e) { setSystem(e.target.value); }} />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={enableThinking} disabled={busy} onChange={function (e) { setEnableThinking(e.target.checked); }} />
+                    /api/compare 时给协议 A 开 extra_body 思考（B 侧对照仍不传 thinking）
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={function () {
+                      run("/api/compare", { message: message, system: system || undefined, enable_thinking: enableThinking });
+                    }}>跑一次性对照（/api/compare）</button>
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={function () {
+                      run("/api/think-compare", { message: message, system: system || undefined });
+                    }}>跑 thinking 差异（/api/think-compare）</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={function () {
+                      run("/api/compare", { message: "" });
+                    }}>故意空消息（期望 HTTP 400）</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={async function () {
+                      setBusy(true); setStatus("loading"); setError(null);
+                      try {
+                        await triggerNetworkError();
+                      } catch (e) {
+                        setError({ title: "网络错误", detail: e.message, httpStatus: null });
+                        setStatus("error");
+                      } finally { setBusy(false); }
+                    }}>故意网络错误（期望 fetch reject）</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={function () {
+                      run("/api/think-compare", { message: "用一句话介绍你自己，10 字以内。" });
+                    }}>短自我介绍（thinking 对照）</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!pair && !scenarios && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。期望：compare 左右字段名不同；think-compare 出现 4 张卡 + 第 4 行计费差异。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {pair && <ComparePairView pair={pair} />}
+                  {scenarios && (
+                    <>
+                      <ScenarioGrid scenarios={scenarios} />
+                      <DiffTable scenarios={scenarios} />
+                    </>
+                  )}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

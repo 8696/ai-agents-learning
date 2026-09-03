@@ -2,7 +2,7 @@
 
 > 对应模块：[模块 02 · LLM API 开发 ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 2 条
 
-- **来源**：本对话（§6.2 完整讲解 + 3 个追问 + think-test.ts 4 组实验 + /api/b-thinking-stream 端点 223 事件实测 + README）
+- **来源**：本对话（§6.2 完整讲解 + 3 个追问 + 4 组思考对照实验 + /api/b-thinking-stream 端点 223 事件实测 + README）
 - **状态**：已沉淀
 - **Demo**：已落 [apps/02-LLM-API开发/02-协议-A-vs-B/](../../../apps/02-LLM-API开发/02-协议-A-vs-B/)（5 个端点：/api/a /api/b /api/compare /api/think-compare /api/b-thinking-stream；用 MiniMax-M3 同 Key 跑双协议对照）
 
@@ -897,7 +897,7 @@ for await (const delta of sendMessageStream(opts)) {
 - **问了：为什么 Anthropic 的没有返回思考内容？** → 答：分两层。
   - 第一层：协议 B 流式 `messages.stream()` 默认**不传 thinking 参数**，所以 SDK 不启用 extended thinking block。**思考过程被合并进 `content_block_delta.delta.text`**（看起来「直接给答案」）。
   - 第二层：即便**传了 thinking 参数**，MiniMax 兼容 Anthropic 端点的 thinking 拆分字段也**不在顶层 `reasoning_tokens`**——藏在 `output_tokens_details.thinking_tokens`（MiniMax 扩展字段），流式 `message_delta` 里**根本不报**（只报 `output_tokens` 总数）。
-  - 验证：跑 think-test.ts 4 组对照（A 不带 / B 不带 / B 带 100 / B 带 500），结论：
+  - 验证：跑 `/pages/once.html` 的 `/api/think-compare`（A 关/开 · B 关/开），结论：
     1. A 不带 = content 字符串嵌 `<think>...` 标记 + `completion_tokens_details.reasoning_tokens: 188`
     2. B 不带 = content block 数组只有 text，无独立 thinking block，无 thinking 拆分字段
     3. B 带 100 = 独立 thinking block + `output_tokens_details.thinking_tokens: 153`（用了 153 token 思考，**略超 budget=100**，软上限）

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流式协议 A · 协议 A vs B</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+  <script type="text/babel">
+    /**
+     * 本页教学点：协议 A 一流式帧 = 一个 OpenAI chunk JSON，带 kind（role / chunk / finish / usage）。
+     * 思考可能在独立字段，也可能嵌在 delta.content 的 {"<think>"} 标记里。
+     */
+    const { useState, useRef } = React;
+    const DEFAULT_MSG = "23 × 47 等于多少？先一步步想，再回答。";
+    const INTRO_STEPS = [
+      "点「发流式」→ POST /api/a-stream-raw { message, enable_thinking }",
+      "勾选「开思考」会打 extra_body（和 05-思考同一套）；不勾则不带思考参数",
+      "每帧 { type: openai_chunk, kind, chunk }。kind 用来给事件流着色",
+      "curl 对照可用 POST /api/a（无 kind 包装，只看字符串增量）",
+    ];
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "StreamColumns", "PromptCard", "splitProtocolADelta", "kindClass"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, StreamColumns, PromptCard, splitProtocolADelta, kindClass } = window.DemoUI;
+        const { consumeSse, triggerNetworkError } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [msg, setMsg] = useState(DEFAULT_MSG);
+          const [enableThinking, setEnableThinking] = useState(true);
+          const [lines, setLines] = useState([]);
+          const [thinking, setThinking] = useState("");
+          const [answer, setAnswer] = useState("");
+          const [meta, setMeta] = useState("");
+          const [elapsed, setElapsed] = useState("0.00");
+          const [error, setError] = useState(null);
+          const splitState = useRef({ inThink: false, reasoningSeen: "" });
+          const thinkingRef = useRef("");
+          const answerRef = useRef("");
+          const usageRef = useRef(null);
+          const finishRef = useRef("");
+          const t0 = useRef(0);
+          const blocked = busy || !env.hasKey;
+
+          async function run() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setLines([]);
+            setThinking("");
+            setAnswer("");
+            setMeta("");
+            setElapsed("0.00");
+            splitState.current = { inThink: false, reasoningSeen: "" };
+            thinkingRef.current = "";
+            answerRef.current = "";
+            usageRef.current = null;
+            finishRef.current = "";
+            t0.current = performance.now();
+            try {
+              const result = await consumeSse("/api/a-stream-raw", {
+                message: msg.trim(),
+                enable_thinking: enableThinking,
+              }, function (obj, frameCount) {
+                if (obj.type !== "openai_chunk") return;
+                var kind = obj.kind || "chunk";
+                var chunk = obj.chunk || {};
+                var delta = (chunk.choices && chunk.choices[0] && chunk.choices[0].delta) || {};
+                var finishReason = chunk.choices && chunk.choices[0] && chunk.choices[0].finish_reason;
+                var usage = chunk.usage;
+                var split = splitProtocolADelta(delta, splitState.current);
+                if (split.thinking) thinkingRef.current += split.thinking;
+                if (split.content) answerRef.current += split.content;
+                if (usage) usageRef.current = usage;
+                if (finishReason) finishRef.current = finishReason;
+                var now = ((performance.now() - t0.current) / 1000).toFixed(2);
+                setElapsed(now);
+                setThinking(thinkingRef.current);
+                setAnswer(answerRef.current);
+                var summary = "";
+                if (kind === "role") summary = "delta.role=" + (delta.role || "?") + "（无 content）";
+                else if (kind === "chunk") {
+                  var thinkPreview = (split.thinking || "").slice(0, 40);
+                  var contentPreview = (split.content || delta.content || "").slice(0, 40);
+                  summary = thinkPreview
+                    ? "Δthinking \"" + thinkPreview + "\""
+                    : "Δcontent \"" + contentPreview + "\"";
+                } else if (kind === "finish") summary = "finish_reason=\"" + (finishReason || "?") + "\"";
+                else if (kind === "usage") {
+                  var u = usage || {};
+                  summary = "prompt_tokens=" + (u.prompt_tokens ?? "?") + ", completion_tokens=" + (u.completion_tokens ?? "?");
+                  if (u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens != null) {
+                    summary += ", reasoning_tokens=" + u.completion_tokens_details.reasoning_tokens;
+                  }
+                } else summary = JSON.stringify(chunk).slice(0, 80);
+                setLines(function (prev) {
+                  return prev.concat([{
+                    idx: obj.frameIdx || frameCount,
+                    label: kind,
+                    summary: summary,
+                    tone: kindClass(kind),
+                  }]);
+                });
+              });
+              if (!result.ok) {
+                setError({ title: "HTTP 失败", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              if (result.streamError) {
+                setError({ title: "流中错误", detail: result.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              var total = ((performance.now() - t0.current) / 1000).toFixed(2);
+              var metaText = result.frameCount + " frames · " + total + "s · finish_reason=" + (finishRef.current || "?");
+              var u2 = usageRef.current;
+              if (u2) {
+                metaText += " · prompt_tokens=" + (u2.prompt_tokens ?? "?") + ", completion_tokens=" + (u2.completion_tokens ?? "?");
+              }
+              setMeta(metaText);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function pingNet() {
+            setStatus("loading");
+            try {
+              await triggerNetworkError();
+            } catch (e) {
+              setError({ title: "网络错误（故意）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">流式协议 A</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="OpenAI chunk 原样转发。看 role / chunk / finish / usage 四类帧；思考可能在独立字段或嵌在 content 里。"
+                  steps={INTRO_STEPS}
+                />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && <p className="text-xs text-red-600">Key ❌，主按钮已禁用。</p>}
+                  <label className="block text-sm">
+                    消息
+                    <span className="block text-xs text-gray-500">点了会真实打协议 A 流。勾选「开思考」才会带 extra_body。</span>
+                    <input
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      value={msg}
+                      disabled={busy}
+                      onChange={function (e) { setMsg(e.target.value); }}
+                    />
+                  </label>
+                  <label className="text-sm flex items-center gap-1">
+                    <input type="checkbox" checked={enableThinking} disabled={busy} onChange={function (e) { setEnableThinking(e.target.checked); }} />
+                    开思考（extra_body.thinking + reasoning_split）
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={run}>
+                      发流式请求
+                    </button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={function () { setMsg(""); run(); }}>
+                      空输入（看 400）
+                    </button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={pingNet}>
+                      故意网络错误
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!lines.length && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。发出后左边事件流按 kind 着色，中间思考，右边正文。</p>
+                  )}
+                  {error && (
+                    <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                      <div className="font-semibold">{error.title} {error.httpStatus ? "HTTP " + error.httpStatus : "请求未送达"}</div>
+                      <div className="text-xs">{error.detail}</div>
+                    </div>
+                  )}
+                  <PromptCard text={msg} />
+                  <StreamColumns
+                    lines={lines}
+                    thinking={thinking}
+                    answer={answer}
+                    meta={meta}
+                    elapsed={elapsed}
+                    thinkingEmpty="（未触发思考，或思考嵌在正文里但没切开）"
+                    answerEmpty="（等待 chunk…）"
+                    thinkingTitle="thinking 累加"
+                    answerTitle="answer 累加（模型终态）"
+                    countLabel="frames"
+                  />
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

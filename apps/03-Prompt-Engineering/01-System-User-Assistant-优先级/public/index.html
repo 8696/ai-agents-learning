@@ -3,468 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>System / User / Assistant 优先级 · Demo</title>
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入 -->
+  <title>System / User / Assistant 优先级 · 总览</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4（classic runtime，输出 React.createElement） -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
-  <style>
-    /* thinking block 灰显；A 协议内容里会嵌 … */
-    pre { white-space: pre-wrap; word-break: break-word; line-height: 1.55; font-size: 13px; }
-    .verdict-pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
-    .verdict-SYSTEM_WIN, .verdict-REMEMBERED { background: #dcfce7; color: #166534; }
-    .verdict-USER_WIN, .verdict-FORGOT        { background: #fee2e2; color: #991b1b; }
-    .verdict-PARTIAL                           { background: #fef9c3; color: #854d0e; }
-    /* #output 汇总带 */
-    #output .summary-row { font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline; }
-    #output .summary-row:last-child { border-bottom: none; }
-    #output .summary-case { font-weight: 600; color: #334155; min-width: 60px; }
-    #output .summary-verdict { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
-    #output .summary-usage { color: #64748b; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
-    #output .placeholder { color: #94a3b8; font-style: italic; font-size: 12px; }
-  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-
-  <!-- type="text/babel"：Babel Standalone 运行时转译 JSX（classic runtime → React.createElement） -->
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
   <script type="text/babel">
-    const { useState, useEffect } = React;
-
-    // ── 协议 A content 字符串里的 thinking block 灰显 ──
-    // 用 React 元素数组返回：先 split，正则匹配段包 <span class="italic text-gray-500">，
-    // 其他段照原样返回。让学习者一眼看到"A 的 content 字符串嵌了 thinking"。
-    function renderTextWithThink(text) {
-      if (!text) return null;
-      const parts = [];
-      const re = /[\s\S]*?<\/think>/g;
-      let lastIdx = 0;
-      let m;
-      let key = 0;
-      while ((m = re.exec(text)) !== null) {
-        if (m.index > lastIdx) {
-          parts.push(
-            <span key={key++}>{text.slice(lastIdx, m.index)}</span>
-          );
-        }
-        parts.push(
-          <span key={key++} className="italic text-gray-500">
-            {m[0]}
-          </span>
-        );
-        lastIdx = re.lastIndex;
-      }
-      if (lastIdx < text.length) {
-        parts.push(<span key={key++}>{text.slice(lastIdx)}</span>);
-      }
-      return <pre className="text-sm">{parts}</pre>;
-    }
-
-    // ── 单侧面板：协议 A 或 B 的结果 ──
-    function SidePanel({ side }) {
-      if (side.error) {
+    /**
+     * 本页教学点：三条 case 怎么连在一起。本页不调模型。
+     * 对照例外：同一份 prompt 并排看协议 A（messages[].system）和协议 B（顶层 system）。
+     */
+    const { useState } = React;
+    const INTRO_STEPS = [
+      "角色优先级是训练事实：System 压 User，User 压 Assistant，不是厂商开关",
+      "协议 A 把 system 放进 messages[]；协议 B 放顶层 system —— 语义一样，字段位置不同",
+      "Case 1 看 System JSON-only 能不能压过 User 的长文段",
+      "Case 2 / 3 对照：assistant 历史塞回去才叫多轮；漏塞 = 失忆或瞎编",
+    ];
+    const SCENES = [
+      {
+        href: "/pages/priority.html",
+        title: "Case 1 · 优先级",
+        desc: "System 要 JSON-only，User 要 ≥80 字散文。期望 SYSTEM_WIN；妥协则 PARTIAL / USER_WIN。",
+      },
+      {
+        href: "/pages/with-history.html",
+        title: "Case 2 · 有 assistant 历史",
+        desc: "三轮 user / assistant / user。期望提到「北京」→ REMEMBERED。",
+      },
+      {
+        href: "/pages/no-history.html",
+        title: "Case 3 · 漏塞 assistant",
+        desc: "两轮 user/user。期望 FORGOT 或 PARTIAL。协议 B 常会自信地编，是幻觉样本。",
+      },
+    ];
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
+      function App() {
+        const { env, envError } = useEnvInfo();
+        const [status, setStatus] = useState("idle"); // #status-pill：总览只跟 /health 走
+        React.useEffect(function () {
+          if (envError) setStatus("error");
+          else if (env.port) setStatus("ok");
+        }, [env, envError]);
         return (
-          <div className="border border-red-200 rounded p-3 bg-red-50">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-700">
-                协议 {side.protocol}
-              </span>
-              <span className="verdict-pill bg-gray-200 text-gray-700">
-                ⚠️ 请求失败
-              </span>
-            </div>
-            <pre className="text-sm text-red-600">⚠️ {side.error}</pre>
+          <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+            <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+              <h1 id="page-title" className="text-xl font-semibold">System / User / Assistant 优先级</h1>
+              <StatusPill status={status} />
+            </header>
+            <main id="page-main" className="container mx-auto p-4 space-y-4">
+              <PageIntro
+                summary="同一份 prompt 并排打协议 A 和协议 B，看 System 优先级和 assistant 历史塞不塞回去。"
+                steps={INTRO_STEPS}
+                extra={
+                  <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`浏览器 POST /api/caseN
+  → route 分叉：sendViaA（openai）|| sendViaB（Anthropic）
+  → 共用 judge（SYSTEM_WIN / USER_WIN / REMEMBERED / FORGOT）
+  → JSON { a, b } 并排回到页面
+
+协议 A：system ∈ messages[]     usage = prompt/completion_tokens
+协议 B：system 顶层字段         usage = input/output_tokens`}
+                  </pre>
+                }
+              />
+              <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                <PageNav />
+                <p className="text-sm text-gray-600">
+                  总览页不发起模型请求。选一个 Case 进去跑，每页只演示一个教学点。
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {SCENES.map(function (s) {
+                    return (
+                      <a key={s.href} href={s.href} className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                        <div className="font-semibold text-sm">{s.title}</div>
+                        <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+              <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600 space-y-2">
+                {envError && <p className="text-red-700">{envError}</p>}
+                {!env.hasKey && env.port && (
+                  <p className="text-red-600 text-xs">页脚 Key ❌：场景页主按钮会禁用，先配 apps/.env。</p>
+                )}
+                <p>进场景页后，左侧协议 A、右侧协议 B；判定 pill 来自服务端，页面不自己猜。</p>
+              </section>
+            </main>
+            <EnvFooter env={env} />
           </div>
         );
       }
-      const cleanedDiffers = side.text !== side.cleanedText;
-      const verdictClass = `verdict-${side.verdict}`;
-      return (
-        <div className="border border-slate-200 rounded p-3 bg-slate-50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-700">
-              协议 {side.protocol}
-            </span>
-            <span className={`verdict-pill ${verdictClass}`}>
-              {side.verdictLabel}
-            </span>
-          </div>
-          {renderTextWithThink(side.text)}
-          {/* 协议 A 才会有 think 块；B 通常 cleaned === raw */}
-          <details className="mt-2 text-xs text-slate-600">
-            <summary className="cursor-pointer hover:text-slate-900">
-              剥掉 <code>…</code> 后{" "}
-              {cleanedDiffers
-                ? `(少了 ${side.text.length - side.cleanedText.length} 字符)`
-                : "（无变化）"}
-            </summary>
-            <pre className="mt-1 bg-slate-100 p-2 rounded text-slate-800 whitespace-pre-wrap break-words text-sm">
-              {side.cleanedText || "(空)"}
-            </pre>
-          </details>
-          <div className="text-xs text-slate-500 mt-2 pt-2 border-t border-slate-200">
-            协议 {side.protocol} · 用量{" "}
-            <code>
-              {side.usage.input}+{side.usage.output}
-            </code>{" "}
-            tokens · 耗时 <code>{side.durationMs}</code> ms
-          </div>
-        </div>
-      );
-    }
-
-    // ── 单个 Case 区块 ──
-    function CaseBlock({ caseNum, endpoint, title, subtitle, promptBlock, expectation, onResult, onError, onLoadingChange }) {
-      const [status, setStatus] = useState("idle"); // idle / running / done / error
-      const [a, setA] = useState(null);
-      const [b, setB] = useState(null);
-      const [errMsg, setErrMsg] = useState("");
-
-      const run = async () => {
-        setStatus("running");
-        setErrMsg("");
-        onLoadingChange(true);
-        try {
-          const r = await fetch(endpoint, { method: "POST" });
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          const data = await r.json();
-          setA(data.a);
-          setB(data.b);
-          setStatus("done");
-          onResult(caseNum, data.a, data.b);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          setErrMsg(msg);
-          setStatus("error");
-          onError(caseNum, msg);
-        } finally {
-          onLoadingChange(false);
-        }
-      };
-
-      return (
-        <section className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-          <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <span className="text-xs text-slate-500">{subtitle}</span>
-          </div>
-
-          <div className="mb-3">{promptBlock}</div>
-
-          <div className="mb-4 text-xs text-slate-600">{expectation}</div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={run}
-              disabled={status === "running"}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
-            >
-              {status === "running" ? "请求中…" : "Run · 协议 A + B"}
-            </button>
-            <span className="text-xs text-slate-500">
-              {status === "idle" && "未运行"}
-              {status === "running" && "🔄 请求中…"}
-              {status === "done" && "✓ 完成"}
-              {status === "error" && `✗ 失败：${errMsg}`}
-            </span>
-          </div>
-
-          {errMsg ? (
-            <div className="col-span-2 text-xs text-red-600 p-3 mt-3 bg-red-50 rounded">
-              ⚠️ 请求失败：{errMsg}
-            </div>
-          ) : null}
-
-          {a && b ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-              <SidePanel side={a} />
-              <SidePanel side={b} />
-            </div>
-          ) : null}
-        </section>
-      );
-    }
-
-    // ── StatusPill：顶部状态徽章（四态） ──
-    function StatusPill({ status }) {
-      const map = {
-        idle:    { emoji: "⏸", text: "待连接",  cls: "bg-gray-200" },
-        running: { emoji: "🔄", text: "请求中…", cls: "bg-blue-100" },
-        done:    { emoji: "✅", text: "完成",     cls: "bg-green-100" },
-        error:   { emoji: "❌", text: "错误",     cls: "bg-red-100" },
-      };
-      const s = map[status] || map.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    // ── #output 汇总行 ──
-    function SummaryRow({ caseNum, a, b }) {
-      const verdictCls = (v) => {
-        if (v === "SYSTEM_WIN" || v === "REMEMBERED") return "verdict-SYSTEM_WIN";
-        if (v === "USER_WIN"   || v === "FORGOT")     return "verdict-USER_WIN";
-        if (v === "PARTIAL")                          return "verdict-PARTIAL";
-        return "bg-gray-200 text-gray-700";
-      };
-      return (
-        <div className="summary-row">
-          <span className="summary-case">Case {caseNum}</span>
-          <span className={`summary-verdict ${verdictCls(a.verdict)}`}>
-            A={a.verdict}
-          </span>
-          <span className="summary-usage">
-            in:{a.usage?.input ?? "?"}+out:{a.usage?.output ?? "?"}
-          </span>
-          <span className={`summary-verdict ${verdictCls(b.verdict)}`}>
-            B={b.verdict}
-          </span>
-          <span className="summary-usage">
-            in:{b.usage?.input ?? "?"}+out:{b.usage?.output ?? "?"}
-          </span>
-          <span className="text-xs text-slate-400">
-            {new Date().toLocaleTimeString()}
-          </span>
-        </div>
-      );
-    }
-
-    // ── 主组件 App ──
-    function App() {
-      const [globalStatus, setGlobalStatus] = useState("idle"); // 顶部状态徽章
-      const [rows, setRows] = useState([]); // 汇总行（按时间顺序追加）
-      const [runningCount, setRunningCount] = useState(0);
-      const [errorCount, setErrorCount] = useState(0);
-
-      // 启动时 ping /health（让 status-pill 从 idle 切到 idle 之前的状态——验证后端可达）
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => r.json())
-          .then(() => setGlobalStatus("idle"))
-          .catch(() => {
-            setGlobalStatus("error");
-          });
-      }, []);
-
-      // 监听 runningCount / errorCount / rows 推导 status-pill
-      useEffect(() => {
-        if (runningCount > 0) setGlobalStatus("running");
-        else if (errorCount > 0) setGlobalStatus("error");
-        else if (rows.length > 0) setGlobalStatus("done");
-        else setGlobalStatus("idle");
-      }, [runningCount, errorCount, rows.length]);
-
-      const onLoadingChange = (isRunning) => {
-        setRunningCount((c) => Math.max(0, c + (isRunning ? 1 : -1)));
-      };
-      const onResult = (caseNum, a, b) => {
-        setRows((r) => [...r, { caseNum, a, b }]);
-      };
-      const onError = (_caseNum, _msg) => {
-        setErrorCount((c) => c + 1);
-        // 失败一次后立即把 counter 减回去，避免 sticky
-        setTimeout(() => setErrorCount((c) => Math.max(0, c - 1)), 0);
-      };
-
-      // ── 三个 Case 的 prompt / 期望文案 ──
-      const case1Prompt = (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="bg-slate-50 border border-slate-200 rounded p-3">
-            <div className="text-xs font-bold text-slate-500 mb-1">system</div>
-            <pre>{`你只能输出 JSON，格式 {"reply": string}，禁止任何解释或额外文字。`}</pre>
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded p-3">
-            <div className="text-xs font-bold text-slate-500 mb-1">user</div>
-            <pre>请评价「今天天气不错」这句话，并**用至少 80 字中文详细说明你的理由**。</pre>
-          </div>
-        </div>
-      );
-
-      const case2Prompt = (
-        <div className="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
-          <div className="text-xs font-bold text-slate-500 mb-1">turns（messages 数组）</div>
-          <pre>{`[user: "我住北京。"]
-[assistant: "好的，已记录。"]   ← 关键：塞回去
-[user: "我刚才说的城市今天天气怎么样？"]`}</pre>
-        </div>
-      );
-
-      const case3Prompt = (
-        <div className="bg-slate-50 border border-slate-200 rounded p-3 text-sm">
-          <div className="text-xs font-bold text-slate-500 mb-1">turns（messages 数组）</div>
-          <pre>{`[user: "我住北京。"]
-                  ← 关键：assistant 历史漏掉，不塞
-[user: "我刚才说的城市今天天气怎么样？"]`}</pre>
-        </div>
-      );
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header
-            id="page-header"
-            className="border-b p-4 flex items-center justify-between bg-white"
-          >
-            <h1 id="page-title" className="text-xl font-semibold">
-              System / User / Assistant 优先级
-            </h1>
-            <StatusPill status={globalStatus} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-6">
-              <p className="text-slate-600 text-sm">
-                对照{" "}
-                <span className="font-mono text-xs bg-slate-200 px-1 rounded">
-                  协议 A（OpenAI）
-                </span>{" "}
-                和{" "}
-                <span className="font-mono text-xs bg-slate-200 px-1 rounded">
-                  协议 B（Anthropic）
-                </span>{" "}
-                看 System 优先级、assistant 多轮历史的差异。每次点 Run 会真调一次
-                当前配置的模型。
-                对应小节：
-                <a
-                  className="underline hover:text-slate-800"
-                  href="/docs/学习模块/03-Prompt-Engineering/01-System-User-Assistant-优先级.md"
-                >
-                  docs/学习模块/03-Prompt-Engineering/01-System-User-Assistant-优先级.md
-                </a>
-              </p>
-
-              <CaseBlock
-                caseNum={1}
-                endpoint="/api/case1-priority"
-                title="Case 1 · 优先级对照"
-                subtitle="System JSON-only vs User 长文段"
-                promptBlock={case1Prompt}
-                expectation={
-                  <>
-                    预期：模型听 <b>System</b> → 输出 JSON（
-                    <code className="bg-slate-100 px-1 rounded">SYSTEM_WIN</code>）。
-                    若妥协给长文段 →{" "}
-                    <code className="bg-slate-100 px-1 rounded">USER_WIN</code>。
-                  </>
-                }
-                onResult={onResult}
-                onError={onError}
-                onLoadingChange={onLoadingChange}
-              />
-
-              <CaseBlock
-                caseNum={2}
-                endpoint="/api/case2-with-history"
-                title="Case 2 · 多轮 WITH assistant 历史"
-                subtitle="assistant 历史塞回去"
-                promptBlock={case2Prompt}
-                expectation={
-                  <>
-                    预期：模型记得「北京」 →{" "}
-                    <code className="bg-slate-100 px-1 rounded">REMEMBERED</code>。
-                  </>
-                }
-                onResult={onResult}
-                onError={onError}
-                onLoadingChange={onLoadingChange}
-              />
-
-              <CaseBlock
-                caseNum={3}
-                endpoint="/api/case3-no-history"
-                title="Case 3 · 多轮 WITHOUT assistant 历史（失忆对照组）"
-                subtitle="assistant 漏塞"
-                promptBlock={case3Prompt}
-                expectation={
-                  <>
-                    预期：模型瞎猜 / 承认不知道 / 编造 →{" "}
-                    <code className="bg-slate-100 px-1 rounded">FORGOT</code>{" "}
-                    或{" "}
-                    <code className="bg-slate-100 px-1 rounded">PARTIAL</code>。
-                    <b>协议 B 通常会"自信地编"</b>，是经典幻觉样本。
-                  </>
-                }
-                onResult={onResult}
-                onError={onError}
-                onLoadingChange={onLoadingChange}
-              />
-
-              <section className="bg-amber-50 border border-amber-200 rounded-lg p-5 text-sm">
-                <h2 className="text-base font-semibold mb-2 text-amber-900">
-                  本轮对照要点
-                </h2>
-                <ul className="list-disc pl-5 text-amber-900 space-y-1">
-                  <li>
-                    <b>Case 1</b>：System 写「JSON-only」 vs User 写「长文段」 → 看{" "}
-                    <code>SYSTEM_WIN</code> 还是 <code>USER_WIN</code>。
-                    <span className="block mt-1 text-amber-800">
-                      点每个面板的「剥掉 <code>…</code> 后」看协议 A 的真实 JSON。
-                    </span>
-                  </li>
-                  <li>
-                    <b>Case 2 vs Case 3</b>：assistant 历史不塞回去 = 模型瞎猜 / 自信地编（幻觉样本）。
-                  </li>
-                  <li>
-                    <b>协议 A vs B</b>：System 位置不同（A 在{" "}
-                    <code>messages[]</code>、B 在顶层 <code>system</code>），但优先级语义一致。
-                  </li>
-                  <li>
-                    <b>协议 A 的 thinking 默认开启</b>：OpenAI 协议侧没有 API 参数关掉它 ——
-                    工程答案是在你的适配层自己剥（regex）。协议 B 可以通过不传{" "}
-                    <code>thinking</code> 参数关掉。
-                  </li>
-                </ul>
-              </section>
-            </section>
-
-            <section
-              id="output"
-              className="bg-white shadow rounded p-4 min-h-[80px]"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold text-slate-700">
-                  本轮跑完的对照汇总（按时间顺序）
-                </h2>
-                <span className="text-xs text-slate-400">#output</span>
-              </div>
-              {rows.length === 0 ? (
-                <div className="placeholder">
-                  （点任一 Case 的 Run · 协议 A + B，结果追加在这里）
-                </div>
-              ) : (
-                <div>
-                  {rows.map((row, i) => (
-                    <SummaryRow
-                      key={i}
-                      caseNum={row.caseNum}
-                      a={row.a}
-                      b={row.b}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          </main>
-
-          <footer
-            id="page-footer"
-            className="border-t p-2 text-xs text-gray-500 text-center"
-          >
-            端口 50301 · 协议 A/B · 模型随 LLM_PROVIDER
-          </footer>
-        </div>
-      );
-    }
-
-    // ── 入口：UMD 全局 ReactDOM.createRoot（React 18 API） ──
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    });
   </script>
 </body>
 </html>

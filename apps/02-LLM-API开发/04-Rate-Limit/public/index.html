@@ -3,328 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Retry Demo · 429 / Rate Limit 时间线</title>
-
+  <title>Rate-Limit · 总览</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
-  <style>
-    .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-    .status-200 { background: #dcfce7; color: #14532d; }
-    .status-429 { background: #fef9c3; color: #713f12; }
-    .status-5xx { background: #fee2e2; color: #7f1d1d; }
-    .status-401 { background: #e0e7ff; color: #312e81; }
-    .status-network { background: #f3e8ff; color: #581c87; }
-  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
   <script type="text/babel">
-    const { useState, useEffect } = React;
-
-    function statusClass(s) {
-      if (s === "network") return "status-network";
-      if (s >= 200 && s < 300) return "status-200";
-      if (s === 429) return "status-429";
-      if (s >= 500) return "status-5xx";
-      if (s === 401 || s === 403 || s === 404 || s === 422) return "status-401";
-      return "bg-slate-100";
-    }
-
-    function StatusPill({ status }) {
-      const map = {
-        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
-        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
-      };
-      const s = map[status] || map.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    function TimelineTable({ attempts }) {
-      return (
-        <table className="w-full text-xs mono mt-2 border border-slate-200">
-          <thead className="bg-slate-100 text-slate-700">
-            <tr>
-              <th className="px-2 py-1 text-left">#</th>
-              <th className="px-2 py-1 text-left">status</th>
-              <th className="px-2 py-1 text-left">waitBefore</th>
-              <th className="px-2 py-1 text-left">Retry-After</th>
-              <th className="px-2 py-1 text-left">duration</th>
-              <th className="px-2 py-1 text-left">body</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(attempts || []).map((a) => (
-              <tr key={a.attempt} className="border-t border-slate-200">
-                <td className="px-2 py-1">#{a.attempt}</td>
-                <td className="px-2 py-1">
-                  <span className={`px-1.5 py-0.5 rounded ${statusClass(a.status)}`}>{a.status}</span>
-                </td>
-                <td className="px-2 py-1">{a.waitBeforeMs.toFixed(0)}ms</td>
-                <td className="px-2 py-1">{a.retryAfterUsedMs === null ? "—" : a.retryAfterUsedMs + "ms"}</td>
-                <td className="px-2 py-1">{a.durationMs.toFixed(0)}ms</td>
-                <td className="px-2 py-1">{(a.errorMessage || "—").slice(0, 60)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-    }
-
-    function TimelineBlock({ data }) {
-      return (
-        <div>
-          <div className="text-xs text-slate-500 mt-1">
-            {data.ok ? (
-              <span className="text-green-700">
-                ✅ 最终成功 · result：<span className="mono">{(data.result || "").slice(0, 80)}</span>
-              </span>
-            ) : (
-              <span className="text-red-700">
-                ❌ {data.errorType || "Error"} · {(data.error || "").slice(0, 80)}
-              </span>
-            )}
+    const { useState } = React;
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
+      function App() {
+        const { env, envError } = useEnvInfo();
+        const [status, setStatus] = useState("idle");
+        React.useEffect(function () {
+          if (envError) setStatus("error");
+          else if (env.port) setStatus("ok");
+        }, [env, envError]);
+        return (
+          <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+            <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+              <h1 id="page-title" className="text-xl font-semibold">429 / Rate Limit</h1>
+              <StatusPill status={status} />
+            </header>
+            <main id="page-main" className="container mx-auto p-4 space-y-4">
+              <PageIntro summary="可重试（429/5xx/网络）才退避；401 立刻停；有上限。本页不调模型。"
+                steps={["429/408/5xx/网络错 → 等 Retry-After 与指数退避的较大者，再加 jitter", "400/401/403/404/422 → NonRetryable，第一次就停", "maxAttempts + 总时长上限，避免永远重试"]}
+                extra={<pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">{`GET /api/proxy?target=easy|chaos|auth|forever|ok
+GET /api/real          真 API 单次（需 Key）
+GET /api/real-burst    并发撞 429`}</pre>} />
+              <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                <PageNav />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <a href="/pages/mock.html" className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                    <div className="font-semibold text-sm">Mock 五场景</div>
+                    <div className="text-xs text-gray-500 mt-1">零成本。听 Retry-After、jitter、不可重试、耗尽上限。</div>
+                  </a>
+                  <a href="/pages/real.html" className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                    <div className="font-semibold text-sm">真 API</div>
+                    <div className="text-xs text-gray-500 mt-1">单次 + burst。没 Key 按钮会锁。</div>
+                  </a>
+                </div>
+              </section>
+              <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600">
+                {envError && <p className="text-red-700">{envError}</p>}
+                <p>本页不发请求。进 mock 页点场景，才能看见 attempts 时间线。</p>
+              </section>
+            </main>
+            <EnvFooter env={env} />
           </div>
-          <TimelineTable attempts={data.attempts} />
-        </div>
-      );
-    }
-
-    function BurstBlock({ data }) {
-      const a = data.aggregate;
-      return (
-        <div>
-          <div className="text-sm font-semibold mb-2">并发 {data.concurrency} · 聚合</div>
-          <div className="text-xs text-slate-700 mb-2">
-            <span className="text-green-700">✅ 一次成功 {a.okFirstTry}</span> ·{" "}
-            <span className="text-amber-700">🔄 重试后成功 {a.okAfterRetry}</span> ·{" "}
-            <span className="text-red-700">❌ 失败 {a.failed}</span>
-          </div>
-          <div className="text-xs text-slate-700 mb-3">
-            状态码分布：<b>429</b> = {a.total429} 次 · <b>5xx</b> = {a.total5xx} 次 ·{" "}
-            <b>network</b> = {a.totalNetwork} 次；总重试 = {a.totalRetries} 次；总耗时 ={" "}
-            {(a.totalTimeMs / 1000).toFixed(1)}s
-          </div>
-          <table className="w-full text-xs mono border border-slate-200">
-            <thead className="bg-slate-100 text-slate-700">
-              <tr>
-                <th className="px-2 py-1 text-left">结果</th>
-                <th className="px-2 py-1 text-left">req#</th>
-                <th className="px-2 py-1 text-left">attempts</th>
-                <th className="px-2 py-1 text-left">lastStatus</th>
-                <th className="px-2 py-1 text-left">totalTime</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.results.map((r) => {
-                const last = r.attempts.at(-1);
-                const lastStatus = last?.status ?? "?";
-                return (
-                  <tr key={r.idx} className="border-t border-slate-200">
-                    <td className="px-2 py-1">{r.ok ? "✅" : "❌"}</td>
-                    <td className="px-2 py-1">#{r.idx}</td>
-                    <td className="px-2 py-1">{r.attempts.length}</td>
-                    <td className="px-2 py-1">
-                      <span className={`px-1.5 py-0.5 rounded ${statusClass(lastStatus)}`}>{lastStatus}</span>
-                    </td>
-                    <td className="px-2 py-1">{r.totalTimeMs.toFixed(0)}ms</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [busy, setBusy] = useState(false);
-      const [error, setError] = useState("");
-      const [blocks, setBlocks] = useState([]);
-
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          })
-          .then(() => setStatus("idle"))
-          .catch((e) => {
-            setStatus("error");
-            setError(e instanceof Error ? e.message : String(e));
-          });
-      }, []);
-
-      const withBusy = async (fn) => {
-        if (busy) return;
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-        try {
-          await fn();
-          setStatus("ok");
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          setError(msg);
-          setStatus("error");
-        } finally {
-          setBusy(false);
-        }
-      };
-
-      const runMock = (target, runs) =>
-        withBusy(async () => {
-          const rows = [];
-          for (let r = 0; r < runs; r++) {
-            const resp = await fetch(`/api/proxy?target=${encodeURIComponent(target)}`);
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
-            rows.push({ kind: "timeline", label: runs > 1 ? `${target} (${r + 1}/${runs})` : target, data });
-          }
-          setBlocks((prev) => [{ id: Date.now(), title: `mock ${target} × ${runs}`, rows }, ...prev]);
-        });
-
-      const runReal = () =>
-        withBusy(async () => {
-          const resp = await fetch("/api/real");
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const data = await resp.json();
-          if (!data.hasKey) {
-            setBlocks((prev) => [
-              { id: Date.now(), title: "真 API 单次", warn: data.error },
-              ...prev,
-            ]);
-            return;
-          }
-          setBlocks((prev) => [
-            { id: Date.now(), title: "真 API 单次", rows: [{ kind: "timeline", label: "real", data }] },
-            ...prev,
-          ]);
-        });
-
-      const runBurst = () =>
-        withBusy(async () => {
-          const resp = await fetch("/api/real-burst?concurrency=20");
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const data = await resp.json();
-          if (!data.hasKey) {
-            setBlocks((prev) => [
-              { id: Date.now(), title: "真 API 并发 20", warn: data.error || "apps/.env 里没有 MINIMAX_API_KEY" },
-              ...prev,
-            ]);
-            return;
-          }
-          setBlocks((prev) => [
-            { id: Date.now(), title: "真 API 并发 20", rows: [{ kind: "burst", data }] },
-            ...prev,
-          ]);
-        });
-
-      const buttons = [
-        { label: "① easy（前 2 次 429）", onClick: () => runMock("easy", 1) },
-        { label: "② chaos（随机，跑 1 次）", onClick: () => runMock("chaos", 1) },
-        { label: "③ auth（永远 401）", onClick: () => runMock("auth", 1) },
-        { label: "④ forever（永远 429）", onClick: () => runMock("forever", 1) },
-        { label: "⑤ ok（直接 200）", onClick: () => runMock("ok", 1) },
-        { label: "② chaos × 6（看 jitter）", onClick: () => runMock("chaos", 6), cls: "bg-amber-100 border-amber-300" },
-        { label: "⑥ 真 API：单次", onClick: runReal, cls: "bg-emerald-100 border-emerald-300" },
-        { label: "⑦ 真 API：并发 20（会烧 token）", onClick: runBurst, cls: "bg-rose-100 border-rose-300" },
-      ];
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header
-            id="page-header"
-            className="border-b p-4 flex items-center justify-between bg-white"
-          >
-            <h1 id="page-title" className="text-xl font-semibold">
-              429 / Rate Limit · 重试时间线
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <p className="text-sm text-gray-500">
-                点按钮跑场景，每次返回 attempts[]，渲染成时间线表。
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {buttons.map((b) => (
-                  <button
-                    key={b.label}
-                    onClick={b.onClick}
-                    disabled={busy}
-                    className={`px-3 py-2 rounded-lg bg-white shadow border border-slate-200 text-sm disabled:opacity-50 ${b.cls || ""}`}
-                  >
-                    {b.label}
-                  </button>
-                ))}
-              </div>
-              {error ? (
-                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">⚠️ {error}</div>
-              ) : null}
-              <details className="text-sm text-slate-700">
-                <summary className="cursor-pointer font-semibold">看什么</summary>
-                <ul className="mt-2 space-y-1 list-disc pl-5">
-                  <li>① easy：attempt 1/2 是 429，waitBefore 至少 500ms，attempt 3 是 200。</li>
-                  <li>② chaos × 6：对比每次 waitBefore，jitter 让数值带随机偏移。</li>
-                  <li>③ auth：只有 1 行 401，立刻 NonRetryableError。</li>
-                  <li>④ forever：4 行 429，最终 RetryExhaustedError。</li>
-                  <li>⑤ ok：1 行 200，waitBefore=0。</li>
-                </ul>
-              </details>
-            </section>
-
-            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
-              {blocks.length === 0 ? (
-                <div className="text-sm text-slate-400 italic">（点上面按钮，时间线追加在这里）</div>
-              ) : (
-                blocks.map((block) => (
-                  <div key={block.id} className="border border-slate-200 rounded-lg p-4">
-                    <div className="text-xs text-slate-500 mb-2">{block.title}</div>
-                    {block.warn ? (
-                      <div className="text-sm text-amber-700">⚠️ {block.warn}</div>
-                    ) : (
-                      (block.rows || []).map((row, i) => (
-                        <div key={i} className="mt-3">
-                          <div className="text-sm font-semibold mb-1">{row.label}</div>
-                          {row.kind === "burst" ? (
-                            <BurstBlock data={row.data} />
-                          ) : (
-                            <TimelineBlock data={row.data} />
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ))
-              )}
-            </section>
-          </main>
-
-          <footer
-            id="page-footer"
-            className="border-t p-2 text-xs text-gray-500 text-center"
-          >
-            端口 50204 · mock + 协议 A · 模型随 LLM_PROVIDER
-          </footer>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+        );
+      }
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    });
   </script>
 </body>
 </html>

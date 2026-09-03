@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流式 · Adapter</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/unified-cards.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    const INTRO_STEPS = [
+      "点发送 → POST /api/chat-stream，SSE 推 UnifiedDelta",
+      "type=thinking 追加思考区；type=content 追加绿卡片；type=usage 出统一用量",
+      "A 是字符串帧 + 标记切分；B 是事件流。页面只 switch type",
+      "最后一帧 [DONE]。流里的 _error 表示头已是 200，只能靠帧报错",
+    ];
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "UnifiedCard", "StreamLog", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, UnifiedCard, StreamLog, ErrorBanner } = window.DemoUI;
+        const { streamUnified } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [protocol, setProtocol] = useState("A");
+          const [enableThinking, setEnableThinking] = useState(true);
+          const [budget, setBudget] = useState(500);
+          const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再回答。");
+          const [thinking, setThinking] = useState("");
+          const [content, setContent] = useState("");
+          const [usageData, setUsageData] = useState(null);
+          const [log, setLog] = useState("");
+          const [error, setError] = useState(null);
+          const blocked = busy || !env.hasKey;
+
+          async function run() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setThinking("");
+            setContent("");
+            setUsageData(null);
+            setLog("");
+            try {
+              const result = await streamUnified(
+                { message: message, protocol: protocol, enable_thinking: enableThinking, thinking_budget: budget },
+                function (d) {
+                  setLog(function (prev) { return prev + JSON.stringify(d) + "\n"; });
+                  if (d.type === "thinking") setThinking(function (t) { return t + d.text; });
+                  if (d.type === "content") setContent(function (t) { return t + d.text; });
+                  if (d.type === "usage") setUsageData(d);
+                },
+              );
+              if (!result.ok) {
+                setError({ title: "请求被拒绝", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              if (result.streamError) {
+                setError({ title: "流中途失败", detail: result.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          var unified = usageData
+            ? { content: content, thinking: thinking, stopReason: usageData.stopReason, usage: usageData.usage, protocol: usageData.protocol, model: usageData.model }
+            : (thinking || content ? { content: content, thinking: thinking, stopReason: "（流未结束）", usage: null, protocol: protocol, model: "" } : null);
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">流式 sendMessageStream</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro summary="业务 for await 拿 UnifiedDelta，不知道也不需要知道是 A 还是 B。" steps={INTRO_STEPS} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm">协议
+                    <select className="mt-1 border rounded p-2" value={protocol} disabled={busy} onChange={function (e) { setProtocol(e.target.value); }}>
+                      <option value="A">A · Chat Completions 字符串帧</option>
+                      <option value="B">B · Messages 事件流</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={enableThinking} disabled={busy} onChange={function (e) { setEnableThinking(e.target.checked); }} />
+                    开思考
+                  </label>
+                  <label className="block text-sm">thinking_budget（仅 B）
+                    <input className="mt-1 border rounded p-2 w-28" type="number" min={1} value={budget} disabled={busy} onChange={function (e) { setBudget(Number(e.target.value)); }} />
+                  </label>
+                  <label className="block text-sm">message
+                    <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={3} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
+                  </label>
+                  <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={run}>发送（流式）</button>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!unified && !error && <p className="text-sm text-gray-500">还没跑过。点发送后思考区 / 正文 / delta 日志会逐条出现。</p>}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {unified && <UnifiedCard data={unified} />}
+                  {(log || unified) && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">UnifiedDelta 日志（系统事件）</div>
+                      <StreamLog lines={log} />
+                    </div>
+                  )}
+                </section>
+              </main>
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流式对照 · 思考方言</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+    integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+    crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/sse-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+  <script type="text/babel">
+    /**
+     * 本页教学点：勾选一家提供商 + 协议 A/B + 开/关思考，看官方开法 vs 这一轮实测来源。
+     * useState：provider / protocols / thinkingOn 是实验变量；sides 是两列累积状态。
+     */
+    const { useState } = React;
+    const DEFAULT_MSG = "23 × 47 等于多少？先一步步想，再给答案。";
+    const EMPTY_SIDE = {
+      thinking: "",
+      content: "",
+      frames: [],
+      thinkingSources: [],
+      returnShape: "",
+      thinkingExplain: null,
+      switchSnippet: null,
+      skipped: false,
+      skipReason: "",
+      error: "",
+      sdk: "",
+      method: "",
+      model: "",
+      request: null,
+    };
+    const INTRO_STEPS = [
+      "勾选提供商（有 Key 的才能跑）+ 协议 A 和/或 B + 开/关思考",
+      "点「发流式」→ 每个勾选的协议各发一次 POST /api/stream",
+      "第一帧 meta：官方怎么开/关 + 这次请求真正带上的字段",
+      "随后 thinking / content 增量；thinking-map 写实测 sources（独立字段还是嵌 think 标记）",
+    ];
+
+    function applyEvent(side, ev) {
+      var next = Object.assign({}, side, {
+        frames: (side.frames || []).concat([ev]),
+        thinkingSources: (side.thinkingSources || []).slice(),
+      });
+      if (ev.type === "meta") {
+        next.sdk = ev.sdk;
+        next.method = ev.method;
+        next.model = ev.model;
+        next.request = ev.request;
+        next.thinkingExplain = ev.thinkingExplain;
+        next.switchSnippet = ev.switchSnippet;
+        next.skipped = Boolean(ev.skipped);
+        next.skipReason = ev.skipReason || "";
+      } else if (ev.type === "thinking") {
+        next.thinking = (side.thinking || "") + (ev.text || "");
+        if (ev.source && next.thinkingSources.indexOf(ev.source) === -1) next.thinkingSources.push(ev.source);
+      } else if (ev.type === "content") {
+        next.content = (side.content || "") + (ev.text || "");
+      } else if (ev.type === "thinking-map") {
+        next.thinkingSources = ev.sources || next.thinkingSources;
+        next.returnShape = ev.returnShape || next.returnShape;
+        next.skipped = Boolean(ev.skipped) || next.skipped;
+      } else if (ev.type === "error") {
+        next.error = ev.error || "上游错误";
+      }
+      return next;
+    }
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "SideColumn", "ErrorBanner", "PromptCard"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, SideColumn, ErrorBanner, PromptCard } = window.DemoUI;
+        const { consumeSse, triggerNetworkError } = window.DemoUtils;
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [provider, setProvider] = useState("");
+          const [wantA, setWantA] = useState(true);
+          const [wantB, setWantB] = useState(true);
+          const [thinkingOn, setThinkingOn] = useState(true);
+          const [message, setMessage] = useState(DEFAULT_MSG);
+          const [sideA, setSideA] = useState(EMPTY_SIDE);
+          const [sideB, setSideB] = useState(EMPTY_SIDE);
+          const [error, setError] = useState(null);
+
+          const providers = env.providers || [];
+          const selected = providers.find(function (p) { return p.id === provider; }) || providers.find(function (p) { return p.ready; });
+          const currentId = selected ? selected.id : provider;
+          const blocked = busy || !env.hasKey || !currentId || (!wantA && !wantB);
+
+          React.useEffect(function () {
+            if (!provider && providers.length) {
+              var ready = providers.find(function (p) { return p.ready; });
+              if (ready) setProvider(ready.id);
+            }
+          }, [providers, provider]);
+
+          async function runOne(protocol, setSide) {
+            setSide(EMPTY_SIDE);
+            var result = await consumeSse("/api/stream", {
+              provider: currentId,
+              protocol: protocol,
+              thinking_on: thinkingOn,
+              message: message,
+            }, function (ev) {
+              setSide(function (prev) { return applyEvent(prev, ev); });
+            });
+            return result;
+          }
+
+          async function run() {
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              var jobs = [];
+              if (wantA) jobs.push(runOne("A", setSideA));
+              if (wantB) jobs.push(runOne("B", setSideB));
+              var results = await Promise.all(jobs);
+              var httpFail = results.find(function (r) { return !r.ok; });
+              if (httpFail) {
+                setError({ title: "请求失败", detail: httpFail.error, httpStatus: httpFail.httpStatus });
+                setStatus("error");
+                return;
+              }
+              var streamFail = results.find(function (r) { return r.streamError; });
+              if (streamFail) {
+                setError({ title: "流中错误", detail: streamFail.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function pingNet() {
+            setStatus("loading");
+            try {
+              await triggerNetworkError();
+            } catch (e) {
+              setError({ title: "网络错误（故意）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            }
+          }
+
+          var selectedModel = selected
+            ? (wantA && wantB ? "A " + (selected.modelA || "?") + " / B " + (selected.modelB || "?") : wantA ? selected.modelA : selected.modelB)
+            : env.model;
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">流式对照</h1>
+                <StatusPill status={status} />
+              </header>
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="一家提供商、同一句 prompt，并排看协议 A/B 这一轮思考从哪回来。官方表是计划，sources 是实测。"
+                  steps={INTRO_STEPS}
+                />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {!env.hasKey && <p className="text-xs text-red-600">四家都没 Key，主按钮已禁用。在 apps/.env 配任意一家分组即可。</p>}
+                  <div className="flex flex-wrap gap-2">
+                    {providers.map(function (p) {
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={busy || !p.ready}
+                          className={
+                            "text-xs px-2 py-1 rounded border disabled:opacity-50 " +
+                            (currentId === p.id ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 bg-white")
+                          }
+                          onClick={function () { setProvider(p.id); }}
+                        >
+                          {p.label} {p.ready ? "✅" : "❌"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500">点提供商只切换要打的那一家，不会发请求。灰色 = 没 Key。</p>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <label className="flex items-center gap-1">
+                      <input type="checkbox" checked={wantA} disabled={busy} onChange={function (e) { setWantA(e.target.checked); }} />
+                      协议 A
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input type="checkbox" checked={wantB} disabled={busy} onChange={function (e) { setWantB(e.target.checked); }} />
+                      协议 B
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input type="checkbox" checked={thinkingOn} disabled={busy} onChange={function (e) { setThinkingOn(e.target.checked); }} />
+                      开思考
+                    </label>
+                  </div>
+                  <label className="block text-sm">
+                    问题
+                    <textarea className="mt-1 w-full border rounded p-2 text-sm min-h-[72px]" value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={run}>
+                      发流式对照
+                    </button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm text-red-700 disabled:opacity-50" disabled={busy} onClick={function () { setMessage(""); run(); }}>
+                      空输入（看 400）
+                    </button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={pingNet}>
+                      故意网络错误
+                    </button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!sideA.model && !sideB.model && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。跑完后每列会写「官方怎么开」和「这次实测从哪回来」。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  <PromptCard label="用户输入" value={message || "（空）"} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {wantA && <SideColumn title="协议 A" side={sideA} />}
+                    {wantB && <SideColumn title="协议 B" side={sideB} />}
+                  </div>
+                </section>
+              </main>
+              <EnvFooter env={env} selectedProvider={selected ? selected.label : undefined} selectedModel={selectedModel} />
+            </div>
+          );
+        }
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

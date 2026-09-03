@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一次性对照 · Streaming / SSE</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：流式 vs 一次性，差别在 TTFT。总耗时故意对齐成 2.2s，只看第一帧何时到达。
+     */
+    const { useState } = React;
+
+    const INTRO_STEPS = [
+      "点「对照跑一次」→ 同时打 GET /api/stream 和 GET /api/blocking",
+      "流式：第一帧立刻上屏，TTFT 很小；后面每 200ms 补字，总耗时约 2.2s",
+      "一次性：服务端攒齐同样 2.2s 才返回整句，所以 TTFT = 总耗时",
+      "也可以只打一次性：绿卡片会空白等 2.2s 再一次出现整句",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "AnswerCard", "TimingBar", "ErrorBanner", "CompareBar"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, AnswerCard, TimingBar, ErrorBanner, CompareBar } = window.DemoUI;
+        const { consumeSse, fetchBlocking, fetchHttpError, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [ran, setRan] = useState(false);
+          const [streamText, setStreamText] = useState("");
+          const [streamStreaming, setStreamStreaming] = useState(false);
+          const [streamTtft, setStreamTtft] = useState(null);
+          const [streamTotal, setStreamTotal] = useState(null);
+          const [blockText, setBlockText] = useState("");
+          const [blockTtft, setBlockTtft] = useState(null);
+          const [blockTotal, setBlockTotal] = useState(null);
+          const [error, setError] = useState(null);
+
+          function resetOutput() {
+            setError(null);
+            setRan(true);
+            setStreamText("");
+            setStreamStreaming(false);
+            setStreamTtft(null);
+            setStreamTotal(null);
+            setBlockText("");
+            setBlockTtft(null);
+            setBlockTotal(null);
+          }
+
+          async function runCompare() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            resetOutput();
+            setStreamStreaming(true);
+            try {
+              const pair = await Promise.all([
+                consumeSse("/api/stream", {
+                  onDelta: function (_delta, full) { setStreamText(full); },
+                }),
+                fetchBlocking(),
+              ]);
+              setStreamStreaming(false);
+              const streamRes = pair[0];
+              const blockRes = pair[1];
+              if (!streamRes.ok) {
+                setError({ title: "模拟流被拒绝", detail: streamRes.error, httpStatus: streamRes.httpStatus });
+                setStatus("error");
+                return;
+              }
+              if (!blockRes.ok) {
+                setError({ title: "一次性被拒绝", detail: blockRes.error, httpStatus: blockRes.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setStreamTtft(streamRes.firstFrameMs);
+              setStreamTotal(streamRes.totalMs);
+              setBlockText(blockRes.text);
+              setBlockTtft(blockRes.totalMs);
+              setBlockTotal(blockRes.totalMs);
+              setStatus("ok");
+            } catch (e) {
+              setStreamStreaming(false);
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function runBlockingOnly() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            resetOutput();
+            try {
+              const blockRes = await fetchBlocking();
+              if (!blockRes.ok) {
+                setError({ title: "一次性被拒绝", detail: blockRes.error, httpStatus: blockRes.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setBlockText(blockRes.text);
+              setBlockTtft(blockRes.totalMs);
+              setBlockTotal(blockRes.totalMs);
+              setStatus("ok");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function run400() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const result = await fetchHttpError("/api/blocking");
+              setError({ title: "故意 400（query fail=1）", detail: result.error, httpStatus: result.httpStatus });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function runNetwork() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              await triggerNetworkError();
+              setError({ title: "网络错误（fetch 没发出去）", detail: "请求打到了没人听的端口", httpStatus: null });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">一次性对照</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="同样 11 个字符、同样 2.2s 总耗时：流式第一帧就能上屏，一次性必须等完全部。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-xs text-gray-500">
+                    「对照跑一次」会同时打两条接口。期望：左边很快出第一个字，右边空白等到结束才整句出现。不需要 Key。
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runCompare}>对照跑一次</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runBlockingOnly}>只打一次性</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={run400}>故意 400</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runNetwork}>模拟网络失败</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!ran && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点对照后，这里并排出现流式打字机和一次性整句，以及 TTFT 数字。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {ran && <PromptCard label="对照请求" value="GET /api/stream  +  GET /api/blocking（同一份 TOKENS）" />}
+                  {ran && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <AnswerCard title="流式（delta.content 累加）" text={streamText} streaming={streamStreaming} />
+                        <TimingBar ttftMs={streamTtft} totalMs={streamTotal} />
+                      </div>
+                      <div className="space-y-2">
+                        <AnswerCard title="一次性（攒齐再返）" text={blockText} streaming={false} />
+                        <TimingBar ttftMs={blockTtft} totalMs={blockTotal} />
+                      </div>
+                    </div>
+                  )}
+                  {ran && (
+                    <CompareBar
+                      streamTtft={streamTtft}
+                      streamTotal={streamTotal}
+                      blockTtft={blockTtft}
+                      blockTotal={blockTotal}
+                    />
+                  )}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

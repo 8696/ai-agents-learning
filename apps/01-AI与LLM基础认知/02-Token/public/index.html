@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：计费按 Token 不按字。本页不 encode，只指路。
+     */
+    const { useState } = React;
+
+    const SCENES = [
+      {
+        href: "/pages/compare.html",
+        title: "中英对照",
+        desc: "同一句意思，英文 vs 中文的字符数 / Token 数并排。期望中文更碎。",
+      },
+      {
+        href: "/pages/encode.html",
+        title: "自定义文本",
+        desc: "自己贴一段，看 encode 切出几个 id。空串会 400。",
+      },
+    ];
+
+    const INTRO_STEPS = [
+      "GET /health 带回对照样本和词表名，页面不写死那两句话",
+      "对照页：POST /api/compare，服务端用 gpt-tokenizer encode()（cl100k）",
+      "自定义页：POST /api/encode { text }，返回字符数、Token 数、前 5 个 id",
+      "本条不调 LLM，缺 Key 也能点按钮",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo } = window.DemoUI;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+
+          React.useEffect(function () {
+            if (envError) setStatus("error");
+            else if (env.port) setStatus("ok");
+          }, [env, envError]);
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">Token</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="Token 是词表里的一个 id，计费按 Token 数，不按字、不按词。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`浏览器 → POST /api/encode 或 /api/compare
+  → gpt-tokenizer encode()（cl100k）
+  → { charCount, tokenCount, previewIds }
+同一句人话，中文往往切得更碎 → 输入更贵。`}
+                    </pre>
+                  }
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  {env.vocab && <p className="text-xs text-gray-500">词表 {env.vocab}</p>}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {SCENES.map(function (s) {
+                      return (
+                        <a key={s.href} href={s.href} className="border border-gray-300 hover:border-blue-500 rounded p-3">
+                          <div className="font-semibold text-sm">{s.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">{s.desc}</div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] text-sm text-gray-600">
+                  {envError && <p className="text-red-700">{envError}</p>}
+                  <p>本页不 encode。进对照页才能看见「中文更碎」那组数字。</p>
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>

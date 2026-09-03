@@ -3,593 +3,146 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>四家思考方言 · 协议 A vs B</title>
+  <title>思考方言 · 总览</title>
 
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
     integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
     crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap）。
-   注：React 19 移除了 UMD bundle 只发 ESM；§5.3.4 用 React 18 UMD。 -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone **锁定 7.26.4**。
-   8.x 默认 preset-react 是 automatic runtime（输出 import { jsx } from "react/jsx-runtime"），
-   与本规则"完全 ESM 禁用"冲突。7.26.4 默认是 classic runtime（输出 React.createElement）。
-   不要在 script type="text/babel" 块上加 data-presets / data-plugins——Babel 默认行为即可。 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script src="/utils/sse-client.js"></script>
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/dialect-table.js"></script>
+
   <script type="text/babel">
+    /**
+     * 本页教学点：先看官方方言表（怎么开、怎么关、思考回哪个字段），再去流式页实测。
+     * 本页不调模型。表来自 GET /health 的 providers[].dialect。
+     */
     const { useState, useEffect } = React;
 
-    function emptySide() {
-      return {
-        sdk: "",
-        method: "",
-        model: "",
-        baseURL: "",
-        thinking: "",
-        content: "",
-        request: null,
-        frames: [],
-        error: "",
-        thinkingExplain: null,
-        thinkingSources: [],
-        returnShape: "",
-        switchSnippet: null,
-        skipped: false,
-        skipReason: "",
-      };
-    }
+    const INTRO_STEPS = [
+      "页面加载 → GET /health（四家是否就绪 + 官方方言卡片，不调模型）",
+      "表里每一格是文档口径：开哪个字段、关哪个字段、思考应出现在独立字段还是正文",
+      "国内站实测可能和文档不一致（例如 MiniMax 协议 A 仍可能把思考嵌进 content）——以流式页「这次实测」为准",
+      "点「流式对照」：勾选提供商 + 协议 A/B + 开/关思考，才会真正打模型",
+    ];
 
-    function emptyProviderTurn() {
-      return { a: emptySide(), b: emptySide() };
-    }
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "DialectMatrix"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, DialectMatrix } = window.DemoUI;
 
-    const SOURCE_LABEL = {
-      reasoning_details: "独立字段 · choices[0].delta.reasoning_details[].text",
-      reasoning_content: "独立字段 · choices[0].delta.reasoning_content",
-      content_think_tag: "嵌在正文 · choices[0].delta.content 里的 think 标记",
-      "delta.thinking": "独立字段 · content_block_delta.delta.thinking",
-    };
+        function App() {
+          // env：GET /health 的 provider/model/hasKey/providers，喂给页脚和方言表
+          const { env, envError } = useEnvInfo();
+          // status：#status-pill 四态。本页 happy path = /health 拉成功
+          const [status, setStatus] = useState("idle");
+          // error：/health 失败（服务没起）时的页面级红字
+          const [error, setError] = useState("");
 
-    const SHAPE_LABEL = {
-      separate_field: "单独字段（不在正文 content/text 里）",
-      in_content: "嵌在正文里（用 think 标记包住）",
-      both: "这一轮两种都出现了",
-      none: "这一轮没有收到思考增量",
-    };
-
-    const WHERE_LABEL = {
-      separate_field: "单独字段",
-      in_content: "嵌在正文",
-      separate_or_in_content: "可拆可嵌",
-      none: "无思考",
-    };
-
-    function StatusPill({ status }) {
-      const map = {
-        idle: { emoji: "⏸", text: "待连接", cls: "bg-gray-200" },
-        loading: { emoji: "🔄", text: "请求中", cls: "bg-blue-100" },
-        ok: { emoji: "✅", text: "完成", cls: "bg-green-100" },
-        error: { emoji: "❌", text: "错误", cls: "bg-red-100" },
-      };
-      const s = map[status] || map.idle;
-      return (
-        <span id="status-pill" className={`text-xs px-2 py-1 rounded ${s.cls}`}>
-          {s.emoji} {s.text}
-        </span>
-      );
-    }
-
-    function StreamArea({ title, text, hint, tone }) {
-      const box = tone === "think"
-        ? "bg-amber-50 border-amber-200 text-amber-950 italic"
-        : "bg-white border-gray-200";
-      return (
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium">{title}</h3>
-          <pre className={`text-sm border rounded p-3 min-h-[88px] whitespace-pre-wrap break-words ${box}`}>
-            {text || hint}
-          </pre>
-        </div>
-      );
-    }
-
-    function JsonBlock({ title, value }) {
-      const text = value === null || value === undefined
-        ? "（空）"
-        : typeof value === "string"
-          ? value
-          : JSON.stringify(value, null, 2);
-      return (
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium">{title}</h3>
-          <pre className="text-xs bg-gray-50 border rounded p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all">
-            {text}
-          </pre>
-        </div>
-      );
-    }
-
-    function DialectMatrix({ providers }) {
-      if (!providers.length) {
-        return <p className="text-sm text-gray-500">还没读到 /health，方言表稍后出现。</p>;
-      }
-      return (
-        <div className="overflow-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="bg-gray-100 text-left">
-                <th className="border p-2">模型</th>
-                <th className="border p-2">协议</th>
-                <th className="border p-2">默认</th>
-                <th className="border p-2">怎么开</th>
-                <th className="border p-2">怎么关</th>
-                <th className="border p-2">回哪</th>
-                <th className="border p-2">字段</th>
-              </tr>
-            </thead>
-            <tbody>
-              {providers.map((p) => (
-                ["a", "b"].map((proto) => {
-                  const d = p.dialect[proto];
-                  return (
-                    <tr key={p.id + proto} className={p.ready ? "" : "text-gray-400"}>
-                      <td className="border p-2 whitespace-nowrap">
-                        {p.label}
-                        <div className="text-gray-500">{proto === "a" ? p.modelA : p.modelB}</div>
-                      </td>
-                      <td className="border p-2">{proto === "a" ? "A · OpenAI" : "B · Anthropic"}</td>
-                      <td className="border p-2">{d.defaultOn ? "开" : "关"}</td>
-                      <td className="border p-2">{d.howOn}</td>
-                      <td className="border p-2">{d.howOff}</td>
-                      <td className="border p-2">{WHERE_LABEL[d.returnWhere] || d.returnWhere}</td>
-                      <td className="border p-2">{d.returnField}</td>
-                    </tr>
-                  );
-                })
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-
-    function ThinkingMap({ side }) {
-      const explain = side.thinkingExplain;
-      const sources = side.thinkingSources || [];
-      const shape = side.returnShape ? (SHAPE_LABEL[side.returnShape] || side.returnShape) : "还在收帧 / 尚未判定";
-      return (
-        <div className="space-y-2 border border-indigo-100 bg-indigo-50 rounded p-3">
-          <h3 className="text-sm font-medium">这一轮怎么开 · 从哪回来</h3>
-          {side.skipped ? (
-            <p className="text-sm text-amber-800">{side.skipReason || "按官方方言跳过了这次请求"}</p>
-          ) : null}
-          {explain ? (
-            <ul className="text-xs space-y-1">
-              <li><span className="text-gray-500">开：</span>{explain.howEnabled}</li>
-              <li><span className="text-gray-500">关：</span>{explain.howDisabled}</li>
-              <li><span className="text-gray-500">官方字段：</span>{explain.returnField}</li>
-              {explain.notes ? <li className="text-gray-600">{explain.notes}</li> : null}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500">发出请求后，这里会写开启方式和返回位置。</p>
-          )}
-          <JsonBlock title="这次请求里真正打开 / 关闭思考的字段" value={side.switchSnippet} />
-          {side.skipped ? null : (
-            <p className="text-sm">
-              <span className="text-xs text-gray-500 mr-2">这次实测</span>
-              {shape}
-            </p>
-          )}
-          {sources.length ? (
-            <ul className="text-xs list-disc pl-5 space-y-1">
-              {sources.map((s) => (
-                <li key={s}>{SOURCE_LABEL[s] || s}</li>
-              ))}
-            </ul>
-          ) : side.skipped ? null : (
-            <p className="text-xs text-gray-500">还没有思考增量。若正文里也没有 think 标记，就是上游没把思考拆出来。</p>
-          )}
-        </div>
-      );
-    }
-
-    function SideColumn({ title, side }) {
-      return (
-        <div className="space-y-3">
-          <h3 className="text-base font-semibold">{title}</h3>
-          {side.sdk ? (
-            <p className="text-xs text-gray-500">
-              {side.sdk} · {side.method} · {side.model}
-            </p>
-          ) : null}
-          {side.error ? (
-            <p className="text-sm text-red-600 whitespace-pre-wrap">{side.error}</p>
-          ) : null}
-          <ThinkingMap side={side} />
-          <StreamArea title="思考" text={side.thinking} hint="思考会流式写在这里" tone="think" />
-          <StreamArea title="正文" text={side.content} hint="回答会流式写在这里" tone="body" />
-          <JsonBlock title="原始请求" value={side.request} />
-          <JsonBlock title="原始响应帧" value={side.frames} />
-        </div>
-      );
-    }
-
-    function historyFor(turns, providerId, key) {
-      const out = [];
-      for (const turn of turns) {
-        out.push({ role: "user", content: turn.user });
-        const bucket = turn.byProvider[providerId];
-        const side = bucket && bucket[key];
-        if (side && (side.content || side.thinking)) {
-          out.push({
-            role: "assistant",
-            content: side.content || "",
-            thinking: side.thinking || "",
-          });
-        }
-      }
-      return out;
-    }
-
-    async function readSse(res, onEvent) {
-      if (!res.body) throw new Error("响应没有 body");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = buffer.indexOf("\n\n")) >= 0) {
-          const frame = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
-          const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
-          if (!dataLine) continue;
-          const payload = dataLine.slice(5).trim();
-          if (payload === "[DONE]") continue;
-          let obj;
-          try {
-            obj = JSON.parse(payload);
-          } catch {
-            continue;
-          }
-          onEvent(obj);
-        }
-      }
-    }
-
-    function App() {
-      const [status, setStatus] = useState("idle");
-      const [system, setSystem] = useState("你是严谨的助手。先想清楚，再给结论。");
-      const [message, setMessage] = useState("23 × 47 等于多少？先一步步想，再给出答案。");
-      const [thinkingOn, setThinkingOn] = useState(true);
-      const [reasoningSplit, setReasoningSplit] = useState(true);
-      const [error, setError] = useState("");
-      const [busy, setBusy] = useState(false);
-      const [turns, setTurns] = useState([]);
-      const [providers, setProviders] = useState([]);
-      const [selected, setSelected] = useState({});
-
-      useEffect(() => {
-        fetch("/health")
-          .then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            return r.json();
-          })
-          .then((data) => {
-            const list = data.providers || [];
-            setProviders(list);
-            const next = {};
-            list.forEach((p) => { next[p.id] = Boolean(p.ready); });
-            setSelected(next);
-            setStatus("idle");
-          })
-          .catch((e) => {
-            setStatus("error");
-            setError(e instanceof Error ? e.message : String(e));
-          });
-      }, []);
-
-      const patchLast = (providerId, key, updater) => {
-        setTurns((prev) => {
-          if (prev.length === 0) return prev;
-          const next = prev.slice();
-          const last = { ...next[next.length - 1], byProvider: { ...next[next.length - 1].byProvider } };
-          const bucket = { ...last.byProvider[providerId] };
-          bucket[key] = updater(bucket[key]);
-          last.byProvider[providerId] = bucket;
-          next[next.length - 1] = last;
-          return next;
-        });
-      };
-
-      const consume = async (providerId, protocol, messages, signal) => {
-        const key = protocol === "A" ? "a" : "b";
-        const res = await fetch("/api/stream", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: providerId,
-            protocol,
-            thinking_on: thinkingOn,
-            reasoning_split: reasoningSplit,
-            messages,
-            system: system.trim(),
-          }),
-          signal,
-        });
-        if (!res.ok) {
-          const payload = await res.json().catch(() => null);
-          throw new Error((payload && payload.error) || `HTTP ${res.status}`);
-        }
-        let localError = "";
-        await readSse(res, (obj) => {
-          if (obj.type === "error") localError = obj.error || "上游错误";
-          patchLast(providerId, key, (prev) => {
-            const next = { ...prev, frames: prev.frames };
-            if (obj.type === "meta") {
-              next.sdk = obj.sdk;
-              next.method = obj.method;
-              next.model = obj.model;
-              next.baseURL = obj.baseURL;
-              next.request = obj.request;
-              next.thinkingExplain = obj.thinkingExplain || null;
-              next.switchSnippet = obj.switchSnippet || null;
-              next.skipped = Boolean(obj.skipped);
-              next.skipReason = obj.skipReason || "";
-            } else if (obj.type === "thinking") {
-              next.thinking = prev.thinking + (obj.text || "");
-              if (obj.source && next.thinkingSources.indexOf(obj.source) === -1) {
-                next.thinkingSources = next.thinkingSources.concat([obj.source]);
-              }
-            } else if (obj.type === "thinking-map") {
-              next.thinkingSources = obj.sources || next.thinkingSources;
-              next.returnShape = obj.returnShape || "";
-            } else if (obj.type === "content") {
-              next.content = prev.content + (obj.text || "");
-            } else if (obj.type === "raw") {
-              next.frames = prev.frames.concat([obj.frame]);
-            } else if (obj.type === "error") {
-              next.error = obj.error || "上游错误";
+          useEffect(function () {
+            if (envError) {
+              setStatus("error");
+              setError(envError);
+              return;
             }
-            return next;
-          });
-        });
-        return localError;
-      };
-
-      const selectedReady = providers.filter((p) => p.ready && selected[p.id]);
-
-      const send = async () => {
-        const text = message.trim();
-        if (!text || busy) return;
-        if (!selectedReady.length) {
-          setError("请至少勾选一家已配置 Key 的模型");
-          setStatus("error");
-          return;
-        }
-        setBusy(true);
-        setStatus("loading");
-        setError("");
-
-        const byProvider = {};
-        selectedReady.forEach((p) => { byProvider[p.id] = emptyProviderTurn(); });
-        setTurns((prev) => prev.concat([{ user: text, byProvider }]));
-        setMessage("");
-
-        const ac = new AbortController();
-        const timer = setTimeout(() => ac.abort(), 180000);
-
-        try {
-          const jobs = [];
-          selectedReady.forEach((p) => {
-            const messagesA = historyFor(turns, p.id, "a").concat([{ role: "user", content: text }]);
-            const messagesB = historyFor(turns, p.id, "b").concat([{ role: "user", content: text }]);
-            jobs.push(consume(p.id, "A", messagesA, ac.signal));
-            jobs.push(consume(p.id, "B", messagesB, ac.signal));
-          });
-          const results = await Promise.allSettled(jobs);
-          const errs = [];
-          for (const r of results) {
-            if (r.status === "rejected") {
-              const e = r.reason;
-              errs.push(e && e.name === "AbortError" ? "请求超时（180s）或网络中断" : (e instanceof Error ? e.message : String(e)));
-            } else if (r.value) {
-              errs.push(r.value);
+            if (env.providers && env.providers.length) {
+              setStatus("ok");
+              setError("");
             }
-          }
-          if (errs.length) {
-            setError(errs.join(" · "));
-            setStatus("error");
-          } else {
-            setStatus("ok");
-          }
-        } catch (e) {
-          const msg = e && e.name === "AbortError"
-            ? "请求超时（180s）或网络中断"
-            : (e instanceof Error ? e.message : String(e));
-          setError(msg);
-          setStatus("error");
-        } finally {
-          clearTimeout(timer);
-          setBusy(false);
-        }
-      };
+          }, [env, envError]);
 
-      const resetChat = () => {
-        if (busy) return;
-        setTurns([]);
-        setError("");
-        setStatus("idle");
-        setMessage("23 × 47 等于多少？先一步步想，再给出答案。");
-      };
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">02 · 05 · 思考方言 · 总览</h1>
+                <StatusPill status={status} />
+              </header>
 
-      const toggleProvider = (id, ready) => {
-        if (!ready || busy || turns.length > 0) return;
-        setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
-      };
-
-      return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header
-            id="page-header"
-            className="border-b p-4 flex items-center justify-between bg-white"
-          >
-            <h1 id="page-title" className="text-xl font-semibold">
-              四家思考方言 · 协议 A vs B
-            </h1>
-            <StatusPill status={status} />
-          </header>
-
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <p className="text-sm text-gray-500">
-                不再写死 MiniMax 那一套 extra_body。下面先是四家官方怎么开、怎么关、思考回哪个字段；点发送后按你勾选的模型真实打协议 A 和 B。
-                智谱 GLM-5.3 不能关思考；DeepSeek 协议 B 官方没有开关（要关走协议 A）；千问用 enable_thinking / thinking.enabled。
-                顶层 LLM_PROVIDER 不用改，各家用自己分组里的模型 id。
-              </p>
-              <div className="text-sm border rounded p-3 bg-gray-50 space-y-2">
-                <p className="font-medium">官方方言（开思考、拆字段时的默认形态；模型 id 来自各家分组，不跟顶层 LLM_PROVIDER）</p>
-                <DialectMatrix providers={providers} />
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm">
-                {providers.map((p) => (
-                  <label key={p.id} className={`border rounded px-3 py-2 ${p.ready ? "" : "opacity-50"}`}>
-                    <input
-                      className="mr-2"
-                      type="checkbox"
-                      checked={Boolean(selected[p.id])}
-                      disabled={!p.ready || busy || turns.length > 0}
-                      onChange={() => toggleProvider(p.id, p.ready)}
-                    />
-                    {p.label} · {p.modelA || "未配置"}
-                    {p.ready ? "" : "（无 Key）"}
-                  </label>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="thinking"
-                    checked={thinkingOn}
-                    disabled={busy}
-                    onChange={() => setThinkingOn(true)}
-                  />
-                  开思考
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="thinking"
-                    checked={!thinkingOn}
-                    disabled={busy}
-                    onChange={() => setThinkingOn(false)}
-                  />
-                  关思考
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={reasoningSplit}
-                    disabled={busy || !thinkingOn}
-                    onChange={(e) => setReasoningSplit(e.target.checked)}
-                  />
-                  MiniMax 协议 A · reasoning_split（思考拆到独立字段）
-                </label>
-              </div>
-              {!thinkingOn ? (
-                <p className="text-xs text-amber-800">
-                  关思考时：MiniMax A/B、DeepSeek 协议 A、千问 A/B 会按官方字段关；智谱两列、DeepSeek 协议 B 按官方跳过，不发会失败的请求。
-                </p>
-              ) : null}
-              <label className="block text-sm">
-                System
-                <textarea
-                  className="mt-1 w-full border rounded p-2 text-sm"
-                  rows={2}
-                  value={system}
-                  disabled={busy || turns.length > 0}
-                  onChange={(e) => setSystem(e.target.value)}
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="四家提供商 × 协议 A/B 的官方思考方言：怎么开、怎么关、思考回哪个字段。本页不调模型。"
+                  steps={INTRO_STEPS}
+                  extra={
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
+{`全局数据流
+  ① GET /health → 官方方言表（本页）
+  ② 流式页勾选提供商 + 协议 A/B + 开/关思考
+  ③ POST /api/stream { provider, protocol, thinking_on, messages }
+  ④ route 按 protocol 分叉：A → openai 流 / B → anthropic 流
+  ⑤ SSE：meta（这次开关字段）+ thinking/content 增量 + 实测 sources
+  ⑥ 页面按轮、按模型、按协议把思考区和正文拆开`}
+                    </pre>
+                  }
                 />
-              </label>
-              <label className="block text-sm">
-                {turns.length ? "追问" : "第一句"}
-                <textarea
-                  className="mt-1 w-full border rounded p-2 text-sm"
-                  rows={3}
-                  value={message}
-                  disabled={busy}
-                  onChange={(e) => setMessage(e.target.value)}
-                />
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded bg-gray-900 text-white text-sm disabled:opacity-50"
-                  disabled={busy}
-                  onClick={send}
-                >
-                  {busy ? "请求中…" : (turns.length ? "按所选再追问 A 和 B" : "按所选同时打 A 和 B")}
-                </button>
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded border text-sm disabled:opacity-50"
-                  disabled={busy || turns.length === 0}
-                  onClick={resetChat}
-                >
-                  新开会话
-                </button>
-              </div>
-              {error ? <p className="text-sm text-red-600 whitespace-pre-wrap">{error}</p> : null}
-            </section>
 
-            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-6">
-              {turns.length === 0 ? (
-                <p className="text-sm text-gray-500">还没有对话。勾选模型后发出第一句，可以继续追问。</p>
-              ) : (
-                turns.map((turn, idx) => (
-                  <article key={idx} className="border rounded p-4 space-y-4">
-                    <p className="text-sm">
-                      <span className="text-xs text-gray-500 mr-2">第 {idx + 1} 轮 · User</span>
-                      {turn.user}
-                    </p>
-                    {providers.filter((p) => turn.byProvider[p.id]).map((p) => (
-                      <div key={p.id} className="space-y-3 border-t pt-3">
-                        <h2 className="text-sm font-semibold">{p.label} · {p.modelA}</h2>
-                        <div className="grid gap-6 md:grid-cols-2">
-                          <SideColumn title="协议 A · OpenAI 兼容" side={turn.byProvider[p.id].a} />
-                          <SideColumn title="协议 B · Anthropic 兼容" side={turn.byProvider[p.id].b} />
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <p className="text-sm text-gray-600">
+                    总览页不发起模型请求。方言表是文档口径；要看这一轮 HTTP 到底把思考放哪，去流式对照页。
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    点「流式对照」会发生什么：进入勾选页，按所选同时打协议 A 和/或 B。顶层 LLM_PROVIDER 不用改，各家用自己分组里的模型 id。
+                  </p>
+                  <a
+                    href="/pages/stream.html"
+                    className="inline-block px-4 py-2 rounded bg-blue-600 text-white text-sm"
+                  >
+                    去流式对照（会调模型）
+                  </a>
+                </section>
+
+                {(error || envError) && (
+                  <div className="bg-red-50 border border-red-300 rounded p-3 text-sm text-red-700">
+                    {error || envError}
+                  </div>
+                )}
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+                  <p className="text-sm text-gray-500">
+                    {env.providers && env.providers.length
+                      ? "下面是四家官方怎么开、怎么关、思考回哪个字段。灰色行 = 这台机器没配该家 Key，表仍能看，流式页跑不了这一列。"
+                      : "正在读取 /health…（若长时间空白，看服务是否已启动）"}
+                  </p>
+                  <DialectMatrix providers={env.providers || []} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
+                    {(env.providers || []).map(function (p) {
+                      return (
+                        <div
+                          key={p.id}
+                          className={
+                            "border rounded p-2 " +
+                            (p.ready ? "border-green-300 bg-green-50" : "border-gray-300 bg-white")
+                          }
+                        >
+                          <span className="font-semibold">{p.label}</span>
+                          {" · "}
+                          {p.ready ? "Key ✅ 可跑" : "Key ❌ 只能看表"}
+                          <div className="text-gray-500 mt-1">
+                            A {p.modelA || "未配置"} / B {p.modelB || "未配置"}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </article>
-                ))
-              )}
-            </section>
-          </main>
+                      );
+                    })}
+                  </div>
+                </section>
+              </main>
 
-          <footer
-            id="page-footer"
-            className="border-t p-2 text-xs text-gray-500 text-center"
-          >
-            端口 50205 · 协议 A + B · 模型随 MiniMax / 智谱 / DeepSeek / 千问 分组
-          </footer>
-        </div>
-      );
-    }
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
   </script>
 </body>
 </html>

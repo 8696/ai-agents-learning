@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>真实模型 · Streaming / SSE</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script src="/utils/sse-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/stream-cards.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点：原样转发 OpenAI chunk；每帧可能含多个 token；token 数看 usage.completion_tokens。
+     */
+    const { useState } = React;
+
+    const DEFAULT_PROMPT = "用一句话介绍你自己，30 字以内。";
+
+    const INTRO_STEPS = [
+      "点「开始真实调用」→ POST /api/real { prompt }（也可以 GET，用同一句默认问题）",
+      "服务端 stream:true + include_usage，把每个 chunk JSON.parse(JSON.stringify) 后原样写成 SSE",
+      "绿卡片拼的是 delta.content；下面每张卡是原始帧（含 id / model / finish_reason / usage）",
+      "模拟版每帧 1 字符是教学简化；这里每帧可能含多个 token。token 数以最后帧 usage 为准",
+    ];
+
+    window.DemoUtils.waitDemoUI(
+      ["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "PromptCard", "AnswerCard", "TimingBar", "FrameCard", "ErrorBanner"],
+      function () {
+        const { PageNav, StatusPill, PageIntro, EnvFooter, useEnvInfo, PromptCard, AnswerCard, TimingBar, FrameCard, ErrorBanner } = window.DemoUI;
+        const { consumeSse, triggerNetworkError } = window.DemoUtils;
+
+        function App() {
+          const { env, envError } = useEnvInfo();
+          const [status, setStatus] = useState("idle");
+          const [busy, setBusy] = useState(false);
+          const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+          const [lastPrompt, setLastPrompt] = useState("");
+          const [content, setContent] = useState("");
+          const [streaming, setStreaming] = useState(false);
+          const [frames, setFrames] = useState([]);
+          const [usage, setUsage] = useState(null);
+          const [ttftMs, setTtftMs] = useState(null);
+          const [totalMs, setTotalMs] = useState(null);
+          const [doneSeen, setDoneSeen] = useState(false);
+          const [error, setError] = useState(null);
+
+          const blocked = busy || !env.hasKey;
+
+          async function runReal() {
+            const p = prompt.trim();
+            if (!p || blocked) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            setLastPrompt(p);
+            setContent("");
+            setFrames([]);
+            setUsage(null);
+            setTtftMs(null);
+            setTotalMs(null);
+            setDoneSeen(false);
+            setStreaming(true);
+            try {
+              const result = await consumeSse("/api/real", {
+                onDelta: function (_delta, full) { setContent(full); },
+                onFrame: function (frame) {
+                  setFrames(function (prev) { return prev.concat([frame]); });
+                },
+              }, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: p }),
+              });
+              setStreaming(false);
+              if (!result.ok) {
+                setError({ title: "请求被拒绝", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setUsage(result.usage);
+              setTtftMs(result.firstFrameMs);
+              setTotalMs(result.totalMs);
+              setDoneSeen(result.doneSeen);
+              if (result.streamError) {
+                setError({ title: "流中途失败（响应头已是 200，只能靠错误帧）", detail: result.streamError, httpStatus: 200 });
+                setStatus("error");
+                return;
+              }
+              setStatus("ok");
+            } catch (e) {
+              setStreaming(false);
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function runEmptyPrompt() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              const result = await consumeSse("/api/real", {}, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: "" }),
+              });
+              if (!result.ok) {
+                setError({ title: "故意 400（空 prompt）", detail: result.error, httpStatus: result.httpStatus });
+                setStatus("error");
+                return;
+              }
+              setError({ title: "未预期", detail: "空 prompt 应当 400", httpStatus: result.httpStatus });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          async function runNetwork() {
+            if (busy) return;
+            setBusy(true);
+            setStatus("loading");
+            setError(null);
+            try {
+              await triggerNetworkError();
+              setError({ title: "网络错误（fetch 没发出去）", detail: "请求打到了没人听的端口", httpStatus: null });
+              setStatus("error");
+            } catch (e) {
+              setError({ title: "网络错误（fetch 没发出去）", detail: e.message, httpStatus: null });
+              setStatus("error");
+            } finally {
+              setBusy(false);
+            }
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+              <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+                <h1 id="page-title" className="text-xl font-semibold">真实模型</h1>
+                <StatusPill status={status} />
+              </header>
+
+              <main id="page-main" className="container mx-auto p-4 space-y-4">
+                <PageIntro
+                  summary="原样转发上游 chunk。对照模拟页：这里每帧可能含多个 token，token 数看 usage 而不是数帧。"
+                  steps={INTRO_STEPS}
+                />
+
+                <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                  <PageNav />
+                  <label className="block text-sm text-gray-700">
+                    prompt
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      点发送会 POST /api/real。期望绿卡片逐字变长，下面摊开原始帧。Key ❌ 时主按钮会锁住。
+                    </span>
+                    <textarea
+                      className="mt-1 w-full border rounded p-2 text-sm"
+                      rows={2}
+                      value={prompt}
+                      onChange={function (e) { setPrompt(e.target.value); }}
+                      disabled={busy}
+                    />
+                  </label>
+                  {!env.hasKey && env.port && (
+                    <p className="text-xs text-red-600">Key ❌：先在 apps/.env 配当前家的 API Key 再重启。空 prompt / 网络失败按钮仍可点。</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={runReal}>开始真实调用</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runEmptyPrompt}>故意发空 prompt（期望 HTTP 400）</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runNetwork}>模拟网络失败</button>
+                  </div>
+                  {envError && <p className="text-sm text-red-700">{envError}</p>}
+                </section>
+
+                <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                  {!lastPrompt && !error && (
+                    <p className="text-sm text-gray-500">还没跑过。点发送后，这里会出现 prompt、绿底正文、帧数 / token、以及每一帧原始 JSON。</p>
+                  )}
+                  {error && <ErrorBanner title={error.title} detail={error.detail} httpStatus={error.httpStatus} />}
+                  {lastPrompt && <PromptCard label="POST /api/real" value={"prompt: " + lastPrompt} />}
+                  {lastPrompt && <AnswerCard text={content} streaming={streaming} />}
+                  {lastPrompt && (
+                    <TimingBar ttftMs={ttftMs} totalMs={totalMs} frameCount={frames.length} usage={usage} doneSeen={doneSeen} />
+                  )}
+                  {lastPrompt && (
+                    <div className="text-sm bg-blue-50 border-l-4 border-blue-500 p-3">
+                      <b>对照结论：</b>
+                      模拟版每帧 1 字符（教学简化）；真实 LLM 每帧可能含 1～多个 token 的字符串（厂商 batching）。
+                      <code>delta.content</code> 是解码后字符串，与 token 不一一对应——token 数唯一信源是最后帧的 <code>usage.completion_tokens</code>。
+                    </div>
+                  )}
+                  {frames.map(function (f) {
+                    return <FrameCard key={f.index} frame={f} />;
+                  })}
+                </section>
+              </main>
+
+              <EnvFooter env={env} />
+            </div>
+          );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      },
+    );
+  </script>
+</body>
+</html>
