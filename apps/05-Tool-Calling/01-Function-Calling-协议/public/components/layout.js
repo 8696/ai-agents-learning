@@ -24,6 +24,7 @@
     { href: "/", label: "总览", match: "index" },
     { href: "/pages/run.html", label: "单 / 并行", match: "run" },
     { href: "/pages/serial.html", label: "串行依赖", match: "serial" },
+    { href: "/pages/realistic.html", label: "差旅助手", match: "realistic" },
     { href: "/pages/zod-error.html", label: "Zod repair", match: "zod-error" },
     { href: "/pages/tool-error.html", label: "工具失败", match: "tool-error" },
   ];
@@ -33,6 +34,7 @@
     if (p === "/" || p.endsWith("/index.html")) return "index";
     if (p.endsWith("/run.html")) return "run";
     if (p.endsWith("/serial.html")) return "serial";
+    if (p.endsWith("/realistic.html")) return "realistic";
     if (p.endsWith("/zod-error.html")) return "zod-error";
     if (p.endsWith("/tool-error.html")) return "tool-error";
     return "";

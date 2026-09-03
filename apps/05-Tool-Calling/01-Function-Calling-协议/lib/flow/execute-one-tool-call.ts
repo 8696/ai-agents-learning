@@ -16,10 +16,16 @@ export async function executeOneToolCall(
   const t0 = performance.now();
   const ms = () => Math.round(performance.now() - t0);
   const toolName = tc.function.name;
+  //  // 打 tc 完整 SDK 结构（含 id / type / function 全字段）—— 长度超 800 截前
+  const tcJson = JSON.stringify(tc);
+  console.log(
+    `  │     · ${toolName} 开始 · tc=${tcJson.length > 800 ? tcJson.slice(0, 800) + "…(截)" : tcJson}`,
+  );
 
   // ① 查表：模型可能幻觉出一个根本没注册的工具名，这里必须挡住
   const tool = registry.get(toolName);
   if (!tool) {
+    console.log(`  │     · ${toolName} ✗ 未知工具`);
     return buildToolResult({
       toolCallId: tc.id,
       toolName,
@@ -34,6 +40,9 @@ export async function executeOneToolCall(
   // ② arguments 是字符串，先 JSON.parse；模型偶尔会吐出截断或带反引号的伪 JSON
   const parsedJson = parseToolArgsJson(tc.function.arguments);
   if (!parsedJson.ok) {
+    console.log(
+      `  │     · ${toolName} ✗ JSON.parse 失败 · ${ms()}ms · err=${parsedJson.errorContent.slice(0, 120)}`,
+    );
     return buildToolResult({
       toolCallId: tc.id,
       toolName,
@@ -48,6 +57,9 @@ export async function executeOneToolCall(
   // ③ Zod：合法 JSON ≠ 合法参数。校验必须在 handler 之前，非法参数一律不打到真实服务
   const validated = validateToolArgs(tool.input, parsedJson.data);
   if (!validated.ok) {
+    console.log(
+      `  │     · ${toolName} ✗ Zod 校验失败 · ${ms()}ms · err=${validated.errorContent.slice(0, 120)}`,
+    );
     return buildToolResult({
       toolCallId: tc.id,
       toolName,
@@ -63,20 +75,26 @@ export async function executeOneToolCall(
   //    不 rethrow —— 一个工具超时不该让整轮对话 500
   try {
     const out = await tool.handler(validated.data);
+    const contentStr = JSON.stringify(out);
+    console.log(
+      `  │     · ${toolName} ✓ · ${ms()}ms · content=${contentStr.slice(0, 200)}${contentStr.length > 200 ? "…" : ""}`,
+    );
     return buildToolResult({
       toolCallId: tc.id,
       toolName,
-      content: JSON.stringify(out),
+      content: contentStr,
       parseOk: true,
       executeOk: true,
       rawArgs: parsedJson.rawArgs,
       durationMs: ms(),
     });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`  │     · ${toolName} ✗ 执行 throw · ${ms()}ms · err=${msg.slice(0, 120)}`);
     return buildToolResult({
       toolCallId: tc.id,
       toolName,
-      content: `执行失败: ${err instanceof Error ? err.message : String(err)}`,
+      content: `执行失败: ${msg}`,
       parseOk: true,
       executeOk: false,
       rawArgs: parsedJson.rawArgs,

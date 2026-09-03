@@ -20,9 +20,11 @@ import { fileURLToPath } from "node:url";
 import { logLlmConfig } from "../../llm.js";
 import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import "./lib/tools/tool-defs.js";
+import "./lib/tools/tool-defs-realistic.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountRunRoutes } from "./routes/run.js";
 import { mountRunSerialRoutes } from "./routes/run-serial.js";
+import { mountRunRealisticRoutes } from "./routes/run-realistic.js";
 import { mountSimulateZodErrorRoutes } from "./routes/simulate-zod-error.js";
 
 const app = new Koa();
@@ -36,6 +38,7 @@ app.use(bodyParser());
 mountHealthRoutes(router);
 mountRunRoutes(router);
 mountRunSerialRoutes(router);
+mountRunRealisticRoutes(router);
 mountSimulateZodErrorRoutes(router);
 
 // router 必须在 serve 前：否则静态中间件会先把 /api/* 当文件找并返回 404
@@ -48,16 +51,17 @@ app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
   console.log(
-    "──── 模块 05 · 01 Function Calling 协议 Demo（§5.3.8 分层拆分 · 仅协议 A）· 已启动 ────",
+    "──── 模块 05 · 01 Function Calling 协议 Demo（§5.3.8 分层拆分 · 协议 A · 9 个 Tool）· 已启动 ────",
   );
   console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  总览         /`);
   console.log(`  单 / 并行    /pages/run.html`);
   console.log(`  串行依赖     /pages/serial.html`);
+  console.log(`  差旅助手     /pages/realistic.html  ← 4-5 轮完整业务流（并行+串行混合）`);
   console.log(`  Zod repair   /pages/zod-error.html`);
   console.log(`  工具失败     /pages/tool-error.html`);
   console.log(`  GET  /health · GET /tools`);
-  console.log(`  POST /api/run · /api/run-serial · /api/simulate-zod-error`);
+  console.log(`  POST /api/run · /api/run-serial · /api/run-realistic · /api/simulate-zod-error`);
   logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
 });

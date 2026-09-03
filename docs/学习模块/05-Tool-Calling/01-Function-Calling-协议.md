@@ -4,11 +4,12 @@
 
 - **来源**：
   - 本对话主讲（`coach start` 详解 + 5 用例 HTTP Demo 实测，含协议 A vs B 字段差异 + 并行/串行 + Zod 修复闭环 + 工具执行失败回传）
+  - 本轮追加（2026-09-03）：⑥ 差旅助手 4-5 轮混合业务流（trip_weather / trip_exchange / trip_attractions / trip_flights / trip_hotels）+ z.coerce.number() 工程修法
   - 04 条已沉淀：[02-JSON-Mode-vs-Structured-Output.md](../04-Structured-Output/02-JSON-Mode-vs-Structured-Output.md)（协议 A/B 字段对齐 + Zod 单一来源）
   - 01 条已沉淀：[01-JSON-Schema.md](../04-Structured-Output/01-JSON-Schema.md)（Zod → JSON Schema 派生 + repair 闭环）
   - [OpenAI function calling guide](https://platform.openai.com/docs/guides/function-calling) · [Anthropic tool use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
 - **状态**：Demo 已落 / 沉淀已写（2026-09-03）· 待勾 ✅
-- **Demo**：`apps/05-Tool-Calling/01-Function-Calling-协议/`（HTTP，端口 `50501`，`yarn app:05-01-function-calling-protocol`）· 详见 §5.2 Demo 判断块
+- **Demo**：`apps/05-Tool-Calling/01-Function-Calling-协议/`（HTTP，端口 `50501`，`yarn app:05-01-function-calling-protocol`）· 9 个 Tool（calculator / weather / db / search + 5 个 trip_*），含 ⑥ 差旅助手 4-5 轮混合业务流；详见 §5.2 Demo 判断块
 
 ---
 
@@ -92,6 +93,57 @@ final.choices[0].message.content === "北京今天晴25°C；1 USD ≈ 7.25 CNY�
 | `tool_calls` / `tool_use` | 模型要继续调 | **循环**——执行 → 回灌 → 再调 |
 | `length` | token 不够被截断 | 增加 `max_tokens` / 分块 |
 | `content_filter` / `safety` | 安全拦截 | 告诉用户"无法回答"，**不要**当成功 |
+
+---
+
+## ⑥ 真实业务流 · 差旅助手（4-5 轮混合）
+
+> 这是 ①②③「3-轮以内」教学点的延伸：用**一个真实业务流**演示模型怎么把「并行 + 串行」自然混合。决定权在模型，不在代码。
+
+**场景**：用户说「我下周去东京 5 天，预算 1.5 万人民币，帮我出份行程单」——同时涉及查天气、汇率、景点、机票、酒店。模型怎么拆？
+
+### 预期流程（实际轮数由模型决定）
+
+```
+Round 1（并行）：trip_weather(东京) + trip_exchange(CNY,JPY) + trip_attractions(东京)
+   └─ 这 3 件事互相不依赖 → 一轮里并行，省 2 次往返
+Round 2（串行）：trip_hotels(东京, 5, 预算换算后)
+   └─ 要等 R1 的汇率换算预算，否则不知道 per_night 给多少 → 必须串行
+Round 3（并行 / 串行 看模型）：trip_flights(北京, 东京, ...)
+   └─ 看模型决定是否同时查酒店
+Round N（终态）：finish_reason=stop → final content = 行程单
+```
+
+### 实测数据（MiniMax-M3 · 协议 A）
+
+| Round | tool_call | finish_reason | 含义 |
+| ----- | --------- | ------------- | ---- |
+| R1 | **3**（并行） | `tool_calls` | trip_weather + trip_exchange + trip_attractions 同时跑 |
+| R2 | 1（串行） | `tool_calls` | 等 R1 的汇率才能算酒店预算 |
+| R3 | 1（串行） | `tool_calls` | 继续依赖 |
+| R4 | 1（串行） | `tool_calls` | 继续依赖 |
+| R5 | 0 | **`stop`** | 出最终行程单 |
+
+**totalRounds=5 · elapsedMs=23499**。对应教学点：
+
+| 看什么 | 在页面哪里 | 代表什么 |
+| ------ | ---------- | -------- |
+| totalRounds | 卡片右上 | 串行依赖的次数 |
+| 每轮 `· N 个 tool_call` | RoundCard 标题徽标 | 这一轮并行几件事 |
+| `finish_reason=tool_calls`（蓝）vs `stop`（绿）| RoundCard 标题徽标 | 继续 / 终止 |
+
+**为什么模型会自然产生 4-5 轮**——因为「先查后算」是真实业务的常态：拿到汇率才能换算预算、拿到预算才能选酒店档位、拿到所有项才能组装行程。**轮数不是模型慢，是业务有依赖**。
+
+### System Prompt 的隔离
+
+新 5 个 Tool 与旧 4 个 Tool 同时注册到 registry（共 9 个）。两端各用自己的 system prompt 引导：
+
+| 端点 | system prompt 引导 | 调用的 tool 子集 |
+| ---- | ------------------ | ---------------- |
+| `/api/run`、`/api/run-serial` | 「你可以使用工具（add / get_weather / lookup_user / search_wiki）」 | 旧 4 个 |
+| `/api/run-realistic` | 「能用的工具只有 5 个：trip_*；不要调用其他工具」 | 新 5 个 |
+
+→ System prompt 是工具子集的「菜单」，**不是装饰**——同一份 Registry，不同 system prompt 切出不同业务流。
 
 ---
 
@@ -274,6 +326,30 @@ export function register<P, R>(tool: Tool<P, R>) {
 }
 ```
 
+### 真实例子 · 差旅助手（5 轮混合）
+
+```text
+User: "我下周去东京 5 天，预算 1.5 万人民币，帮我出份行程单"
+  │
+  ▼ Round 1（并行 3 个 tool_call）
+  trip_weather(东京) → { city: "东京", temp_c: 22, condition: "晴" }
+  trip_exchange(CNY, JPY) → { base: "CNY", target: "JPY", rate: 21.0 }
+  trip_attractions(东京, top_n: 3) → { items: [浅草寺, 东京塔, 上野公园] }
+  │
+  ▼ Round 2（串行 1 个，等 R1 的汇率换算预算）
+  trip_hotels(东京, nights: 5, per_night_cny_budget: 15000/21/5 ≈ 143)
+  → 给出三档酒店 + total_cny
+  │
+  ▼ Round 3 / R4（串行 1 个，继续依赖）
+  trip_flights(北京, 东京, "2026-09-10") → 3 个航班选项
+  │
+  ▼ Round 5（stop）
+  model.content = "你的行程单：
+    Day1: 抵达东京，入住商务酒店..."
+```
+
+→ 整个 5 轮 = 1 次并行 + 3 次串行依赖 + 1 次终态。**不是循环出错，是业务有依赖**。
+
 ---
 
 ## 取舍
@@ -305,6 +381,7 @@ export function register<P, R>(tool: Tool<P, R>) {
 | 11 | **Zod 校验失败没回灌** | `safeParse` 失败时，把 `path.join(' + message)` 拼成 `tool_result` 回传——**这是 04 条沉淀的 repair 闭环** |
 | 12 | **Registry 里 name 重复** | `register()` 时检查 `registry.has(name)` → throw——本 demo `defineTool` 内已加 |
 | 13 | **handler 抛错后**没**让模型重试或换路径** | 把错误信息当 tool_result 回传 → 模型决定；本 demo ⑤ 实测模型**主动重试**了一次再 stop（千问行为） |
+| 14 | **模型把数字字段填字符串** —— 拿 `{"top_n": "3"}` 喂 Zod `z.number()` 直接 ✗ | `z.coerce.number().int().min(1).max(10).default(3)` —— `coerce` 内部 `Number(v)` 把字符串转数字；**这是真实的工程妥协**（模型偶尔会给 `"3"`），把它当教学点比"假装不会发生"更值 |
 
 ---
 
@@ -315,6 +392,9 @@ export function register<P, R>(tool: Tool<P, R>) {
 - **「错误回传 ≠ 抛异常终止」** → 强调 handler `throw` 不挂循环，包成 `tool_result`（含 `is_error: true`）回灌；本 demo ⑤ 实测模型主动重试
 - **「为什么 `Promise.all` 重要」** → 模型一次返回多个 tool_call 没数据依赖 → 必须并行；全 `for await` 串行延迟翻倍
 - **「tool_result 是给谁看的」** → 给模型，不是给用户；UI 只显示 `message.content`
+- **「串行 / 并行在 demo 里到底怎么看」** → 答在「完整一圈」：Round 1 多 tool_call = 并行；Round 数 > 1 = 串行依赖；看 RoundCard 标题的「· N 个 tool_call」徽标
+- **「Demo 再详细点，流程再多轮，举一个真实例子」** → 答在「⑥ 真实业务流 · 差旅助手」：5 轮混合 = R1 并行 3 个 + R2-R4 串行各 1 个 + R5 stop
+- **「trip_attractions 反复报 Zod 错」** → 模型把 `top_n` 填成字符串 `"3"`；修法 `z.coerce.number()`——见踩坑 #14
 
 ---
 
@@ -327,28 +407,35 @@ Demo 判断
   · 落点：apps/05-Tool-Calling/01-Function-Calling-协议/
   · 端口 50501（5{模块两位}{小节两位}）
   · 脚本 app:05-01-function-calling-protocol（沿用真实小节号 + 英文）
-- 包含 4 个 Tool（calculator / weather / search / database）：
+- 包含 9 个 Tool（旧 4 + 新 5 个 trip_*，对应 ⑥ 差旅助手）：
   · add：{ a: number, b: number } → { sum }
   · get_weather：{ city: string.min(1) } → { city, temp_c, condition }
   · lookup_user：{ user_id: string.regex(/^u\d+$/) } → { id, name, level, points }
     u999 故意 throw "数据库连接超时" → 演示工具执行失败回传
   · search_wiki：{ query: string.min(2) } → { title, summary }
-- 包含 3 个主端点 + 2 个辅助端点：
-  · POST /api/run             完整 Round 1 → Round 2 → 终止（单/并行自动适配）
-  · POST /api/run-serial      串行多轮（最多 5 轮，用 Round 2 拿到的 level 调 add）
-  · POST /api/simulate-zod-error  服务端绕过模型篡改 arguments → Zod ✗ → repair → Zod ✓
-  · GET /health  环境信息 + 注册表 tool 列表
-  · GET /tools   Registry 全貌（name + description + JSON Schema · Zod 派生）
-- 理由：5 用例覆盖完整一圈（①②③）+ 错误处理 ≥2 类（④ Zod 校验失败 + ⑤ 工具执行失败）
+  · trip_weather：{ city } → { city, temp_c, condition }（mock 东京/北京 两条）
+  · trip_exchange：{ base, target } → { base, target, rate }（mock CNY/JPY=21.0 等四对）
+  · trip_attractions：{ city, top_n } → { city, items }（top_n 用 z.coerce.number 接受字符串/数字，见踩坑 #14）
+  · trip_flights：{ from_city, to_city, date(YYYY-MM-DD) } → 3 个航班选项
+  · trip_hotels：{ city, nights, per_night_cny_budget } → 3 档酒店 + total_cny + fits_budget 标记
+- 包含 4 个主端点 + 2 个辅助端点：
+  · POST /api/run                  完整 Round 1 → Round 2 → 终止（单/并行自动适配）
+  · POST /api/run-serial           串行多轮（最多 5 轮，用 Round 2 拿到的 level 调 add）
+  · POST /api/run-realistic        差旅助手 4-5 轮混合业务流（trip_* 5 个工具，maxRounds=5）
+  · POST /api/simulate-zod-error   服务端绕过模型篡改 arguments → Zod ✗ → repair → Zod ✓
+  · GET  /health                   环境信息 + 注册表 tool 列表
+  · GET  /tools                    Registry 全貌（name + description + JSON Schema · Zod 派生）
+- 理由：5 用例覆盖完整一圈（①②③）+ 错误处理 ≥2 类（④ Zod 校验失败 + ⑤ 工具执行失败）+ ⑥ 4-5 轮混合业务流（演示并行/串行在真实场景下自然混合）
 - 错误传播：writeUpstreamError(ctx, err) helper，透传上游 HTTP 状态码 + upstreamStatus 字段（沿用 04 条踩坑 #15）
 - DeepSeek 兼容：N/A（本条只走协议 A 且未用到 strict / json_object 关键字；按需加 system "JSON" 关键字）
 - yarn typecheck：✅ 通过
-- 浏览器验证（千问 qwen3.8-max 实跑）：
-  · ① 单 tool 调用（北京天气）：Round 1 tool_calls.length=1 → get_weather("北京") → Zod ✓ → 执行 ✓ → Round 2 stop。终态："北京今天天气是**晴**，气温 **25°C**"（4236ms）
-  · ② 并行 tool 调用（北京天气 + 100+200）：Round 1 tool_calls.length=2 → get_weather + add 并行执行 → Round 2 stop。终态："晴25°C / 100+200=300"（5159ms）
-  · ③ 串行数据依赖（查 u001 → level+7）：Round 1 lookup_user → {level:3} → Round 2 add(3,7) → {sum:10} → Round 3 stop。"结果是 **10**"（7196ms）
-  · ④ Zod 校验失败 + repair：服务端篡改 a="not_a_number" → Zod ✗ "Expected number, received string" → Round 2 模型修复成 {a:5,b:3} → Round 3 真执行 → Round 4 stop。"5 + 3 = **8** 🎉"（7215ms · 全程 Zod ✗ → repair → Zod ✓ 闭环可见）
-  · ⑤ 工具执行失败（查 u999）：Round 1 lookup_user → throw → 执行失败 → 模型收到错误决定重试 → Round 2 再失败 → Round 3 stop。"两次尝试都失败，系统返回数据库连接超时"（8005ms · 演示 handler throw 不挂循环 + 模型主动重试智能行为）
+- 浏览器验证：
+  · ① 单 tool 调用（北京天气）·千问 qwen3.8-max 实跑：Round 1 tool_calls.length=1 → get_weather("北京") → Zod ✓ → 执行 ✓ → Round 2 stop。终态："北京今天天气是**晴**，气温 **25°C**"（4236ms）
+  · ② 并行 tool 调用（北京天气 + 100+200）·千问 qwen3.8-max：Round 1 tool_calls.length=2 → get_weather + add 并行执行 → Round 2 stop。终态："晴25°C / 100+200=300"（5159ms）
+  · ③ 串行数据依赖（查 u001 → level+7）·千问 qwen3.8-max：Round 1 lookup_user → {level:3} → Round 2 add(3,7) → {sum:10} → Round 3 stop。"结果是 **10**"（7196ms）
+  · ④ Zod 校验失败 + repair ·千问 qwen3.8-max：服务端篡改 a="not_a_number" → Zod ✗ "Expected number, received string" → Round 2 模型修复成 {a:5,b:3} → Round 3 真执行 → Round 4 stop。"5 + 3 = **8** 🎉"（7215ms · 全程 Zod ✗ → repair → Zod ✓ 闭环可见）
+  · ⑤ 工具执行失败（查 u999）·千问 qwen3.8-max：Round 1 lookup_user → throw → 执行失败 → 模型收到错误决定重试 → Round 2 再失败 → Round 3 stop。"两次尝试都失败，系统返回数据库连接超时"（8005ms · 演示 handler throw 不挂循环 + 模型主动重试智能行为）
+  · ⑥ 差旅助手 4-5 轮混合 ·MiniMax-M3 实跑：Round 1 并行 3 个 tool_call（trip_weather + trip_exchange + trip_attractions）→ Round 2/3/4 串行各 1 个（依赖 R1 的汇率/前置项）→ Round 5 finish_reason=stop → 行程单。"5 轮 · 23499ms"。模型完整经历了「并行 → 串行 → 串行 → 串行 → stop」4 步依赖链
 - 与 start 预告：一致
 ```
 
@@ -365,6 +452,7 @@ Demo 判断
 5. **错答**：把 `finish_reason="tool_calls"` 当 stop 截断会发生什么？把 tool_result 原样 echo 给用户会发生什么？把模型请求当成"已执行成功"上报会发生什么？
 6. **handler throw 没 catch**：整个调用链怎么挂？正确做法是 catch → 包成 `tool_result`（含 `is_error: true`）→ 让模型决定重试 / 换路径 / 报告用户。
 7. **自测问题（README）**：「Tool Call 完整数据流是什么？」——口述三段；「为什么"模型请求了"还不能直接执行？」——口述"请求 ≠ 执行 + Gateway 钩子位"。
+8. **差旅助手 5 轮混合**：点 `/pages/realistic.html` 跑"东京 5 天"，数 totalRounds = 5（串了 4 次依赖）、数 R1 的「· 3 个 tool_call」（并了 3 件事）、看 R5 的 `finish_reason=stop`（绿徽标）。能口述「为什么这么多轮 = 业务有先查后算的依赖」。
 
 ---
 

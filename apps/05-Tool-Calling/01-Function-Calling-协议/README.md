@@ -14,6 +14,7 @@ yarn app:05-01-function-calling-protocol
 # → http://127.0.0.1:50501/                     总览（Registry）
 # → http://127.0.0.1:50501/pages/run.html       ① 单 tool / ② 并行
 # → http://127.0.0.1:50501/pages/serial.html    ③ 串行数据依赖
+# → http://127.0.0.1:50501/pages/realistic.html ⑥ 差旅助手（4-5 轮混合业务流）
 # → http://127.0.0.1:50501/pages/zod-error.html ④ Zod repair
 # → http://127.0.0.1:50501/pages/tool-error.html ⑤ 工具执行失败
 ```
@@ -61,6 +62,7 @@ yarn 入口只有这一条。
 | GET | `/tools` | Registry 全貌 |
 | POST | `/api/run` | 单 / 并行 / 工具失败（max 4 轮） |
 | POST | `/api/run-serial` | 串行，最多 5 轮 |
+| POST | `/api/run-realistic` | 差旅助手 4-5 轮混合（并行+串行），用 trip_* 5 个工具 |
 | POST | `/api/simulate-zod-error` | 篡改 arguments → Zod repair |
 
 ## §5.3.2 六项
