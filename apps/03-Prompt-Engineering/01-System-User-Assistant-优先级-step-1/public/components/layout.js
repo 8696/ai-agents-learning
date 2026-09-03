@@ -120,7 +120,7 @@
     return (
       <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
         <span id="env-info">
-          端口 {env.port || 50301} · 对照 A/B · provider{" "}
+          端口 {env.port || 50011} · 对照 A/B · provider{" "}
           <span className="font-mono">{env.provider}</span> · modelA{" "}
           <span className="font-mono">{env.model}</span> · modelB{" "}
           <span className="font-mono">{env.modelB}</span> · Key{" "}

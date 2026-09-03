@@ -134,13 +134,13 @@
 
   /**
    * §5.3.9 页脚环境条：全站唯一权威位置，禁止在别处写死 provider / model。
-   * 端口兜底写 50203（本条 §5.3.3 算出的默认口），真实值仍以 /health 返回的为准。
+   * 端口兜底写 50008（本条 §5.3.3 算出的默认口），真实值仍以 /health 返回的为准。
    */
   function EnvFooter({ env, protocol }) {
     return (
       <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
         <span id="env-info">
-          端口 {env.port || 50203} · 协议 {protocol || "A"} · provider{" "}
+          端口 {env.port || 50008} · 协议 {protocol || "A"} · provider{" "}
           <span className="font-mono">{env.provider}</span> · model{" "}
           <span className="font-mono">{env.model}</span> · Key{" "}
           {env.hasKey ? "✅" : "❌（apps/.env 未配置该家 Key）"}

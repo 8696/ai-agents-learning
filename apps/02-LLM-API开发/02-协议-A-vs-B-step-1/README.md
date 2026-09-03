@@ -6,17 +6,17 @@
 
 ## 端口
 
-**50202**。可临时 `PORT=50999 yarn app:02-02-protocol-ab-step-1` 覆盖。脚本名不变。
+**50006**。可临时 `PORT=50999 yarn app:02-02-protocol-ab-step-1` 覆盖。脚本名不变。
 
 ## 浏览器访问
 
 ```bash
 cd apps
 yarn app:02-02-protocol-ab-step-1
-# → http://127.0.0.1:50202/                      总览（字段映射 ASCII + 导航）
-# → http://127.0.0.1:50202/pages/once.html       一次性：/api/compare + /api/think-compare
-# → http://127.0.0.1:50202/pages/stream-a.html   流式 A：/api/a-stream-raw（可兼 /api/a）
-# → http://127.0.0.1:50202/pages/stream-b.html   流式 B 有/无 thinking
+# → http://127.0.0.1:50006/                      总览（字段映射 ASCII + 导航）
+# → http://127.0.0.1:50006/pages/once.html       一次性：/api/compare + /api/think-compare
+# → http://127.0.0.1:50006/pages/stream-a.html   流式 A：/api/a-stream-raw（可兼 /api/a）
+# → http://127.0.0.1:50006/pages/stream-b.html   流式 B 有/无 thinking
 ```
 
 yarn 入口只有这一条。没 Key 时服务仍能起；页脚 `Key ❌`，场景页主按钮 disabled。

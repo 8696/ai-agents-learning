@@ -14,11 +14,11 @@ export const llm = getLlmOptional();
 /** 本 Demo 只跑协议 A（OpenAI Chat Completions）。 */
 export const PROTOCOL = "A" as const;
 
-// 端口口径 §5.3.3：5{模块两位}{小节两位} = 5 02 03。
+// 端口口径 §5.3.3：顺序分配（占用表当前最大 + 1）。
 // 传 undefined 而不是空字符串，是为了让 z 的 default 生效（"" 会被 coerce 成 NaN）。
 export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50203)
+  .default(50008)
   .parse(process.env.PORT || undefined);

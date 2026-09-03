@@ -3,7 +3,7 @@
  *
  * 数据流：
  *   apps/.env → getLlmOptional() → llm（当前 LLM_PROVIDER 没配 Key 时是 null）
- *   process.env.PORT → PORT（默认 50000 = 5 + 模块 00 + 小节 00，§5.3.3）
+ *   process.env.PORT → PORT（默认 50000，§5.3.3 顺序分配的起步口）
  *
  * 为什么单独成文件：
  *   /health 与 /api/chat 必须看到**同一份**运行时。分散在各 route 里各建一次，

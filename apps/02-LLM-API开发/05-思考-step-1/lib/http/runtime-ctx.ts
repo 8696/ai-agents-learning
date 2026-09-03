@@ -10,5 +10,5 @@ export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50205)
+  .default(50010)
   .parse(process.env.PORT ?? undefined);

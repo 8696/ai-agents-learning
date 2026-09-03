@@ -2,7 +2,7 @@
 
 对应：[01-Streaming-SSE](../../../docs/学习模块/02-LLM-API开发/01-Streaming-SSE-step-1.md)
 
-**端口 50201** · `yarn app:02-01-streaming-sse-step-1`
+**端口 50005** · `yarn app:02-01-streaming-sse-step-1`
 
 ```text
 /                      总览

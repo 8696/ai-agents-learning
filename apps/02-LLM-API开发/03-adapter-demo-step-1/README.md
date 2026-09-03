@@ -6,16 +6,16 @@
 
 ## 端口
 
-**50213**（同小节第二份 HTTP Demo，小节位 +10）。脚本 `yarn app:02-03-adapter-step-1`。
+**50007**（按占用表顺序分配）。脚本 `yarn app:02-03-adapter-step-1`。
 
 ## 浏览器访问
 
 ```bash
 cd apps
 yarn app:02-03-adapter-step-1
-# → http://127.0.0.1:50213/                     总览
-# → http://127.0.0.1:50213/pages/once.html      一次性 UnifiedResponse
-# → http://127.0.0.1:50213/pages/stream.html    流式 UnifiedDelta
+# → http://127.0.0.1:50007/                     总览
+# → http://127.0.0.1:50007/pages/once.html      一次性 UnifiedResponse
+# → http://127.0.0.1:50007/pages/stream.html    流式 UnifiedDelta
 ```
 
 ## 数据流

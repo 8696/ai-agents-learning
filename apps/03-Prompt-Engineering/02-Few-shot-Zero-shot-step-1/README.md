@@ -2,7 +2,7 @@
 
 对应小节：[docs/学习模块/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1.md](../../../docs/学习模块/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1.md)
 
-**端口**：`50302` · 浏览器打开 `http://127.0.0.1:50302/`（可用环境变量 `PORT=` 单次覆盖）。
+**端口**：`50012` · 浏览器打开 `http://127.0.0.1:50012/`（可用环境变量 `PORT=` 单次覆盖）。
 
 ## 怎么跑
 
@@ -12,7 +12,7 @@ yarn install
 yarn app:03-02-few-shot-zero-shot-step-1
 ```
 
-启动后打开 `http://127.0.0.1:50302/`。需要 `apps/.env` 里当前 `LLM_PROVIDER` 的 Key（协议 A）。并排对比一次 = 两次短请求。
+启动后打开 `http://127.0.0.1:50012/`。需要 `apps/.env` 里当前 `LLM_PROVIDER` 的 Key（协议 A）。并排对比一次 = 两次短请求。
 
 按 Ctrl+C 退出。
 

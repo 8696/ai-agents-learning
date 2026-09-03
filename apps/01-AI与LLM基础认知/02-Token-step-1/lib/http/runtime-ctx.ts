@@ -8,10 +8,10 @@ import { getLlmOptional } from "../../../../llm.js";
 
 export const llm = getLlmOptional();
 
-// 端口口径 §5.3.3：5{模块两位}{小节两位} = 5 01 02。
+// 端口口径 §5.3.3：顺序分配（占用表当前最大 + 1）。
 export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50102)
+  .default(50002)
   .parse(process.env.PORT || undefined);

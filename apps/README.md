@@ -14,29 +14,33 @@
 
 **本表是已落地 Demo 的唯一清单**（脚本名 / 端口）。新建对照 [AGENTS.md §5](../AGENTS.md#5-demo-落点) 的骨架，不要把本表某条当模板去抄。改端口时改这里和 `package.json`，不要抄进 `AGENTS.md`。
 
+**新建 / 改口 5 步 checklist**：[AGENTS.md §5.3.3](../agents/05-demo.md#533-目录与脚本) —— ① 查本表最大端口 M → ② 新口 = M+1 → ③ 同步 `runtime-ctx.ts` / `layout.js` / 本表 / demo README 四份 → ④ `node scripts/check-demo.cjs` 过 → ⑤ 完工。
+
 当前已有：
 
 | 跑 | 默认端口 | 对应小节 |
 | -- | -------- | -------- |
 | `yarn app:00-01-mini-app-step-1` | `50000` | 模块 00 mini-app · HTTP + SSE |
 | `yarn app:00-01-api-key-billing-step-1` | `50001` | 输入 / 输出 Token 分开 |
-| `yarn app:01-02-token-step-1` | `50102` | 中英文 Token 数（本地 encode，不调 LLM） |
-| `yarn app:01-06-embedding-step-1` | `50106` | 玩具向量：Token ID 减不出远近，余弦能排出谁近（不调 LLM） |
-| `yarn app:01-07-temperature-step-1` | `50107` | 同一 prompt，温度 0 vs 1.2 |
-| `yarn app:02-01-streaming-sse-step-1` | `50201` | SSE 帧长什么样 + 流式 vs 一次性 TTFT 对照 |
-| `yarn app:02-02-protocol-ab-step-1` | `50202` | 同 Key 跑协议 A vs B（具体模型看 `apps/.env` 的 `LLM_MODEL`） |
-| `yarn app:02-03-adapter-step-1` | `50213` | 适配层：业务只调 sendMessage（同小节第二份 HTTP Demo） |
-| `yarn app:02-03-abort-controller-step-1` | `50203` | AbortController 三端点对照 |
-| `yarn app:02-04-rate-limit-step-1` | `50204` | 429 / Rate Limit 五场景时间线 |
-| `yarn app:02-05-thinking-step-1` | `50205` | 四家官方思考方言（MiniMax / 智谱 / DeepSeek / 千问）× 协议 A/B：怎么开、怎么关、回哪个字段 |
-| `yarn app:03-01-system-user-assistant-priority-step-1` | `50301` | System / User / Assistant 优先级 + 多轮 |
-| `yarn app:03-02-few-shot-zero-shot-step-1` | `50302` | 同一评价任务：Zero-shot vs Few-shot |
-| `yarn app:03-04-prompt-versioning-diff-step-1` | `50304` | 一字之差：v1.0.0 vs v1.1.0 看行为影响 |
-| `yarn app:04-01-json-schema-step-1` | `50401` | Zod 端：parse/safeParse/issues/transform（本地，不调 LLM） |
-| `yarn app:04-02-json-mode-vs-structured-output-step-1` | `50402` | 同 prompt × 5 用例，JSON Mode vs Structured Output strict 并排；⑥ strict schema 写法不对 → API 400 |
-| `yarn app:04-02-anthropic-tool-use-step-1` | `50412` | 协议 B 镜像版：text（无 tools）vs tool-use（强制 tool_choice）并排；⑥ prompt 诱导模型违 input_schema，看守约（同小节第二份 HTTP Demo；脚本名沿用真实小节号 04-02，与协议 A 端口错开 +10 = 50412） |
+| `yarn app:01-02-token-step-1` | `50002` | 中英文 Token 数（本地 encode，不调 LLM） |
+| `yarn app:01-06-embedding-step-1` | `50003` | 玩具向量：Token ID 减不出远近，余弦能排出谁近（不调 LLM） |
+| `yarn app:01-07-temperature-step-1` | `50004` | 同一 prompt，温度 0 vs 1.2 |
+| `yarn app:02-01-streaming-sse-step-1` | `50005` | SSE 帧长什么样 + 流式 vs 一次性 TTFT 对照 |
+| `yarn app:02-02-protocol-ab-step-1` | `50006` | 同 Key 跑协议 A vs B（具体模型看 `apps/.env` 的 `LLM_MODEL`） |
+| `yarn app:02-03-adapter-step-1` | `50007` | 适配层：业务只调 sendMessage（同小节第二份 HTTP Demo） |
+| `yarn app:02-03-abort-controller-step-1` | `50008` | AbortController 三端点对照 |
+| `yarn app:02-04-rate-limit-step-1` | `50009` | 429 / Rate Limit 五场景时间线 |
+| `yarn app:02-05-thinking-step-1` | `50010` | 四家官方思考方言（MiniMax / 智谱 / DeepSeek / 千问）× 协议 A/B：怎么开、怎么关、回哪个字段 |
+| `yarn app:03-01-system-user-assistant-priority-step-1` | `50011` | System / User / Assistant 优先级 + 多轮 |
+| `yarn app:03-02-few-shot-zero-shot-step-1` | `50012` | 同一评价任务：Zero-shot vs Few-shot |
+| `yarn app:03-04-prompt-versioning-diff-step-1` | `50013` | 一字之差：v1.0.0 vs v1.1.0 看行为影响 |
+| `yarn app:04-01-json-schema-step-1` | `50014` | Zod 端：parse/safeParse/issues/transform（本地，不调 LLM） |
+| `yarn app:04-02-json-mode-vs-structured-output-step-1` | `50015` | 同 prompt × 5 用例，JSON Mode vs Structured Output strict 并排；⑥ strict schema 写法不对 → API 400 |
+| `yarn app:04-02-anthropic-tool-use-step-1` | `50016` | 协议 B 镜像版：text（无 tools）vs tool-use（强制 tool_choice）并排；⑥ prompt 诱导模型违 input_schema，看守约（同小节第二份 HTTP Demo；脚本名沿用真实小节号 04-02，端口按占用表顺序） |
+| `yarn app:05-01-fc-protocol-step-1` | `50017` | Function Calling 协议完整一圈（含并行调用 · step-1 sketch 不调 LLM，mock 数据；锁定时再补 §5.3.2 6 项） |
+| `yarn app:05-01-fc-protocol-step-2` | `50018` | step-2 真 LLM（协议 A · openai.chat.completions）；两轮调用 + 请求/响应全量前端可视化（copy step-1 + 加 lib/llm/protocol-a.ts） |
 
-HTTP 端口公式见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：`5{模块两位}{小节两位}`；同一小节第 N 份再 `+10×(N-1)`，**占用表已有则继续 +10**。本表「默认端口」列是全仓库占用表，新建前先查，禁止两个 Demo 同一个口。不要把 `PORT` 写进共享 `apps/.env`。
+HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。
 

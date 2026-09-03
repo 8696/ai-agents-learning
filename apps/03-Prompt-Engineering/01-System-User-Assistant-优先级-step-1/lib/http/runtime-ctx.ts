@@ -8,10 +8,10 @@ import { getLlmOptional } from "../../../../llm.js";
 
 export const llm = getLlmOptional();
 
-/** §5.3.3：模块 03 第 01 条 → 50301。PORT= 只做单次覆盖，不写进 apps/.env。 */
+/** §5.3.3：顺序分配。PORT= 只做单次覆盖，不写进 apps/.env。 */
 export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50301)
+  .default(50011)
   .parse(process.env.PORT ?? undefined);

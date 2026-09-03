@@ -8,10 +8,10 @@ import { getLlmOptional } from "../../../../llm.js";
 
 export const llm = getLlmOptional();
 
-/** 模块 02 第 02 条 → 50202（§5.3.3 `5{MM}{SS}`）。 */
+/** 顺序分配（§5.3.3）。 */
 export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50202)
+  .default(50006)
   .parse(process.env.PORT ?? undefined);

@@ -118,12 +118,12 @@
     );
   }
 
-  /** 页脚强制「协议 B」；port 默认 50412，真正数字以 /health 为准。 */
+  /** 页脚强制「协议 B」；port 默认 50016，真正数字以 /health 为准。 */
   function EnvFooter({ env }) {
     return (
       <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
         <span id="env-info">
-          端口 {env.port || 50412} · 协议 B · provider{" "}
+          端口 {env.port || 50016} · 协议 B · provider{" "}
           <span className="font-mono">{env.provider}</span> · model{" "}
           <span className="font-mono">{env.model}</span> · Key{" "}
           {env.hasKey ? "✅" : "❌（apps/.env 未配置该家 Key）"}

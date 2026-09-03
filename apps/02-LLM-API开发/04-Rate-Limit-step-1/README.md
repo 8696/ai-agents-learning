@@ -2,7 +2,7 @@
 
 对应：[04-Rate-Limit](../../../docs/学习模块/02-LLM-API开发/04-Rate-Limit-step-1.md)
 
-**端口 50204** · `yarn app:02-04-rate-limit-step-1`
+**端口 50009** · `yarn app:02-04-rate-limit-step-1`
 
 浏览器：
 

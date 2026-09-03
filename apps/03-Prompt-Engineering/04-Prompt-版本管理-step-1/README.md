@@ -2,7 +2,7 @@
 
 对应小节：[docs/学习模块/03-Prompt-Engineering/04-Prompt-版本管理.md](../../../docs/学习模块/03-Prompt-Engineering/04-Prompt-版本管理.md)
 
-**端口**：`50304` · 浏览器打开 `http://127.0.0.1:50304/`（可用环境变量 `PORT=` 单次覆盖）。
+**端口**：`50013` · 浏览器打开 `http://127.0.0.1:50013/`（可用环境变量 `PORT=` 单次覆盖）。
 
 ## 怎么跑
 
@@ -12,7 +12,7 @@ yarn install
 yarn app:03-04-prompt-versioning-diff-step-1
 ```
 
-启动后打开 `http://127.0.0.1:50304/`。需要 `apps/.env` 里的 API Key（协议 A，由 `LLM_PROVIDER` 选用）。并排对比一次 = 两次短请求。
+启动后打开 `http://127.0.0.1:50013/`。需要 `apps/.env` 里的 API Key（协议 A，由 `LLM_PROVIDER` 选用）。并排对比一次 = 两次短请求。
 
 按 Ctrl+C 退出。
 

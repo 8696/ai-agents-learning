@@ -3,7 +3,7 @@
  *
  * 数据流：
  *   apps/.env → getLlmOptional() → llm（当前 LLM_PROVIDER 没配 Key 时是 null）
- *   process.env.PORT → PORT（默认 50201 = 5 + 模块 02 + 小节 01，§5.3.3）
+ *   process.env.PORT → PORT（默认 50005，§5.3.3 顺序分配）
  *
  * 为什么单独成文件：
  *   /health 与 /api/real 必须看到同一份运行时。分散在各 route 里各建一次，
@@ -24,5 +24,5 @@ export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50201)
+  .default(50005)
   .parse(process.env.PORT ?? undefined);

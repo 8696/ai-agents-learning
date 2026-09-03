@@ -122,7 +122,7 @@
     return (
       <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
         <span id="env-info">
-          端口 {env.port || 50106} · 本地计算（不调 LLM）· provider{" "}
+          端口 {env.port || 50003} · 本地计算（不调 LLM）· provider{" "}
           <span className="font-mono">{env.provider}</span> · model{" "}
           <span className="font-mono">{env.model}</span> · Key{" "}
           {env.hasKey ? "✅" : "❌（apps/.env 未配置该家 Key）"}

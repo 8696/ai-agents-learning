@@ -278,8 +278,8 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 ```bash
 # 本条对应 Demo
 cd apps && yarn app:02-04-rate-limit-step-1
-# http://127.0.0.1:50204/pages/mock.html  mock 五场景
-# http://127.0.0.1:50204/pages/real.html  真 API 单次 + burst（会烧 token）
+# http://127.0.0.1:50009/pages/mock.html  mock 五场景
+# http://127.0.0.1:50009/pages/real.html  真 API 单次 + burst（会烧 token）
 ```
 
 ---

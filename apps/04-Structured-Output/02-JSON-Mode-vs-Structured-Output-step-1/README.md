@@ -11,11 +11,11 @@ cd apps
 yarn app:04-02-json-mode-vs-structured-output-step-1
 ```
 
-启动后打开 <http://127.0.0.1:50402/>。
+启动后打开 <http://127.0.0.1:50015/>。
 
 ## 端口
 
-`50402` —— 公式 `5{模块两位}{小节两位}` = `5` + `04` + `02`。可用 `PORT=` 单次覆盖。不要把 `PORT` 写进 `apps/.env`。
+`50015` —— §5.3.3 顺序分配（占用表当前最大 + 1）。可用 `PORT=` 单次覆盖。不要把 `PORT` 写进 `apps/.env`。
 
 ## 数据流
 
@@ -104,7 +104,7 @@ yarn app:04-02-json-mode-vs-structured-output-step-1
 - 看同一段 prompt 在 JSON Mode vs Structured Output 下输出的差异（`keysSeen` / `missingKeys` / `extraKeys`）
 - 看 JSON Mode 输出偶尔夹 markdown fence 或 think 块
 - 看 strict 对 schema 写法本身的严格（端点 400 或 unexpectedSuccess）
-- 把 5 个用例一键顺序跑，**正面对照** 协议 B Demo（端口 50412）
+- 把 5 个用例一键顺序跑，**正面对照** 协议 B Demo（端口 50016）
 
 ## 对应学习沉淀
 
@@ -113,7 +113,7 @@ yarn app:04-02-json-mode-vs-structured-output-step-1
 
 ## 没在这里做的事
 
-- 不演示 Anthropic `tool_use` 对照（**协议 B Demo 在隔壁端口 `50412`**）
+- 不演示 Anthropic `tool_use` 对照（**协议 B Demo 在隔壁端口 `50016`**）
 - 不演示国内各家 strict 支持度差异（要逐 provider 实测）
 - 不演示 schema 包含 `anyOf` / `$ref` 时 OpenAI strict 拒收的各路写法坑
 - 不演示流式 + structured output 同 prompt

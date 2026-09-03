@@ -2,7 +2,7 @@
 
 对应：[03-AbortController](../../../docs/学习模块/02-LLM-API开发/03-AbortController-step-1.md)
 
-**端口 50203** · `yarn app:02-03-abort-controller-step-1`
+**端口 50008** · `yarn app:02-03-abort-controller-step-1`
 
 ```text
 /                     总览

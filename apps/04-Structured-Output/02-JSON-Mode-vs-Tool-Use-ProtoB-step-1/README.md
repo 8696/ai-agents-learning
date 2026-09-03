@@ -2,7 +2,7 @@
 
 **协议 B（Anthropic Messages API）** 视角下的结构化输出对照 Demo — §5.3 完整版、§5.3.8 按职责分层。只跑协议 B（`@anthropic-ai/sdk`），不 import 协议 A 那一份。
 
-是 [`02-JSON-Mode-vs-Structured-Output/`](../02-JSON-Mode-vs-Structured-Output/README.md) **协议 A 版的镜像**：同一组 5 个诱导用例、同一组分析维度。§5.3.13 B 版分拆，端口小节两位 +10。
+是 [`02-JSON-Mode-vs-Structured-Output/`](../02-JSON-Mode-vs-Structured-Output/README.md) **协议 A 版的镜像**：同一组 5 个诱导用例、同一组分析维度。§5.3.13 B 版分拆，端口按占用表顺序分配。
 
 ## 怎么跑
 
@@ -11,11 +11,11 @@ cd apps
 yarn app:04-02-anthropic-tool-use-step-1
 ```
 
-启动后打开 <http://127.0.0.1:50412/>。
+启动后打开 <http://127.0.0.1:50016/>。
 
 ## 端口
 
-`50412` —— 公式 `5{模块两位}{小节两位 +10}` = `5` + `04` + `12`。可用 `PORT=` 单次覆盖。不要把 `PORT` 写进 `apps/.env`。
+`50016` —— §5.3.3 顺序分配（占用表当前最大 + 1）。可用 `PORT=` 单次覆盖。不要把 `PORT` 写进 `apps/.env`。
 
 ## 数据流
 
@@ -101,7 +101,7 @@ yarn app:04-02-anthropic-tool-use-step-1
 - 看同一段 prompt 在 text vs tool-use 下输出的差异（左 raw 是模型原始文本，右 raw 是 tool_use.input）
 - 看协议 B 的工具模型对 enum 外的字段如何反应（守还是不守）
 - 看协议 A vs B 的 `tool_use` 相比 `response_format` 在「闸」上软硬程度的真实差别
-- 把 5 个用例一键顺序跑，**正面对照** 协议 A Demo（端口 50402）
+- 把 5 个用例一键顺序跑，**正面对照** 协议 A Demo（端口 50015）
 
 ## 对应学习沉淀
 

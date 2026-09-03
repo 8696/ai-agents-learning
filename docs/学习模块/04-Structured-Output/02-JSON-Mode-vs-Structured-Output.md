@@ -11,8 +11,8 @@
   - [json-schema.org](https://json-schema.org) · 上一条沉淀复习用
 - **状态**：Demo 已落（协议 A + 协议 B 两条）/ 沉淀已写（2026-09-03）· 待勾 ✅
 - **Demo**：
-  - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/`（端口 `50402`，`yarn app:04-02-json-mode-vs-structured-output-step-1`）
-  - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/`（端口 `50412`，`yarn app:04-02-anthropic-tool-use-step-1`；与上一份 HTTP Demo 错开 +10）
+  - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/`（端口 `50015`，`yarn app:04-02-json-mode-vs-structured-output-step-1`）
+  - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/`（端口 `50016`，`yarn app:04-02-anthropic-tool-use-step-1`；按占用表顺序分配）
   - 详见 §5.2 Demo 判断块
 
 > 章节随这条知识切，不套固定九节。覆盖：协议 A/B 全景 → 机制数据怎么走 → 翻车点 → 6 路例子 → 易混 → 怎么选用 → 取舍 → 踩坑（本 demo 实测数据）→ 仓库内约定 → 追问过 → 过关自检 → 还没搞懂。
@@ -475,7 +475,7 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 9. **协议 B `tool_choice: { type: "tool", name: "..." }` 的 `name` 必须匹配 `tools` 里的**某个 `name`**。 拼错就 400。
 10. **Anthropic SDK 类型 narrowing**。 `.filter((b): b is { type: "text"; text: string } => ...)` 这种显式 type predicate 容易漏 SDK 的可选字段（如 `TextBlock.citations`）。**用 for-of + `if (block.type === "text")`** 让 TS discriminated union 自动收窄更稳。这是本 demo 第一轮 typecheck 的两个错误之一。
 11. **JSX 文本里 `<` 必须 `{"<"}` 转义**。 Babel 把 `<think>` 当成新 JSX 标签，找不到 closing tag 直接 break。`apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/public/index.html` 的 `夹 <think>` 第一次实测踩坑——按 §5.3.4 规则改成 `{"<think>"}` 即可。
-12. **条二份 HTTP Demo 的端口 vs 脚本名规则**。 §5.3.3 那句"小节两位 `+10`"措辞模糊——读起来像脚本名也要带 `+10`，**实际仓库既有样本（`02-03-abort-controller` + `02-03-adapter`，端口 `50203` + `50213`）证明脚本名沿用真实小节号**，**只有端口错开**。本 demo 第二份 HTTP Demo 原本命名为 `app:04-12-anthropic-tool-use`，已修正为 `app:04-02-anthropic-tool-use-step-1`，端口仍 `50412`。
+12. **条二份 HTTP Demo 的端口 vs 脚本名规则**。<!-- TODO: §5.3.3 端口规则已改为顺序分配（max + 1），本段讲解的 `+10` 措辞已过时；踩坑事实（脚本名沿用真实小节号）仍成立，但「+10 错开端口」解释需重写或删。旧值保留只为 git blame。 --> 原措辞：§5.3.3 那句"小节两位 `+10`"措辞模糊——读起来像脚本名也要带 `+10`，**实际仓库既有样本（`02-03-abort-controller` + `02-03-adapter`，端口 `50203` → `50008` / `50213` → `50007`）证明脚本名沿用真实小节号**，**只有端口错开**。本 demo 第二份 HTTP Demo 原本命名为 `app:04-12-anthropic-tool-use`，已修正为 `app:04-02-anthropic-tool-use-step-1`，端口 `50412` → `50016`。
 13. **协议 B 没有"JSON Mode"等价字段**。 协议 A 的 `json_object` 在 B 上没有对位字段。协议 B 唯一进入结构化路径的方法是 `tools + tool_choice`。**`tools` 是协议 B 的"闸的容器"**，不是一个开关。
 14. **thinking 模式与 tool_choice 是物理冲突**。 OpenAI o 系列 / DeepSeek-Reasoner / Anthropic extended thinking 等 **reasoning 模型** 在 thinking 路径下，**B3 强制 tool_choice 会被 HTTP 400 拒绝**，原文 `Thinking mode does not support this tool_choice`（DeepSeek-Reasoner 实证）。A3 strict 同理受 token-mask 限制，reasoning 模型一般拿不到 A3。**修法**：(a) 协议 B 显式 `thinking: { type: "disabled" }`（Anthropic SDK 顶层字段）；(b) 协议 A 没法关，只能换非 reasoning 模型；(c) 生产上落地 Provider Profile 时要标 `thinking` 字段、reasoning 模型上把 A3/B3 自动降档到 A2/B2。**§4.1 / §4.2** 是这条对应的代码与判定清单。
 15. **adapter 不能把上游 4xx 都包成 500**。 `ctx.status = 500` 把上游 HTTP 400 / 401 / 429 全掩盖了，watchdog 看到的全是 500、看不到真正失败。**修法**：catch 块从上游 SDK 错误对象上读 `.status` 字段（OpenAI `APIError.status` / Anthropic `APIError.status`），透传 `ctx.status = upstreamStatus ?? 500`，**body 加 `upstreamStatus` 字段给前端**。本 demo 两个 server.ts 已加 `writeUpstreamError()` helper 并替换所有 6 个 catch 块。
@@ -486,6 +486,8 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 ## 仓库内约定（落在这条 Demo 里要遵守的）
 
 ### 端口约定（[§5.3.3](../../AGENTS.md#533-目录与脚本)）
+
+<!-- TODO: §5.3.3 已改为顺序分配（占用表当前最大 + 1）。本表展示的 `5{模块}{小节}` / `+10` 公式已不再适用；下表保留只为 git blame。当前实际占用：协议 A `50015`、协议 B `50016`。 -->
 
 | 第一份 HTTP Demo | 第二份 HTTP Demo（同小节） |
 | --- | --- |
@@ -519,10 +521,11 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 ## 我追问过的
 
 - **「举几个例子，这个库的调用的返回值是什么」**（来源 01 条对话里的相关追问，影响复用契约写法）→ 同契约的 Zod 端在协议 A 走 `message.content` 字符串 + JSON.parse；协议 B 走 `content[type=tool_use].input` 对象不要 parse。
-- **「写demo」（强制出 Demo）」** → 落协议 A `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/` §5.3 完整版；后来又写一份协议 B 镜像 `apps/.../02-JSON-Mode-vs-Tool-Use-ProtoB/` 端口 `50412`。`yarn typecheck` 过；浏览器跑过 5 用例 + ⑥。
+- **「写demo」（强制出 Demo）」** → 落协议 A `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/` §5.3 完整版；后来又写一份协议 B 镜像 `apps/.../02-JSON-Mode-vs-Tool-Use-ProtoB/` 端口 `50412` → `50016`。`yarn typecheck` 过；浏览器跑过 5 用例 + ⑥。
 - **「说是解析 OK 了，但页面又显示缺 action,query」** → 真 bug：`safeParseIntent` 和 `analyze` 用两份独立 strip 链。**根因**：早期 `analyze` 把 4 个 `.replace()` 串成一行没有 trim，剥掉 `<think>` 之后剩 `\n```json…` 开头 `\n` 让 `^```(?:json)?\s*\n?` 匹配不到 → JSON.parse 挂 → keysSeen 空 → 缺 keys 标签错亮。**修法**：抽 `stripWrap(raw)`，两函数共用同一清洗链，每步后强制 `.trim()`。从此「Zod ✓」与「keysSeen 非空」必然同进同出，不再矛盾。
 - **「停掉服务，然后详细解释这个协议 A 的请求参数中的 `response_format`」** → 沉淀补充了 4 种 `type`、6 路全景的协议 A 端；本沉淀正文里协议 A 的「是什么」一节就是这一问的基础上的展开。
 - **「再把协议 B 的也做一份，然后把两份协议的 demo 都写清楚一点」** → 新建协议 B demo + 渲染同 5 用例 + ⑥ prompt 诱导模型违 input_schema；两份 README 重写成对称镜像（端口公式 + 一图看清表 + 端点 + §5.3.2 四项 + 5 用例 + 没做的事）。
+<!-- TODO: §5.3.3 已改为顺序分配。本行历史端口样本 `50203` / `50213` 已分别映射到 `50008` / `50007`；旧值保留只为 git blame。 -->
 - **「这个 script 为什么写成 `04-12-...`」** → 这是 §5.3.3 措辞模糊踩坑：本应 `app:04-02-...`，**只有端口错开**——印证既有 `02-03-abort-controller` + `02-03-adapter` / `50203` + `50213` 样本。
 - **「总结一下这两个协议的各种方式……」** → 沉淀的核心内容：6 路全景（A1/A2/A3 + B1/B2/B3）；协议 A vs B 根本差异；决策树 + 矩阵；各 Provider 实测；prompt-only 路单独说明；本 demo 实测数据并入踩坑。
 - **「不同模型不同国产/海外差异更大，生产多个模型怎么办」** → 沉淀「延伸 · 多协议 × 多模型 · 生产的层叠防御」整节：5 层防御（每层假设上一层失败）+ Schema 单一来源 + Provider Profile 表 + 多模型 4 范式 + Protocol Adapter 抽象 + Repair loop 示例 + 8 条生产清单 + 仓库位置地图。**这是当前条之外**但与本条强相关的内容——主轴答案在模块 23，本节立骨架 + 指路。
@@ -561,9 +564,9 @@ Demo 判断
 - 小节：JSON Mode vs Structured Output：前者保证合法 JSON，后者保证符合 schema
 - 结论：可运行 §5.3（两份）
   - 协议 A 落点：apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/
-    · yarn app:04-02-json-mode-vs-structured-output-step-1 · 端口 50402
+    · yarn app:04-02-json-mode-vs-structured-output-step-1 · 端口 50015
   - 协议 B 落点：apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/
-    · yarn app:04-02-anthropic-tool-use-step-1 · 端口 50412（同小节第二份 HTTP Demo 错开 +10）
+    · yarn app:04-02-anthropic-tool-use-step-1 · 端口 50016（同小节第二份 HTTP Demo，按占用表顺序分配）
 - 理由：要看见"两协议 × 6 档"的可观察对照——同 5 用例 × 同 prompt × 双协议；
        还要看见协议 A3 ⑥ schema 不严格 → API 400 的实装差异；
        和协议 B3 ⑥ prompt 诱导模型拒调工具这个失败行为的实装。
@@ -571,10 +574,10 @@ Demo 判断
 - DeepSeek 兼容：协议 A system prompt 含 "JSON" 关键字（[踩坑 #16](#踩坑本-demo-实证数据逐条编号)）
 - yarn typecheck：✅ 过
 - 浏览器验证：
-  · 50402（MiniMax-M3 原跑）：5 用例 × 2 mode；JSON Mode 5/5 Zod ✓；Structured Output strict 0 个 Zod ✓（MiniMax-M3 silently ignored strict，模型自由发挥）
-  · 50412（MiniMax-M3 原跑）：5 用例 × 2 mode；text 路径 5/5 Zod ✓；tool-use 路径 4/5 Zod ✓（① 5/5、⑤ 5/5 OK，② ③ ④ 模型层输给 prompt）
-  · 50402（DeepSeek-V4-Pro 实跑）：JSON Mode 5/5 Zod ✓；Structured Output 0/5 Zod ✓（A3 strict 不可用被 400 拒，⑥ strict-rejected 同样返 400）
-  · 50412（DeepSeek-V4-Pro 实跑）：text 路径 4/5 Zod ✓；tool-use 路径 5/5 Zod ✓（B3 强 tool_choice 仍 OK）；⑥ tool-rejected 返 400 'Thinking mode does not support this tool_choice'
+  · 50015（MiniMax-M3 原跑）：5 用例 × 2 mode；JSON Mode 5/5 Zod ✓；Structured Output strict 0 个 Zod ✓（MiniMax-M3 silently ignored strict，模型自由发挥）
+  · 50016（MiniMax-M3 原跑）：5 用例 × 2 mode；text 路径 5/5 Zod ✓；tool-use 路径 4/5 Zod ✓（① 5/5、⑤ 5/5 OK，② ③ ④ 模型层输给 prompt）
+  · 50015（DeepSeek-V4-Pro 实跑）：JSON Mode 5/5 Zod ✓；Structured Output 0/5 Zod ✓（A3 strict 不可用被 400 拒，⑥ strict-rejected 同样返 400）
+  · 50016（DeepSeek-V4-Pro 实跑）：text 路径 4/5 Zod ✓；tool-use 路径 5/5 Zod ✓（B3 强 tool_choice 仍 OK）；⑥ tool-rejected 返 400 'Thinking mode does not support this tool_choice'
 - 与 start 预告：一致
 ```
 

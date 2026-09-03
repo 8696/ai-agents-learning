@@ -44,9 +44,9 @@
     {
       "name": "05-01-function-calling-protocol",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["--cwd", "apps", "app:05-01-function-calling-protocol"],
-      "port": 50501,
-      "url": "http://127.0.0.1:50501/",
+      "runtimeArgs": ["--cwd", "apps", "app:05-01-fc-protocol-step-2"],
+      "port": 50511,
+      "url": "http://127.0.0.1:50511/",
       "autoPort": false
     }
   ]

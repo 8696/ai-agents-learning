@@ -4,17 +4,17 @@
 
 ## 端口
 
-**50301**。可临时 `PORT=50999 yarn app:03-01-system-user-assistant-priority-step-1` 覆盖。浏览器打开 `http://127.0.0.1:50301/`。
+**50011**。可临时 `PORT=50999 yarn app:03-01-system-user-assistant-priority-step-1` 覆盖。浏览器打开 `http://127.0.0.1:50011/`。
 
 ## 怎么跑
 
 ```bash
 cd apps
 yarn app:03-01-system-user-assistant-priority-step-1
-# → http://127.0.0.1:50301/                          总览
-# → http://127.0.0.1:50301/pages/priority.html       Case 1 优先级
-# → http://127.0.0.1:50301/pages/with-history.html   Case 2 有历史
-# → http://127.0.0.1:50301/pages/no-history.html     Case 3 无历史
+# → http://127.0.0.1:50011/                          总览
+# → http://127.0.0.1:50011/pages/priority.html       Case 1 优先级
+# → http://127.0.0.1:50011/pages/with-history.html   Case 2 有历史
+# → http://127.0.0.1:50011/pages/no-history.html     Case 3 无历史
 ```
 
 yarn 入口只有这一条。需要 `apps/.env` 里当前 `LLM_PROVIDER` 对应的 Key（同一把 Key 走协议 A 与协议 B）。

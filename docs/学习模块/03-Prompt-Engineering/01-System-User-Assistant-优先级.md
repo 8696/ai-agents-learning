@@ -1,7 +1,7 @@
 # **System / User / Assistant 优先级**：冲突时谁说了算、System 该放什么
 
 > 对应模块：[模块 03 · Prompt Engineering ⭐⭐⭐⭐](./README.md) · 小节进度第 1 条
-> Demo：已落 [apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/](../../../../apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/) · `yarn app:03-01-system-user-assistant-priority-step-1`（HTTP server · 浏览器端口 50301 · 3 个 Case × 协议 A/B）
+> Demo：已落 [apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/](../../../../apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/) · `yarn app:03-01-system-user-assistant-priority-step-1`（HTTP server · 浏览器端口 50011 · 3 个 Case × 协议 A/B）
 
 - **来源**：本对话全部轮次（详解 + 三个意外发现 + Case 1 判错修正 + 协议 A 关思考的工程答案）+ 跑通的 Demo 实测
 - **状态**：已沉淀

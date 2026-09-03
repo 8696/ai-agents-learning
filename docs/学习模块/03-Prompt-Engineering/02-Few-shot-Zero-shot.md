@@ -1,7 +1,7 @@
 # **Few-shot / Zero-shot**：示例怎么帮模型「对齐格式」
 
 > 对应模块：[模块 03 · Prompt Engineering ⭐⭐⭐⭐](./README.md) · 小节进度第 2 条
-> Demo：已落 [apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/](../../../../apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/) · `yarn app:03-02-few-shot-zero-shot-step-1`（HTTP · 端口 50302 · 协议 A · MiniMax-M3 · 同一评价任务并排 Zero / Few）
+> Demo：已落 [apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/](../../../../apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/) · `yarn app:03-02-few-shot-zero-shot-step-1`（HTTP · 端口 50012 · 协议 A · MiniMax-M3 · 同一评价任务并排 Zero / Few）
 
 - **来源**：本对话全部轮次（详解 + 区别 / 第三种 / 场景 + Demo + 协议 A + 思考块解析）+ 跑通的 Demo 实测
 - **状态**：已沉淀

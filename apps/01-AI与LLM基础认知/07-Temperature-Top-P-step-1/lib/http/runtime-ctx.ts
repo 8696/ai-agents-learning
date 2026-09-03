@@ -11,11 +11,11 @@ import { getLlmOptional } from "../../../../llm.js";
 // 页面靠 /health 的 hasKey 提前把按钮 disabled 掉，比让人点完再等 503 早得多（§5.3.9）。
 export const llm = getLlmOptional();
 
-// 端口口径 §5.3.3：5{模块两位}{小节两位} = 5 01 07。
+// 端口口径 §5.3.3：顺序分配（占用表当前最大 + 1）。
 // 传 undefined 而不是 process.env.PORT 本身，是为了让 z 的 default 生效（空字符串会被 coerce 成 NaN）。
 export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50107)
+  .default(50004)
   .parse(process.env.PORT || undefined);

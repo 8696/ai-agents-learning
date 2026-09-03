@@ -134,7 +134,7 @@
     return (
       <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
         <span id="env-info">
-          端口 {env.port || 50204} · 协议 {protocol || "A"} · provider{" "}
+          端口 {env.port || 50009} · 协议 {protocol || "A"} · provider{" "}
           <span className="font-mono">{env.provider}</span> · model{" "}
           <span className="font-mono">{env.model}</span> · Key{" "}
           {env.hasKey ? "✅" : "❌（apps/.env 未配置该家 Key）"}

@@ -7,10 +7,10 @@ import { getLlmOptional } from "../../../../llm.js";
 
 export const llm = getLlmOptional();
 
-/** 同小节第二份 HTTP Demo：小节位 +10 → 50213（§5.3.3）。 */
+/** 顺序分配（§5.3.3）。 */
 export const PORT = z.coerce
   .number()
   .int()
   .positive()
-  .default(50213)
+  .default(50007)
   .parse(process.env.PORT ?? undefined);

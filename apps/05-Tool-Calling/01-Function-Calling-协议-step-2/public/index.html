@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-2 真 LLM（请求/响应全量可视化）</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 7.26.4（8.x 默认 automatic runtime 与本规则"完全 ESM 禁用"冲突） -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    /**
+     * 本页教学点（step-2 比 step-1 多了两件事）：
+     *   1. 真调 LLM（协议 A）—— 不再 mock 决定；模型自己说调什么
+     *   2. 请求/响应**全量**可视化 —— 你在 #llm-protocol 能看到协议层数据长什么样：
+     *      - Round 1 Request 里 `messages / tools / tool_choice` 是什么
+     *      - Round 1 Response 里 `choices[0].finish_reason = "tool_calls"` 是关键判断
+     *      - Round 2 Request 里 messages 多了 `assistant(tool_calls) + tool` 两条
+     *      - Round 2 Response 里 `choices[0].message.content` 就是 final_reply
+     *
+     * 这些字段的"是什么"在 lib/llm/protocol-a.ts 的 TypeScript 类型注释里标了；
+     * 本页把同一份注释的物理形态摆在浏览器里。
+     */
+    const { useState, useEffect } = React;
+
+    // ── #status-pill 四态（§5.3.4） ──
+    function StatusPill({ status }) {
+      const label = {
+        idle: "⏸ 待连接",
+        running: "🔄 请求中",
+        ok: "✅ 完成",
+        error: "❌ 错误",
+      }[status] || "⏸ 待连接";
+      const cls = {
+        idle: "bg-gray-200",
+        running: "bg-yellow-200",
+        ok: "bg-green-200",
+        error: "bg-red-200",
+      }[status] || "bg-gray-200";
+      return (
+        <span id="status-pill" className={"text-xs px-2 py-1 rounded " + cls}>
+          {label}
+        </span>
+      );
+    }
+
+    // ── 页脚：环境元信息（§5.3.9）──
+    function EnvFooter({ env }) {
+      const port = env?.port || 50511;
+      const provider = env?.provider || "(待连接)";
+      const model = env?.model || "(待连接)";
+      const key = env?.hasKey ? "✅" : "❌";
+      const callsModel = env?.callsModel ? "调 LLM" : "本地 mock";
+      return (
+        <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+          <span id="env-info">
+            端口 {port} · {callsModel} · provider {provider} · model {model} · Key {key}
+          </span>
+        </footer>
+      );
+    }
+
+    // ── #page-intro：本页只演示什么 + 数据流步骤（§5.3.11） ──
+    function PageIntro() {
+      const steps = [
+        "页面加载 → GET /health 填页脚；GET /api/tools 填 Registry 面板",
+        "用户在输入框打字 → 点「发问」",
+        "浏览器 POST /api/chat → 服务端两轮调 LLM（协议 A openai.chat.completions.create）",
+        "Round 1：messages=[user] + tools=[3 项] + tool_choice='auto' → LLM 返回 tool_calls",
+        "Round 2：messages=[user, assistant(tool_calls), tool, tool] → LLM 返回 final_reply",
+        "#llm-protocol 把两轮的完整 Request / Response JSON 摆出来；你在浏览器里能「看见」协议层数据",
+      ];
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：Function Calling 协议完整一圈 + **真 LLM（协议 A）** + **请求/响应全量可视化**。
+            step-2 比 step-1 多了「看见协议层到底发了什么、模型回了什么」这一步。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            {steps.map(function (s, i) { return <li key={i}>{s}</li>; })}
+          </ol>
+        </section>
+      );
+    }
+
+    // ── Tool Registry 面板 ──
+    function ToolRegistryPanel({ tools }) {
+      if (!tools || tools.length === 0) {
+        return <div className="text-xs text-gray-500">（Registry 还没加载）</div>;
+      }
+      return (
+        <div className="space-y-2">
+          {tools.map(function (t) {
+            const dangerBadge = t.dangerous
+              ? <span className="text-xs px-2 py-0.5 rounded bg-red-200 text-red-800">dangerous · gateway 拦</span>
+              : <span className="text-xs px-2 py-0.5 rounded bg-green-200 text-green-800">safe</span>;
+            return (
+              <div key={t.name} className="border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="font-mono text-sm font-semibold">{t.name}</div>
+                  <div className="text-xs text-gray-600">{t.description}</div>
+                </div>
+                {dangerBadge}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── 单条 JSON 卡片（kind: protocol = 协议层；trace = 业务 trace；reject = gateway 拒绝） ──
+    function JsonCard({ title, badge, badgeClass, data, kind, annotation }) {
+      const bg = {
+        protocol: "bg-white border border-blue-300",
+        trace: "bg-white border border-gray-300",
+        final: "bg-green-50 border border-green-300",
+        reject: "bg-red-50 border border-red-300",
+      }[kind] || "bg-white";
+      return (
+        <div className={"rounded p-3 text-sm space-y-2 " + bg}>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-xs">{title}</span>
+            <span className={"text-xs px-2 py-0.5 rounded " + badgeClass}>{badge}</span>
+          </div>
+          {annotation && (
+            <div className="text-xs text-gray-600 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded">
+              {annotation}
+            </div>
+          )}
+          <pre className="whitespace-pre-wrap text-xs max-h-96 overflow-auto bg-gray-900 text-gray-100 p-2 rounded">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </div>
+      );
+    }
+
+    // ── 单条 tool_result 卡片（用 kind="reject" 标红） ──
+    function ResultCard({ r, idx }) {
+      if (r.ok) {
+        return (
+            <JsonCard
+              title={"④-" + (idx + 1) + " · tool_result · " + r.tool + " ✅"}
+              badge="tool_result"
+              badgeClass="bg-yellow-200 text-yellow-800"
+              data={{ tool_call_id: r.tool_call_id, result: r.result }}
+              kind="trace"
+              annotation="Registry.executeTool() 返回 { ok:true, result } —— 真副作用执行完成"
+            />
+          );
+      }
+      return (
+          <JsonCard
+            title={"④-" + (idx + 1) + " · tool_result · " + r.tool + " ❌ Gateway 拒绝"}
+            badge="rejected"
+            badgeClass="bg-red-200 text-red-800"
+            data={{ tool_call_id: r.tool_call_id, error: r.error }}
+            kind="reject"
+            annotation="Registry.executeTool() 返回 { ok:false, error } —— 不抛异常，回灌模型让它能自纠"
+          />
+        );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [tools, setTools] = useState([]);
+      const [input, setInput] = useState("北京和上海今天天气怎么样？");
+      const [status, setStatus] = useState("idle");
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function (e) { setError("GET /health 失败：" + String(e)); });
+        fetch("/api/tools").then(function (r) { return r.json(); }).then(function (j) { setTools(j.tools || []); }).catch(function () { });
+      }, []);
+
+      // ── 主按钮 disabled 逻辑：缺 Key 时不让点（§5.3.9） ──
+      const noKey = env && env.callsModel && !env.hasKey;
+
+      function ask() {
+        setStatus("running");
+        setError(null);
+        setResult(null);
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: input }),
+        })
+          .then(function (r) {
+            return r.json().then(function (j) { return { status: r.status, body: j }; });
+          })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setResult(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      // 拿字段的友好展示
+      function round1Annotation(r1) {
+        if (!r1 || !r1.response) return "";
+        const msg = r1.response.choices?.[0];
+        const finish = msg?.finish_reason;
+        const toolCallCount = msg?.message?.tool_calls?.length || 0;
+        return "LLM 决定调 " + toolCallCount + " 个工具；finish_reason = " + finish +
+          (finish === "tool_calls" ? "（关键：进入 round-2）" : "（模型直接给了自然语言，跳过 round-2）");
+      }
+
+      function round2Annotation(r2) {
+        if (!r2 || !r2.response) return "";
+        const msg = r2.response.choices?.[0];
+        const finish = msg?.finish_reason;
+        const usage = r2.response.usage;
+        return "LLM 第二轮生成 final_reply；finish_reason = " + finish +
+          "；tokens: prompt=" + (usage?.prompt_tokens ?? "?") +
+          " completion=" + (usage?.completion_tokens ?? "?") +
+          " total=" + (usage?.total_tokens ?? "?");
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · Function Calling 协议 · step-2（真 LLM · 请求/响应可视化）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+
+            {noKey && (
+              <div className="bg-red-50 border border-red-300 text-red-800 text-sm rounded p-3">
+                检测到当前 <code>LLM_PROVIDER</code> 没配 Key，主按钮已禁用。
+                在 <code>apps/.env</code> 填上对应 Key 后重启服务。
+              </div>
+            )}
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户输入（真发到 LLM）：
+                <input
+                  type="text"
+                  value={input}
+                  onChange={function (e) { setInput(e.target.value); }}
+                  className="mt-1 block w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  placeholder="例如：北京和上海今天天气怎么样？"
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={ask}
+                  disabled={status === "running" || noKey}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 请求中…" : "发问（真调 LLM）"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                真发到 <code>openai.chat.completions.create()</code>；模型自己决定调哪些工具。
+                这一轮具体调几个、调哪个，由模型说了算（不是 mock）。
+              </p>
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Tool Registry（server 注册了哪些 Tool）</h2>
+                <span className="text-xs text-gray-500">GET /api/tools</span>
+              </div>
+              <ToolRegistryPanel tools={tools} />
+            </section>
+
+            {result && result.round_1 && (
+              <section id="llm-protocol" className="bg-white shadow rounded p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold">🔌 LLM 协议层数据（每轮 Request / Response 都在这）</h2>
+                  <span className="text-xs text-gray-500">直接来自 openai.chat.completions</span>
+                </div>
+
+                {/* Round 1 */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold text-blue-800">Round 1 · 拿 tool_calls</h3>
+                  <JsonCard
+                    title="Round 1 · Request · { model, messages, tools, tool_choice }"
+                    badge="Request"
+                    badgeClass="bg-blue-200 text-blue-800"
+                    data={result.round_1.request}
+                    kind="protocol"
+                    annotation="messages=[user] · tools=[Registry 派生的 3 项] · tool_choice='auto' 让模型自己决定"
+                  />
+                  <JsonCard
+                    title="Round 1 · Response · { id, choices[0].{message, finish_reason}, usage }"
+                    badge="Response"
+                    badgeClass="bg-blue-200 text-blue-800"
+                    data={result.round_1.response}
+                    kind="protocol"
+                    annotation={round1Annotation(result.round_1)}
+                  />
+                </div>
+
+                {/* Round 2 */}
+                {result.round_2 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-purple-800">Round 2 · 把 tool_result 回灌，拿 final_reply</h3>
+                    <JsonCard
+                      title="Round 2 · Request · messages 多了 assistant(tool_calls) + tool × N"
+                      badge="Request"
+                      badgeClass="bg-purple-200 text-purple-800"
+                      data={result.round_2.request}
+                      kind="protocol"
+                      annotation="注意 messages 长度：user + assistant(tool_calls) + tool × N"
+                    />
+                    <JsonCard
+                      title="Round 2 · Response · choices[0].message.content = final_reply"
+                      badge="Response"
+                      badgeClass="bg-purple-200 text-purple-800"
+                      data={result.round_2.response}
+                      kind="protocol"
+                      annotation={round2Annotation(result.round_2)}
+                    />
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">🎯 业务 trace（5 块卡片）</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!result && !error && (
+                <p className="text-sm text-gray-500">
+                  还没问。点「发问」会真发到 LLM（两轮），结果在这里 + 上面的 #llm-protocol 同时显示。
+                </p>
+              )}
+              {result && (
+                <>
+                  <JsonCard
+                    title="① 用户输入"
+                    badge="request"
+                    badgeClass="bg-gray-200 text-gray-700"
+                    data={{ input: result.user_input }}
+                    kind="trace"
+                    annotation="原样作为 messages[0].content 发到 LLM"
+                  />
+                  <JsonCard
+                    title={"② model 返回 tool_calls · " + (result.model_tool_calls?.length || 0) + " 个（来自 Round 1 Response）"}
+                    badge="model decision"
+                    badgeClass="bg-blue-200 text-blue-800"
+                    data={result.model_tool_calls || []}
+                    kind="trace"
+                    annotation="注意 arguments 是 JSON 字符串，不是对象 —— 常见踩坑点"
+                  />
+                  {(result.tool_results || []).map(function (r, i) {
+                    return <ResultCard key={i} r={r} idx={i} />;
+                  })}
+                  <JsonCard
+                    title="⑤ model 基于 tool_result 生成的最终回复（来自 Round 2 Response）"
+                    badge="final reply"
+                    badgeClass="bg-green-300 text-green-900"
+                    data={result.final_reply}
+                    kind="final"
+                    annotation="这一段就是用户在聊天框看到的自然语言回复"
+                  />
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

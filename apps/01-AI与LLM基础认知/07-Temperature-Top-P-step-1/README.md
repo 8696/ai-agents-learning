@@ -6,17 +6,17 @@
 
 ## 端口
 
-**50107**。可临时 `PORT=50999 yarn app:01-07-temperature-step-1` 覆盖。
+**50004**。可临时 `PORT=50999 yarn app:01-07-temperature-step-1` 覆盖。
 
 ## 浏览器访问
 
 ```bash
 cd apps
 yarn app:01-07-temperature-step-1
-# → http://127.0.0.1:50107/                         总览
-# → http://127.0.0.1:50107/pages/temperature.html   温度三档
-# → http://127.0.0.1:50107/pages/top-p.html         Top-P 三档（可把 T 改成 0 验证反例）
-# → http://127.0.0.1:50107/pages/repeat.html        同一档连跑 N 次
+# → http://127.0.0.1:50004/                         总览
+# → http://127.0.0.1:50004/pages/temperature.html   温度三档
+# → http://127.0.0.1:50004/pages/top-p.html         Top-P 三档（可把 T 改成 0 验证反例）
+# → http://127.0.0.1:50004/pages/repeat.html        同一档连跑 N 次
 ```
 
 ## 数据流

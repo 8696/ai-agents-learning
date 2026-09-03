@@ -25,7 +25,9 @@
     "app:03-04-prompt-versioning-diff-step-1": "tsx 03-Prompt-Engineering/04-Prompt-版本管理-step-1/server.ts",
     "app:04-01-json-schema-step-1": "tsx 04-Structured-Output/01-JSON-Schema-step-1/server.ts",
     "app:04-02-json-mode-vs-structured-output-step-1": "tsx 04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/server.ts",
-    "app:04-02-anthropic-tool-use-step-1": "tsx 04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/server.ts"
+    "app:04-02-anthropic-tool-use-step-1": "tsx 04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/server.ts",
+    "app:05-01-fc-protocol-step-1": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-1/server.ts",
+    "app:05-01-fc-protocol-step-2": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-2/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

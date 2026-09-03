@@ -11,7 +11,7 @@ import { getLlmOptional } from "../../../../llm.js";
 // 页面靠 /health 的 hasKey=false 提前把按钮锁掉，比等请求 503 更早告诉人。
 export const llm = getLlmOptional();
 
-// §5.3.3 端口口径：5{模块两位}{小节两位} = 5 00 01。PORT= 只做单次覆盖。
+// §5.3.3 端口口径：顺序分配（占用表当前最大 + 1）。PORT= 只做单次覆盖。
 export const PORT = z.coerce
   .number()
   .int()
