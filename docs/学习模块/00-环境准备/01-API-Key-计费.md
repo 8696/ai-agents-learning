@@ -4,11 +4,11 @@
 
 - **来源**：本对话（陪跑 Coach）；无外部 URL
 - **状态**：已沉淀
-- **Demo**：已落 `apps/00-环境准备/01-API-Key-计费/` · `yarn app:00-01-api-key-billing`（看见 prompt_tokens / completion_tokens 分开）
+- **Demo**：已落 `apps/00-环境准备/01-API-Key-计费-step-1/` · `yarn app:00-01-api-key-billing-step-1`（看见 prompt_tokens / completion_tokens 分开）
 
 ### 是什么
 
-调云端大模型，账单按 **Token** 算，不是按「你点了几次发送」。Token 本身是什么（词表里的整数 ID、中文为什么更碎）在 [模块 01 · Token](../01-AI与LLM基础认知/02-Token.md)。本条只把**钱怎么扣、Key 怎么分**钉死。
+调云端大模型，账单按 **Token** 算，不是按「你点了几次发送」。Token 本身是什么（词表里的整数 ID、中文为什么更碎）在 [模块 01 · Token](../01-AI与LLM基础认知/02-Token-step-1.md)。本条只把**钱怎么扣、Key 怎么分**钉死。
 
 一次请求通常拆成两截，单价往往也不一样：
 
@@ -39,7 +39,7 @@ Agent 从第一天就要盯用量。后面多轮对话把历史塞进 prompt、T
 
 | 容易当成 | 其实是 |
 |----------|--------|
-| 网页能聊天 = 代码能调 API | 会员 Key ≠ 按量接口密钥。能进网页 ≠ `yarn app:00-01-mini-server` 能过鉴权。 |
+| 网页能聊天 = 代码能调 API | 会员 Key ≠ 按量接口密钥。能进网页 ≠ `yarn app:00-01-mini-app-step-1` 能过鉴权。 |
 | Token Plan 订阅 Key | 填进 `MINIMAX_API_KEY` 会 401，不是 `baseURL` 写错。 |
 | 「发一条消息 = 收一次固定费」 | 按这条消息里的 Token 数算；同样意思中文通常件数更多（→ Token 那条）。 |
 | 国内站 / 海外站同一把环境 | 国内 `api.minimaxi.com`，海外 `*.minimax.io`。抄错域名 = 进错店。 |
@@ -105,4 +105,4 @@ total_tokens: …
 
 ### 还没搞懂的
 
-本条没有未闭合问题。Token 本身是什么、中文为什么更贵 → [模块 01 · Token](../01-AI与LLM基础认知/02-Token.md)。
+本条没有未闭合问题。Token 本身是什么、中文为什么更贵 → [模块 01 · Token](../01-AI与LLM基础认知/02-Token-step-1.md)。

@@ -5,8 +5,8 @@
 - **来源**：
   - 本对话主讲（`coach start` 详解 + 5 用例 HTTP Demo 实测，含协议 A vs B 字段差异 + 并行/串行 + Zod 修复闭环 + 工具执行失败回传）
   - 本轮追加（2026-09-03）：⑥ 差旅助手 4-5 轮混合业务流（trip_weather / trip_exchange / trip_attractions / trip_flights / trip_hotels）+ z.coerce.number() 工程修法
-  - 04 条已沉淀：[02-JSON-Mode-vs-Structured-Output.md](../04-Structured-Output/02-JSON-Mode-vs-Structured-Output.md)（协议 A/B 字段对齐 + Zod 单一来源）
-  - 01 条已沉淀：[01-JSON-Schema.md](../04-Structured-Output/01-JSON-Schema.md)（Zod → JSON Schema 派生 + repair 闭环）
+  - 04 条已沉淀：[02-JSON-Mode-vs-Structured-Output.md](../04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1.md)（协议 A/B 字段对齐 + Zod 单一来源）
+  - 01 条已沉淀：[01-JSON-Schema.md](../04-Structured-Output/01-JSON-Schema-step-1.md)（Zod → JSON Schema 派生 + repair 闭环）
   - [OpenAI function calling guide](https://platform.openai.com/docs/guides/function-calling) · [Anthropic tool use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
 - **状态**：Demo 已落 / 沉淀已写（2026-09-03）· 待勾 ✅
 - **Demo**：`apps/05-Tool-Calling/01-Function-Calling-协议/`（HTTP，端口 `50501`，`yarn app:05-01-function-calling-protocol`）· 9 个 Tool（calculator / weather / db / search + 5 个 trip_*），含 ⑥ 差旅助手 4-5 轮混合业务流；详见 §5.2 Demo 判断块

@@ -11,8 +11,8 @@
   - [json-schema.org](https://json-schema.org) · 上一条沉淀复习用
 - **状态**：Demo 已落（协议 A + 协议 B 两条）/ 沉淀已写（2026-09-03）· 待勾 ✅
 - **Demo**：
-  - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/`（端口 `50402`，`yarn app:04-02-json-mode-vs-structured-output`）
-  - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/`（端口 `50412`，`yarn app:04-02-anthropic-tool-use`；与上一份 HTTP Demo 错开 +10）
+  - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/`（端口 `50402`，`yarn app:04-02-json-mode-vs-structured-output-step-1`）
+  - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/`（端口 `50412`，`yarn app:04-02-anthropic-tool-use-step-1`；与上一份 HTTP Demo 错开 +10）
   - 详见 §5.2 Demo 判断块
 
 > 章节随这条知识切，不套固定九节。覆盖：协议 A/B 全景 → 机制数据怎么走 → 翻车点 → 6 路例子 → 易混 → 怎么选用 → 取舍 → 踩坑（本 demo 实测数据）→ 仓库内约定 → 追问过 → 过关自检 → 还没搞懂。
@@ -406,7 +406,7 @@ const IntentAnthropicSchema = {
 
 ### 6. Protocol Adapter · 业务不关心协议
 
-仓库已有 [`apps/02-LLM-API开发/03-adapter-demo/`](../../apps/02-LLM-API开发/03-adapter-demo/README.md) 这个雏形（"业务只调 `sendMessage`"）。生产里把这层做厚 = L1+L2 的封装：
+仓库已有 [`apps/02-LLM-API开发/03-adapter-demo-step-1/`](../../apps/02-LLM-API开发/03-adapter-demo-step-1/README.md) 这个雏形（"业务只调 `sendMessage`"）。生产里把这层做厚 = L1+L2 的封装：
 
 ```ts
 interface IntentCall {
@@ -474,8 +474,8 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 8. **协议 B 响应是数组而非对象**。 `res.content` 是 `ContentBlock[]`——用 `block.type` 区分文本与 `tool_use`。直接 `res.text` 这种属性是不存在的。带 for-of + `if (block.type === "tool_use")` 才是稳定写法。
 9. **协议 B `tool_choice: { type: "tool", name: "..." }` 的 `name` 必须匹配 `tools` 里的**某个 `name`**。 拼错就 400。
 10. **Anthropic SDK 类型 narrowing**。 `.filter((b): b is { type: "text"; text: string } => ...)` 这种显式 type predicate 容易漏 SDK 的可选字段（如 `TextBlock.citations`）。**用 for-of + `if (block.type === "text")`** 让 TS discriminated union 自动收窄更稳。这是本 demo 第一轮 typecheck 的两个错误之一。
-11. **JSX 文本里 `<` 必须 `{"<"}` 转义**。 Babel 把 `<think>` 当成新 JSX 标签，找不到 closing tag 直接 break。`apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/public/index.html` 的 `夹 <think>` 第一次实测踩坑——按 §5.3.4 规则改成 `{"<think>"}` 即可。
-12. **条二份 HTTP Demo 的端口 vs 脚本名规则**。 §5.3.3 那句"小节两位 `+10`"措辞模糊——读起来像脚本名也要带 `+10`，**实际仓库既有样本（`02-03-abort-controller` + `02-03-adapter`，端口 `50203` + `50213`）证明脚本名沿用真实小节号**，**只有端口错开**。本 demo 第二份 HTTP Demo 原本命名为 `app:04-12-anthropic-tool-use`，已修正为 `app:04-02-anthropic-tool-use`，端口仍 `50412`。
+11. **JSX 文本里 `<` 必须 `{"<"}` 转义**。 Babel 把 `<think>` 当成新 JSX 标签，找不到 closing tag 直接 break。`apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/public/index.html` 的 `夹 <think>` 第一次实测踩坑——按 §5.3.4 规则改成 `{"<think>"}` 即可。
+12. **条二份 HTTP Demo 的端口 vs 脚本名规则**。 §5.3.3 那句"小节两位 `+10`"措辞模糊——读起来像脚本名也要带 `+10`，**实际仓库既有样本（`02-03-abort-controller` + `02-03-adapter`，端口 `50203` + `50213`）证明脚本名沿用真实小节号**，**只有端口错开**。本 demo 第二份 HTTP Demo 原本命名为 `app:04-12-anthropic-tool-use`，已修正为 `app:04-02-anthropic-tool-use-step-1`，端口仍 `50412`。
 13. **协议 B 没有"JSON Mode"等价字段**。 协议 A 的 `json_object` 在 B 上没有对位字段。协议 B 唯一进入结构化路径的方法是 `tools + tool_choice`。**`tools` 是协议 B 的"闸的容器"**，不是一个开关。
 14. **thinking 模式与 tool_choice 是物理冲突**。 OpenAI o 系列 / DeepSeek-Reasoner / Anthropic extended thinking 等 **reasoning 模型** 在 thinking 路径下，**B3 强制 tool_choice 会被 HTTP 400 拒绝**，原文 `Thinking mode does not support this tool_choice`（DeepSeek-Reasoner 实证）。A3 strict 同理受 token-mask 限制，reasoning 模型一般拿不到 A3。**修法**：(a) 协议 B 显式 `thinking: { type: "disabled" }`（Anthropic SDK 顶层字段）；(b) 协议 A 没法关，只能换非 reasoning 模型；(c) 生产上落地 Provider Profile 时要标 `thinking` 字段、reasoning 模型上把 A3/B3 自动降档到 A2/B2。**§4.1 / §4.2** 是这条对应的代码与判定清单。
 15. **adapter 不能把上游 4xx 都包成 500**。 `ctx.status = 500` 把上游 HTTP 400 / 401 / 429 全掩盖了，watchdog 看到的全是 500、看不到真正失败。**修法**：catch 块从上游 SDK 错误对象上读 `.status` 字段（OpenAI `APIError.status` / Anthropic `APIError.status`），透传 `ctx.status = upstreamStatus ?? 500`，**body 加 `upstreamStatus` 字段给前端**。本 demo 两个 server.ts 已加 `writeUpstreamError()` helper 并替换所有 6 个 catch 块。
@@ -519,7 +519,7 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 ## 我追问过的
 
 - **「举几个例子，这个库的调用的返回值是什么」**（来源 01 条对话里的相关追问，影响复用契约写法）→ 同契约的 Zod 端在协议 A 走 `message.content` 字符串 + JSON.parse；协议 B 走 `content[type=tool_use].input` 对象不要 parse。
-- **「写demo」（强制出 Demo）」** → 落协议 A `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/` §5.3 完整版；后来又写一份协议 B 镜像 `apps/.../02-JSON-Mode-vs-Tool-Use-ProtoB/` 端口 `50412`。`yarn typecheck` 过；浏览器跑过 5 用例 + ⑥。
+- **「写demo」（强制出 Demo）」** → 落协议 A `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/` §5.3 完整版；后来又写一份协议 B 镜像 `apps/.../02-JSON-Mode-vs-Tool-Use-ProtoB/` 端口 `50412`。`yarn typecheck` 过；浏览器跑过 5 用例 + ⑥。
 - **「说是解析 OK 了，但页面又显示缺 action,query」** → 真 bug：`safeParseIntent` 和 `analyze` 用两份独立 strip 链。**根因**：早期 `analyze` 把 4 个 `.replace()` 串成一行没有 trim，剥掉 `<think>` 之后剩 `\n```json…` 开头 `\n` 让 `^```(?:json)?\s*\n?` 匹配不到 → JSON.parse 挂 → keysSeen 空 → 缺 keys 标签错亮。**修法**：抽 `stripWrap(raw)`，两函数共用同一清洗链，每步后强制 `.trim()`。从此「Zod ✓」与「keysSeen 非空」必然同进同出，不再矛盾。
 - **「停掉服务，然后详细解释这个协议 A 的请求参数中的 `response_format`」** → 沉淀补充了 4 种 `type`、6 路全景的协议 A 端；本沉淀正文里协议 A 的「是什么」一节就是这一问的基础上的展开。
 - **「再把协议 B 的也做一份，然后把两份协议的 demo 都写清楚一点」** → 新建协议 B demo + 渲染同 5 用例 + ⑥ prompt 诱导模型违 input_schema；两份 README 重写成对称镜像（端口公式 + 一图看清表 + 端点 + §5.3.2 四项 + 5 用例 + 没做的事）。
@@ -560,10 +560,10 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 Demo 判断
 - 小节：JSON Mode vs Structured Output：前者保证合法 JSON，后者保证符合 schema
 - 结论：可运行 §5.3（两份）
-  - 协议 A 落点：apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output/
-    · yarn app:04-02-json-mode-vs-structured-output · 端口 50402
-  - 协议 B 落点：apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/
-    · yarn app:04-02-anthropic-tool-use · 端口 50412（同小节第二份 HTTP Demo 错开 +10）
+  - 协议 A 落点：apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/
+    · yarn app:04-02-json-mode-vs-structured-output-step-1 · 端口 50402
+  - 协议 B 落点：apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/
+    · yarn app:04-02-anthropic-tool-use-step-1 · 端口 50412（同小节第二份 HTTP Demo 错开 +10）
 - 理由：要看见"两协议 × 6 档"的可观察对照——同 5 用例 × 同 prompt × 双协议；
        还要看见协议 A3 ⑥ schema 不严格 → API 400 的实装差异；
        和协议 B3 ⑥ prompt 诱导模型拒调工具这个失败行为的实装。

@@ -26,7 +26,7 @@
 
 **一句话目标**：让模型稳定按照你的要求工作，而不是「有时候好有时候不好」。
 
-**代码落点**：按条 Demo 已落 01-System-User-Assistant-优先级 / 02-Few-shot-Zero-shot / 04-Prompt-版本管理。Zero/Few 对照仍在 `yarn app:03-02-few-shot-zero-shot`（端口 `50302`）。本模块无额外整合 APP。
+**代码落点**：按条 Demo 已落 01-System-User-Assistant-优先级 / 02-Few-shot-Zero-shot / 04-Prompt-版本管理。Zero/Few 对照仍在 `yarn app:03-02-few-shot-zero-shot-step-1`（端口 `50302`）。本模块无额外整合 APP。
 
 **验收标准**
 - [ ] 处理一封来信能看到完整工单；页脚有所用 Prompt 的版本号
@@ -45,4 +45,4 @@
 
 > 按条 Demo（01 / 02 / 04）已落；本模块无额外整合 APP。
 
-4. 对照 Few-shot 仍看 `yarn app:03-02-few-shot-zero-shot`；CLI 回归可选
+4. 对照 Few-shot 仍看 `yarn app:03-02-few-shot-zero-shot-step-1`；CLI 回归可选

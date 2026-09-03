@@ -4,7 +4,7 @@
 
 - **来源**：本对话（§6.2 完整讲解 + 3 个追问 + 4 组思考对照实验 + /api/b-thinking-stream 端点 223 事件实测 + README）
 - **状态**：已沉淀
-- **Demo**：已落 [apps/02-LLM-API开发/02-协议-A-vs-B/](../../../apps/02-LLM-API开发/02-协议-A-vs-B/)（5 个端点：/api/a /api/b /api/compare /api/think-compare /api/b-thinking-stream；用 MiniMax-M3 同 Key 跑双协议对照）
+- **Demo**：已落 [apps/02-LLM-API开发/02-协议-A-vs-B-step-1/](../../../apps/02-LLM-API开发/02-协议-A-vs-B-step-1/)（5 个端点：/api/a /api/b /api/compare /api/think-compare /api/b-thinking-stream；用 MiniMax-M3 同 Key 跑双协议对照）
 
 > 各节写什么、怎么判断归哪一节、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -517,7 +517,7 @@ N+M+3. message_stop
 
 ### 例子 5：adapter demo 落地（业务代码完全不碰 SDK）
 
-[apps/02-LLM-API开发/03-adapter-demo](../../../apps/02-LLM-API开发/03-adapter-demo/) 把上面所有差异**收敛到一个统一接口**——业务代码从此不直接调 SDK。
+[apps/02-LLM-API开发/03-adapter-demo-step-1](../../../apps/02-LLM-API开发/03-adapter-demo-step-1/) 把上面所有差异**收敛到一个统一接口**——业务代码从此不直接调 SDK。
 
 **adapter 暴露的统一类型**（业务代码只看这个）：
 
@@ -761,7 +761,7 @@ async function sendMessage(messages, opts) {
 
 ## 适配层落地（adapter demo）
 
-[apps/02-LLM-API开发/03-adapter-demo](../../../apps/02-LLM-API开发/03-adapter-demo/) 是一个最小可运行的 adapter demo——业务代码完全不碰 SDK，只调 `sendMessage(opts)`。
+[apps/02-LLM-API开发/03-adapter-demo-step-1](../../../apps/02-LLM-API开发/03-adapter-demo-step-1/) 是一个最小可运行的 adapter demo——业务代码完全不碰 SDK，只调 `sendMessage(opts)`。
 
 ### 生活类比（用户原话）
 
@@ -775,7 +775,7 @@ async function sendMessage(messages, opts) {
 ### Demo 文件结构
 
 ```
-apps/02-LLM-API开发/03-adapter-demo/
+apps/02-LLM-API开发/03-adapter-demo-step-1/
 ├── adapter.ts           ← Adapter 层（types + sendViaA + sendViaB + sendMessage 入口）
 ├── index.ts             ← HTTP server（POST /api/chat 调 sendMessage；零业务逻辑）
 ├── public/
@@ -788,7 +788,7 @@ apps/02-LLM-API开发/03-adapter-demo/
 ```bash
 cd apps
 yarn install
-yarn app:02-03-adapter    # 端口 5175
+yarn app:02-03-adapter-step-1    # 端口 5175
 ```
 
 浏览器打开 `http://127.0.0.1:5175/`；切换「协议」下拉框在 A / B 之间，看 4 块显示区（thinking / answer / usage / 原始 JSON）的字段一致——**业务层永远看不到协议差异**。
@@ -816,7 +816,7 @@ r.protocol + r.model  // debug 用，不要 if 分支用
 
 - 「字段对照速查表」「完整字段映射（10 节）」「thinking 三种字段模式」「MiniMax 兼容端点 quirk」「budget_tokens」—— **这些都是 adapter 设计的输入**
 - 「取舍」段的「多协议接入怎么写」「thinking 计费模型」—— **这是 adapter 的设计原则**
-- **adapter demo（apps/02-LLM-API开发/03-adapter-demo/）—— 这是 adapter 的最小可运行实现**
+- **adapter demo（apps/02-LLM-API开发/03-adapter-demo-step-1/）—— 这是 adapter 的最小可运行实现**
 
 adapter 把上面所有学到的差异**收敛成 5 个统一字段**，业务层从此不再关心协议。本 demo 是本条（协议 A vs B）的**收口示例**——学完前面所有字段差异，最终在 adapter 里消化掉。
 
@@ -865,7 +865,7 @@ for await (const delta of sendMessageStream(opts)) {
 | **A** | **28** | 3 | 1 | 1 | thinking 跨多个 chunk，状态机切分正确 |
 | **B** | **12** | 3 | 1 | 1 | 独立 block 直接 yield；这次 `usage.thinkingTokens: 41` |
 
-**新发现**：之前 [streaming-sse demo](../../../apps/02-LLM-API开发/01-Streaming-SSE/) 用数学题预算 500 测出「MiniMax 兼容端点流式 `message_delta` 不报 `output_tokens_details.thinking_tokens`」；**这次 adapter demo 用同样的简单 prompt（"23 × 47"）却报出 `thinkingTokens: 41`**。说明 MiniMax 兼容端点的流式 thinking 拆分上报**不是绝对"不报"**——跟 prompt 长度 / thinking 总量 / 模型内部决策都有关。**写客户端不能假设"流式一定有 thinkingTokens"，要做兜底**。
+**新发现**：之前 [streaming-sse demo](../../../apps/02-LLM-API开发/01-Streaming-SSE-step-1/) 用数学题预算 500 测出「MiniMax 兼容端点流式 `message_delta` 不报 `output_tokens_details.thinking_tokens`」；**这次 adapter demo 用同样的简单 prompt（"23 × 47"）却报出 `thinkingTokens: 41`**。说明 MiniMax 兼容端点的流式 thinking 拆分上报**不是绝对"不报"**——跟 prompt 长度 / thinking 总量 / 模型内部决策都有关。**写客户端不能假设"流式一定有 thinkingTokens"，要做兜底**。
 
 ---
 

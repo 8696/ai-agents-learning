@@ -2,9 +2,9 @@
 
 > 对应模块：[模块 04 · Structured Output ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 1 条
 
-- **来源**：本对话主讲（聊到 `apps/04-Structured-Output/01-JSON-Schema/`） · [json-schema.org](https://json-schema.org) · [Zod v3](https://zod.dev)
+- **来源**：本对话主讲（聊到 `apps/04-Structured-Output/01-JSON-Schema-step-1/`） · [json-schema.org](https://json-schema.org) · [Zod v3](https://zod.dev)
 - **状态**：Demo 已落 / 沉淀首次写满 + 增量 #1（2026-09-03）· 待勾 ✅
-- **Demo**：`apps/04-Structured-Output/01-JSON-Schema/`（CLI，可在终端跑 `yarn app:04-01-json-schema`；不调 LLM API）· 详见 §5.2 Demo 判断块
+- **Demo**：`apps/04-Structured-Output/01-JSON-Schema-step-1/`（CLI，可在终端跑 `yarn app:04-01-json-schema-step-1`；不调 LLM API）· 详见 §5.2 Demo 判断块
 
 > 各节写什么、怎么判断归哪一节、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -52,7 +52,7 @@ Agent 项目里模型的输出是自由文本，要变成"程序能处理的数�
 | **Zod** | 工厂流水线末端的"质检仪"——产品过逐项卡（长度、重量、印刷、颜色），合格放行、不合格标红返工 |
 | **Zod ↔ JSON Schema** | "施工图纸"vs"实体建筑"。图纸（JSON Schema）人人能看（跨语言），实体建筑（Zod 在 TS 里运行）实际占地 |
 
-#### Zod 调用返回值（6 段，对应 `apps/04-Structured-Output/01-JSON-Schema/index.ts` 跑出来的样子）
+#### Zod 调用返回值（6 段，对应 `apps/04-Structured-Output/01-JSON-Schema-step-1/index.ts` 跑出来的样子）
 
 **① `parse(data)` — 成功返回 typed 对象，失败抛 `ZodError`**
 
@@ -195,7 +195,7 @@ type Cat = z.infer<typeof Cat>;       // { name: string; age: number }
 ### 我追问过的
 
 - **「举几个例子，这个库的调用的返回值是什么」** → 给了 6 段 Zod 调用返回值（`parse` / `safeParse` / `z.infer` / `enum+default+transform` / repair loop / 端到端），把 `ZodError.issues` 的 `path | code | message` 形状摊开看。
-- **「写demo」** → 强制出 Demo，覆盖原预告的"伪代码（见机制），不写 Demo"。改判为"可运行 CLI（不调 API）"，落到 `apps/04-Structured-Output/01-JSON-Schema/`。
+- **「写demo」** → 强制出 Demo，覆盖原预告的"伪代码（见机制），不写 Demo"。改判为"可运行 CLI（不调 API）"，落到 `apps/04-Structured-Output/01-JSON-Schema-step-1/`。
 - **「沉淀稳定」** → 走首次写满路径，把以上全部写进这份 MD。
 - **「zod 不仅可以动态推导 ts 类型还可以校验？」** → 用最小代码 (`Cat` schema 一段带出 `.parse` / `.safeParse` / `z.infer`) + 量表比喻（同一张表被卡尺 / 图纸 / 报错模板三角色各取）把"一份 schema 同时给三件事"补到「例子」§⑦。已并入增量 #1。
 

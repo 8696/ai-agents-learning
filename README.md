@@ -13,7 +13,7 @@
 5. 不写代码？只学概念也行。`coach status` 看当前节奏
 
 `apps/` 是**唯一**的代码落点（[AGENTS.md §4](AGENTS.md#4-代码落点)）：
-- 模块 00 mini-app：`apps/00-环境准备/01-mini-app/`
+- 模块 00 mini-app：`apps/00-环境准备/01-mini-app-step-1/`
 - 各外部小节 Demo：`apps/{模块}/{小节}/`（按 §5.2 判断要不要建）
 
 每个 `apps/` 子文件夹只保持 `README.md`（怎么跑 + 当前能做什么），跟代码一起改写。
@@ -29,11 +29,11 @@ cp .env.example .env
 # 编辑 apps/.env：填 MINIMAX_API_KEY
 
 # 模块 00 mini-app
-yarn app:00-01-mini-server         # HTTP + SSE + 浏览器页（http://127.0.0.1:50000/）
+yarn app:00-01-mini-app-step-1     # HTTP + SSE + 浏览器页（http://127.0.0.1:50000/）
 
 # 其它入口（按 docs/学习模块/README.md 里的小节）
-yarn app:01-02-token               # 例：模块 01 · Token
-yarn app:02-01-streaming-sse       # 例：模块 02 · Streaming/SSE
+yarn app:01-02-token-step-1       # 例：模块 01 · Token
+yarn app:02-01-streaming-sse-step-1 # 例：模块 02 · Streaming/SSE
 ```
 
 ## 仓库约定
@@ -76,23 +76,14 @@ ai-agents-learning/
 ├── apps/
 │   ├── README.md · package.json · tsconfig.json · tsconfig.base.json
 │   ├── load-root-env.ts · .env.example · .nvmrc · .env（Key，不进 git）
-│   ├── 00-环境准备/01-mini-app/        ← 模块 00 mini-app（HTTP + SSE）
-│   ├── 01-AI与LLM基础认知/02-Token/ · 06-Embedding/ · 07-Temperature-Top-P/
-│   ├── 02-LLM-API开发/01-Streaming-SSE/ · 02-协议-A-vs-B/ · 03-AbortController/ · 04-Rate-Limit/
+│   ├── 00-环境准备/01-mini-app-step-1/        ← 模块 00 mini-app（HTTP + SSE）
+│   ├── 01-AI与LLM基础认知/02-Token-step-1/ · 06-Embedding/ · 07-Temperature-Top-P/
+│   ├── 02-LLM-API开发/01-Streaming-SSE-step-1/ · 02-协议-A-vs-B/ · 03-AbortController/ · 04-Rate-Limit/
 │   └── ...（学到哪条、§5.2 判为可运行才建）
 └── RESET.md                          ← 清进度 / 清小节 Demo（共享 package 保留；按需打开，非日常）
 ```
 
 学完所有模块后想要作品集再从零建（[AGENTS.md §5](AGENTS.md#5-demo-落点)）。
-
-## 学习总览（截至模块 02）
-
-| 模块 | 状态 | 内容 |
-| ---- | ---- | ---- |
-| 00 | ✅ 完成 | 环境准备 / Key 安全 / Node ≥22 |
-| 01 | ✅ 完成 | Token / Context / Transformer / 幻觉 |
-| 02 | ✅ 完成 | Streaming · 协议 A/B · AbortController · Rate-Limit · 思考 |
-| 03 ~ 23 | ⬜ | 见 [docs/06-学习总览.md](docs/06-学习总览.md) |
 
 ## 关键链接
 

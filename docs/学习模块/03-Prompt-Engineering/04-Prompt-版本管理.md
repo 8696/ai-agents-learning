@@ -49,7 +49,7 @@
 
 ### 例子 1：Prompt 落文件（机制）
 
-把聊天机器人里"欢迎语"从对话字符串变成仓库里的 `apps/03-Prompt-Engineering/04-Prompt-版本管理/src/prompts/greeting.prompt.md`：
+把聊天机器人里"欢迎语"从对话字符串变成仓库里的 `apps/03-Prompt-Engineering/04-Prompt-版本管理-step-1/src/prompts/greeting.prompt.md`：
 
 ```text
 <!-- ── 元数据（每条 Prompt 都有这一段） ── -->

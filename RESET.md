@@ -131,7 +131,7 @@ find apps -mindepth 1 -maxdepth 1 -type d ! -name node_modules -exec rm -rf {} +
 2. [apps/README.md](apps/README.md)：约定段落、Key / CATALOG、端口公式保留。「当前已有」占用表清空，只留表头 + 一句「尚无已落 Demo。学到该条、§5.2 判为可运行再加行。」不要提前建空模块夹。
 3. 可选：`node scripts/gen-manifest.js`（导航清单若还指着已删路径）。
 
-下次某条外部判为可运行：按条建 `apps/{模块}/{小节}/`，在 `package.json` 加 `app:{模块两位}-{小节两位}-{英文短名}`，占用表加一行。写法对照 [agents/05-demo.md](agents/05-demo.md)，禁止拿已删的旧夹当模板抄。
+下次某条外部判为可运行：按条建 `apps/{模块}/{小节}-step-{N}/`（[§5.3.14 动态引导](agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新)，**扁平结构**），在 `package.json` 加 `app:{模块两位}-{小节两位}-{英文短名}-step-{N}`，占用表加一行。写法对照 [agents/05-demo.md](agents/05-demo.md)，禁止拿已删的旧夹当模板抄。
 
 只重学某一模块：只删 `apps/{该模块文件夹}/`，只去掉该模块的 `app:*` 与占用表行。
 
@@ -142,7 +142,7 @@ coach status 应报：
   当前模块：00 环境准备
   节奏：外部学习
   当前条目：API Key / 计费
-  代码落点：apps/00-环境准备/01-API-Key-计费（尚未建）
+  代码落点：apps/00-环境准备/01-API-Key-计费-step-1（尚未建）
   动作：外部（可 Demo）
 ```
 

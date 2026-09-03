@@ -4,7 +4,7 @@
     {
       "name": "00-api-key-billing",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["--cwd", "apps", "app:00-01-api-key-billing"],
+      "runtimeArgs": ["--cwd", "apps", "app:00-01-api-key-billing-step-1"],
       "port": 5180,
       "url": "http://127.0.0.1:5180/",
       "autoPort": false
@@ -12,7 +12,7 @@
     {
       "name": "02-02-protocol-ab",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["--cwd", "apps", "app:02-02-protocol-ab"],
+      "runtimeArgs": ["--cwd", "apps", "app:02-02-protocol-ab-step-1"],
       "port": 5180,
       "url": "http://127.0.0.1:5180/",
       "autoPort": false
@@ -20,7 +20,7 @@
     {
       "name": "03-04-prompt-versioning-diff",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["--cwd", "apps", "app:03-04-prompt-versioning-diff"],
+      "runtimeArgs": ["--cwd", "apps", "app:03-04-prompt-versioning-diff-step-1"],
       "port": 50304,
       "url": "http://127.0.0.1:50304/",
       "autoPort": false
@@ -28,7 +28,7 @@
     {
       "name": "04-02-json-mode-vs-structured-output",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["--cwd", "apps", "app:04-02-json-mode-vs-structured-output"],
+      "runtimeArgs": ["--cwd", "apps", "app:04-02-json-mode-vs-structured-output-step-1"],
       "port": 50402,
       "url": "http://127.0.0.1:50402/",
       "autoPort": false
@@ -36,7 +36,7 @@
     {
       "name": "04-02-anthropic-tool-use",
       "runtimeExecutable": "yarn",
-      "runtimeArgs": ["--cwd", "apps", "app:04-02-anthropic-tool-use"],
+      "runtimeArgs": ["--cwd", "apps", "app:04-02-anthropic-tool-use-step-1"],
       "port": 50412,
       "url": "http://127.0.0.1:50412/",
       "autoPort": false

@@ -47,8 +47,8 @@ function listDemos() {
 }
 
 /**
- * §5.3.14 父目录参数：传 apps/.../01-…/ 时，本目录没有 server.ts，
- * 但有 step-N/ 子目录 → 展开成各 step-N；否则原样返回。
+ * 父目录参数：扁平结构下没有 step-N/ 子夹（§5.3.14）。
+ * 传 apps/{模块}/ 或 apps/{模块}/{小节}-step-1/ 时都按"扫所有 server.ts"处理。
  */
 function expandTargets(args) {
   const out = [];
@@ -61,10 +61,9 @@ function expandTargets(args) {
       out.push(a);
       continue;
     }
-    const subs = fs
-      .readdirSync(a, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && /^step-\d+$/.test(e.name))
-      .map((e) => path.join(a, e.name))
+    const subs = walk(a)
+      .filter((f) => f.endsWith(`${path.sep}server.ts`) || f.endsWith("/server.ts"))
+      .map((f) => path.dirname(f))
       .sort();
     if (subs.length > 0) out.push(...subs);
     else {

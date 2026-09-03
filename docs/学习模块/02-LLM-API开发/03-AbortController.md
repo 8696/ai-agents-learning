@@ -2,9 +2,9 @@
 
 > 对应模块：[模块 02 · LLM API 开发 ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 3 条
 
-- **来源**：本对话（§6.2 完整讲解 + 用户追问"是否看模型提供商" + 厂商行为对照 + demo `apps/02-LLM-API开发/03-AbortController/` 实证）
+- **来源**：本对话（§6.2 完整讲解 + 用户追问"是否看模型提供商" + 厂商行为对照 + demo `apps/02-LLM-API开发/03-AbortController-step-1/` 实证）
 - **状态**：已沉淀
-- **Demo**：已落 [apps/02-LLM-API开发/03-AbortController/](../../../apps/02-LLM-API开发/03-AbortController/)（3 端点对照：流到底基线 / 收 N 帧就停 / 故意不传 signal；浏览器页面 + 后端日志）
+- **Demo**：已落 [apps/02-LLM-API开发/03-AbortController-step-1/](../../../apps/02-LLM-API开发/03-AbortController-step-1/)（3 端点对照：流到底基线 / 收 N 帧就停 / 故意不传 signal；浏览器页面 + 后端日志）
 
 > 各节写什么、怎么判断归哪一节、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -114,7 +114,7 @@ OpenAI / Anthropic SDK 接 AbortController 做两步：
 - 把 `signal` 传给底层 fetch / HTTP 客户端（**真正关 socket**）
 - SDK 自己再抛 `APIUserAbortError` 让你能 catch
 
-**catch 要双写**：`err.name === 'AbortError'`（Node fetch）vs `err.constructor?.name === 'APIUserAbortError'`（SDK 包过）。本项目 `apps/00-环境准备/01-mini-app/src/{index.ts, server.ts}` 同时判这两种。
+**catch 要双写**：`err.name === 'AbortError'`（Node fetch）vs `err.constructor?.name === 'APIUserAbortError'`（SDK 包过）。本项目 `apps/00-环境准备/01-mini-app-step-1/src/{index.ts, server.ts}` 同时判这两种。
 
 ## 例子
 
@@ -236,7 +236,7 @@ for await (const chunk of stream) {
 }
 ```
 
-### 例子 5：Demo 三端点对照实证（[apps/02-LLM-API开发/03-AbortController/](../../../apps/02-LLM-API开发/03-AbortController/)）
+### 例子 5：Demo 三端点对照实证（[apps/02-LLM-API开发/03-AbortController-step-1/](../../../apps/02-LLM-API开发/03-AbortController-step-1/)）
 
 浏览器页面三个按钮：
 

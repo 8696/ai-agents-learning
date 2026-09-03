@@ -1,7 +1,7 @@
 # **429 / Rate Limit**：为什么要指数退避；哪些错误不该重试
 
 > 对应模块：[模块 02 · LLM API 开发 ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 4 条
-> **来源**：本对话（详解 §4.1~§4.9 全部轮次 + `yarn app:02-04-rate-limit` 跑通的 5 个场景时间线 + 进入维护模式改 `app:{模块}-{小节}-{短名}` 命名约定 + 真 API burst 撞限的实际结果）
+> **来源**：本对话（详解 §4.1~§4.9 全部轮次 + `yarn app:02-04-rate-limit-step-1` 跑通的 5 个场景时间线 + 进入维护模式改 `app:{模块}-{小节}-{短名}` 命名约定 + 真 API burst 撞限的实际结果）
 > **状态**：已沉淀
 
 **一句话概括**：LLM API 一定返回 429；第一次上量整个应用就崩——因为没做「分类重试 + 指数退避 + jitter」。这一条把分类表、退避（人话版步骤，不是公式）、jitter 防 thundering herd、重试上限、流式 + 429 怎么接一次讲清。
@@ -250,7 +250,7 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 
 ## 踩坑（本对话 demo 实际撞过的）
 
-- **TS strict 报错 `NodeJS.HttpIncomingMessage` 类型不存在**：在 [apps/02-LLM-API开发/04-Rate-Limit/index.ts](../../../apps/02-LLM-API开发/04-Rate-Limit/index.ts) 第 124 行用了 `NodeJS.HttpIncomingMessage["headers"]`，但 Node 22 类型里这个类型是 `IncomingMessage`，从 `node:http` 直接 import 即可
+- **TS strict 报错 `NodeJS.HttpIncomingMessage` 类型不存在**：在 [apps/02-LLM-API开发/04-Rate-Limit-step-1/index.ts](../../../apps/02-LLM-API开发/04-Rate-Limit-step-1/index.ts) 第 124 行用了 `NodeJS.HttpIncomingMessage["headers"]`，但 Node 22 类型里这个类型是 `IncomingMessage`，从 `node:http` 直接 import 即可
 - **TS strict 报 `RETRYABLE_STATUS` 声明但未使用**：第一次写分类时显式列了 RETRYABLE_STATUS 集合，但代码里其实只检查 NON_RETRYABLE_STATUS（不在 NON_RETRYABLE_STATUS 里且不是 2xx 就当可重试）。**删了显式集合**，注释写清「隐式可重试」逻辑——这样新增可重试状态码不用改代码
 - **真 API burst 没撞出 429**：20 并发 MiniMax-M3 全部 200。要撞需 50+ 并发，或换更小模型，或加 prompt 让 TPM 限制先撞
 - **端口 5176 EADDRINUSE**：多次跑 demo 没关进程，端口被占。`lsof -ti :5176 | xargs kill -9` 清掉
@@ -277,11 +277,11 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 
 ```bash
 # 本条对应 Demo
-cd apps && yarn app:02-04-rate-limit
+cd apps && yarn app:02-04-rate-limit-step-1
 # http://127.0.0.1:50204/pages/mock.html  mock 五场景
 # http://127.0.0.1:50204/pages/real.html  真 API 单次 + burst（会烧 token）
 ```
 
 ---
 
-- **Demo**：已落 `apps/02-LLM-API开发/04-Rate-Limit/` · `yarn app:02-04-rate-limit`（`/pages/mock.html` 五场景；`/pages/real.html` 单次 + burst）
+- **Demo**：已落 `apps/02-LLM-API开发/04-Rate-Limit-step-1/` · `yarn app:02-04-rate-limit-step-1`（`/pages/mock.html` 五场景；`/pages/real.html` 单次 + burst）

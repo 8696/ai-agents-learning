@@ -5,7 +5,7 @@
 [← 00 环境准备](../00-环境准备/README.md) · [02 LLM API 开发 →](../02-LLM-API开发/README.md)
 
 > **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以该小节 `apps/` README 为准。
-> **代码落点**：按条 Demo：[`02-Token`](../../../apps/01-AI与LLM基础认知/02-Token/) · [`06-Embedding`](../../../apps/01-AI与LLM基础认知/06-Embedding/) · [`07-Temperature-Top-P`](../../../apps/01-AI与LLM基础认知/07-Temperature-Top-P/)。Transformer / Attention / Context 是伪代码，不建文件夹。
+> **代码落点**：按条 Demo：[`02-Token`](../../../apps/01-AI与LLM基础认知/02-Token-step-1/) · [`06-Embedding`](../../../apps/01-AI与LLM基础认知/06-Embedding-step-1/) · [`07-Temperature-Top-P`](../../../apps/01-AI与LLM基础认知/07-Temperature-Top-P-step-1/)。Transformer / Attention / Context 是伪代码，不建文件夹。
 
 ## 小节进度
 
@@ -53,7 +53,7 @@
 **常见坑**：陷进 Transformer 数学推导（B 档内容），迟迟不写一行代码。设硬性上限。Token / Temperature 该看见数字的已经落了 Demo；不要为 Attention 再起一个进程。
 
 **出门线索**（完整勾选表见 [小节进度](#小节进度)）：⭐ 本模块大部分是概念；**Token 用本地 tokenizer 数过、Temperature 跑过对照**就算代码侧够了
-- `LLM token explained` · `tiktoken 中文` — 跑 `yarn app:01-02-token`，或再用在线 tokenizer 对一下
+- `LLM token explained` · `tiktoken 中文` — 跑 `yarn app:01-02-token-step-1`，或再用在线 tokenizer 对一下
 - `context window limit LLM` — 各模型文档的 Context 章节
 - `illustrated transformer` — Jay Alammar《The Illustrated Transformer》，**不要推公式**
 - `why LLM hallucinate` — 任意 10 min 科普视频

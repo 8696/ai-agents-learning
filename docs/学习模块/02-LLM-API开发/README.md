@@ -27,7 +27,7 @@
 
 **一句话目标**：从代码层面真正调用模型，而不是在网页里聊天。
 
-**代码落点**：按条 Demo 已落 01-Streaming-SSE / 02-协议-A-vs-B / 03-AbortController / 03-adapter-demo / 04-Rate-Limit / 05-思考。`yarn app:02-05-thinking` 看思考拆帧的细对照；429 实验仍在 `yarn app:02-04-rate-limit`。本模块无额外整合 APP。
+**代码落点**：按条 Demo 已落 01-Streaming-SSE / 02-协议-A-vs-B / 03-AbortController / 03-adapter-demo / 04-Rate-Limit / 05-思考。`yarn app:02-05-thinking-step-1` 看思考拆帧的细对照；429 实验仍在 `yarn app:02-04-rate-limit-step-1`。本模块无额外整合 APP。
 
 **验收标准**
 - [x] 流式（草稿）和非流式（终审）都在同一条值班路径里
@@ -48,4 +48,4 @@
 > 按条 Demo（01–05）已落；本模块无额外整合 APP。按条文件夹不删、不 import。
 
 2. 按条入口仍可用：`02-01` … `02-05`
-3. 思考正文拆帧的细对照：`yarn app:02-05-thinking`
+3. 思考正文拆帧的细对照：`yarn app:02-05-thinking-step-1`

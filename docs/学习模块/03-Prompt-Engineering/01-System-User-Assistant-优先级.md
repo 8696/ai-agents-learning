@@ -1,7 +1,7 @@
 # **System / User / Assistant 优先级**：冲突时谁说了算、System 该放什么
 
 > 对应模块：[模块 03 · Prompt Engineering ⭐⭐⭐⭐](./README.md) · 小节进度第 1 条
-> Demo：已落 [apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/](../../../../apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/) · `yarn app:03-01-system-user-assistant-priority`（HTTP server · 浏览器端口 50301 · 3 个 Case × 协议 A/B）
+> Demo：已落 [apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/](../../../../apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/) · `yarn app:03-01-system-user-assistant-priority-step-1`（HTTP server · 浏览器端口 50301 · 3 个 Case × 协议 A/B）
 
 - **来源**：本对话全部轮次（详解 + 三个意外发现 + Case 1 判错修正 + 协议 A 关思考的工程答案）+ 跑通的 Demo 实测
 - **状态**：已沉淀
@@ -158,7 +158,7 @@ return JSON.parse(cleaned);
 
 | 追问 | 答在 |
 |------|------|
-| 问：要写代码、能描述优先级、要看多轮结果、协议 A/B 都要 | 「§5.2 Demo 判断块 + 本条产出预告」段：Demo 改判**可运行**，落 `apps/03-Prompt-Engineering/01-System-User-Assistant-优先级/`，yarn `app:03-01-system-user-assistant-priority` |
+| 问：要写代码、能描述优先级、要看多轮结果、协议 A/B 都要 | 「§5.2 Demo 判断块 + 本条产出预告」段：Demo 改判**可运行**，落 `apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/`，yarn `app:03-01-system-user-assistant-priority-step-1` |
 | 问：`load-root-env.js` 为什么是 `.js` 后缀 | 「为什么是 .js」段：NodeNext + ESM 强制要求显式扩展名（TS 编译产物是 `.js`；运行时 Node ESM 只解析 `.js`；裸路径 / `.ts` 都会挂） |
 | 问：把它写成网页 | Demo 从 CLI 改成 HTTP server + Tailwind HTML，端口 5180，3 个 Case 卡片 + A/B 并排输出 + verdict pill |
 | 问：Case 1 协议 A 实际是完成了，只是把思考放在了内容里 —— 判断错了 | 「易混点」段第 5 行 + 「踩坑」段 + 「judgeCase1 改语义」：`judgeCase1` 改为"剥 think → 找 JSON → 判优先级"；现在 A 和 B 都是 `SYSTEM_WIN` |

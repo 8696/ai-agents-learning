@@ -4,7 +4,7 @@
 
 - **来源**：本对话
 - **状态**：已沉淀
-- **Demo**：已落 [apps/02-LLM-API开发/01-Streaming-SSE/](../../../apps/02-LLM-API开发/01-Streaming-SSE/)（前后端分离 · 三接口对照：模拟 SSE / 一次性 / 真实 MiniMax-M3）
+- **Demo**：已落 [apps/02-LLM-API开发/01-Streaming-SSE-step-1/](../../../apps/02-LLM-API开发/01-Streaming-SSE-step-1/)（前后端分离 · 三接口对照：模拟 SSE / 一次性 / 真实 MiniMax-M3）
 
 > 各节写什么、怎么判断归哪一节、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -226,7 +226,7 @@ data: {"id":"chatcmpl-9X","object":"chat.completion.chunk","created":1700000000,
 
 ### 例子 3：Node 里手写 SSE server + 流式消费
 
-见 [apps/02-LLM-API开发/01-Streaming-SSE/](../../../apps/02-LLM-API开发/01-Streaming-SSE/)。**前后端分离** + 三个对照接口：
+见 [apps/02-LLM-API开发/01-Streaming-SSE-step-1/](../../../apps/02-LLM-API开发/01-Streaming-SSE-step-1/)。**前后端分离** + 三个对照接口：
 
 | 接口 | 数据源 | 调 API | 每帧 content |
 | --- | ------ | ------ | ------------ |
@@ -240,7 +240,7 @@ data: {"id":"chatcmpl-9X","object":"chat.completion.chunk","created":1700000000,
 
 ```bash
 cd apps
-yarn app:02-01-streaming-sse
+yarn app:02-01-streaming-sse-step-1
 ```
 
 打开浏览器 `http://127.0.0.1:5173/`，点页面里三个按钮对照；后端控制台同步打印每一帧 SSE 原文（**真实版会打 OpenAI 原始 chunk 全文**，含 `id` / `object` / `model` / `service_tier` / `base_resp` 等）。

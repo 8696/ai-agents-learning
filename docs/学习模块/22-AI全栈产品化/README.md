@@ -5,7 +5,7 @@
 [← 21 后端 & 基础设施](../21-后端与基础设施/README.md) · [23 Production Agent Architecture →](../23-Production-Agent-Architecture/README.md)
 
 > **小节进度、验收、动手落点**在本 README；**每条学习沉淀**在同目录单独 MD（「重点」列已链接）。有代码时，「现在怎么跑」以 `apps/22-AI全栈产品化/{小节文件夹}/README.md` 为准。
-> **代码落点**：`apps/22-AI全栈产品化/{小节文件夹}/`（每条外部小节的最小可运行 UI Demo）。模块 00 mini-app 的最简流式 UI 在 `apps/00-环境准备/01-mini-app/`。
+> **代码落点**：`apps/22-AI全栈产品化/{小节文件夹}/`（每条外部小节的最小可运行 UI Demo）。模块 00 mini-app 的最简流式 UI 在 `apps/00-环境准备/01-mini-app-step-1/`。
 
 ## 小节进度
 
@@ -24,7 +24,7 @@
 
 **一句话目标**：把 Agent 的执行过程完整、清晰地呈现给用户。
 
-**动手产出**：每条外部小节在 `apps/22-AI全栈产品化/0X-XX/` 落最小可运行 UI Demo。最简流式 Chat UI 复用模块 00 mini-app（`apps/00-环境准备/01-mini-app/`）；Agent Steps / HITL / 错误 UI / 流式 Markdown 落在本模块的小节 Demo。
+**动手产出**：每条外部小节在 `apps/22-AI全栈产品化/0X-XX/` 落最小可运行 UI Demo。最简流式 Chat UI 复用模块 00 mini-app（`apps/00-环境准备/01-mini-app-step-1/`）；Agent Steps / HITL / 错误 UI / 流式 Markdown 落在本模块的小节 Demo。
 
 **验收标准**（最简版勾在 `01`，打磨项勾在 `05`）
 - [ ] （01）流式输出能逐字出现，并能中断生成
@@ -48,7 +48,7 @@
 
 > 落到 `apps/22-AI全栈产品化/0X-XX/` 各小节，最简流式 Chat UI 复用模块 00 mini-app。
 
-1. `apps/00-环境准备/01-mini-app/`：最简流式 Chat 页（逐字出现、能取消；模块 00 已落）
+1. `apps/00-环境准备/01-mini-app-step-1/`：最简流式 Chat 页（逐字出现、能取消；模块 00 已落）
 2. `apps/22-AI全栈产品化/01-流式-Markdown/`：流式 Markdown 渲染（不闪烁不跳动）
 3. `apps/22-AI全栈产品化/02-Agent-Steps-UI/`：Agent Steps / HITL / 错误 UI
 4. 引用、上传、移动端、骨架屏只打磨进对应小节 Demo
