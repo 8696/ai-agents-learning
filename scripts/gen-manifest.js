@@ -89,7 +89,15 @@ function main() {
   const outPath =
     outArg === "-o" && argv[1] ? path.resolve(argv[1]) : path.join(ROOT, "manifest.json");
 
-  const nav = [fileLeaf("README.md"),fileLeaf("RESET.md"), fileLeaf("AGENTS.md"), dirGroup("docs"), dirGroup("apps")].filter(
+  const nav = [
+    fileLeaf("README.md"),
+    fileLeaf("AGENTS.md"),
+    fileLeaf("CLAUDE.md"),
+    fileLeaf("RESET.md"),
+    dirGroup("docs"),
+    dirGroup("apps"),
+    dirGroup("scripts")
+  ].filter(
     Boolean,
   );
 

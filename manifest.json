@@ -4,12 +4,16 @@
     "path": "README.md"
   },
   {
-    "label": "RESET.md",
-    "path": "RESET.md"
-  },
-  {
     "label": "AGENTS.md",
     "path": "AGENTS.md"
+  },
+  {
+    "label": "CLAUDE.md",
+    "path": "CLAUDE.md"
+  },
+  {
+    "label": "RESET.md",
+    "path": "RESET.md"
   },
   {
     "label": "docs",
@@ -3209,6 +3213,23 @@
       {
         "label": "yarn.lock",
         "path": "apps/yarn.lock"
+      }
+    ]
+  },
+  {
+    "label": "scripts",
+    "children": [
+      {
+        "label": "check-demo.cjs",
+        "path": "scripts/check-demo.cjs"
+      },
+      {
+        "label": "gen-manifest.js",
+        "path": "scripts/gen-manifest.js"
+      },
+      {
+        "label": "static-server.js",
+        "path": "scripts/static-server.js"
       }
     ]
   }
