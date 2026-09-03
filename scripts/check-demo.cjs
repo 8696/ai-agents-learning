@@ -46,6 +46,35 @@ function listDemos() {
     .sort();
 }
 
+/**
+ * §5.3.14 父目录参数：传 apps/.../01-…/ 时，本目录没有 server.ts，
+ * 但有 step-N/ 子目录 → 展开成各 step-N；否则原样返回。
+ */
+function expandTargets(args) {
+  const out = [];
+  for (const a of args) {
+    if (!fs.existsSync(a)) {
+      console.error("不存在：" + a);
+      process.exit(2);
+    }
+    if (fs.existsSync(path.join(a, "server.ts"))) {
+      out.push(a);
+      continue;
+    }
+    const subs = fs
+      .readdirSync(a, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && /^step-\d+$/.test(e.name))
+      .map((e) => path.join(a, e.name))
+      .sort();
+    if (subs.length > 0) out.push(...subs);
+    else {
+      console.error("不存在：" + a);
+      process.exit(2);
+    }
+  }
+  return out;
+}
+
 function stripJsComments(code) {
   return code
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -381,7 +410,7 @@ selfCheckBraceQuote();
 
 const arg = process.argv[2];
 const targets = arg
-  ? [path.resolve(arg)]
+  ? expandTargets([path.resolve(arg)])
   : listDemos();
 
 if (targets.length === 0) {
