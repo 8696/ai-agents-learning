@@ -34,6 +34,9 @@
 | `yarn app:03-01-system-user-assistant-priority` | `50301` | System / User / Assistant 优先级 + 多轮 |
 | `yarn app:03-02-few-shot-zero-shot` | `50302` | 同一评价任务：Zero-shot vs Few-shot |
 | `yarn app:03-04-prompt-versioning-diff` | `50304` | 一字之差：v1.0.0 vs v1.1.0 看行为影响 |
+| `yarn app:04-01-json-schema` | — | Zod 端：parse/safeParse/issues/transform 返回值与 issues → repair（不调 API） |
+| `yarn app:04-02-json-mode-vs-structured-output` | `50402` | 同 prompt × 5 用例，JSON Mode vs Structured Output strict 并排；⑥ strict schema 写法不对 → API 400 |
+| `yarn app:04-02-anthropic-tool-use` | `50412` | 协议 B 镜像版：text（无 tools）vs tool-use（强制 tool_choice）并排；⑥ prompt 诱导模型违 input_schema，看守约（同小节第二份 HTTP Demo；脚本名沿用真实小节号 04-02，与协议 A 端口错开 +10 = 50412） |
 
 HTTP 端口公式见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：`5{模块两位}{小节两位}`。不要把 `PORT` 写进共享 `apps/.env`。
 

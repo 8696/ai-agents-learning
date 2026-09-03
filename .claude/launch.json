@@ -24,6 +24,22 @@
       "port": 50304,
       "url": "http://127.0.0.1:50304/",
       "autoPort": false
+    },
+    {
+      "name": "04-02-json-mode-vs-structured-output",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:04-02-json-mode-vs-structured-output"],
+      "port": 50402,
+      "url": "http://127.0.0.1:50402/",
+      "autoPort": false
+    },
+    {
+      "name": "04-02-anthropic-tool-use",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:04-02-anthropic-tool-use"],
+      "port": 50412,
+      "url": "http://127.0.0.1:50412/",
+      "autoPort": false
     }
   ]
 }

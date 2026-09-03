@@ -23,7 +23,10 @@
     "app:02-05-thinking": "tsx 02-LLM-API开发/05-思考/server.ts",
     "app:03-01-system-user-assistant-priority": "tsx 03-Prompt-Engineering/01-System-User-Assistant-优先级/server.ts",
     "app:03-02-few-shot-zero-shot": "tsx 03-Prompt-Engineering/02-Few-shot-Zero-shot/server.ts",
-    "app:03-04-prompt-versioning-diff": "tsx 03-Prompt-Engineering/04-Prompt-版本管理/server.ts"
+    "app:03-04-prompt-versioning-diff": "tsx 03-Prompt-Engineering/04-Prompt-版本管理/server.ts",
+    "app:04-01-json-schema": "tsx 04-Structured-Output/01-JSON-Schema/index.ts",
+    "app:04-02-json-mode-vs-structured-output": "tsx 04-Structured-Output/02-JSON-Mode-vs-Structured-Output/server.ts",
+    "app:04-02-anthropic-tool-use": "tsx 04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

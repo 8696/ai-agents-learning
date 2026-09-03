@@ -13,7 +13,7 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**JSON Schema**：类型、optional、enum；Zod 和 Schema 的关系](./01-JSON-Schema.md) | 能读一份 Schema，知道必填 / 枚举 | `JSON Schema tutorial` `zod to json schema` · [json-schema.org](https://json-schema.org) · [Zod 文档](https://zod.dev) | — |
+| ✅ | [**JSON Schema**：类型、optional、enum；Zod 和 Schema 的关系](./01-JSON-Schema.md) | 能读一份 Schema，知道必填 / 枚举 | `JSON Schema tutorial` `zod to json schema` · [json-schema.org](https://json-schema.org) · [Zod 文档](https://zod.dev) | 暂无链接 |
 | ⬜ | [**JSON Mode vs Structured Output**：前者保证合法 JSON，后者保证符合 schema](./02-JSON-Mode-vs-Structured-Output.md) | 能说清严格模式多保证了什么 | `OpenAI structured outputs vs json mode` · OpenAI Structured Outputs 文档 | — |
 | ⬜ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
 
