@@ -15,6 +15,8 @@
  *   GET  /api/tools     → Registry 元信息
  *   POST /api/chat      → 真调 LLM（两轮）
  *
+ * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ *
  * 入口：cd apps && yarn app:05-01-fc-protocol-step-2
  */
 import Koa from "koa";
@@ -25,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountChatRoutes } from "./routes/chat.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -41,11 +44,11 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  console.log("──── 模块 05 · 01 Function Calling 协议 Demo · step-2（真 LLM · 协议 A）────");
+  logger.info("server.start", "listening", "服务起好了，记下端口与端点让 /health 能对照", {
+    url: `http://127.0.0.1:${PORT}/`,
+    endpoints: ["GET /", "GET /health", "GET /api/tools", "POST /api/chat"],
+    protocol: "A",
+  });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
-  console.log(`  GET  /health       → 环境元信息（hasKey 决定主按钮是否 disabled）`);
-  console.log(`  GET  /api/tools    → Registry 元信息`);
-  console.log(`  POST /api/chat     → 真调 LLM（两轮）；请求/响应全量回前端`);
-  console.log(`  端口 ${PORT} · 协议 A`);
   console.log(`  Ctrl+C 退出`);
 });

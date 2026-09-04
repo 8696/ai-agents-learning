@@ -1,7 +1,7 @@
 # Demo 落点细则（§5.0 / §5.1 / §5.3）
 
 > **不会自动注入。** Cursor / Codex / Claude Code 只自动读仓库根 [AGENTS.md](../AGENTS.md)。
-> **何时必须 Read 本文件：** 判断 Demo 之后只要结论是可运行：落/改 HTML/koa、扩 CATALOG、拆多场景、协议 A/B 分文件夹。根 [AGENTS.md §5.2](../AGENTS.md#52-小节-demo) 只留判断摘要。
+> **何时必须 Read 本文件：** 判 Demo / 打判断块；结论是可运行时再读全文（落/改 HTML/koa、扩 CATALOG、拆多场景、协议 A/B）。根 [AGENTS.md §5.2](../AGENTS.md#52-小节-demo) 只留三结论摘要；判断块与闸门以本文件为准。
 
 ## 5. Demo 落点
 
@@ -82,7 +82,7 @@ Demo 只用 `getLlm()` / `getLlmOptional()`，不要再直接读 `PROVIDER_IDS` 
 
 | 时机 | 做什么 |
 | ---- | ------ |
-| `coach start` 详解结束 | 按下面标准判完，打出 [§6.1 第 6 步 本条产出预告](../AGENTS.md#61-外部学习出门包点名才出)。用人话说清「要 / 不要写 Demo」。默认先不落 |
+| `coach start` 详解结束 | 按下面标准判完，打出 [本条产出预告](./03-progress.md#61-本条产出预告)。用人话说清「要 / 不要写 Demo」。默认先不落 |
 | 学习者说写 / 先落 Demo / 强制出 Demo | **立刻**按结论写满本条 Demo |
 | 沉淀之后、`coach next` 勾 ✅ 之前 | 再打 **Demo 判断块**（未打不准勾）。与 start 预告一致则写「与 start 预告一致」；改判须一句原因。该落还没落则当场做 |
 
@@ -93,7 +93,7 @@ Demo 只用 `getLlm()` / `getLlmOptional()`，不要再直接读 `PROVIDER_IDS` 
 
 已 ✅ 的旧小节**不回头补** Demo，除非学习者点名。
 
-判断由助手做，对照「本条要能讲清」。一眼能定（纯概念 → 无）就自己判；**两可 / 不好处理**走 [§0.3](../AGENTS.md#03-不好处理时先给选项)。学习者可改判：「这次不要 Demo」/「强制出 Demo」。
+判断由助手做，对照「本条要能讲清」。一眼能定（纯概念 → 无）就自己判；**两可 / 不好处理**走 [00-mode.md §0.3](./00-mode.md#03-不好处理时先给选项)。学习者可改判：「这次不要 Demo」/「强制出 Demo」。
 
 #### 判断标准
 
@@ -111,16 +111,26 @@ Demo 只用 `getLlm()` / `getLlmOptional()`，不要再直接读 `PROVIDER_IDS` 
 
 ```text
 Demo 判断
-- 小节：{复制该行「重点」}
+- 小节：{该行「重点」}
 - 结论：无 | 伪代码 | 可运行
-- 理由：{一句话，对照「本条要能讲清」}
+- step-1 起手：一句话点明本条 step-1 只演示什么（如「1 函数 mock tool_call JSON」/「请求/响应 shape 静态展示」/「单 tool_call happy path」）
+- 锁定时机：学习者主动决定（不是自动触发；详见 §5.3.14）
+- 理由：{对照「本条要能讲清」}
 - 落点：— | 该条 MD 机制节 | apps/{模块文件夹}/{小节文件夹}-step-{N}/ · yarn app:{模块两位}-{小节两位}-{英文短名}-step-{N}
+- N 动态：step-1 是工作区（自由打磨），学习者主动说「锁定」后才算这步完成；双方再决定下一步加什么（[§5.3.14](#5314-demo-子节拆分动态引导由浅入深新)）。**禁止预判 N 步**；禁止一次连落多步
 - 与 start 预告：一致 | 改判：{一句}
 ```
 
+N 动态 + 学习者锁定（[§5.3.14](#5314-demo-子节拆分动态引导由浅入深新)）：至少 1 个 step-N 被学习者主动锁定（✅）→ 可勾本条 ✅；后续 step-(N+1) 是「加深」，✅ 后可继续加，不阻塞当前条。
+
 #### `coach next` 闸门
 
-外部条勾 ✅ 前：小节 MD 已过 [§7.2](../AGENTS.md#72-沉淀--小节进度对齐) **且** Demo 行不是 `未判`（必须是 `无` / `伪代码（见机制）` / `已落 …`）。结论是可运行但文件夹不存在、或 `apps/package.json` 没有对应 `app:{模块两位}-{小节两位}-{英文短名}-step-{N}` → **不准勾**。可运行条：脚本必须是 `tsx …/{小节文件夹}-step-{N}/server.ts`（不是 `index.ts`），且 [§5.3.2](#532-完整版--必做的-6-项替代-52-最低标准) 六项齐（含 `GET /health` + 页脚 `#env-info`、`#page-intro`）。默认端口必须在 [apps/README.md](../apps/README.md) 占用表里**唯一**，并与本条 `runtime-ctx.ts` `.default(...)`、该条 README「端口」行三处一致；撞车或三处对不上 → **不准勾**。`node scripts/check-demo.cjs` 不过 → **不准勾**。Demo 判断不改当前条锁定。
+外部条勾 ✅ 前闸门是**三件事**——
+1. 小节 MD 已过 [§7.2](../AGENTS.md#72-沉淀--小节进度对齐)
+2. Demo 行不是 `未判`（必须是 `无` / `伪代码（见机制）` / `已落 …`）；可运行条还须 `apps/{模块文件夹}/` 下有 step-N 被锁定（✅）+ 有对应 `yarn app:…-step-N` + 锁定时 `node scripts/check-demo.cjs apps/{模块文件夹}/{小节文件夹}-step-N` 过 + [§5.3.2](#532-完整版--必做的-6-项替代-52-最低标准) 六项齐（含 `GET /health` + 页脚 `#env-info`、`#page-intro`）。脚本必须是 `tsx …/{小节文件夹}-step-{N}/server.ts`（不是 `index.ts`）。默认端口必须在 [apps/README.md](../apps/README.md) 占用表里**唯一**，并与本条 `runtime-ctx.ts` `.default(...)`、该条 README「端口」行三处一致；撞车或三处对不上 → **不准勾**
+3. **[§5.4](#54-目标--代码整合闸门两段式新) 目标 ↔ 代码整合闸门**（5.4.A / 5.4.B）——任意一段不过，**不准勾**
+
+「锁定 + §5.3.2 + check-demo」只解决第 2 件事；**目标 ↔ 代码整合**单列。复盘行不打 §5.4（[§7.3](../AGENTS.md#73-模块复盘进度表最后一行) 只过 MD 闸门）。Demo 判断不改当前条锁定。
 
 #### 可运行 Demo 怎么建
 
@@ -164,7 +174,7 @@ apps/{模块文件夹}/{小节文件夹}/
 | 1 | **Happy path** | 本条主要用例完整跑通（对照、并排、多端点等按该条需求，不要只打一次就关进程） |
 | 2 | **错误处理**（≥2 类，能一眼分开） | **一类**：页面能看见的失败（HTTP 4xx / 5xx，或 fetch reject，或本条教学点里的失败：取消 / 429 / Zod 校验）。**另一类**：与第一类不同的失败通道。`catch` 后必须有面向人的红字 + `#status-pill` 变红。**不要**每页都强制「故意断网」按钮；本条教学点不是网络时，用空输入 400、取消、或业务失败即可。 |
 | 3 | **Loading 状态** | 请求中 `#status-pill` = 🔄请求中 + 按钮 `disabled`；完成/失败切回 ✅/❌ |
-| 4 | **单会话输出区** | `#output` 显示完整对话 / 对照结果；新结果追加或覆盖，按小节定 |
+| 4 | **单会话输出区** | `#output` 显示完整对话 / 对照结果；新结果追加或覆盖，按小节定（[AGENTS.md §5.3 高频遗忘](../AGENTS.md#53-小节-Demo-完整版前后端--react--koa2026-09-02-维护模式起生效)：**请求参数 / 流程 / 响应结果**三件上页，不只露成功按钮） |
 | 5 | **环境元信息** | `GET /health` + 页脚 `#env-info` 显示 provider / model / port / 有没有 Key（[§5.3.9](#539-环境元信息health--页脚强制)） |
 | 6 | **页面自解释** | `#page-intro` 讲清本页演示什么 + 数据流步骤；控件旁写「点了会发生什么」（[§5.3.11](#5311-页面必须自解释教学注解强制)） |
 
@@ -608,7 +618,7 @@ router.get("/health", (ctx: Context) => {
 | **功能区** | `#controls` | `bg-white shadow rounded p-4 space-y-3`；主操作按钮 `bg-blue-600 text-white`，次要 `border border-gray-300`，一律带 `disabled:opacity-50` |
 | **输出区** | `#output` | `bg-white shadow rounded p-4 space-y-4 min-h-[200px]`；空态必须有一句灰字说明 |
 
-**输出区内部，三种内容必须可区分**（颜色语义固定，不要每条 Demo 自创一套）：
+**输出区内部，三种内容必须可区分**（颜色语义固定，不要每条 Demo 自创一套）——[AGENTS.md §5.3 高频遗忘](../AGENTS.md#53-小节-Demo-完整版前后端--react--koa2026-09-02-维护模式起生效)：**请求参数 / 调用流程 / 响应结果**三件都得上页，不只露成功按钮。
 
 | 内容 | 语义 | 样式约定 |
 | ---- | ---- | -------- |
@@ -623,6 +633,8 @@ router.get("/health", (ctx: Context) => {
 #### 5.3.11 页面必须自解释（教学注解，强制）
 
 **这些 Demo 的读者是「几个月后回来复习的自己」**。合上笔记只看页面，也要能讲清这一页在演示什么。教学信息写在**页面上**，不是只写在 README 或代码注释里。
+
+> 强约束，对应 [AGENTS.md §5.3 高频遗忘](../AGENTS.md#53-小节-Demo-完整版前后端--react--koa2026-09-02-维护模式起生效)：**请求参数 / 调用流程 / 响应结果**三件都得上页，不要只露成功按钮。
 
 | 位置 | 必须写什么 | 例子 |
 | ---- | ---------- | ---- |
@@ -652,7 +664,7 @@ router.get("/health", (ctx: Context) => {
 
 **独立性（不因为拆分而互相引用）**
 
-- 允许 import 的**只有** `apps/llm.ts`（`getLlm` / `getLlmOptional` / `logLlmConfig`）与 `apps/load-root-env.ts`——顶层提供商 / 环境配置。
+- 允许 import 的**只有** `apps/llm.ts`（`getLlm` / `getLlmOptional` / `logLlmConfig`）、`apps/load-root-env.ts`（环境变量）、`apps/logger.ts`（日志服务，[§5.3.16](#5316-详细日志强制)）——顶层基础设施。
 - **禁止**：小节 A 的 `lib/` / `routes/` / `components/` / `utils/` 被小节 B import；把某条 Demo 的 UI 抽成跨 Demo 公共包；import 模块 00 mini-app。
 - 每条 Demo 内部的 `components/` / `utils/` **只服务本条**。要在新 Demo 用同样的组件：**照本节规则重写一份**（可以照抄自己写过的思路，但文件归本条所有），不要跨目录引用。
 - 重复几十行 UI 是可接受成本；跨条耦合不是——改一条会连坐别条，教学 Demo 必须能单独删掉。
@@ -938,6 +950,59 @@ cd apps && yarn check-demo
 | **禁止** | verify 完留着 server 不关 / 没事先启一遍"以防万一" / 用 Bash `yarn ... &` 绕开 `preview_*` / 多个 Demo 同进程抢口不报 |
 
 **理由**：端口是全仓库共享资源（占用表见 [apps/README.md](../apps/README.md)）；Demo 一多就互相撞口；学习者下次回来发现端口被占还得自己 `lsof -i :PORT` 找进程。学习模式不替学习者持有长跑服务。
+
+#### 5.3.16 详细日志（强制）
+
+**目的**：**详细优先**（不是主流程优先）。控制台看不清大量日志 / 没时间戳 / 电脑卡顿 → 服务端写文件。几个月后回来翻日志也能讲清流程。
+
+**路径**
+- 服务端日志文件：`apps/{demo}/logs/{YYYY-MM-DD}.log`（**按 BJT 日切**，demo 自管，删 demo 一起带走；同一天多进程共享同一文件，`appendFileSync` 原子追加即可）
+- 前端：**不写日志**——页面已展示请求参数 / 调用流程 / 响应结果（§5.3.10 / §5.3.11 / §5.3.2 #4），不再重复打 #log 区
+
+**顶层实现（一个文件）**
+- `apps/logger.ts` 导出 `createLogger(logDir)`（也可传 `{ logDir, consoleLevel? }`）—— **内置**安全序列化（私有，不导出；处理 Error / Map / Set / Date / Buffer / 循环引用 / 大对象截断）
+- 每个 demo 在 `lib/logger.ts` 一行建本地 logger，业务代码 `import { logger } from "./logger"` 直接用；**调用方不感知写文件 / 写 console 两件事的细节**
+
+**API（业务代码视角，四参调用极简）**
+
+```ts
+logger.debug(scope: string, msg: string, explain: string, data?: unknown)
+logger.info (scope: string, msg: string, explain: string, data?: unknown)
+logger.warn (scope: string, msg: string, explain: string, data?: unknown)
+logger.error(scope: string, msg: string, explain: string, data?: unknown)
+```
+
+**约定（业务代码写法）**
+- `scope`：**中文节点名**，讲清"在哪一段 / 哪个步骤"（例：`工具调用-解析`、`消息装配-组装`、`循环-第1轮`）
+- `msg`：**一句话中文动作**，讲清"现在在做什么"（例：`进入 Zod 校验`、`拿到模型响应`）
+- `explain`：**人话释义**，讲清"为什么打这个日志 / 给谁看 / 解释什么"——**必填**（详细优先，宁啰嗦不省）
+- **文件里不写服务名**：logDir + 文件名自带 demo 语义；头里不带 `[serviceName]` 块
+
+**每条格式**
+- 服务端文件：**基础信息单行** `YYYY-MM-DD HH:MM:SS.mmm +08:00 <LEVEL> <scope>` + 下一行 `  msg=<中文>`（**北京时**，可视化）
+- data（如果有）**下一行起** `JSON.stringify(data, null, 2)` 缩进 2 格式化的多行 JSON——可读、grep head 干净、不用 jq
+- **`data.__code` 字段**：约定为**源代码字符串**（业务调大模型的代码片段）；logger 自动以 `── code ──` / `── end code ──` 分隔块单独输出——「源代码在日志里」就能看到调用形式（含变量值）。示例：`logger.info("llm.request", "...", { model, messagesCount, ..., __code: \`await llm.openai.chat.completions.create(${JSON.stringify(request, null, 2)});\` })`
+- **LLM 响应打整个对象**：不要挑字段（id / choices / usage / SDK 自带字段），直接 `logger.info("llm.response", "← got response", response)`
+
+**内置序列化（data 不能崩）**
+
+| 类型 | 怎么显示 |
+| ---- | -------- |
+| `Error` | `{ name, message, stack, ...自定义字段 }` |
+| `Map` | 转对象；`Set` 转数组 |
+| `Date` | ISO string |
+| `Buffer` | `{ type: "Buffer", length, hex-preview }` |
+| `undefined` / `null` | 字面量字符串 |
+| 循环引用 | `"[Circular]"` |
+| 函数 | `"[Function: name]"` |
+| 大对象 (>50KB) | 截到 50KB + 标 `"...truncated"` |
+
+**业务代码打日志原则（详细优先）**
+- 主流程每个关键步骤都打：parse / validate / execute / assemble / loop / retry / repair / 等
+- 与 [§5.3.11 `// ①②③` 注解](../AGENTS.md#53-小节-Demo-完整版前后端--react--koa2026-09-02-维护模式起生效) 对齐：在该行附近插一行 `log.info(...)`，不打断主流程
+- `debug` 调试细节；`info` 主流程节点；`warn` 异常但可走通；`error` 失败
+- **不**因为怕啰嗦省略；可读性 > 行数
+- **调大模型时**：data 加 `__code` 字段（源码字符串，调大模型的代码片段）；同时打**整个** `request` / `response`（不挑字段）—— 详见上面「每条格式」
 
 ### 5.4 目标 ↔ 代码整合闸门（两段式）·新
 

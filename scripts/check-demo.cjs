@@ -327,8 +327,8 @@ function checkOne(root) {
       if (!spec.startsWith(".")) continue;
       const abs = path.resolve(path.dirname(f), spec);
       const inSelf = abs.startsWith(root);
-      const isSharedLlm = /apps\/(llm|load-root-env)\.js$/.test(abs.replace(/\\/g, "/"));
-      if (!inSelf && !isSharedLlm) fail(rel + " : 跨小节 import " + spec + "（§5.3.12 禁止）");
+      const isSharedInfra = /apps\/(llm|load-root-env|logger)\.js$/.test(abs.replace(/\\/g, "/"));
+      if (!inSelf && !isSharedInfra) fail(rel + " : 跨小节 import " + spec + "（§5.3.12 禁止）");
     }
   }
 

@@ -32,6 +32,9 @@
      *
      * 这些字段的"是什么"在 lib/llm/protocol-a.ts 的 TypeScript 类型注释里标了；
      * 本页把同一份注释的物理形态摆在浏览器里。
+     *
+     * 日志：服务端每处可打点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-2/logs/）；
+     *   前端不再打 #log —— 页面已经展示请求参数 / 流程 / 响应，重复。
      */
     const { useState, useEffect } = React;
 
@@ -80,7 +83,7 @@
         "浏览器 POST /api/chat → 服务端两轮调 LLM（协议 A openai.chat.completions.create）",
         "Round 1：messages=[user] + tools=[3 项] + tool_choice='auto' → LLM 返回 tool_calls",
         "Round 2：messages=[user, assistant(tool_calls), tool, tool] → LLM 返回 final_reply",
-        "#llm-protocol 把两轮的完整 Request / Response JSON 摆出来；你在浏览器里能「看见」协议层数据",
+        "#llm-protocol 把两轮的完整 Request / Response JSON 摆出来；#output 把业务 trace 摆出来",
       ];
       return (
         <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
@@ -150,15 +153,15 @@
     function ResultCard({ r, idx }) {
       if (r.ok) {
         return (
-            <JsonCard
-              title={"④-" + (idx + 1) + " · tool_result · " + r.tool + " ✅"}
-              badge="tool_result"
-              badgeClass="bg-yellow-200 text-yellow-800"
-              data={{ tool_call_id: r.tool_call_id, result: r.result }}
-              kind="trace"
-              annotation="Registry.executeTool() 返回 { ok:true, result } —— 真副作用执行完成"
-            />
-          );
+          <JsonCard
+            title={"④-" + (idx + 1) + " · tool_result · " + r.tool + " ✅"}
+            badge="tool_result"
+            badgeClass="bg-yellow-200 text-yellow-800"
+            data={{ tool_call_id: r.tool_call_id, result: r.result }}
+            kind="trace"
+            annotation="Registry.executeTool() 返回 { ok:true, result } —— 真副作用执行完成"
+          />
+        );
       }
       return (
           <JsonCard
@@ -192,6 +195,7 @@
         setStatus("running");
         setError(null);
         setResult(null);
+        const t0 = performance.now();
         fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -201,6 +205,7 @@
             return r.json().then(function (j) { return { status: r.status, body: j }; });
           })
           .then(function (res) {
+            const elapsedMs = Math.round(performance.now() - t0);
             if (res.status >= 400) {
               setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
               setStatus("error");
@@ -210,6 +215,7 @@
             setStatus("ok");
           })
           .catch(function (e) {
+            const elapsedMs = Math.round(performance.now() - t0);
             setError(String(e));
             setStatus("error");
           });

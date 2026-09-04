@@ -18,7 +18,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 
-const SKIP_DIRS = new Set([".git", "node_modules"]);
+const SKIP_DIRS = new Set([".git", "node_modules", 'logs']);
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -94,6 +94,7 @@ function main() {
     fileLeaf("AGENTS.md"),
     fileLeaf("CLAUDE.md"),
     fileLeaf("RESET.md"),
+    dirGroup("agents"),
     dirGroup("docs"),
     dirGroup("apps"),
     dirGroup("scripts")

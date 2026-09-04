@@ -9,11 +9,14 @@
  * 教学锚点（这一刀覆盖 §05-Tool-Calling-04 Tool Gateway / 幂等的"请求 ≠ 执行"一刀）：
  *   模型发出 tool_call ≠ 允许执行 —— gatewayCheck 在 execute 前必须跑过；
  *   dangerous 工具 / 未注册工具都被拦下，回灌 tool_result 时返回 { ok:false, error } 让模型能自纠。
+ *
+ * 日志（§5.3.16）：gateway.rejected / zod.fail / execute.ok / execute.fail 四类都打。
  */
 import { z } from "zod";
 import { getWeatherTool } from "./get-weather.js";
 import { searchTool } from "./search.js";
 import { calcTool } from "./calc.js";
+import { logger } from "../logger.js";
 
 // ── 注册表：name → Tool 完整定义 ──
 // 新增 Tool 只要在这里多挂一行 + 在 lib/tools/ 加一个文件。其它代码不动。
@@ -35,14 +38,19 @@ export type ExecResult =
 function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   const tool = TOOLS[name as ToolName];
   if (!tool) {
-    return { allowed: false, reason: `unknown tool: ${name}（未注册）` };
+    const reason = `unknown tool: ${name}（未注册）`;
+    logger.warn("registry.gateway.rejected", "未注册工具", "LLM 想调的工具不在白名单；不能让未注册的工具被执行，记录 name + reason 便于排查 prompt 模板错", { name, reason });
+    return { allowed: false, reason };
   }
   if (tool.dangerous) {
+    const reason = `dangerous tool ${name} requires manual approval（gateway 拒绝；本 demo 默认拦截）`;
+    logger.warn("registry.gateway.rejected", "危险工具", "工具被标 dangerous（如 shell_exec / write_file）；即使 LLM 提到也直接拦掉，记录 name + reason 便于审计防误调", { name, reason });
     return {
       allowed: false,
-      reason: `dangerous tool ${name} requires manual approval（gateway 拒绝；本 demo 默认拦截）`,
+      reason,
     };
   }
+  logger.debug("registry.gateway.allowed", "gateway 放行", "工具通过 gateway 校验（在白名单 + 非 dangerous）；可以放心进执行阶段", { name, dangerous: tool.dangerous });
   return { allowed: true };
 }
 
@@ -63,17 +71,32 @@ export function executeTool(
   const tool = TOOLS[name as ToolName];
   const parsed = tool.schema.safeParse(args);
   if (!parsed.success) {
+    const issues = parsed.error.issues;
+    logger.warn("registry.zod.fail", "参数 Zod 校验失败", "工具名合法但参数 schema 不匹配；可能 LLM 生成了错结构，记录 issues 让 round-2 模型能看懂错在哪、怎么改", { name, toolCallId, issues });
     return {
       ok: false,
       tool: name,
       tool_call_id: toolCallId,
-      error: `Zod parse failed: ${JSON.stringify(parsed.error.issues)}`,
+      error: `Zod parse failed: ${JSON.stringify(issues)}`,
     };
   }
 
   // ③ 真正执行
   // @ts-ignore —— 三个 Tool 的 handler 签名不同，TS 看成联合；运行时安全（Zod 已校验）
-  return { ok: true, tool: name, tool_call_id: toolCallId, result: tool.handler(parsed.data) };
+  const result = tool.handler(parsed.data);
+  logger.info("registry.execute.ok", "执行成功", "工具实际跑通；只打 result 摘要（不打全文），便于核对返回结构又不撑爆日志", { name, toolCallId, resultPreview: summarize(result) });
+  return { ok: true, tool: name, tool_call_id: toolCallId, result };
+}
+
+// 大对象 / 字符串截断，避免日志太长
+function summarize(v: unknown): unknown {
+  try {
+    const s = JSON.stringify(v);
+    if (s.length <= 200) return v;
+    return JSON.parse(s.slice(0, 200) + "…");
+  } catch {
+    return String(v).slice(0, 200);
+  }
 }
 
 // ── 给前端"Registry 面板"用：列出所有 Tool 的元信息（不含 schema） ──
