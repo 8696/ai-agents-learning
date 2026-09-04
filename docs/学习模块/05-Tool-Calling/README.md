@@ -12,8 +12,8 @@
 > 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
-|----|----------------|------------|-----------------|----------|
-| ⬜ | [**Function Calling 协议**：model → tool_call → execute → tool_result → model](./01-Function-Calling-协议.md) | 能画出这一圈，含并行调用 | `OpenAI function calling guide` `Anthropic tool use` `parallel function calling` · 资源清单里的厂商 Tool 文档 | 暂无链接 |
+|---|----------------|------------|-----------------|----------|
+| ⬜ | [**Function Calling 协议**：model → tool_call → execute → tool_result → model](./01-Function-Calling-协议.md) | 能画出这一圈，含并行调用 | `OpenAI function calling guide` `Anthropic tool use` `parallel function calling` · 资源清单里的厂商 Tool 文档 | [沉淀](./01-Function-Calling-协议.md) |
 | ⬜ | [**Tool Description**：description / schema 影响模型**何时**调用](./02-Tool-Description.md) | 知道写不好就会乱调或不调 | `writing good tool descriptions LLM` `tool schema best practices` · Anthropic Tool Use 最佳实践章节 | — |
 | ⬜ | [**Tool Choice**：auto / none / required 各适合什么](./03-Tool-Choice.md) | 能举三种模式的使用场景 | `tool_choice openai` `force tool call` · 官方 API 参考 | — |
 | ⬜ | [**Tool Gateway / 幂等**：请求 ≠ 执行；有副作用的 Tool 必须可重试](./04-Tool-Gateway-幂等.md) | 知道执行前要鉴权 / 校验 | `idempotent API tool calling` `LLM tool permission gateway` · 模块 20 安全卡片 | — |

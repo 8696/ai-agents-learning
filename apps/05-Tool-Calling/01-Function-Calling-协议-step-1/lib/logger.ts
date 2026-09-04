@@ -1,6 +1,6 @@
 /**
- * 本地日志服务 freeze 副本（lock-time freeze 于 2026-09-04）。
- *
+ * 职责：本地日志服务 freeze 副本（lock-time freeze 于 2026-09-04）。
+ * 数据流：业务代码 import { logger } from "./logger.js" → logger.info(scope, msg, explain, data?) 写文件 + console。
  * 为什么拷贝：顶层 apps/logger.ts 是模板，未来会改；已锁定 step 不被未来顶层改动影响。
  * 与顶层差异：本文件是单文件副本，无外部 import；底部额外 export logger 实例。
  *

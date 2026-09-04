@@ -3,8 +3,8 @@
 > 对应模块：[模块 05 · Tool Calling / Function Calling ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 1 条
 
 - **来源**：本对话（`coach start` 详解 §6.2 + 落 step-1 锁定 + step-2 真 LLM）+ 2026-09-04 重新讲解一轮（补「需求清单」独立节 + 「例子 4」点名 §5.4.A2 + step-3 落 + 1:1 规则 + 并行/串行选型与依赖写法）+ MiniMax-M3 实测响应（[apps/05-Tool-Calling/01-Function-Calling-协议-step-2](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-2/README.md)）
-- **状态**：已沉淀 · 2026-09-03 · 2026-09-04 step-3 落（修 §5.4.A2）+ §5.4 闸门重跑过
-- **Demo**：已落 `apps/05-Tool-Calling/01-Function-Calling-协议-step-1/`（✅ 锁定 · mock 不调 LLM）+ `…-step-2/`（✅ 锁定 · 真 LLM 协议 A · 请求/响应可视化）+ **`…-step-3/`（🔄 打磨中 · mock 3 async Tool + Promise.all + gantt 时序图 + 串/并行对比按钮 · check-demo 过 · §5.4 重跑过 · 待学习者锁定）** —— 详见 [§Demo 子节进度](#demo-子节进度)
+- **状态**：已沉淀 · 已勾 ✅ · 2026-09-03 · 2026-09-04 step-3…5 + §5.4 / 独立代码覆盖 / check-demo 全过 · `coach complete` 2026-09-04
+- **Demo**：已落 `apps/05-Tool-Calling/01-Function-Calling-协议-step-1/`（✅ 锁定 · mock 不调 LLM）+ `…-step-2/`（✅ 锁定 · 真 LLM 协议 A · 请求/响应可视化）+ `…-step-3/`（✅ 锁定 · 并行 Promise.all + gantt + 串/并行对比）+ `…-step-4/`（✅ 锁定 · 串行依赖 search_doc→summarize）+ `…-step-5/`（✅ 锁定 · while 自编排 + 自纠 + MAX_ROUNDS）—— 详见 [§Demo 子节进度](#demo-子节进度)
 
 > 各节写什么、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -479,4 +479,4 @@ async function chatWithTools(userInput: string) {
 - §5.4.A：**过**（A1 + A2 都有证据）
 - §5.4.B：**过**（需求清单 1 / 2 + A2 同源 3 条 + 核心对象 ②④ 都对齐；协议 B 单向缺口不阻塞；2026-09-04 step-4 重跑后 B 段新增 3 行：例子 5 / 选型准则 / 独立 IO 写串行 全部 ✅；step-5 重跑后例子 5.5 从 ❌ → ✅（while + 自纠 + MAX_ROUNDS 三场景全跑通））
 
-→ **本条 §5.4 闸门已过**。下一步：学习者主动决定是否**锁定 step-4**（[§5.3.14 锁定 = 学习者主动决策](../agents/05-demo.md#交互检查点协议每步之间必走)；step-3 已 ✅，step-4 check-demo.cjs 已过 + §5.3.2 6 项齐：happy path 跑链按钮、错误处理 2 类（HTTP 400 empty query + bad style）、Loading `#status-pill` 四态、#output 展示链式时序图 + 2 tool_result + final summary、`GET /health` + #env-info、#page-intro 自解释）。锁定后 → `coach complete` 走 [§7.2 / §5.2 / §5.4 三件事闸门](../AGENTS.md#52-小节-demo) 判勾本条 ✅。
+→ **本条 §5.4 闸门已过**。step-1…5 均已锁定 ✅（check-demo 过；独立代码覆盖验证 18/18 ✓）。`coach complete` 勾本条 ✅ 的闸门证据齐全（§7.2 + §5.2 + §5.4 + 独立代码覆盖）。协议 B 单向缺口不阻塞（模块分工）。
