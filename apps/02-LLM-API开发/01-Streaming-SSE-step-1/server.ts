@@ -24,6 +24,7 @@ import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
 import { logLlmConfig } from "../../llm.js";
+import { logger } from "./lib/logger.js";
 import { BLOCKING_TOTAL_MS } from "./lib/flow/simulate.js";
 import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
@@ -66,4 +67,28 @@ app.listen(PORT, "127.0.0.1", () => {
   console.log(`  POST /api/real      → 真实 LLM 流式（需 Key，body.prompt）`);
   logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
+  logger.info(
+    "服务-启动",
+    `模块 02 · 01 Streaming / SSE Demo 监听 127.0.0.1:${PORT}`,
+    "起服务时记一次：监听地址 / 端口 / 三条业务路；之后所有路由 / 流 / LLM 调用都会落到 logs/{YYYY-MM-DD}.log",
+    {
+      host: "127.0.0.1",
+      port: PORT,
+      routes: [
+        "GET  /",
+        "GET  /pages/simulated.html",
+        "GET  /pages/blocking.html",
+        "GET  /pages/real.html",
+        "GET  /health",
+        "GET  /api/stream",
+        "GET  /api/blocking",
+        "GET  /api/real",
+        "POST /api/real",
+      ],
+      blockingTotalMs: BLOCKING_TOTAL_MS,
+      hasLlm: Boolean(llm),
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+    },
+  );
 });

@@ -20,6 +20,7 @@ import { logLlmConfig } from "../../llm.js";
 import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountEncodeRoutes } from "./routes/encode.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -33,6 +34,15 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
+  logger.info("server.start", "listening", "服务起好了，记下端口、端点、词表让 /health 能对照；本地 encode · 不调 LLM", {
+    url: `http://127.0.0.1:${PORT}/`,
+    endpoints: ["GET /", "GET /pages/compare.html", "GET /pages/encode.html", "GET /health", "POST /api/encode", "POST /api/compare"],
+    vocab: "cl100k (gpt-tokenizer)",
+    callsModel: false,
+    provider: llm?.provider ?? null,
+    model: llm?.modelA ?? null,
+    hasKey: Boolean(llm),
+  });
   console.log("──── 模块 01 · 02 Token Demo（本地 encode · 不调 LLM）· 已启动 ────");
   console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  总览         /`);

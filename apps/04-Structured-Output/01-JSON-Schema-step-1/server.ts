@@ -12,6 +12,7 @@ import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
 import { logLlmConfig } from "../../llm.js";
+import { logger } from "./lib/logger.js";
 import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountParseRoutes } from "./routes/parse.js";
@@ -42,4 +43,24 @@ app.listen(PORT, "127.0.0.1", () => {
   console.log(`  POST /api/parse · /api/repair · /api/transform`);
   logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
+  // 服务起好：记端口 + 端点列表 + 是否调用 LLM，让 /health 与控制台对得上
+  logger.info(
+    "server.start",
+    "listening",
+    "模块 04 · 01 JSON Schema Demo 已 listen；记端口 + 端点 + callsModel 标记便于核对本条是否真的不调模型",
+    {
+      port: PORT,
+      host: "127.0.0.1",
+      callsModel: false,
+      endpoints: [
+        "GET  /health",
+        "POST /api/parse",
+        "POST /api/repair",
+        "POST /api/transform",
+      ],
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm),
+    },
+  );
 });

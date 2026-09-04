@@ -12,6 +12,7 @@ import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
 import { logLlmConfig } from "../../llm.js";
+import { logger } from "./lib/logger.js";
 import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountRankRoutes } from "./routes/rank.js";
@@ -30,6 +31,16 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
+  logger.info(
+    "启动-服务监听",
+    "Embedding Demo 服务已起来",
+    "入口装配完成（bodyParser / routes / static 都挂上）；记下 PORT + LLM 配置便于核对",
+    {
+      port: PORT,
+      endpoints: ["GET /health", "POST /api/token-id", "POST /api/rank"],
+      pages: ["/", "/pages/token-id.html", "/pages/cosine.html"],
+    },
+  );
   console.log("──── 模块 01 · 06 Embedding Demo（玩具向量 · 不调 LLM）· 已启动 ────");
   console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  总览         /`);

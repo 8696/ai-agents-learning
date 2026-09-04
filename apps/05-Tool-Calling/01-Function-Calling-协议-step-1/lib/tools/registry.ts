@@ -13,6 +13,7 @@
 import { getWeatherTool } from "./get-weather.js";
 import { searchTool } from "./search.js";
 import { calcTool } from "./calc.js";
+import { logger } from "../logger.js";
 
 // ── 注册表：name → Tool 完整定义 ──
 // 新增 Tool 只要在这里多挂一行 + 在 lib/tools/ 加一个文件。其它代码不动。
@@ -52,16 +53,45 @@ export function executeTool(
   args: unknown,
   toolCallId: string,
 ): ExecResult {
+  logger.debug(
+    "工具执行-gateway",
+    "进入 gatewayCheck",
+    "教学锚点：模型发出 tool_call ≠ 允许执行 —— Gateway 必须在 execute 前跑过；这是本 demo 的核心新增点",
+    { toolCallId, name, __code: "function gatewayCheck(name: string)" },
+  );
+
   // ① Gateway 先过
   const gate = gatewayCheck(name);
   if (!gate.allowed) {
+    logger.warn(
+      "工具执行-gateway",
+      "gateway 拒绝",
+      "未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠（教学锚点：dangerous 工具≠自动执行）",
+      { toolCallId, name, reason: gate.reason },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" };
   }
 
   // ② Zod 校验参数（防模型解析错 / 注入）
   const tool = TOOLS[name as ToolName];
+  logger.debug(
+    "工具执行-zod",
+    "进入 schema safeParse",
+    "tool_call.arguments 可能格式错 / 注入；校验失败时打 raw 排错；不影响后续流程（仍回 ok:false 让模型自纠）",
+    { toolCallId, name, rawArgs: args, __code: "const parsed = tool.schema.safeParse(args)" },
+  );
   const parsed = tool.schema.safeParse(args);
   if (!parsed.success) {
+    logger.warn(
+      "工具执行-zod",
+      "Zod 校验失败",
+      "模型解析错或恶意注入；回 ok:false + Zod issues，方便模型在第二轮修正 tool_call.arguments",
+      {
+        toolCallId,
+        name,
+        issues: JSON.parse(JSON.stringify(parsed.error.issues)),
+      },
+    );
     return {
       ok: false,
       tool: name,
@@ -71,8 +101,21 @@ export function executeTool(
   }
 
   // ③ 真正执行
+  logger.info(
+    "工具执行-handler",
+    "执行 handler",
+    "Gateway + Zod 都过；handler 内部可能调外部 API；这里都是 mock（get-weather / search / calc）",
+    { toolCallId, name, validatedArgs: parsed.data },
+  );
   // @ts-ignore
-  return { ok: true, tool: name, tool_call_id: toolCallId, result: tool.handler(parsed.data) };
+  const result: ExecResult = { ok: true, tool: name, tool_call_id: toolCallId, result: tool.handler(parsed.data) };
+  logger.info(
+    "工具执行-handler",
+    "handler 返回",
+    "完整打 tool_result：模型第二轮拿到后拼人话回复（buildFinalReply）",
+    { toolCallId, name, toolResult: result },
+  );
+  return result;
 }
 
 // ── 给前端"Registry 面板"用：列出所有 Tool 的元信息 ──

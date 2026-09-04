@@ -6,6 +6,7 @@
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
 import type { SseWriter } from "../sse/sse-writer.js";
+import { logger } from "../logger.js";
 import {
   createChatStream,
   describeUpstreamError,
@@ -37,6 +38,16 @@ export async function runFull(params: {
   console.log(
     `\n[${(t0 / 1000).toFixed(2)}s] /api/full: messages.length=1, signal=无, 客户端不取消`,
   );
+  logger.info(
+    "full.run.start",
+    "进入 /api/full 主流程（对照基线）",
+    "不传 signal、不 abort 的路径；记 model + 消息预览让回看时知道这是「什么都不做」的对照尺",
+    {
+      model: llm.modelA,
+      messagePreview: message.slice(0, 80),
+      messageLen: message.length,
+    },
+  );
 
   try {
     const stream = await createChatStream(llm, message);
@@ -61,12 +72,40 @@ export async function runFull(params: {
     console.log(
       `[${(performance.now() / 1000).toFixed(2)}s] /api/full: ✅ 完成 | 耗时 ${elapsedMs}ms | 帧数 ${frameIdx} | usage ${usageText}`,
     );
+    logger.info(
+      "full.run.complete",
+      "流跑完（基线对照）",
+      "完整跑完对照尺；记耗时 + 帧数 + usage 摘要，和 cancel/no-signal 对照看 token 消耗差异",
+      {
+        elapsedMs,
+        frameIdx,
+        usageSummary: usage && typeof usage === "object" && "total_tokens" in usage
+          ? {
+              prompt_tokens: (usage as { prompt_tokens?: number }).prompt_tokens,
+              completion_tokens: (usage as { completion_tokens?: number }).completion_tokens,
+              total_tokens: (usage as { total_tokens?: number }).total_tokens,
+            }
+          : null,
+      },
+    );
     return { frameIdx, usage, elapsedMs };
   } catch (err: unknown) {
     const failed = describeUpstreamError(err);
     console.error(
       `[${(performance.now() / 1000).toFixed(2)}s] /api/full error:`,
       err,
+    );
+    logger.error(
+      "full.run.fail",
+      "上游 / 网络异常",
+      "基线路径也不该 100% 成功；记 upstreamStatus + message 让排错时知道是哪条上游挂了",
+      {
+        upstreamStatus: failed.upstreamStatus ?? null,
+        message: failed.message,
+        errName: err instanceof Error ? err.name : String(err),
+        frameIdx,
+        elapsedMs: Math.round(performance.now() - t0),
+      },
     );
     writer.frame({
       event: "error",

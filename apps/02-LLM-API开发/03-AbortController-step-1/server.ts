@@ -25,6 +25,7 @@ import { mountHealthRoutes } from "./routes/health.js";
 import { mountFullRoutes } from "./routes/full.js";
 import { mountCancelRoutes } from "./routes/cancel.js";
 import { mountNoSignalRoutes } from "./routes/no-signal.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -61,4 +62,13 @@ app.listen(PORT, "127.0.0.1", () => {
   console.log(`  POST /api/full · /api/cancel-after-frames · /api/no-signal-abort`);
   logLlmConfig(llm);
   console.log(`  Ctrl+C 退出`);
+  logger.info("server.start", "listening", "AbortController Demo 起好了；记端口 + 协议 + Key 状态让 /health 能对照", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A",
+    provider: llm?.provider ?? null,
+    model: llm?.modelA ?? null,
+    hasKey: Boolean(llm),
+    endpoints: ["GET /health", "POST /api/full", "POST /api/cancel-after-frames", "POST /api/no-signal-abort"],
+    pages: ["/", "/pages/full.html", "/pages/cancel.html", "/pages/no-signal.html"],
+  });
 });

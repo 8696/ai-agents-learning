@@ -11,6 +11,7 @@ import type { IncomingMessage } from "node:http";
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
 import type { SseWriter } from "../sse/sse-writer.js";
+import { logger } from "../logger.js";
 import {
   createChatStream,
   describeUpstreamError,
@@ -55,15 +56,31 @@ export async function runCancelAfterFrames(params: {
     if (!aborted) {
       aborted = true;
       abortReason = "client-close";
-      console.log(
-        `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: 客户端断开（立即取消 / pagehide / 网络断）→ controller.abort()`,
+      logger.warn(
+        "llm.abort",
+        "客户端断开触发 abort()",
+        "浏览器掐 fetch（立即取消 / pagehide / 网络断）→ TCP 断开 → req.close → 走 AbortController；记下当时已收帧数 + targetFrames 便于对照 abort 触发时机",
+        {
+          reason: "client-close",
+          frameIdxSoFar: frameIdx,
+          targetFrames,
+          elapsedMs: Math.round(performance.now() - t0),
+        },
       );
       controller.abort();
     }
   });
 
-  console.log(
-    `\n[${(t0 / 1000).toFixed(2)}s] /api/cancel-after-frames: signal=有, abortAfterFrames=${targetFrames}`,
+  logger.info(
+    "cancel.run.start",
+    "进入 /api/cancel-after-frames 主流程",
+    "带 signal 的对照路径；记 abortAfterFrames 让回看时知道「收几帧才 abort」",
+    {
+      abortAfterFrames: targetFrames,
+      model: llm.modelA,
+      messagePreview: message.slice(0, 80),
+      messageLen: message.length,
+    },
   );
 
   try {
@@ -80,8 +97,16 @@ export async function runCancelAfterFrames(params: {
       if (frameIdx >= targetFrames && !aborted) {
         aborted = true;
         abortReason = "frames";
-        console.log(
-          `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: 已收 ${frameIdx} 帧 → controller.abort()（abortAfterFrames=${targetFrames}）`,
+        logger.warn(
+          "llm.abort",
+          "收满 N 帧触发 abort()",
+          "服务端自己到帧就停（和「客户端立即取消」对照）；记下最后收的帧 + targetFrames 便于核对 abort 触发条件",
+          {
+            reason: "frames",
+            frameIdx,
+            targetFrames,
+            elapsedMs: Math.round(performance.now() - t0),
+          },
         );
         controller.abort();
       }
@@ -92,16 +117,39 @@ export async function runCancelAfterFrames(params: {
     writer.done();
 
     const elapsedMs = Math.round(performance.now() - t0);
-    console.log(
-      `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: ✅ 流跑完 | 耗时 ${elapsedMs}ms | 帧数 ${frameIdx}`,
+    logger.info(
+      "cancel.run.complete",
+      "流跑完（未触发 abort）",
+      "N 设得太大 / abort 之前 SDK 已吐完所有 chunk；记耗时 + 帧数 + usage 摘要便于核对",
+      {
+        elapsedMs,
+        frameIdx,
+        usageSummary: usage && typeof usage === "object" && "total_tokens" in usage
+          ? {
+              prompt_tokens: (usage as { prompt_tokens?: number }).prompt_tokens,
+              completion_tokens: (usage as { completion_tokens?: number }).completion_tokens,
+              total_tokens: (usage as { total_tokens?: number }).total_tokens,
+            }
+          : null,
+      },
     );
     return { frameIdx, usage, elapsedMs, aborted: false, abortReason: null };
   } catch (err: unknown) {
     const elapsedMs = Math.round(performance.now() - t0);
 
     if (isAbortError(err)) {
-      console.log(
-        `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames: 🛑 AbortError caught | 写了 ${frameIdx} 帧 | 耗时 ${elapsedMs}ms | usage ${usage ? "已记录" : "未拿到（流提前结束）"}`,
+      logger.info(
+        "llm.abort",
+        "AbortError caught（教学预期）",
+        "abort() 真的传到 SDK 了；这不算错误而是教学结果，记 abortReason + 收了 N 帧 + usage 拿到没拿到",
+        {
+          reason: abortReason,
+          frameIdx,
+          elapsedMs,
+          usageCaptured: usage !== null,
+          errName: err instanceof Error ? err.name : String(err),
+          errMessage: err instanceof Error ? err.message : String(err),
+        },
       );
       writer.frame({
         event: "aborted",
@@ -115,9 +163,17 @@ export async function runCancelAfterFrames(params: {
     }
 
     const failed = describeUpstreamError(err);
-    console.error(
-      `[${(performance.now() / 1000).toFixed(2)}s] /api/cancel-after-frames error:`,
-      err,
+    logger.error(
+      "cancel.run.fail",
+      "上游 / 网络异常（非 abort）",
+      "非 abort 类的上游失败（401 / 429 / 5xx / 网络断）；记 upstreamStatus + message 让排错时知道是 abort 路径还是真挂了",
+      {
+        upstreamStatus: failed.upstreamStatus ?? null,
+        message: failed.message,
+        errName: err instanceof Error ? err.name : String(err),
+        elapsedMs,
+        frameIdx,
+      },
     );
     writer.frame({
       event: "error",

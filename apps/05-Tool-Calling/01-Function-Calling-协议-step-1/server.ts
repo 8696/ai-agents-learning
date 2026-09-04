@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountChatRoutes } from "./routes/chat.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -50,4 +51,10 @@ app.listen(PORT, "127.0.0.1", () => {
   console.log(`  POST /api/chat-mock → mock 一圈 tool_call 流程（{ input, parallel }）`);
   console.log(`  端口 ${PORT} · callsModel: false · 锁定时才补齐 §5.3.2 6 项`);
   console.log(`  Ctrl+C 退出`);
+  logger.info(
+    "服务启动",
+    "listen 成功",
+    "step-1 sketch：mock 一圈 tool_call 流程（model → tool_call → execute → tool_result → model_final）；callsModel=false 不调 LLM",
+    { port: PORT, host: "127.0.0.1", callsModel: false },
+  );
 });

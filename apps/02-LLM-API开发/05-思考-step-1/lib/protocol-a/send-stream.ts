@@ -10,6 +10,7 @@ import type { ChatTurn, StreamBody } from "../compare/stream-types.js";
 import { classifyReturnShape, writeMeta } from "../compare/thinking-meta.js";
 import { planProtocolA } from "../dialect/thinking-dialect.js";
 import type { SseWriter } from "../http/sse-writer.js";
+import { logger } from "../logger.js";
 
 const THINK_OPEN = "<think>";
 const THINK_CLOSE = "</think>";
@@ -177,12 +178,37 @@ export async function sendStreamA(
     return;
   }
 
+  logger.info(
+    "llm.request.protocolA",
+    `→ 协议 A 请求 ${llm.provider}（${body.thinkingOn ? "thinking 开" : "thinking 关"} / reasoning_split=${body.reasoningSplit}）`,
+    "打完整请求体便于对照 SDK 实际发出去的字段；meta 帧之后立刻补一条原始 JSON，方便看 meta 调整后还差什么",
+    {
+      endpoint: "POST {baseUrlA}/chat/completions",
+      model: request.model,
+      messagesCount: Array.isArray(request.messages) ? request.messages.length : 0,
+      stream: true,
+      thinkingOn: body.thinkingOn,
+      reasoningSplit: body.reasoningSplit,
+      extraBody: request.extra_body ?? null,
+      omitSampling: Boolean(plan.omitSampling),
+      maxTokens: request.max_tokens,
+      __code: JSON.stringify(request, null, 2),
+    },
+  );
+
   const state = { inThink: false, reasoningSeen: "" };
   const sources: string[] = [];
+  const thinkingText = { length: 0, chunks: 0, source: null as ThinkingSourceA | null };
   try {
     const stream = (await llm.openai.chat.completions.create(
       request as never,
     )) as unknown as AsyncIterable<unknown>;
+    logger.info(
+      "llm.response.protocolA",
+      "← 协议 A 已建流，等待 chunk",
+      "完整打响应起步状态便于核对 SDK 自带字段；首 chunk 之前的握手对象",
+      { streamReady: true, awaitingFirstChunk: true },
+    );
     for await (const chunk of stream) {
       const plain = toPlain(chunk);
       if (!writer.frame({ type: "raw", frame: plain })) return;
@@ -200,8 +226,24 @@ export async function sendStreamA(
       const delta = rec.choices?.[0]?.delta ?? {};
       const split = splitProtocolADelta(delta, state);
       if (split.source && !sources.includes(split.source)) sources.push(split.source);
-      if (split.thinking && !writer.frame({ type: "thinking", text: split.thinking, source: split.source })) {
-        return;
+      if (split.thinking) {
+        thinkingText.chunks += 1;
+        thinkingText.length += split.thinking.length;
+        if (!thinkingText.source) thinkingText.source = split.source;
+        logger.debug(
+          "llm.response.protocolA.thinking",
+          "thinking delta（协议 A）",
+          "thinking 流式逐 chunk 打：完整对照 SDK 走的是 reasoning_details / reasoning_content / <think> 标记里的哪一条路径",
+          {
+            source: split.source,
+            deltaText: split.thinking,
+            deltaLength: split.thinking.length,
+            reasoningSeenLength: state.reasoningSeen.length,
+          },
+        );
+        if (!writer.frame({ type: "thinking", text: split.thinking, source: split.source })) {
+          return;
+        }
       }
       if (split.content && !writer.frame({ type: "content", text: split.content })) return;
       if (
@@ -215,6 +257,18 @@ export async function sendStreamA(
         return;
       }
     }
+    logger.info(
+      "llm.response.protocolA.thinking.summary",
+      `← 协议 A 流结束 · thinking 累计 ${thinkingText.length} 字符 / ${thinkingText.chunks} 个 delta`,
+      "thinking 流式结束后打汇总：核对 sources / chunks / total length 与页面 thinking-map 一致",
+      {
+        sourcesSeen: sources,
+        thinkingChunks: thinkingText.chunks,
+        thinkingTextLength: thinkingText.length,
+        primarySource: thinkingText.source,
+        returnShape: classifyReturnShape(sources),
+      },
+    );
     writer.frame({
       type: "thinking-map",
       sources,
@@ -222,6 +276,12 @@ export async function sendStreamA(
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    logger.error(
+      "llm.response.protocolA",
+      "← 协议 A 流异常",
+      "把原始异常对象打出来便于排错（SDK 抛的错常带 status / headers）",
+      { errorMessage: msg, errorObject: err },
+    );
     writer.frame({ type: "error", error: msg });
   }
 }

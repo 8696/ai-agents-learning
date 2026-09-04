@@ -15,6 +15,7 @@
 import OpenAI from "openai";
 import type { Llm } from "../../../../llm.js";
 import type { SseWriter } from "../sse/sse-writer.js";
+import { logger } from "../logger.js";
 
 /** 一次流式对话跑完之后，服务端日志与页面统计都用得上的数字。 */
 export type StreamChatStats = {
@@ -96,14 +97,41 @@ export async function streamChatToSse(params: {
   const { llm, message, writer } = params;
 
   try {
-    const stream = await llm.openai.chat.completions.create(
-      buildChatRequest(llm, message),
+    const req = buildChatRequest(llm, message);
+    logger.info(
+      "llm.request",
+      "→ openai.chat.completions.create（协议 A · 流式）",
+      "记录发往上游的完整请求体：模块 00 最小闭环只有 model + 一条 user + stream 开关，打全便于后续核对字段、排查网关层多塞的参数",
+      {
+        model: req.model,
+        messagesCount: req.messages.length,
+        stream: req.stream,
+        stream_options: req.stream_options,
+        __code: `const stream = await llm.openai.chat.completions.create(${JSON.stringify(req, null, 2)})`,
+      },
+    );
+    const stream = await llm.openai.chat.completions.create(req);
+    logger.info(
+      "llm.response",
+      "← 拿到流对象（AsyncIterable<ChatCompletionChunk>）",
+      "完整打响应便于核对 SDK 自带字段（id / object / created / model / choices 首批 / system_fingerprint 等），流模式下 usage 要在最后一帧里取",
+      stream,
     );
     const { frameCount, usage } = await pumpChunksToSse(stream, writer);
     writer.done();
     return { frameCount, usage };
   } catch (error: unknown) {
     const failed = describeUpstreamError(error);
+    logger.error(
+      "llm.error",
+      "× openai.chat.completions.create 抛错",
+      "上游异常落到这里时 SSE 头已经发出去没法回 HTTP 状态码了，只能以错误帧回页面；upstreamStatus 区分 401/403（Key）、429（限流）、5xx（对方挂了）",
+      {
+        message: failed.message,
+        upstreamStatus: failed.upstreamStatus,
+        __code: `// 已在 catch 中调用 writer.frame({ error, upstreamStatus }) + writer.done()`,
+      },
+    );
     // 错误帧和正常帧走同一条流：页面统一在 onFrame 里判断 obj.error
     writer.frame({ error: failed.message, upstreamStatus: failed.upstreamStatus });
     writer.done();

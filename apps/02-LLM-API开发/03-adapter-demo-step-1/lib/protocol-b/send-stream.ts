@@ -6,6 +6,7 @@
 import type { Llm } from "../../../../llm.js";
 import type { SendMessageOptions, UnifiedDelta } from "../adapter/types.js";
 import { thinkingEnabled } from "../adapter/types.js";
+import { logger } from "../logger.js";
 
 export async function* sendViaBStream(
   llm: Llm,
@@ -17,13 +18,43 @@ export async function* sendViaBStream(
     ? Math.max(thinkingCfg.budget_tokens + 1024, llm.maxTokensB, 2048)
     : llm.maxTokensB;
 
-  const stream = llm.anthropic.messages.stream({
+  const requestBody = {
     model: llm.modelB,
     system: opts.system,
     max_tokens: maxTokens,
     ...(thinkingOn ? { temperature: 1 as const, thinking: thinkingCfg } : {}),
-    messages: [{ role: "user", content: opts.message }],
-  });
+    messages: [{ role: "user" as const, content: opts.message }],
+  };
+
+  logger.info(
+    "llm.request.protocolB.stream",
+    "→ 调用 anthropic.messages.stream",
+    "adapter 已分叉到协议 B 流式分支；拿到的是 EventStream 不是 AsyncIterable，需要用 on('streamEvent') 桥接；完整打请求体便于对照 SDK 文档",
+    {
+      protocol: "B",
+      mode: "stream",
+      sdk: "anthropic",
+      model: llm.modelB,
+      hasSystem: Boolean(opts.system),
+      maxTokens,
+      thinkingEnabled: thinkingOn,
+      messagesCount: 1,
+      __code: JSON.stringify(requestBody, null, 2),
+    },
+  );
+
+  const stream = llm.anthropic.messages.stream(requestBody);
+
+  logger.info(
+    "llm.response.protocolB.stream",
+    "← got stream handle",
+    "拿到 EventStream 句柄（不是最终响应）；后续用 streamEvent 队列桥接 unified delta，message_stop 后再 finalMessage() 兜底拿 usage",
+    {
+      protocol: "B",
+      mode: "stream",
+      streamType: "MessageStream (EventStream)",
+    },
+  );
 
   const queue: unknown[] = [];
   let waiter: (() => void) | null = null;
@@ -96,6 +127,12 @@ export async function* sendViaBStream(
   await stream.finalMessage().catch(() => undefined);
 
   if (usage) {
+    logger.info(
+      "llm.response.protocolB.stream.usage",
+      "← got usage",
+      "汇总自 message_start / message_delta 块的最终 usage；完整打便于核对 input_tokens / output_tokens / cache_read",
+      usage,
+    );
     yield {
       type: "usage",
       usage: {

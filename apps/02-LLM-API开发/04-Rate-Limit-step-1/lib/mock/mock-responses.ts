@@ -2,8 +2,11 @@
  * 职责：本机 mock LLM 的 5 个确定性端点 + 1 个「掐连接」端点的响应形状。
  * 数据流：pathname → { status, headers, body }；retry 层通过 HTTP 再打回来，不直接调这个函数。
  * 为什么单独成文件：mock 状态机（easy 计数器 / chaos 随机）不属于 HTTP 装配，也不属于 retry 算法。
+ *
+ * 日志（§5.3.16）：mock 不是 LLM 但教学上替代 LLM——记每次返回的 status / headers 便于和 retry.decide 时间线对得上。
  */
 import type { Context } from "koa";
+import { logger } from "../logger.js";
 
 /** 五个教学场景 + drop（给 retry 看见 status=network）。 */
 export const MOCK_TARGETS = ["easy", "chaos", "auth", "forever", "ok", "drop"] as const;
@@ -31,6 +34,22 @@ function chaosRoll(): { status: number; retryAfter?: string } {
 
 /** 直接路径（不走 retry）：返回 mock LLM 行为，让 retry 套在外面 */
 export function handleDirect(path: string): {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+} {
+  const out = handleDirectInner(path);
+  logger.debug("mock.respond", `${path} 返回 ${out.status}`, "mock 替代 LLM 给 retry 吃；记 status + retry-after 让 retry.decide 时间线能追到这一刀", {
+    path,
+    status: out.status,
+    retryAfter: out.headers["retry-after"] ?? null,
+    bodyPreview: out.body.slice(0, 120),
+  });
+  return out;
+}
+
+/** handleDirect 的纯函数实现，便于 logger 包裹外层时单独测。 */
+function handleDirectInner(path: string): {
   status: number;
   headers: Record<string, string>;
   body: string;

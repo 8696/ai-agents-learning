@@ -6,9 +6,16 @@ import type { Context } from "koa";
 import type Router from "@koa/router";
 import { llm, PORT } from "../lib/http/runtime-ctx.js";
 import { CHINESE, ENGLISH, VOCAB_LABEL } from "../lib/tokenize/presets.js";
+import { logger } from "../lib/logger.js";
 
 export function mountHealthRoutes(router: Router): void {
   router.get("/health", (ctx: Context) => {
+    logger.info("health.received", "GET /health", "页面加载打一次；记 callsModel + hasKey 让排错时能区分「真没配 Key」与「故意不调模型」", {
+      callsModel: false,
+      hasKey: Boolean(llm),
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+    });
     ctx.body = {
       ok: true,
       port: PORT,

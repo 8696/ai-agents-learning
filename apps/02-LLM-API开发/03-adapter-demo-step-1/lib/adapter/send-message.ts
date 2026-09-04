@@ -9,11 +9,18 @@ import { sendViaA } from "../protocol-a/send-once.js";
 import { sendViaAStream } from "../protocol-a/send-stream.js";
 import { sendViaB } from "../protocol-b/send-once.js";
 import { sendViaBStream } from "../protocol-b/send-stream.js";
+import { logger } from "../logger.js";
 
 export async function sendMessage(
   llm: Llm,
   opts: SendMessageOptions,
 ): Promise<UnifiedResponse> {
+  logger.info(
+    "llm.dispatch.adapter",
+    `分叉 → 协议 ${opts.protocol}（一次性）`,
+    "adapter 唯一分叉点（两行 if）；业务层看不见 SDK，这里选 A(openai) 还是 B(anthropic)；计数便于核对多协议对比时的调用次数",
+    { protocol: opts.protocol, mode: "once" },
+  );
   if (opts.protocol === "A") return sendViaA(llm, opts);
   return sendViaB(llm, opts);
 }
@@ -22,6 +29,12 @@ export async function* sendMessageStream(
   llm: Llm,
   opts: SendMessageOptions,
 ): AsyncGenerator<UnifiedDelta> {
+  logger.info(
+    "llm.dispatch.adapter",
+    `分叉 → 协议 ${opts.protocol}（流式）`,
+    "adapter 唯一分叉点（两行 if）；业务层看不见 SDK，这里选 A(openai) 还是 B(anthropic)；计数便于核对多协议对比时的调用次数",
+    { protocol: opts.protocol, mode: "stream" },
+  );
   if (opts.protocol === "A") {
     yield* sendViaAStream(llm, opts);
   } else {

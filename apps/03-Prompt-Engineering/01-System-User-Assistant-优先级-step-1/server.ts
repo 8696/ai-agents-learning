@@ -23,6 +23,7 @@ import { mountHealthRoutes } from "./routes/health.js";
 import { mountCase1Routes } from "./routes/case1-priority.js";
 import { mountCase2Routes } from "./routes/case2-with-history.js";
 import { mountCase3Routes } from "./routes/case3-no-history.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -41,6 +42,24 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
+  logger.info(
+    "server.start",
+    "listening",
+    "服务起好了，记下端口与端点让 /health 能对照；本条对照 3 个 Case 用同一份 spec 分别送 A / B 看 SDK 行为差",
+    {
+      url: `http://127.0.0.1:${PORT}/`,
+      port: PORT,
+      provider: llm?.provider ?? null,
+      modelA: llm?.modelA ?? null,
+      modelB: llm?.modelB ?? null,
+      endpoints: [
+        "GET  /health",
+        "POST /api/case1-priority",
+        "POST /api/case2-with-history",
+        "POST /api/case3-no-history",
+      ],
+    },
+  );
   console.log(
     "──── 模块 03 · 01 System / User / Assistant 优先级（§5.3.8 分层 · 对照例外）· 已启动 ────",
   );

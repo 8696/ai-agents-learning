@@ -9,6 +9,7 @@ import type { Llm } from "../../../../llm.js";
 import { computeCost } from "../billing/pricing.js";
 import { MissingUsageError } from "./measure-types.js";
 import type { BillingMeasurement, UsageTriple } from "./measure-types.js";
+import { logger } from "../logger.js";
 
 export type MeasureInput = {
   llm: Llm;
@@ -44,12 +45,30 @@ export async function measureOneCall(input: MeasureInput): Promise<BillingMeasur
   const { llm, label, prompt, maxTokens } = input;
   const startedAt = performance.now();
 
+  logger.info(
+    "llm.request",
+    "→ openai.chat.completions.create",
+    "单次计费；非流式（stream:false）才能稳定拿到 usage 三字段，便于核对 billing",
+    {
+      model: llm.modelA,
+      messagesCount: 1,
+      maxTokens,
+      stream: false,
+      __code: `await llm.openai.chat.completions.create({\n  model: llm.modelA,\n  messages: [{ role: "user", content: prompt }],\n  max_tokens: maxTokens,\n  stream: false,\n});`,
+    },
+  );
   const completion = await llm.openai.chat.completions.create({
     model: llm.modelA,
     messages: [{ role: "user", content: prompt }],
     max_tokens: maxTokens,
     stream: false,
   });
+  logger.info(
+    "llm.response",
+    "← got response",
+    "完整打响应便于核对 SDK 自带字段（id / choices / usage）",
+    completion,
+  );
 
   const usage = normalizeUsage(completion.usage);
   const choice = completion.choices[0];
@@ -69,6 +88,23 @@ export async function measureOneCall(input: MeasureInput): Promise<BillingMeasur
 
 /** 服务端日志：跑完在终端也能核对一遍，页面和终端两处数字必须一致。 */
 export function logMeasurement(scope: string, m: BillingMeasurement): void {
+  logger.info(
+    `计量摘要-${scope}`,
+    `本次 ${m.label} 跑完`,
+    "把计费 + 耗时 + finish_reason 摘要打出来，让 route 和页面两边数字一致",
+    {
+      label: m.label,
+      prompt_tokens: m.usage.prompt_tokens,
+      completion_tokens: m.usage.completion_tokens,
+      total_tokens: m.usage.total_tokens,
+      cost_cny: m.cost.totalCny,
+      currency: m.cost.currency,
+      duration_ms: m.durationMs,
+      finish_reason: m.finishReason,
+    },
+  );
+  // 保留终端输出，让开发者不读日志也能看到摘要
+  // eslint-disable-next-line no-console
   console.log(
     `[${scope}] ${m.label} | prompt=${m.usage.prompt_tokens} completion=${m.usage.completion_tokens} ` +
       `total=${m.usage.total_tokens} | ${m.cost.totalCny} ${m.cost.currency} | ${m.durationMs}ms | finish=${m.finishReason}`,

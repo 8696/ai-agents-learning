@@ -14,6 +14,7 @@ import { llm } from "../lib/http/runtime-ctx.js";
 import { parseChatBody, writeRawJson } from "../lib/http/request-guards.js";
 import { openSseStream } from "../lib/sse/sse-writer.js";
 import { streamChatToSse } from "../lib/flow/stream-chat.js";
+import { logger } from "../lib/logger.js";
 
 export function mountChatRoutes(router: Router): void {
   router.post("/api/chat", async (ctx: Context) => {
@@ -42,6 +43,18 @@ export function mountChatRoutes(router: Router): void {
     const stats = await streamChatToSse({ llm, message: parsed.message, writer });
 
     // 终端日志和页面看到的是同一份统计，方便对着核对帧数
+    logger.info(
+      "api.chat",
+      "POST /api/chat 流式对话结束",
+      "汇总本次请求的结果：帧数、Token 用量、是否上游失败 —— 跟页面 stats 区对着看就是一份核对清单",
+      {
+        endpoint: "POST /api/chat",
+        frameCount: stats.frameCount,
+        usage: stats.usage,
+        failed: stats.failed,
+        __code: `// routes/chat.ts ctx.respond=false → openSseStream → streamChatToSse → writer.done()`,
+      },
+    );
     console.log(
       `  POST /api/chat  帧数=${stats.frameCount}` +
         (stats.usage ? `  total_tokens=${stats.usage.total_tokens}` : "  usage=无") +

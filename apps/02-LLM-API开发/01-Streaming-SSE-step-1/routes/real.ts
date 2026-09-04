@@ -11,6 +11,7 @@
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
+import { logger } from "../lib/logger.js";
 import { llm } from "../lib/http/runtime-ctx.js";
 import { parseRealPrompt, writeRawJson } from "../lib/http/request-guards.js";
 import { DEFAULT_REAL_PROMPT, streamRealToSse } from "../lib/flow/stream-real.js";
@@ -39,9 +40,30 @@ async function handleReal(ctx: Context): Promise<void> {
   }
 
   const writer = openSseStream(ctx.res);
+  logger.info(
+    "llm.request",
+    `${ctx.method} /api/real 已开 SSE 流，准备转发真实模型`,
+    "闸门（400 / 503）已过，SSE 响应头已发；从这一步起 HTTP 状态码改不了，只剩推帧 + [DONE] / error 帧两条路",
+    {
+      method: ctx.method,
+      promptLength: prompt.length,
+      promptPreview: prompt.length > 60 ? `${prompt.slice(0, 60)}…` : prompt,
+    },
+  );
   const stats = await streamRealToSse({ llm, prompt, writer });
   if (stats.failed) {
     console.log(`  ${ctx.method} /api/real  上游失败=${stats.failed.message}`);
+    logger.warn(
+      "llm.response",
+      `${ctx.method} /api/real 上游失败已写 error 帧`,
+      "客户端已收到 SSE error 帧；HTTP 仍 200（流已开），靠帧里的 upstreamStatus / message 排错",
+      {
+        method: ctx.method,
+        frameCount: stats.frameCount,
+        message: stats.failed.message,
+        upstreamStatus: stats.failed.upstreamStatus,
+      },
+    );
   }
 }
 

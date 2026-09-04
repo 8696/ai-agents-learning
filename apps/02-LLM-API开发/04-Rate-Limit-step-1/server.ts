@@ -21,6 +21,7 @@ import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountMockRoutes } from "./routes/mock.js";
 import { mountRealRoutes } from "./routes/real.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -42,6 +43,11 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
+  logger.info("server.start", "listening", "服务起好了，记下端口与端点让 /health 能对照", {
+    url: `http://127.0.0.1:${PORT}/`,
+    endpoints: ["GET /health", "GET /api/proxy", "GET /api/real", "GET /api/real-burst", "GET /api/{easy,chaos,auth,forever,ok,drop}"],
+    pages: ["/", "/pages/mock.html", "/pages/real.html"],
+  });
   console.log(
     "──── 模块 02 · 04 Rate-Limit Demo（§5.3.8 分层拆分 · 仅协议 A）· 已启动 ────",
   );

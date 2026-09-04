@@ -11,6 +11,7 @@ import {
   splitProtocolADelta,
   type ProtocolADelta,
 } from "./think-extract.js";
+import { logger } from "../logger.js";
 
 export async function* sendViaAStream(
   llm: Llm,
@@ -20,13 +21,43 @@ export async function* sendViaAStream(
   if (opts.system) messages.push({ role: "system", content: opts.system });
   messages.push({ role: "user", content: opts.message });
 
-  const stream = await llm.openai.chat.completions.create({
+  const requestBody = {
     model: llm.modelA,
     messages,
-    stream: true,
+    stream: true as const,
     stream_options: { include_usage: true },
     ...(thinkingEnabled(opts) ? PROTOCOL_A_THINKING : {}),
-  });
+  };
+
+  logger.info(
+    "llm.request.protocolA.stream",
+    "→ 调用 openai.chat.completions.create(stream:true)",
+    "adapter 已分叉到协议 A 流式分支；含 stream_options.include_usage=true 以拿到末尾 usage 块",
+    {
+      protocol: "A",
+      mode: "stream",
+      sdk: "openai",
+      model: llm.modelA,
+      messagesCount: messages.length,
+      stream: true,
+      includeUsage: true,
+      thinkingEnabled: thinkingEnabled(opts),
+      __code: JSON.stringify(requestBody, null, 2),
+    },
+  );
+
+  const stream = await llm.openai.chat.completions.create(requestBody);
+
+  logger.info(
+    "llm.response.protocolA.stream",
+    "← got stream handle",
+    "拿到 AsyncIterable 流句柄（不是最终响应）；后续逐 chunk 解析，最后由末尾 usage 块汇总给前端",
+    {
+      protocol: "A",
+      mode: "stream",
+      streamType: "AsyncIterable<ChatCompletionChunk>",
+    },
+  );
 
   const state = { inThink: false, reasoningSeen: "" };
   let usage: {
@@ -51,6 +82,12 @@ export async function* sendViaAStream(
   }
 
   if (usage) {
+    logger.info(
+      "llm.response.protocolA.stream.usage",
+      "← got usage chunk",
+      "末尾 usage 块（include_usage=true 才会有）；完整打便于核对 prompt_tokens / completion_tokens / cached_tokens",
+      usage,
+    );
     yield {
       type: "usage",
       usage: {

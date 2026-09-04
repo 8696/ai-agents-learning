@@ -25,6 +25,7 @@ import { logLlmConfig } from "../../llm.js";
 import { llm, PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountChatRoutes } from "./routes/chat.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Koa();
 const router = new Router();
@@ -46,6 +47,26 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
+  logger.info(
+    "server.startup",
+    "模块 00 · mini-app HTTP + SSE 已启动（§5.3.8 分层 · 仅协议 A）",
+    "启动横幅：把端口、协议、Provider、Model、Key 状态、可用端点一次性打到日志，后续接 production 也按这份扫一眼服务是否就绪",
+    {
+      port: PORT,
+      bind: "127.0.0.1",
+      protocol: "A (chat.completions · stream=true)",
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm?.apiKey),
+      endpoints: {
+        "GET  /": "总览（场景地图 + 环境自检）",
+        "GET  /pages/chat.html": "流式对话 · 逐字上屏 + Token 用量",
+        "GET  /pages/frames.html": "SSE 原始帧 · 一帧一卡片看清协议字段",
+        "GET  /health": "{ ok, port, protocol, provider, model, hasKey }",
+        "POST /api/chat": "Body: { \"message\": \"你好\" } → 协议 A 流式 SSE",
+      },
+    },
+  );
   console.log("──── 模块 00 · mini-app HTTP + SSE（§5.3.8 分层 · 仅协议 A）· 已启动 ────");
   console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  总览         /`);

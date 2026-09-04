@@ -6,6 +6,7 @@
  */
 import type { Llm } from "../../../../llm.js";
 import type OpenAI from "openai";
+import { logger } from "../logger.js";
 
 export type AbortReason = "frames" | "client-close" | "manual";
 
@@ -40,10 +41,40 @@ export async function createChatStream(
   signal?: AbortSignal,
 ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
   const params = buildChatStreamParams(llm, message);
+
+  logger.info(
+    "llm.request",
+    "→ openai.chat.completions.create (stream:true)",
+    "建上游流；带不带 signal 决定后面 abort() 能不能传到 SDK，记下 model + messages 数 + __code 便于核对请求体",
+    {
+      model: llm.modelA,
+      messagesCount: params.messages.length,
+      stream: true,
+      signal: signal ? "已传 AbortSignal" : "未传",
+      signalAbortedAtStart: signal?.aborted ?? null,
+      __code: `await llm.openai.chat.completions.create(${JSON.stringify(params, null, 2)}${signal ? ", { signal }" : ""});`,
+    },
+  );
+
+  let stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
   if (signal) {
-    return llm.openai.chat.completions.create(params, { signal });
+    stream = await llm.openai.chat.completions.create(params, { signal });
+  } else {
+    stream = await llm.openai.chat.completions.create(params);
   }
-  return llm.openai.chat.completions.create(params);
+
+  logger.info(
+    "llm.response",
+    "← got stream iterator",
+    "create 返回 AsyncIterable<ChatCompletionChunk>，不是单一响应对象；记 SDK 调用成功、流已就绪，后续 chunk 在 run-* 里逐帧处理",
+    {
+      model: llm.modelA,
+      streamType: "AsyncIterable<ChatCompletionChunk>",
+      signal: signal ? "已传 AbortSignal" : "未传",
+    },
+  );
+
+  return stream;
 }
 
 /**

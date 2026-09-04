@@ -12,6 +12,7 @@
  */
 import { performance } from "node:perf_hooks";
 import type { SseWriter } from "../sse/sse-writer.js";
+import { logger } from "../logger.js";
 
 /** 教学简化：每帧正好 1 个字符。真实模型每帧可能含多个 token 解码后的字符串。 */
 export const TOKENS = ["你", "好", "，", "我", "是", " ", "AI", " ", "助", "手", "。"];
@@ -33,12 +34,24 @@ export function pumpSimulatedSse(writer: SseWriter): Promise<void> {
     let i = 0;
     const tick = (): void => {
       if (writer.isClosed()) {
+        logger.info(
+          "模拟 SSE-中断",
+          "浏览器断开，停止推帧",
+          "writer.isClosed()=true 是路由层 close 事件触发，主动停掉模拟时钟避免白写",
+          { stoppedAtIndex: i },
+        );
         resolve();
         return;
       }
       if (i >= TOKENS.length) {
         console.log(
           `[${(performance.now() / 1000).toFixed(2)}s] SSE 帧 #${i + 1}: data: [DONE]    ← 结束帧，连接关闭`,
+        );
+        logger.info(
+          "模拟 SSE-收尾",
+          "SSE 帧 [DONE] 写出，连接关闭",
+          "结束帧必须显式打：少了它浏览器的 EventSource 会一直挂到超时；totalFrames 是用来核对『11 帧 + [DONE] = 12 次 write』的",
+          { totalFrames: i, finalIndex: i + 1 },
         );
         writer.done();
         resolve();
@@ -49,6 +62,16 @@ export function pumpSimulatedSse(writer: SseWriter): Promise<void> {
       });
       console.log(
         `[${(performance.now() / 1000).toFixed(2)}s] SSE 帧 #${i + 1}: data: ${payload}`,
+      );
+      logger.info(
+        "模拟 SSE-推帧",
+        `SSE 帧 #${i + 1} 已写`,
+        "教学页要看到『流式 = 多次小响应』：每帧 1 个 token（教学简化），真实模型一帧可能含多个解码 token",
+        {
+          frameIndex: i + 1,
+          token: TOKENS[i],
+          payload,
+        },
       );
       writer.writeRaw(payload);
       i += 1;
