@@ -963,6 +963,13 @@ cd apps && yarn check-demo
 - `apps/logger.ts` 导出 `createLogger(logDir)`（也可传 `{ logDir, consoleLevel? }`）—— **内置**安全序列化（私有，不导出；处理 Error / Map / Set / Date / Buffer / 循环引用 / 大对象截断）
 - 每个 demo 在 `lib/logger.ts` 一行建本地 logger，业务代码 `import { logger } from "./logger"` 直接用；**调用方不感知写文件 / 写 console 两件事的细节**
 
+**lock-time freeze（已锁定 demo 必读）**
+- 顶层 `apps/logger.ts` 是**模板**——未来会改；已锁定 step 不能被未来顶层改动影响
+- **每条 demo 锁定 step 的那一刻**：把当时顶层 `apps/logger.ts` 完整拷一份到 `apps/{demo}/lib/logger.ts`（顶部 doc comment 可改为「本地 freeze 副本 · 锁定于 YYYY-MM-DD」），demo 业务代码 import 路径不变（仍是 `./logger`）
+- 顶层 `apps/logger.ts` 未来改动：只影响新 demo / 新 step；已 freeze 的副本不动
+- 已锁定 step 业务代码（registry / chat / server 等）使用 demo 本地 logger，**不感知顶层**
+- freeze 操作是 `node scripts/check-demo.cjs` 前的最后一步；§5.4 闸门要求 logger 在 demo 本地独立可用
+
 **API（业务代码视角，四参调用极简）**
 
 ```ts

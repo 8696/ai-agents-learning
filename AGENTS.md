@@ -166,7 +166,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 
 ### 5.6 详细日志（高频错误·表层摘要）
 
-完整细则 [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制)。落 Demo 必看：详细优先；`apps/{demo}/logs/`；**四参** `logger.info(scope, msg, explain, data?)` / `warn` / `error` / `debug`，`explain` **必填**（人话释义）；业务每个打点都打；顶层 `apps/logger.ts`；**格式**：基础信息（BJT `YYYY-MM-DD HH:MM:SS.mmm +08:00` + level + scope）**单行**，msg / explain / data / code 块缩进 2 下一行起多行 JSON（grep head 干净、不用 jq）；文件名 `{YYYY-MM-DD}.log` 按 BJT 切（**无 serviceName 前缀**）；文件**不写**服务名；`scope` 中文节点、`msg` 中文动作、`explain` 中文人话、`__code` 源代码块、LLM 响应整个对象（不挑字段）；前端**不写日志**（页面 §5.3.10/11/2 #4 已展示）。
+完整细则 [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制)。落 Demo 必看：详细优先；`apps/{demo}/logs/`；**四参** `logger.info(scope, msg, explain, data?)` / `warn` / `error` / `debug`，`explain` **必填**（人话释义）；业务每个打点都打；顶层 `apps/logger.ts`；**格式**：基础信息（BJT `YYYY-MM-DD HH:MM:SS.mmm +08:00` + level + scope）**单行**，msg / explain / data / code 块缩进 2 下一行起多行 JSON（grep head 干净、不用 jq）；文件名 `{YYYY-MM-DD}.log` 按 BJT 切（**无 serviceName 前缀**）；文件**不写**服务名；`scope` 中文节点、`msg` 中文动作、`explain` 中文人话、`__code` 源代码块、LLM 响应整个对象（不挑字段）；前端**不写日志**（页面 §5.3.10/11/2 #4 已展示）；**lock-time freeze**（锁定那一刻拷顶层 logger.ts 到 demo/lib/logger.ts，未来顶层改不动已锁定 demo）。
 
 ---
 
