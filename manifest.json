@@ -808,6 +808,10 @@
                         "path": "apps/00-环境准备/01-API-Key-计费-step-1/lib/http/write-upstream-error.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/00-环境准备/01-API-Key-计费-step-1/lib/logger.ts"
                   }
                 ]
               },
@@ -913,6 +917,10 @@
                         "path": "apps/00-环境准备/01-mini-app-step-1/lib/http/runtime-ctx.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/00-环境准备/01-mini-app-step-1/lib/logger.ts"
                   },
                   {
                     "label": "sse",
@@ -1021,6 +1029,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/01-AI与LLM基础认知/02-Token-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "tokenize",
                     "children": [
                       {
@@ -1124,6 +1136,10 @@
                         "path": "apps/01-AI与LLM基础认知/06-Embedding-step-1/lib/http/runtime-ctx.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/01-AI与LLM基础认知/06-Embedding-step-1/lib/logger.ts"
                   },
                   {
                     "label": "vec",
@@ -1258,6 +1274,10 @@
                         "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P-step-1/lib/http/write-upstream-error.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P-step-1/lib/logger.ts"
                   },
                   {
                     "label": "sampling",
@@ -1399,6 +1419,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/02-LLM-API开发/01-Streaming-SSE-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "sse",
                     "children": [
                       {
@@ -1531,6 +1555,10 @@
                         "path": "apps/02-LLM-API开发/02-协议-A-vs-B-step-1/lib/http/write-upstream-error.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/02-LLM-API开发/02-协议-A-vs-B-step-1/lib/logger.ts"
                   },
                   {
                     "label": "protocol-a",
@@ -1724,6 +1752,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/02-LLM-API开发/03-AbortController-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "sse",
                     "children": [
                       {
@@ -1852,6 +1884,10 @@
                         "path": "apps/02-LLM-API开发/03-adapter-demo-step-1/lib/http/sse-writer.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/02-LLM-API开发/03-adapter-demo-step-1/lib/logger.ts"
                   },
                   {
                     "label": "protocol-a",
@@ -1997,6 +2033,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/02-LLM-API开发/04-Rate-Limit-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "mock",
                     "children": [
                       {
@@ -2135,6 +2175,10 @@
                         "path": "apps/02-LLM-API开发/05-思考-step-1/lib/http/sse-writer.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/02-LLM-API开发/05-思考-step-1/lib/logger.ts"
                   },
                   {
                     "label": "protocol-a",
@@ -2283,6 +2327,10 @@
                         "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/lib/http/write-upstream-error.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/lib/logger.ts"
                   },
                   {
                     "label": "protocol-a",
@@ -2439,6 +2487,10 @@
                         "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/lib/http/write-upstream-error.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/lib/logger.ts"
                   }
                 ]
               },
@@ -2546,6 +2598,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "version",
                     "children": [
                       {
@@ -2650,6 +2706,10 @@
                         "path": "apps/04-Structured-Output/01-JSON-Schema-step-1/lib/http/runtime-ctx.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/04-Structured-Output/01-JSON-Schema-step-1/lib/logger.ts"
                   },
                   {
                     "label": "schema",
@@ -2792,6 +2852,10 @@
                         "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/lib/http/write-upstream-error.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/lib/logger.ts"
                   },
                   {
                     "label": "schema",
@@ -2940,6 +3004,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "schema",
                     "children": [
                       {
@@ -3058,6 +3126,10 @@
                     ]
                   },
                   {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-1/lib/logger.ts"
+                  },
+                  {
                     "label": "tools",
                     "children": [
                       {
@@ -3169,15 +3241,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-2/public/index.html"
-                  },
-                  {
-                    "label": "utils",
-                    "children": [
-                      {
-                        "label": "logger-client.js",
-                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-2/public/utils/logger-client.js"
-                      }
-                    ]
                   }
                 ]
               },
