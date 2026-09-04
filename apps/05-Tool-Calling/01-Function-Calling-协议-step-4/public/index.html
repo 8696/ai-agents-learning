@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-4 串行依赖链 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- 加载顺序：utils（普通）→ components（babel src）→ 本页内联（babel） -->
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 总览页：本 step 有什么、串行依赖链场景长什么样；不直接演示业务（业务在 pages/chain.html）。
+     *
+     * 全局数据流：
+     *   浏览器 /pages/chain.html
+     *     → POST /api/chain { query, style }
+     *       → routes/chain.ts
+     *         → ① await search_doc(query)        ← A（上游）
+     *         → ② await summarize(content=A.result, style)  ← B（依赖 A 的输出）
+     *       → 返 { steps: [step1, step2], finalSummary, totalMs }
+     *     → 浏览器渲链式 gantt 时序图 + 2 条 tool_result + final summary
+     *
+     * 与 step-3 的区别：step-3 走 Promise.all 并发 3 个独立 Tool；本步是 await chain 串 2 个依赖 Tool。
+     *   B 需要 A 的输出当参数 → 串行；不能 Promise.all（否则 B 的 content 是 undefined）。
+     *
+     * 日志：服务端每处可打点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-4/logs/）。
+     */
+    const { useState, useEffect } = React;
+    const { useEnvInfo, StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+
+    function App() {
+      const { env, envError } = useEnvInfo();
+      const [tools, setTools] = useState([]);
+      const [error, setError] = useState(null);
+
+      useEffect(function () {
+        fetch("/api/tools")
+          .then(function (r) { return r.json(); })
+          .then(function (j) { setTools(j.tools || []); })
+          .catch(function (e) { setError("GET /api/tools 失败：" + String(e)); });
+      }, []);
+
+      const pageIntroSteps = [
+        "页面加载 → GET /health 填页脚；GET /api/tools 拉 Registry 元信息",
+        "点「串行依赖链」进 chain 页 → 那里才有业务按钮",
+        "chain 页：填 query + 选 style → POST /api/chain → 服务端 await 串两步",
+        "① 第一步 search_doc(query) → 拿 hits（async 80ms）",
+        "② 第二步 summarize(content=上一步 result, style) → 拿 summary（async 50ms）",
+        "gantt 时序图：2 bar 顺序堆叠（left 累加），总长 ≈ 130ms（80+50）",
+        "观察点：与 step-3 区别 —— 这里是 await 串行，不是 Promise.all；B 用 A 的输出",
+      ];
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · Function Calling 协议 · step-4（串行依赖链 · 总览）
+            </h1>
+            <StatusPill status={envError ? "error" : (env.port ? "ok" : "idle")} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              summary="step-4 演示「串行依赖链 A → B」：search_doc → summarize（B 用 A 的输出当参数）。路由层 hard-code await 顺序 —— B 必须等 A 完成才能拿到 content。"
+              steps={pageIntroSteps}
+              extra={
+                <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
+{`POST /api/chain { query, style }
+  → ① await search_doc(query)                     ← 链 A（80ms）
+  → ② await summarize(content=A.result, style)    ← 链 B（50ms，依赖 A 输出）
+  → 返 { steps, finalSummary, totalMs }`}
+                </pre>
+              }
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">📍 场景导航（点进去才有业务按钮）</h2>
+              <div className="grid grid-cols-1 gap-3">
+                <a href="/pages/chain.html" className="block border border-gray-200 rounded p-4 hover:border-blue-500">
+                  <div className="text-sm font-semibold">① 串行依赖链（search_doc → summarize）</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    填 query + 选 style（tech/oneliner/bullets）→ POST /api/chain → 渲链式 gantt 时序图 + 2 条 tool_result + final summary。
+                    适合：看清 B 用 A 的输出当参数这种「依赖链」的物理形态。
+                  </p>
+                </a>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[120px] space-y-3">
+              <h2 className="text-sm font-semibold">🧩 本页只导览、不演示业务（业务在 chain 页）</h2>
+              <p className="text-sm text-gray-700">
+                总览页的"输出区"——这里给出 step-4 关键观察点的一句话总结，详细时序 / tool_result / summary 都在 chain 页里。
+              </p>
+              <ul className="text-xs text-gray-600 list-disc pl-5 space-y-1">
+                <li>链 A（search_doc）：async 80ms；返回 hits 列表</li>
+                <li>链 B（summarize）：async 50ms；content = A.result（**不**是用户输入）</li>
+                <li>总耗时 ≈ 130ms（串行 sum；不是并行 max）</li>
+                <li>关键代码：<code>routes/chain.ts</code> await 链式调用，<strong>不</strong>用 <code>Promise.all</code></li>
+                <li>本页 vs step-3：step-3 是 Promise.all 并发 3 个独立 Tool；本页是 await 串 2 个依赖 Tool</li>
+              </ul>
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Tool Registry（2 Tool · 链 A → B · 全 async · handler 含 sleep 模拟 IO）</h2>
+                <span className="text-xs text-gray-500">GET /api/tools</span>
+              </div>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              <div className="space-y-2">
+                {tools.map(function (t) {
+                  return (
+                    <div key={t.name} className="border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="font-mono text-sm font-semibold">{t.name}</div>
+                        <div className="text-xs text-gray-600">{t.description}</div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-200 text-green-800">safe · async</span>
+                    </div>
+                  );
+                })}
+                {tools.length === 0 && !error && <p className="text-xs text-gray-500">（Registry 还没加载）</p>}
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-4 · 串行依赖链</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 串行依赖链页：填 query + 选 style → POST /api/chain → 渲链式 gantt + 2 tool_result + final summary。
+     *
+     * 教学锚点（覆盖 MD 例子 5）：
+     *   - ① search_doc → ② summarize(B 用 A 的 result 当 content)
+     *   - 路由层 await 串行 —— **不**用 Promise.all（B 必须等 A 完成）
+     *   - gantt 时序图：2 bar 顺序堆叠（left 累加），总长 ≈ 130ms（80+50）
+     */
+    const { useState } = React;
+    const { useEnvInfo, PageNav, StatusPill, PageIntro, EnvFooter, GanttChart, ResultCard } = window.DemoUI;
+
+    function App() {
+      const { env } = useEnvInfo();
+      const [query, setQuery] = useState("Function Calling");
+      const [style, setStyle] = useState("tech");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+      const [result, setResult] = useState(null);
+
+      function run() {
+        setStatus("running");
+        setError(null);
+        setResult(null);
+        fetch("/api/chain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, style: style }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setResult(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      // 把 steps 转成 gantt 友好的 timeline 格式
+      const timeline = (result?.steps ?? []).map(function (s) {
+        return {
+          tool: s.tool,
+          tool_call_id: s.tool_call_id,
+          startMs: s.startMs,
+          endMs: s.endMs,
+          durationMs: s.durationMs,
+          ok: s.ok,
+        };
+      });
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · step-4 · 串行依赖链
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageNav />
+            <PageIntro
+              summary="串行依赖：POST /api/chain → 服务端 await 链式跑 search_doc → summarize（B 用 A 的输出当参数）→ 渲链式 gantt + 2 tool_result + final summary。"
+              steps={[
+                "填 query + 选 style（tech/oneliner/bullets）→ POST /api/chain { query, style }",
+                "服务端：① await search_doc(query)（80ms）→ 拿 hits",
+                "服务端：② await summarize(content=上一步 result, style)（50ms）→ 拿 summary",
+                "返 { steps: [step1, step2], finalSummary, totalMs }",
+                "前端：链式 gantt 时序图（2 bar 顺序堆叠，totalMs ≈ 130ms）+ 2 条 tool_result + final summary",
+                "观察：与 step-3 区别 —— 这里是 await 串行（不是 Promise.all）；B 的 content = A 的 result",
+              ]}
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">🔗 链配置</h2>
+              <label className="block text-sm text-gray-700">
+                query（传给 search_doc）：
+                <input
+                  type="text"
+                  value={query}
+                  onChange={function (e) { setQuery(e.target.value); }}
+                  className="mt-1 block w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  placeholder="例如：Function Calling"
+                />
+              </label>
+              <div className="flex items-center gap-4 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="style" value="tech" checked={style === "tech"} onChange={function () { setStyle("tech"); }} />
+                  tech（技术综述）
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="style" value="oneliner" checked={style === "oneliner"} onChange={function () { setStyle("oneliner"); }} />
+                  oneliner（一句话）
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="style" value="bullets" checked={style === "bullets"} onChange={function () { setStyle("bullets"); }} />
+                  bullets（要点列表）
+                </label>
+              </div>
+              <div>
+                <button
+                  onClick={run}
+                  disabled={status === "running"}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 链跑中…" : "跑链（search_doc → summarize）"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Tool handler sleep：search_doc 80ms / summarize 50ms。链总耗时 ≈ 130ms（串行 sum；不是并行 max）。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">📊 结果</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!result && !error && (
+                <p className="text-sm text-gray-500">
+                  还没跑。填 query + 选 style → 点「跑链」。
+                </p>
+              )}
+              {result && (
+                <>
+                  <GanttChart
+                    title={"① 链式时序图 · " + (timeline.length === 2 ? "await 串行（不并发）" : "")}
+                    timeline={timeline}
+                    totalMs={result.totalMs}
+                    mode="chain"
+                  />
+                  <h3 className="text-xs font-semibold">② tool_results（2 条 · 链 A → B）</h3>
+                  {(result.steps || []).map(function (s, i) {
+                    // 适配 ResultCard 期待的字段
+                    const cardResult = {
+                      ok: s.ok,
+                      tool: s.tool,
+                      tool_call_id: s.tool_call_id,
+                      result: s.result,
+                      error: s.error,
+                    };
+                    return <ResultCard key={s.tool_call_id} r={cardResult} idx={i} />;
+                  })}
+                  {result.finalSummary && (
+                    <div className="bg-green-50 border border-green-300 rounded p-3 text-sm space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs">③ final summary（chain 终点）</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-green-300 text-green-900">final_reply</span>
+                      </div>
+                      <pre className="whitespace-pre-wrap text-xs bg-white p-2 rounded border border-green-200">
+                        {result.finalSummary}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "GanttChart", "ResultCard"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>

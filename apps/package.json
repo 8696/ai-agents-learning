@@ -27,7 +27,10 @@
     "app:04-02-json-mode-vs-structured-output-step-1": "tsx 04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/server.ts",
     "app:04-02-anthropic-tool-use-step-1": "tsx 04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/server.ts",
     "app:05-01-fc-protocol-step-1": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-1/server.ts",
-    "app:05-01-fc-protocol-step-2": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-2/server.ts"
+    "app:05-01-fc-protocol-step-2": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-2/server.ts",
+    "app:05-01-fc-protocol-step-3": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-3/server.ts",
+    "app:05-01-fc-protocol-step-4": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-4/server.ts",
+    "app:05-01-fc-protocol-step-5": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-5/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

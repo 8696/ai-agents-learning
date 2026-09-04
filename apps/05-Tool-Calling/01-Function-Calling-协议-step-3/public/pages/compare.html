@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-3 · 串/并行对比</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 串/并行对比页：POST /api/compare → 服务端并发两个 sub-dispatch → 拿 parallelRun + serialRun + speedup。
+     *
+     * 教学锚点：
+     *   - 实测：parallel.totalMs ≈ 80ms（= max(80,50,30)）
+     *   - 实测：serial.totalMs ≈ 165ms（= 80+50+30）
+     *   - 加速比 = serial / parallel ≈ 2×（不是 3×，因为最大 handler = 80ms 是 parallel 的天花板）
+     *
+     * 注意：本页**只发一次** POST /api/compare；服务端自己并发跑两份 sub-dispatch。
+     *   这是「页与接口 1:1」（§5.3.8）：一个页面 = 一个独立 route 文件；跨场景不混 route。
+     */
+    const { useState } = React;
+    const { useEnvInfo, PageNav, StatusPill, PageIntro, EnvFooter, GanttChart, ResultCard } = window.DemoUI;
+
+    function App() {
+      const { env } = useEnvInfo();
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+      const [compareResult, setCompareResult] = useState(null);
+
+      function runCompare() {
+        setStatus("running");
+        setError(null);
+        setCompareResult(null);
+        // 前端只发一次 POST；服务端用 Promise.all 并发跑两个独立 sub-dispatch
+        fetch("/api/compare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scenario: "tokyo-may-7days" }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setCompareResult(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · step-3 · 串/并行对比
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageNav />
+            <PageIntro
+              summary="对比：POST /api/compare → 服务端并发跑 parallel + serial 两个 sub-dispatch → 并排展示两个 gantt + 加速比。验证「串行 ≈ N×单 tool；并行 ≈ max 单 tool」。"
+              steps={[
+                "点「跑对比」→ POST /api/compare { scenario: tokyo-may-7days }",
+                "服务端：Promise.all 并发两个 sub-dispatch（mode=parallel + mode=serial），各拿 totalMs / timeline",
+                "服务端聚合：{ parallelRun, serialRun, speedup = serial.totalMs / parallel.totalMs }",
+                "前端：两个 gantt 并排 + 加速比展示",
+                "观察：parallel 3 bar 同时起步，总长 ≈ 80ms（max handler sleep）；serial 3 bar 堆叠，总长 ≈ 165ms（sum）",
+                "加速比 ≈ 2×（不是 3× —— 因为 parallel 的天花板 = 最慢的那个 handler = 80ms）",
+              ]}
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">🆚 对比</h2>
+              <div>
+                <button
+                  onClick={runCompare}
+                  disabled={status === "running"}
+                  className="bg-purple-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 对比中…" : "跑对比（同时发两个请求）"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                一次发两个 POST（不是工具内 Promise.all，是让两次 dispatch 同时上浏览器 → 服务端）。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">📊 对比结果</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!compareResult && !error && (
+                <p className="text-sm text-gray-500">
+                  还没跑。点「跑对比」会同时发两个 POST；下面并排展示两个 gantt + 加速比。
+                </p>
+              )}
+              {compareResult && (
+                <>
+                  <div className="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm">
+                    串行总耗时 = <span className="font-mono text-red-700">{compareResult.serialRun.totalMs} ms</span>
+                    {" · "}
+                    并行总耗时 = <span className="font-mono text-green-700">{compareResult.parallelRun.totalMs} ms</span>
+                    {" · "}
+                    加速比 ≈ <span className="font-mono text-purple-700">{compareResult.speedup.toFixed(2)}×</span>
+                    <span className="text-xs text-gray-500 ml-2">（理论上限 = N=3，但实际 ≈ max/sum）</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <GanttChart
+                      title="并行（Promise.all）"
+                      timeline={compareResult.parallelRun.timeline}
+                      totalMs={compareResult.parallelRun.totalMs}
+                      mode="parallel"
+                    />
+                    <GanttChart
+                      title="串行（for await）"
+                      timeline={compareResult.serialRun.timeline}
+                      totalMs={compareResult.serialRun.totalMs}
+                      mode="serial"
+                    />
+                  </div>
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "GanttChart", "ResultCard"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>

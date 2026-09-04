@@ -39,6 +39,9 @@
 | `yarn app:04-02-anthropic-tool-use-step-1` | `50016` | 协议 B 镜像版：text（无 tools）vs tool-use（强制 tool_choice）并排；⑥ prompt 诱导模型违 input_schema，看守约（同小节第二份 HTTP Demo；脚本名沿用真实小节号 04-02，端口按占用表顺序） |
 | `yarn app:05-01-fc-protocol-step-1` | `50017` | Function Calling 协议完整一圈（含并行调用 · step-1 sketch 不调 LLM，mock 数据；锁定时再补 §5.3.2 6 项） |
 | `yarn app:05-01-fc-protocol-step-2` | `50018` | step-2 真 LLM（协议 A · openai.chat.completions）；两轮调用 + 请求/响应全量前端可视化（copy step-1 + 加 lib/llm/protocol-a.ts） |
+| `yarn app:05-01-fc-protocol-step-3` | `50019` | step-3 并行调用（mock · 不调 LLM）；3 个 async Tool + Promise.all + gantt 时序图 + 串/并行对比按钮（修 §5.4.A2 阻塞） |
+| `yarn app:05-01-fc-protocol-step-4` | `50020` | step-4 串行依赖链（mock · 不调 LLM）；search_doc → summarize（B 用 A 的输出当参数）；await 链式 + gantt 时序图 + final summary |
+| `yarn app:05-01-fc-protocol-step-5` | `50021` | step-5 模型自编排（mock · 不调 LLM）；while + decideNextAction mock LLM + 自纠触发（query 太短 → 扩 query 重试）+ MAX_ROUNDS 边界 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

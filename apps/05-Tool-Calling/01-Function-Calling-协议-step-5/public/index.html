@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-5 模型自编排链 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 总览页：本 step 有什么、模型自编排场景长什么样；不直接演示业务（业务在 pages/self-correct.html）。
+     *
+     * 全局数据流：
+     *   浏览器 /pages/self-correct.html
+     *     → POST /api/self-correct { query }
+     *       → routes/self-correct.ts
+     *         → while (rounds < MAX_ROUNDS) {
+     *             ① decideNextAction(round, query, lastResult)  ← 模拟 LLM 看 tool_result 决定下一步
+     *             ② if final → break
+     *             ③ executeTool(tool, args) → 拿 result
+     *             ④ lastResult = result → 下一轮模型看到
+     *           }
+     *       → 返 { trace: [{round, decision, result, startMs, endMs}], finalReply, totalMs, rounds, maxRoundsTriggered }
+     *     → 浏览器渲每轮决策 + tool_result 卡片 + final reply
+     *
+     * 与 step-4 的区别：step-4 路由层 hard-code A → B 链；step-5 while 循环 + decideNextAction mock。
+     *   关键观察：自纠触发 —— query 短 → search_doc 空 hits → 模型扩 query 重试 → 拿到 hits。
+     *
+     * 日志：服务端每处可打点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-5/logs/）。
+     */
+    const { useState, useEffect } = React;
+    const { useEnvInfo, StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+
+    function App() {
+      const { env, envError } = useEnvInfo();
+      const [tools, setTools] = useState([]);
+      const [error, setError] = useState(null);
+
+      useEffect(function () {
+        fetch("/api/tools")
+          .then(function (r) { return r.json(); })
+          .then(function (j) { setTools(j.tools || []); })
+          .catch(function (e) { setError("GET /api/tools 失败：" + String(e)); });
+      }, []);
+
+      const pageIntroSteps = [
+        "页面加载 → GET /health 填页脚；GET /api/tools 拉 Registry 元信息",
+        "点「模型自编排」进 self-correct 页 → 那里才有业务按钮",
+        "self-correct 页：填 query → POST /api/self-correct → 服务端 while 循环",
+        "每轮由 decideNextAction mock 决定下一步（真实生产 = LLM 调 llm.chat）",
+        "query 太短（< 3 字符）→ search_doc 返空 hits → 模型扩 query 自纠 → 重试",
+        "MAX_ROUNDS 边界：超 4 轮未收敛 → final 报 MAX_REACHED，业务降级",
+        "前端：每轮决策 + tool_result 卡片 + final reply 全展开",
+      ];
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · Function Calling 协议 · step-5（模型自编排链 · 总览）
+            </h1>
+            <StatusPill status={envError ? "error" : (env.port ? "ok" : "idle")} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              summary="step-5 演示「模型自己编排 + 自纠」：while + finish_reason 循环骨架，每轮由 decideNextAction (mock LLM) 决定下一步；query 太短触发自纠（扩 query 重试）；MAX_ROUNDS 边界。"
+              steps={pageIntroSteps}
+              extra={
+                <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
+{`POST /api/self-correct { query }
+  → while (rounds < MAX_ROUNDS) {
+      ① decideNextAction(round, query, lastResult)  ← 模拟 LLM
+      ② if final → break
+      ③ executeTool(tool, args) → result
+      ④ lastResult = result → 下一轮模型看到
+    }
+  → 返 { trace, finalReply, totalMs, rounds, maxRoundsTriggered }`}
+                </pre>
+              }
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">📍 场景导航（点进去才有业务按钮）</h2>
+              <div className="grid grid-cols-1 gap-3">
+                <a href="/pages/self-correct.html" className="block border border-gray-200 rounded p-4 hover:border-blue-500">
+                  <div className="text-sm font-semibold">① 模型自编排（while + 自纠）</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    填 query（试 "AI" / "Function Calling" / "RAG" 等）→ POST /api/self-correct → 看每轮决策轨迹。
+                    <br />
+                    <strong>关键实验</strong>：query 短（"AI"）→ 触发自纠（Round 1 空 hits → Round 2 扩 query 重试 → Round 3 summarize）；query 长 → Round 1 拿到 hits → Round 2 summarize（2 轮收敛）。
+                  </p>
+                </a>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[120px] space-y-3">
+              <h2 className="text-sm font-semibold">🧩 本页只导览、不演示业务（业务在 self-correct 页）</h2>
+              <p className="text-sm text-gray-700">
+                总览页的"输出区"——这里给出 step-5 关键观察点的一句话总结，详细每轮决策 / tool_result / 自纠触发都在 self-correct 页里。
+              </p>
+              <ul className="text-xs text-gray-600 list-disc pl-5 space-y-1">
+                <li>while 循环骨架：<code>while (rounds &lt; MAX_ROUNDS)</code> + 每轮 decideNextAction</li>
+                <li>终止条件 1：模型决定 final（kind === "final"）→ break</li>
+                <li>终止条件 2：MAX_ROUNDS=4 触发 → 业务降级（structured error）</li>
+                <li>自纠触发：search_doc 返空 hits → 模型扩 query 重试（见 trace[1].result.hits=[] → trace[2].arguments.query）</li>
+                <li>关键代码：<code>routes/self-correct.ts</code> while 循环 + <code>lib/tools/registry.ts</code> decideNextAction</li>
+                <li>本页 vs step-4：step-4 路由 hard-code A → B；step-5 模型自决定多轮</li>
+              </ul>
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Tool Registry（2 Tool · while 循环里被调 · 全 async）</h2>
+                <span className="text-xs text-gray-500">GET /api/tools</span>
+              </div>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              <div className="space-y-2">
+                {tools.map(function (t) {
+                  return (
+                    <div key={t.name} className="border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="font-mono text-sm font-semibold">{t.name}</div>
+                        <div className="text-xs text-gray-600">{t.description}</div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-200 text-green-800">safe · async</span>
+                    </div>
+                  );
+                })}
+                {tools.length === 0 && !error && <p className="text-xs text-gray-500">（Registry 还没加载）</p>}
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>

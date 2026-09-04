@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-3 并行调用 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- 加载顺序：utils（普通）→ components（babel src）→ 本页内联（babel） -->
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 总览页：本 step 有什么、两条场景页各看什么；不直接演示业务（业务在 single / compare）。
+     *
+     * 全局数据流：
+     *   浏览器 /pages/single.html 或 /pages/compare.html
+     *     → POST /api/plan { scenario, mode }
+     *       → routes/plan.ts
+     *         → planToolCalls(scenario) 决定 3 个 tool_call
+     *         → mode=parallel: Promise.all(async handlers)  ← step-3 唯一新增
+     *         → mode=serial  : for await 顺序执行
+     *       → 每条 tool_call 记 startMs / endMs / durationMs
+     *       → ctx.body = { totalMs, results, timeline }
+     *     → 浏览器渲 gantt 时序图
+     *
+     * 日志：服务端每处可打点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-3/logs/）；
+     *   前端不再打 #log —— 页面已展示请求参数 / 时序图 / 响应，重复。
+     */
+    const { useState, useEffect } = React;
+    const { useEnvInfo, StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+
+    function App() {
+      const { env, envError } = window.DemoUI.useEnvInfo();
+      const [tools, setTools] = useState([]);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+
+      useEffect(function () {
+        fetch("/api/tools")
+          .then(function (r) { return r.json(); })
+          .then(function (j) { setTools(j.tools || []); })
+          .catch(function (e) { setError("GET /api/tools 失败：" + String(e)); });
+      }, []);
+
+      const pageIntroSteps = [
+        "页面加载 → GET /health 填页脚；GET /api/tools 拉 Registry 元信息",
+        "点「单跑」或「对比」进入对应场景页 → 那里才有业务按钮",
+        "单跑页：选 mode（parallel|serial）→ POST /api/plan → 渲 gantt 时序图 + tool_results",
+        "对比页：直接点「串/并行对比」→ 同时发两个 POST → 并排展示 gantt + 加速比",
+        "观察点：并行 = 3 bar 同时起步、总长 = max；串行 = bar 堆叠、总长 = sum；加速比 ≈ 2×",
+      ];
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · Function Calling 协议 · step-3（并行调用 · 总览）
+            </h1>
+            <StatusPill status={envError ? "error" : (env.port ? "ok" : "idle")} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              summary="step-3 修 §5.4.A2「含并行调用」阻塞：3 个 async Tool（search_flight 80ms / get_weather 50ms / get_packing_list 30ms），handler async + Promise.all 真并发，gantt 时序图把 3 个 bar 同时起步画出来；串/并行对比按钮把加速比算出来。"
+              steps={pageIntroSteps}
+              extra={
+                <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
+{`POST /api/plan { scenario:"tokyo-may-7days", mode:"parallel" | "serial" }
+  → planToolCalls(scenario)               ← 决定 3 个 tool_call
+  → mode=parallel: Promise.all(async)     ← step-3 唯一新增
+  → mode=serial  : for await 顺序
+  → 每条记 startMs / endMs / durationMs
+  → 返 { totalMs, results, timeline }`}
+                </pre>
+              }
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">📍 场景导航（点进去才有业务按钮）</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <a href="/pages/single.html" className="block border border-gray-200 rounded p-4 hover:border-blue-500">
+                  <div className="text-sm font-semibold">① 单跑（parallel | serial）</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    选 mode → POST /api/plan → 渲单条 gantt 时序图 + 3 条 tool_result。
+                    适合：想看单次 dispatch 的并行 / 串行时序。
+                  </p>
+                </a>
+                <a href="/pages/compare.html" className="block border border-gray-200 rounded p-4 hover:border-blue-500">
+                  <div className="text-sm font-semibold">② 串/并行对比</div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    一次发两个 POST（parallel + serial）→ 并排展示两个 gantt + 加速比。
+                    适合：看「串行 ≈ N×单 tool；并行 ≈ max」的可观察证据。
+                  </p>
+                </a>
+              </div>
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Tool Registry（3 Tool · 全 async · handler 含 sleep 模拟 IO）</h2>
+                <span className="text-xs text-gray-500">GET /api/tools</span>
+              </div>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              <div className="space-y-2">
+                {tools.map(function (t) {
+                  return (
+                    <div key={t.name} className="border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="font-mono text-sm font-semibold">{t.name}</div>
+                        <div className="text-xs text-gray-600">{t.description}</div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded bg-green-200 text-green-800">safe · async</span>
+                    </div>
+                  );
+                })}
+                {tools.length === 0 && !error && <p className="text-xs text-gray-500">（Registry 还没加载）</p>}
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[120px] space-y-3">
+              <h2 className="text-sm font-semibold">🧩 本页只导览、不演示业务（业务在 single / compare）</h2>
+              <p className="text-sm text-gray-700">
+                总览页的"输出区"——这里给出 step-3 关键观察点的一句话总结，详细的时序图 / tool_results 都在场景页里。
+              </p>
+              <ul className="text-xs text-gray-600 list-disc pl-5 space-y-1">
+                <li>parallel：3 bar 同时起步、left ≈ 0；总长 = max（≈ 80ms）</li>
+                <li>serial：3 bar 顺序堆叠、left 累加；总长 = sum（≈ 165ms）</li>
+                <li>加速比 = serial / parallel ≈ 2×（不是 3× —— parallel 天花板 = 最慢 handler = 80ms）</li>
+                <li>关键代码：<code>routes/plan.ts:79</code> <code>Promise.all(promises)</code> 真并发；handler 全 async + sleep 模拟 IO</li>
+              </ul>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>
