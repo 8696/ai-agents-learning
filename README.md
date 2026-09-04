@@ -9,7 +9,7 @@
 1. 按 [docs/06-学习总览.md](docs/06-学习总览.md) 看当前进度
 2. 找到当前模块的 README → [docs/学习模块/](docs/学习模块/)
 3. 跟着「小节进度」从外部第一条走到最后一行「模块复盘」
-4. 每条学完 → 写小节 MD（说「沉淀文档」）→ Demo 判断（说「写 Demo / 不写 Demo」）→ `coach next`
+4. 每条学完 → 写小节 MD（说「沉淀文档」）→ Demo 判断（说「写 Demo / 不写 Demo」）→ `coach complete`
 5. 不写代码？只学概念也行。`coach status` 看当前节奏
 
 `apps/` 是**唯一**的代码落点（[AGENTS.md §4](AGENTS.md#4-代码落点)）：

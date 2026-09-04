@@ -13,7 +13,6 @@
  *
  * 日志（§5.3.16）：gateway.rejected / zod.fail / execute.ok / execute.fail / decide.next-action 都打。
  */
-import { z } from "zod";
 import { searchDocTool } from "./chain-search-doc.js";
 import { summarizeTool } from "./chain-summarize.js";
 import { logger } from "../logger.js";
@@ -75,6 +74,7 @@ export async function executeTool(
 
   // ③ 真正执行（async handler）
   try {
+    // @ts-ignore
     const result = await tool.handler(parsed.data);
     logger.info("registry.execute.ok", "执行成功", "工具实际跑通", { name, toolCallId, resultPreview: summarize(result) });
     return { ok: true, tool: name, tool_call_id: toolCallId, result };

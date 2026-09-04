@@ -276,7 +276,7 @@ async function chatWithTools(userInput: string) {
 
 ## 需求清单（业务需求 · §6.2 item 6 + §6.3 变体覆盖硬性要求）
 
-每核心对象 ≥1 条贴近业务的需求（**验收准绳，不是 step 生产的驱动器**——step 生产仍按本节知识动态推进 [§5.3.14](agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新)；`coach next` 勾 ✅ 时按需求**逐条对**）。
+每核心对象 ≥1 条贴近业务的需求（**验收准绳，不是 step 生产的驱动器**——step 生产仍按本节知识动态推进 [§5.3.14](agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新)；`coach complete` 勾 ✅ 时按需求**逐条对**）。
 
 **本条核心概念「编排方式」的 5 个变体**（按 §6.3 自查触发器列全）：
 
@@ -479,4 +479,4 @@ async function chatWithTools(userInput: string) {
 - §5.4.A：**过**（A1 + A2 都有证据）
 - §5.4.B：**过**（需求清单 1 / 2 + A2 同源 3 条 + 核心对象 ②④ 都对齐；协议 B 单向缺口不阻塞；2026-09-04 step-4 重跑后 B 段新增 3 行：例子 5 / 选型准则 / 独立 IO 写串行 全部 ✅；step-5 重跑后例子 5.5 从 ❌ → ✅（while + 自纠 + MAX_ROUNDS 三场景全跑通））
 
-→ **本条 §5.4 闸门已过**。下一步：学习者主动决定是否**锁定 step-4**（[§5.3.14 锁定 = 学习者主动决策](../agents/05-demo.md#交互检查点协议每步之间必走)；step-3 已 ✅，step-4 check-demo.cjs 已过 + §5.3.2 6 项齐：happy path 跑链按钮、错误处理 2 类（HTTP 400 empty query + bad style）、Loading `#status-pill` 四态、#output 展示链式时序图 + 2 tool_result + final summary、`GET /health` + #env-info、#page-intro 自解释）。锁定后 → `coach next` 走 [§7.2 / §5.2 / §5.4 三件事闸门](../AGENTS.md#52-小节-demo) 判勾本条 ✅。
+→ **本条 §5.4 闸门已过**。下一步：学习者主动决定是否**锁定 step-4**（[§5.3.14 锁定 = 学习者主动决策](../agents/05-demo.md#交互检查点协议每步之间必走)；step-3 已 ✅，step-4 check-demo.cjs 已过 + §5.3.2 6 项齐：happy path 跑链按钮、错误处理 2 类（HTTP 400 empty query + bad style）、Loading `#status-pill` 四态、#output 展示链式时序图 + 2 tool_result + final summary、`GET /health` + #env-info、#page-intro 自解释）。锁定后 → `coach complete` 走 [§7.2 / §5.2 / §5.4 三件事闸门](../AGENTS.md#52-小节-demo) 判勾本条 ✅。

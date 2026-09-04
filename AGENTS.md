@@ -16,7 +16,7 @@
 | 判断要不要 Demo、打判断块 | [agents/05-demo.md](agents/05-demo.md) §5.2 | 可运行再读全文 |
 | 落 / 改可运行 Demo、HTML/koa、CATALOG、协议 A/B 分夹 | [agents/05-demo.md](agents/05-demo.md) 全文 | — |
 | 点名出门包 | [agents/06-outing.md](agents/06-outing.md) | 未点名不要出门包 |
-| 沉淀 / 写回小节 MD / `coach next` 验笔记 | [agents/07-notes.md](agents/07-notes.md) | — |
+| 沉淀 / 写回小节 MD / `coach complete` 验笔记 | [agents/07-notes.md](agents/07-notes.md) | — |
 | 模块复盘，或勾复盘行 | [agents/07-review.md](agents/07-review.md) | 不要为此建 `apps/` |
 | 学什么 / 进度表 | `docs/学习模块/` + [docs/06-学习总览.md](docs/06-学习总览.md) | — |
 | 已有 Demo 清单 / 端口占用 | [apps/README.md](apps/README.md) | 不要抄进本文件 |
@@ -69,7 +69,7 @@
 1. **广度 / 深度 / 完整**；是什么→为什么→易混→每个核心对象 ≥ 1 个能演一遍的生活/前端例子；**缺例子 = 没讲完**
 2. **核心概念的所有变体 / 分支都要覆盖**（详 [§6.3 自查触发器](agents/06-teach.md#63-讲完前的自查触发器核心概念的全变体全分支扫描)）；一个分类（如「编排方式」）拆成 N 个变体（如并行 / 串行依赖 / 自编排 / 自纠 / 边界），每个变体各举 1 个例子 + 1 条需求；**漏变体 = 没讲完**
 3. **缺贴近业务的需求清单 = 没讲完**；需求清单 = 验收准绳（不是 step 生产驱动器；详 teach），每条需求覆盖一个变体（或变体组）
-4. **每条需求清单项未对应 step-N 演示 = 没讲完**（如果该变体可观察；纯知识变体除外）
+4. **每条需求清单项未对应 step-N 演示 = 没讲完**（如果该变体可观察；纯知识变体除外）；**逐项判定**：核心对象 / 例子（前端场景）/ 业务需求 / 易混点的代码对应，**`coach complete` 前必须独立查代码**（[§6](#6-交互命令) + [agents/03-progress.md `coach complete` 段](agents/03-progress.md#coach-complete-勾前必报)），**全部 ✓** 才算讲完。**禁止**「信 MD 自己的 §5.4.B 表 = 闸门过」——MD 自报仅作参考，**不作**判定依据
 
 **不换条 ≠ 可以少讲**。
 
@@ -97,9 +97,11 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 
 `coach status` / `start` / **沉淀文档** 开头必须亮出锁定的当前条。
 
+**进度是分散的，不是汇总的。** 每个模块 README 自己就是它的进度入口；不要主动建 / 补 `docs/06-学习总览.md` 当「24 模块一张进度总表」——那份是模块清单导航（[docs/06-学习总览.md](docs/06-学习总览.md)），不是进度汇总。禁止因此提议「补全模块总览 / 跨模块汇总视图」。
+
 ### 3.1 当前小节锁定（对话中途绝不换条）
 
-整场钉在当前条，直到 `coach next` 勾过。对照旧节、复习已 ✅、预告后面、聊偏了，都**不改**当前条。无关插问不展开成新课。禁止未 `coach next` 就勾下一条或把下一条当当前条讲完。
+整场钉在当前条，直到 `coach complete` 勾过。对照旧节、复习已 ✅、预告后面、聊偏了，都**不改**当前条。无关插问不展开成新课。禁止未 `coach complete` 就勾下一条或把下一条当当前条讲完。
 
 | 说了什么 | 当前条 |
 | -------- | ------ |
@@ -107,7 +109,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 | 「改学模块 08 / 跳到后面」 | **拒绝换进度** |
 | 沉淀未点名 | 写锁定条 |
 | 「沉淀，写 Token 那条」 | 只改写哪份文件，**进度不变** |
-| `coach next` 且 MD+Demo 闸门过 | **才变** |
+| `coach complete` 且 MD+Demo+独立代码覆盖闸门过 | **才变** |
 
 ### 3.2 「MD 已沉淀但未勾」分支（任意入口）
 
@@ -163,9 +165,9 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 
 全文：[agents/05-demo.md](agents/05-demo.md#533-目录与脚本)
 
-#### 5.4 目标 ↔ 代码整合闸门（两段式）·新
+#### 5.4 目标 ↔ 代码整合闸门（两段式 + 独立代码覆盖验证）·新
 
-细则：[agents/05-demo.md §5.4](agents/05-demo.md#54-目标--代码整合闸门两段式新)。一句话：**目标 ↔ 代码 ↔ 文档**三方对齐；缺证据不准勾 ✅。`status` / `start` / `next` 可能勾 ✅ 时先打两段闸门。
+细则：[agents/05-demo.md §5.4](agents/05-demo.md#54-目标--代码整合闸门两段式新)。一句话：**目标 ↔ 代码 ↔ 文档**三方对齐；缺证据不准勾 ✅。`status` / `start` / **`complete`** 可能勾 ✅ 时先打两段闸门；`complete` 还要走「**独立代码覆盖验证**」（[§6](#6-交互命令) + [agents/03-progress.md `coach complete` 段](agents/03-progress.md#coach-complete-勾前必报)）——禁止「MD 自报 §5.4.B = 过」。
 
 ### 5.5 端口底线（高频错误·表层摘要）
 
@@ -185,7 +187,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 | ---- | ------ |
 | `status` | Read `03-progress`：六行 + 四格；MD / `apps/` 是否对齐。外部条**必打 §5.4** 两段闸门。**停** |
 | `start` | Read `03-progress`：六行。外部：Read `06-teach` 讲完 + 产出预告 + **必打 §5.4**。复盘：Read `07-review`。出门包仅点名 |
-| `next` | Read `03-progress`：先报打钩状态 + Demo step。Read `07-notes` 验 MD；外部再过 §5.2 三件事 + §5.4。复盘走 `07-review`。过了才勾 ✅ |
+| `complete` | Read `03-progress`：先报打钩状态 + Demo step。Read `07-notes` 验 MD；外部再过 §5.2 三件事 + §5.4 + **独立代码覆盖验证**（派 subagent 读 step-N 代码，逐项判定核心对象 / 例子 / 需求 / 易混点，**全部 ✓** 才过；详 [`coach complete` 段](agents/03-progress.md#coach-complete-勾前必报)）。复盘走 `07-review`。过了才勾 ✅ |
 
 口语对照：模式路由 → `00-mode`；讲概念 → `06-teach`；沉淀 → `07-notes`；出门包 → `06-outing`；落 Demo → `05-demo`。
 
