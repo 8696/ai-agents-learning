@@ -109,7 +109,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 | 「改学模块 08 / 跳到后面」 | **拒绝换进度** |
 | 沉淀未点名 | 写锁定条 |
 | 「沉淀，写 Token 那条」 | 只改写哪份文件，**进度不变** |
-| `coach complete` 且 MD+Demo+独立代码覆盖闸门过 | **才变** |
+| `coach complete` 且 §7.2（闸门一）+ Demo+§5.4+独立代码覆盖验证（闸门二）全过 | **才变** |
 
 ### 3.2 「MD 已沉淀但未勾」分支（任意入口）
 
@@ -167,7 +167,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 
 #### 5.4 目标 ↔ 代码整合闸门（两段式 + 独立代码覆盖验证）·新
 
-细则：[agents/05-demo.md §5.4](agents/05-demo.md#54-目标--代码整合闸门两段式新)。一句话：**目标 ↔ 代码 ↔ 文档**三方对齐；缺证据不准勾 ✅。`status` / `start` / **`complete`** 可能勾 ✅ 时先打两段闸门；`complete` 还要走「**独立代码覆盖验证**」（[§6](#6-交互命令) + [agents/03-progress.md `coach complete` 段](agents/03-progress.md#coach-complete-勾前必报)）——禁止「MD 自报 §5.4.B = 过」。
+细则：[agents/05-demo.md §5.4](agents/05-demo.md#54-目标--代码整合闸门两段式新)。一句话：**目标 ↔ 代码 ↔ 文档**三方对齐；缺证据不准勾 ✅。`status` / `start` / **`complete`** 可能勾 ✅ 时先打两段闸门；`complete` **先打 §7.2（闸门一 · MD 知识覆盖）—— 不过 STOP**，过了再走「§5.4 两段闸门 + **独立代码覆盖验证**（闸门二）」（[§6](#6-交互命令) + [agents/03-progress.md `coach complete` 段闸门一](./agents/03-progress.md#闸门一--7-沉淀--小节进度对齐md-知识覆盖--2026-09-04-维护模式起生效) + [闸门二](./agents/03-progress.md#闸门二--54-目标--代码整合--独立代码覆盖验证)）——禁止「MD 自报 §5.4.B = 过」。
 
 ### 5.5 端口底线（高频错误·表层摘要）
 
@@ -187,7 +187,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 | ---- | ------ |
 | `status` | Read `03-progress`：六行 + 四格；MD / `apps/` 是否对齐。外部条**必打 §5.4** 两段闸门。**停** |
 | `start` | Read `03-progress`：六行。外部：Read `06-teach` 讲完 + 产出预告 + **必打 §5.4**。复盘：Read `07-review`。出门包仅点名 |
-| `complete` | Read `03-progress`：先报打钩状态 + Demo step。Read `07-notes` 验 MD；外部再过 §5.2 三件事 + §5.4 + **独立代码覆盖验证**（派 subagent 读 step-N 代码，逐项判定核心对象 / 例子 / 需求 / 易混点，**全部 ✓** 才过；详 [`coach complete` 段](agents/03-progress.md#coach-complete-勾前必报)）。复盘走 `07-review`。过了才勾 ✅ |
+| `complete` | **两段闸门（顺序硬定）**：先 §7.2 沉淀覆盖闸门（详 [`coach complete` 段 §7.2 闸门一](./agents/03-progress.md#闸门一--7-沉淀--小节进度对齐md-知识覆盖--2026-09-04-维护模式起生效)）—— 教练自查 MD 是否覆盖本条知识（4 条底线 / §7.0 八条 / §6.3 变体覆盖），**不过 STOP，不进代码检查**；过了再走 §5.2 三件事 + §5.4 + **独立代码覆盖验证**（派 subagent 读 step-N 代码，逐项判定核心对象 / 例子 / 需求 / 易混点，**全部 ✓** 才过；详 [`coach complete` 段闸门二](./agents/03-progress.md#闸门二--54-目标--代码整合--独立代码覆盖验证)）。复盘走 `07-review`。过了才勾 ✅ |
 
 口语对照：模式路由 → `00-mode`；讲概念 → `06-teach`；沉淀 → `07-notes`；出门包 → `06-outing`；落 Demo → `05-demo`。
 
