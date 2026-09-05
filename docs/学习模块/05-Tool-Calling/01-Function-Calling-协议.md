@@ -3,7 +3,7 @@
 > 对应模块：[模块 05 · Tool Calling / Function Calling ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 1 条
 
 - **来源**：本对话（`coach start` 详解 §6.2 + 落 step-1 锁定 + step-2 真 LLM）+ 2026-09-04 重新讲解一轮（补「需求清单」独立节 + 「例子 4」点名 §5.4.A2 + step-3 落 + 1:1 规则 + 并行/串行选型与依赖写法）+ MiniMax-M3 实测响应（[apps/05-Tool-Calling/01-Function-Calling-协议-step-2](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-2/README.md)）
-- **状态**：已沉淀 · 已勾 ✅ · 2026-09-03 · 2026-09-04 step-3…5 + §5.4 / 独立代码覆盖 / check-demo 全过 · `coach complete` 2026-09-04
+- **状态**：已沉淀 · 进度表仍 ⬜ · 2026-09-05 §5.4 按「已实现/未实现」重写（禁「❌ 不阻塞」）· 闸门未全过，不可勾 ✅
 - **Demo**：已落 `apps/05-Tool-Calling/01-Function-Calling-协议-step-1/`（✅ 锁定 · mock 不调 LLM）+ `…-step-2/`（✅ 锁定 · 真 LLM 协议 A · 请求/响应可视化）+ `…-step-3/`（✅ 锁定 · 并行 Promise.all + gantt + 串/并行对比）+ `…-step-4/`（✅ 锁定 · 串行依赖 search_doc→summarize）+ `…-step-5/`（✅ 锁定 · while 自编排 + 自纠 + MAX_ROUNDS）—— 详见 [§Demo 子节进度](#demo-子节进度)
 
 > 各节写什么、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
@@ -443,40 +443,40 @@ async function chatWithTools(userInput: string) {
 
 | 目标点 | 状态 | 证据 |
 |---|---|---|
-| A1 能画出 5 动作一圈（model → tool_call → execute → tool_result → final_reply） | ✅ | step-1 五张卡片 `#card-input` `#card-decide` `#card-execute` `#card-result` `#card-final`；step-2 `#llm-protocol` Round 1/2 Request/Response 四张卡 |
-| A2 **含并行调用** | ✅ | step-3 [routes/plan.ts:79-90](../apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/plan.ts#L79) `Promise.all(promises)` 真并发（handler 全 async）；实测 `mode=parallel` 3 条 tool_call startMs=0、endMs=32/51/82、totalMs=82（=max 单 handler 耗时）；前端 gantt 时序图把 3 个 bar 同时起步画出来 |
+| A1 能画出 5 动作一圈（model → tool_call → execute → tool_result → final_reply） | 已实现 | step-1 五张卡片 `#card-input` `#card-decide` `#card-execute` `#card-result` `#card-final`；step-2 `#llm-protocol` Round 1/2 Request/Response 四张卡 |
+| A2 **含并行调用** | 已实现 | step-3 [routes/plan.ts:79-90](../apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/plan.ts#L79) `Promise.all(promises)` 真并发（handler 全 async）；实测 `mode=parallel` 3 条 tool_call startMs=0、endMs=32/51/82、totalMs=82（=max 单 handler 耗时）；前端 gantt 时序图把 3 个 bar 同时起步画出来 |
 
 **A 段小结**：**过**。
 
 ### §5.4.B 文档 → 代码对齐
 
+> 状态栏只许 **已实现 / 未实现**（2026-09-05）。禁止 `✅` / `❌` /「不阻塞」。未实现 = 阻塞。
+
 | MD 讲点 | 代码里有没有 | 状态 |
 |---|---|---|
-| 「例子 4 · 前端：**并行**调用（旅游规划助手）—— 5 月东京 7 天要带什么、机票多少钱？」（三个 tool_call → Promise.all 并发） | step-3 「跑并行」按钮 → POST /api/plan { scenario: tokyo-may-7days, mode: parallel } → 3 个 tool_call（search_flight / get_weather / get_packing_list）Promise.all 并发；前端 gantt 时序图展示 | ✅ |
-| 「易混点：并行调用 ≠ SDK 自动；必须 `Promise.all`」 | step-3 [routes/plan.ts:79](../apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/plan.ts#L79) `Promise.all(promises)` 真调用；[registry.ts:74-86](../apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/tools/registry.ts#L74) `await tool.handler(...)` 异步执行 | ✅ |
-| 「踩坑：串行 `for await` 执行 → 模型嫌慢 → 编造结果」 | step-3 [routes/plan.ts:95-108](../apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/plan.ts#L95) 串行分支 `for (const c of calls) await executeTool(...)`；前端「跑串行」按钮 + 「串/并行对比」按钮对比总耗时（实测 82ms vs 165ms） | ✅ |
-| 「核心对象 ④ · `tool_result` 必须把成功**或失败**都回传」（catch → `{ok:false, error}` 塞回） | step-1 / step-2 都把 Zod 失败 / Gateway 拒绝当成 `ExecResult {ok:false}` 返回，再回灌 `tool` 消息；step-3 [registry.ts:84-90](../apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/tools/registry.ts#L84) `try/catch` 包 handler 抛错，返 `ExecResult {ok:false, error}` | ✅ |
-| 「例子 5 · 前端：**串行依赖**调用（RAG 风格 · search_doc → summarize）」 | step-4 `routes/chain.ts` 路由层 hard-code await 链：A = await search_doc(query)；B = await summarize(content=A.result, style)；**不**用 Promise.all；实测 step1 0→82ms / step2 82→134ms / totalMs=134 | ✅ |
-| 「例子 5.5 · 模型自己编排链（while + finish_reason === "tool_calls" 循环）」 | step-5 `routes/self-correct.ts` 真 while 循环骨架 + MAX_ROUNDS=4 边界；`lib/tools/registry.ts` `decideNextAction` mock LLM 决策；实测三场景：① query="AI" 触发 Round2 自纠成功 → 4 轮 totalMs=222；② query="Function Calling" 2 轮收敛 → 3 轮 totalMs=135；③ query="❌"（含 ❌ 标记）→ MAX_ROUNDS 触发 → 业务降级 finalReply 返 structured error | ✅ |
-| 「选型准则：主轴 = 依赖关系」 | step-3 routes/plan.ts 用 Promise.all（独立）；step-4 routes/chain.ts 用 await chain（依赖）；step-5 routes/self-correct.ts while + 自纠 —— 同一份代码骨架、三种编排方式 | ✅ |
-| 「三种编排方式对比」（硬编码 / 模型自由 / 混合） | step-4 硬编码串行 ✓；step-5 模型自由 ✓；混合（路由层允许调但 hard-code tool 列表）**没专门 step-N 演示** —— 模块 13 框架的活 | ✅（两种极端已覆盖；混合非本条必做） |
-| 「链路深度 vs 成本」 | MD 列表 ✓（context 长 / 响应慢 / token 贵 + 三个降本模块入口） | ✅（知识沉淀；本条不要求代码） |
-| 「踩坑：独立 IO 写串行」 | step-3 routes/plan.ts:95-108 串行分支（按 mode=serial 走，故意让"独立 IO 串行"成为可观察证据）；step-4 串行是**依赖**（不是反例） | ✅ |
-| 「协议 A vs B 字段对照表」（同圈两套写法；强制 `max_tokens` 等） | step-2 协议 A 完整字段；step-1 / step-2 / step-3 都没起协议 B Demo | ❌（**单向缺口 · 不阻塞**：MD 写了 A vs B 对照但本条 demo 只跑 A；协议 B 是模块 02 / 其它条对照） |
-| 「需求清单 · 需求 1（旅游规划助手 · 并行调用）」（场景 / 目标 / 涉及知识点 / 验收 5 条） | step-3 全覆盖：场景"5 月东京 7 天"（planToolCalls tokyo-may-7days）+ 3 个 tool_call + handler async + Promise.all + gantt 时序图 + 串/并行对比按钮 | ✅ |
-| 「需求清单 · 需求 2（串行 vs 并行 · 对比按钮 · 总耗时 + 是否编造）」 | step-3 `routes/compare.ts` 服务端并发跑 parallel + serial 两个 sub-dispatch → 返 `{parallelRun, serialRun, speedup}`；前端「串/并行对比」按钮发 1 次 POST（不混 `/api/plan`）；实测 speedup ≈ 2.05× | ✅ |
-| 「需求清单 · 需求 3（串行依赖 · search_doc → summarize · B 用 A 输出）」 | step-4 `routes/chain.ts` 路由层 hard-code await 链：A = await search_doc(query) → B = await summarize(content=A.result, style)；**不**用 Promise.all；实测 step1 0→82ms / step2 82→134ms / totalMs=134；错误反例代码块对比（Promise.all 拿 undefined） | ✅ |
-| 「需求清单 · 需求 4（模型自编排 · while + finish_reason 多轮链）」 | step-5 `routes/self-correct.ts` 真 while 循环骨架 + MAX_ROUNDS=4；`decideNextAction` mock LLM 决策；选型三档对照（硬编码串行 ✓ / 模型自由 ✓ / 混合 = 模块 13 框架的活） | ✅ |
-| 「需求清单 · 需求 5（自纠 + 边界 · 空 tool_result → 换 query 重试）」 | step-5 故意触发失败（query 含 ❌ 标记 / length<3）→ 自纠触发 Round2 扩 query 重试；MAX_ROUNDS 触发 → 业务降级返 structured error；实测三场景（query="AI" 4 轮自纠成功 / "Function Calling" 3 轮收敛 / "❌" 4 轮 MAX_ROUNDS 触发） | ✅ |
-| 「§5.4.A 教学点覆盖（5 个变体 = 5 条需求全过）」 | 需求 1 / 2 → step-3 ✅；需求 3 → step-4 ✅；需求 4 / 5 → step-5 ✅；每个变体都有 step-N 演示 + 通俗例子 + 贴近业务需求（详 §6.3 变体覆盖自查触发器） | ✅ |
+| 「例子 4 · 前端：并行调用（旅游规划助手）」 | step-3 Promise.all + gantt + parallel 按钮 | 已实现 |
+| 「易混点：并行调用 ≠ SDK 自动；必须 `Promise.all`」 | step-3 `routes/plan.ts` `Promise.all` | 已实现 |
+| 「踩坑：串行 `for await` → 模型嫌慢」 | step-3 serial 分支 + 对比按钮 | 已实现 |
+| 「核心对象 ④ · tool_result 失败也回传」 | step-1/2/3 `ok:false` 回灌 | 已实现 |
+| 「例子 5 · 串行依赖 search_doc → summarize」 | step-4 `routes/chain.ts` await 链 | 已实现 |
+| 「例子 5.5 · while 自编排 + 自纠 + MAX_ROUNDS」 | step-5 `routes/self-correct.ts` | 已实现 |
+| 「选型准则：主轴 = 依赖关系」 | step-3 并行 / step-4 串行 / step-5 while | 已实现 |
+| 「三种编排方式对比」含**混合** | 硬编码 + 模型自由有；**混合无 step** | 未实现 |
+| 「踩坑：独立 IO 写串行」 | step-3 `mode=serial` 可观察 | 已实现 |
+| 「协议 A vs B 字段对照表」需可观察对照 | 只跑协议 A；**无协议 B Demo** | 未实现 |
+| 「需求 1 · 并行」 | step-3 | 已实现 |
+| 「需求 2 · 串/并行对比 · 含是否编造」 | 有耗时对比；**无编造检测** | 未实现 |
+| 「需求 3 · 串行依赖 · 含 Promise.all 反例可跑」 | 正例有；**反例仅注释** | 未实现 |
+| 「需求 4 · 自编排」 | step-5 | 已实现 |
+| 「需求 5 · 自纠 + MAX_ROUNDS」 | step-5 | 已实现 |
 
-**B 段小结**：**过**。缺口 1 条（协议 B 单向缺口 · 标 ❌ 不阻塞本条 §5.4；是模块分工问题）。
+**B 段小结**：**不过**。未实现 4 条：① 混合编排演示 ② 协议 B 对照 Demo ③ 需求 2 编造检测 ④ 需求 3 错误反例可跑。处理：补代码或拆条——禁止「标未实现却不阻塞」。
 
-**5 条需求 ↔ 5 个变体 ↔ 5 个 step-N 证据行**：详见「需求清单」节末的变体对照表 + 上面 §5.4.B 行。**漏一个变体 = §5.4.B 不过**（2026-09-04 维护前漏 ③④⑤ 三个变体就是踩坑实例；详 §6.3 case study）。
+（「链路深度 vs 成本」为纯知识指针 → 模块 10/19/11，**已挪出本表**，不进闸门 3/4 清单。）
 
 ### §5.4 闸门结论
 
-- §5.4.A：**过**（A1 + A2 都有证据）
-- §5.4.B：**过**（需求清单 1 / 2 + A2 同源 3 条 + 核心对象 ②④ 都对齐；协议 B 单向缺口不阻塞；2026-09-04 step-4 重跑后 B 段新增 3 行：例子 5 / 选型准则 / 独立 IO 写串行 全部 ✅；step-5 重跑后例子 5.5 从 ❌ → ✅（while + 自纠 + MAX_ROUNDS 三场景全跑通））
+- §5.4.A：以闸门 3/4 当次报告为准（勿信本表历史「已过」）
+- §5.4.B：**不过**（上表未实现 4 条）
 
-→ **本条 §5.4 闸门已过**。step-1…5 均已锁定 ✅（check-demo 过；独立代码覆盖验证 18/18 ✓）。`coach complete` 勾本条 ✅ 的闸门证据齐全（§7.2 + §5.2 + §5.4 + 独立代码覆盖）。协议 B 单向缺口不阻塞（模块分工）。
+→ **本条不可勾 ✅**，直到未实现项补代码或拆条后重跑 `coach complete`。
