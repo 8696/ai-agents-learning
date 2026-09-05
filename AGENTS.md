@@ -187,7 +187,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 | ---- | ------ |
 | `status` | Read `03-progress` **`coach status` 段**：只报进度；按 [已沉淀硬判定](./agents/07-notes.md#0-沉淀--已沉淀--未沉淀唯一口径2026-09-05) 未沉淀→问 `start`，已沉淀→问 `complete`。**不打闸门、不讲课。停** |
 | `start` | Read `03-progress`：六行。外部：Read `06-teach` 讲完 + 产出预告 + **必打 §5.4**。复盘：Read `07-review`。出门包仅点名 |
-| `complete` | **闸门 1→2→3→4（顺序硬定）**，详 [agents/03-progress.md](./agents/03-progress.md#coach-complete-勾前必报)：**1** §7.2 MD 知识（已覆盖/未覆盖）→ **2** §5.2 Demo 完整度 → **3** §5.4 教练自查逐项（已实现/未实现）→ **4** 独立 subagent 再查同一清单。任一不过 STOP；未实现只许补代码或拆条，禁止问接受缺口写进 MD。复盘走 `07-review`。过了才勾 ✅ |
+| `complete` | **闸门 1→2→3→4**，详 [03-progress](./agents/03-progress.md#coach-complete-勾前必报)。不过 → 缺口**逐条列全** + 按由浅入深**只推 1 刀**（补这一刀 / 拆这一条 / 停）；禁止一次打包补完 Demo。过了才勾 ✅。复盘走 `07-review` |
 
 口语对照：模式路由 → `00-mode`；讲概念 → `06-teach`；沉淀 → `07-notes`；出门包 → `06-outing`；落 Demo → `05-demo`。
 
