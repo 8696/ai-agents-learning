@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-4 · 串行依赖链 · Promise.all 反例</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * Promise.all 反例页：填 query + 选 style → POST /api/chain-bad → 渲链式 gantt + 2 tool_result + final summary（❌ 缺数据）。
+     *
+     * 教学锚点（覆盖 MD 需求 3 反例可跑）：
+     *   - 把 chain.ts 的"await 串行"故意改成"Promise.all 并发"——演示踩坑
+     *   - 反例：summarize.content = undefined（不是 search_doc 的 result）→ summary 缺数据
+     *   - gantt：2 bar 同时起步（与正例 chain.html 的"顺序堆叠"形成对比）
+     *   - final summary 标红 ❌（query="(未知 query)" / hits=0）
+     *
+     * 对照正例：pages/chain.html 走 /api/chain（await 串行 → summary 有内容）
+     */
+    const { useState } = React;
+    const { useEnvInfo, PageNav, StatusPill, PageIntro, EnvFooter, GanttChart, ResultCard } = window.DemoUI;
+
+    function App() {
+      const { env } = useEnvInfo();
+      const [query, setQuery] = useState("Function Calling");
+      const [style, setStyle] = useState("tech");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+      const [result, setResult] = useState(null);
+
+      function run() {
+        setStatus("running");
+        setError(null);
+        setResult(null);
+        fetch("/api/chain-bad", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, style: style }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setResult(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      // 把 steps 转成 gantt 友好的 timeline 格式
+      const timeline = (result?.steps ?? []).map(function (s) {
+        return {
+          tool: s.tool,
+          tool_call_id: s.tool_call_id,
+          startMs: s.startMs,
+          endMs: s.endMs,
+          durationMs: s.durationMs,
+          ok: s.ok,
+        };
+      });
+
+      // 反例证据：summarize 的 result 里 hits 数量 + query 字段
+      const summarizeStep = (result?.steps ?? []).find(function (s) { return s.tool === "summarize"; });
+      const summarizePreview = summarizeStep?.ok ? summarizeStep.result : null;
+      const summarizePreviewObj = summarizePreview && typeof summarizePreview === "object" ? summarizePreview : null;
+      const isMissing = Boolean(summarizePreviewObj) && ((summarizePreviewObj && Array.isArray(summarizePreviewObj.hits) ? summarizePreviewObj.hits.length : 0) === 0);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · step-4 · ❌ Promise.all 反例（有依赖链误用并发）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageNav />
+            <PageIntro
+              summary="反例：POST /api/chain-bad → 服务端用 Promise.all 并发跑 search_doc + summarize(content=undefined) → 演示「有依赖链误用并发 → B 拿 undefined → summary 缺数据」的踩坑。"
+              steps={[
+                "填 query + 选 style → POST /api/chain-bad { query, style }",
+                "服务端：❌ Promise.all 并发两个 tool_call（不走 await 串行）",
+                "summarize.arguments.content = undefined（不依赖 search_doc.result）",
+                "summarize handler 收到 content=undefined → Zod 通过（z.unknown）→ 返 query='(未知 query)' + hits=[]",
+                "gantt 时序图：2 bar 同时起步（与 chain.html 正例的『顺序堆叠』形成对比）",
+                "final summary 标红 ❌（query='(未知 query)' / hits=0）—— 反例代价：耗时短了 ≈ 50ms，但 summary 缺数据",
+              ]}
+            />
+
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm space-y-1">
+              <div className="font-semibold text-red-800">❌ 反例警告：本路由故意把"依赖链"写成 Promise.all —— 演示踩坑</div>
+              <div className="text-xs text-red-700">
+                对照正例：<a href="/pages/chain.html" className="underline">pages/chain.html</a>（routes/chain.ts await 串行 → summary 有内容）。
+                选型准则：依赖关系是主轴 —— B 需要 A 的输出 → 必须串行 await，不能 Promise.all（详 MD 「选型准则」节）。
+              </div>
+            </div>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">⚙️ 反例配置（与正例 chain.html 一致便于对照）</h2>
+              <label className="block text-sm text-gray-700">
+                query（传给 search_doc）：
+                <input
+                  type="text"
+                  value={query}
+                  onChange={function (e) { setQuery(e.target.value); }}
+                  className="mt-1 block w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  placeholder="例如：Function Calling"
+                />
+              </label>
+              <div className="flex items-center gap-4 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="style" value="tech" checked={style === "tech"} onChange={function () { setStyle("tech"); }} />
+                  tech（技术综述）
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="style" value="oneliner" checked={style === "oneliner"} onChange={function () { setStyle("oneliner"); }} />
+                  oneliner（一句话）
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="style" value="bullets" checked={style === "bullets"} onChange={function () { setStyle("bullets"); }} />
+                  bullets（要点列表）
+                </label>
+              </div>
+              <div>
+                <button
+                  onClick={run}
+                  disabled={status === "running"}
+                  className="bg-red-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 反例跑中…" : "跑反例（Promise.all · 故意拿 undefined）"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                反例预期：gantt 2 bar 同时起步，totalMs ≈ 80ms（max 单 handler）；final summary 标红 ❌（hits=0）。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">📊 反例结果</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!result && !error && (
+                <p className="text-sm text-gray-500">
+                  还没跑。填 query + 选 style → 点「跑反例」。
+                </p>
+              )}
+              {result && (
+                <>
+                  <GanttChart
+                    title={"① 时序图 · ❌ Promise.all 并发（2 bar 同时起步，totalMs ≈ 80ms）"}
+                    timeline={timeline}
+                    totalMs={result.totalMs}
+                    mode="bad"
+                  />
+                  <h3 className="text-xs font-semibold">② tool_results（2 条 · 反例证据）</h3>
+                  {(result.steps || []).map(function (s, i) {
+                    const cardResult = {
+                      ok: s.ok,
+                      tool: s.tool,
+                      tool_call_id: s.tool_call_id,
+                      result: s.result,
+                      error: s.error,
+                    };
+                    return <ResultCard key={s.tool_call_id} r={cardResult} idx={i} />;
+                  })}
+                  {isMissing && (
+                    <div className="bg-red-50 border border-red-400 rounded p-3 text-sm space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-red-800">③ ❌ 反例证据：summarize 拿到 content=undefined</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-red-300 text-red-900">antiPattern</span>
+                      </div>
+                      <ul className="text-xs text-red-700 list-disc pl-5 space-y-1">
+                        <li>summarize.query = <code className="bg-red-100 px-1 rounded">"{(summarizePreviewObj?.query ?? '')}"</code>（应是用户 query；实际是占位符）</li>
+                        <li>summarize.hits = <code className="bg-red-100 px-1 rounded">[]</code>（应是 search_doc 的 hits；实际空数组）</li>
+                        <li>final summary 缺真实内容 —— 业务角度是错误结果</li>
+                      </ul>
+                      <p className="text-[10px] text-gray-600 mt-1">{result.summaryNote}</p>
+                    </div>
+                  )}
+                  {!isMissing && result.finalSummary && (
+                    <div className="bg-yellow-50 border border-yellow-400 rounded p-3 text-sm space-y-1">
+                      <div className="font-semibold text-xs text-yellow-800">⚠️ 反例未触发？summarize 拿到非 undefined content —— 看 summary 内容判断</div>
+                      <pre className="whitespace-pre-wrap text-xs bg-white p-2 rounded border border-yellow-200">
+                        {result.finalSummary}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "GanttChart", "ResultCard"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>

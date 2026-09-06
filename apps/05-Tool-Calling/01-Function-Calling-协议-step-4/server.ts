@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountChainRoutes } from "./routes/chain.js";
+import { mountChainBadRoutes } from "./routes/chain-bad.js";
 import { logger } from "./lib/logger.js";
 
 const app = new Koa();
@@ -35,7 +36,8 @@ const router = new Router();
 app.use(bodyParser());
 
 mountHealthRoutes(router);
-mountChainRoutes(router);  // pages/chain.html → POST /api/chain
+mountChainRoutes(router);    // pages/chain.html    → POST /api/chain    （正例 · await 串行）
+mountChainBadRoutes(router); // pages/chain-bad.html → POST /api/chain-bad（反例 · Promise.all → B 拿 undefined）
 
 app.use(router.routes()).use(router.allowedMethods());
 
@@ -43,13 +45,14 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "服务起好了；step-4 是 mock demo，不调 LLM；演示串行依赖链 A → B（页与接口 1:1）", {
+  logger.info("server.start", "listening", "服务起好了；step-4 是 mock demo，不调 LLM；演示串行依赖链 A → B（页与接口 1:1）+ Promise.all 反例", {
     url: `http://127.0.0.1:${PORT}/`,
     endpoints: [
       "GET /",
       "GET /health",
       "GET /api/tools",
-      "POST /api/chain   ← pages/chain.html",
+      "POST /api/chain       ← pages/chain.html    （正例 · await 串行）",
+      "POST /api/chain-bad   ← pages/chain-bad.html（反例 · Promise.all → B 拿 undefined）",
     ],
     protocol: "mock",
   });

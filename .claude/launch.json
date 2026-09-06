@@ -48,6 +48,30 @@
       "port": 50511,
       "url": "http://127.0.0.1:50511/",
       "autoPort": false
+    },
+    {
+      "name": "05-01-function-calling-protocol-step-3",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-01-fc-protocol-step-3"],
+      "port": 50019,
+      "url": "http://127.0.0.1:50019/",
+      "autoPort": false
+    },
+    {
+      "name": "05-01-function-calling-protocol-step-6",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-01-fc-protocol-step-6"],
+      "port": 50022,
+      "url": "http://127.0.0.1:50022/",
+      "autoPort": false
+    },
+    {
+      "name": "05-01-function-calling-protocol-step-4",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-01-fc-protocol-step-4"],
+      "port": 50020,
+      "url": "http://127.0.0.1:50020/",
+      "autoPort": false
     }
   ]
 }

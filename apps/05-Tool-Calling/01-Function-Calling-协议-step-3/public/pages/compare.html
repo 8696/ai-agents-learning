@@ -137,6 +137,34 @@
                       mode="serial"
                     />
                   </div>
+                  {/* ── 编造检测栏（覆盖 MD 需求 2 验收「模型最终回复是否编造」）── */}
+                  <div className="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm space-y-2">
+                    <div className="font-semibold text-xs">🧪 编造检测（mock 的「模型最终回复」是否含不在 tool_result 里的数字）</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-green-50 border border-green-300 rounded p-2 space-y-1">
+                        <div className="font-mono text-[10px] text-green-800">并行 · mockReply</div>
+                        <div className="text-xs text-gray-800">{compareResult.parallelRun.mockReply}</div>
+                        <div className="text-[10px] text-gray-600">
+                          源数字 = [{compareResult.parallelHallucination.sourceNumbers.join(", ")}]
+                          {" · "}reply 数字 = [{compareResult.parallelHallucination.replyNumbers.join(", ")}]
+                          {" · "}编造数字 = <span className={compareResult.parallelHallucination.isHallucinated ? "text-red-700 font-semibold" : "text-green-700 font-semibold"}>{compareResult.parallelHallucination.isHallucinated ? `[${compareResult.parallelHallucination.fakeNumbers.join(", ")}] ❌` : "[] ✅"}</span>
+                        </div>
+                      </div>
+                      <div className="bg-red-50 border border-red-300 rounded p-2 space-y-1">
+                        <div className="font-mono text-[10px] text-red-800">串行 · mockReply</div>
+                        <div className="text-xs text-gray-800">{compareResult.serialRun.mockReply}</div>
+                        <div className="text-[10px] text-gray-600">
+                          源数字 = [{compareResult.serialHallucination.sourceNumbers.join(", ")}]
+                          {" · "}reply 数字 = [{compareResult.serialHallucination.replyNumbers.join(", ")}]
+                          {" · "}编造数字 = <span className={compareResult.serialHallucination.isHallucinated ? "text-red-700 font-semibold" : "text-green-700 font-semibold"}>{compareResult.serialHallucination.isHallucinated ? `[${compareResult.serialHallucination.fakeNumbers.join(", ")}] ❌` : "[] ✅"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-600">
+                      step-3 是 mock demo；用 mode 模拟「模型嫌慢编造」—— parallel（快）用真实数字；serial（慢）故意加 5500 / 25（不在 tool_result 里）。
+                      真 LLM 也会有同样行为：长延迟 + 不耐烦 → 编造数字填补；这就是 MD 「踩坑：串行 for await」的延伸代价。
+                    </p>
+                  </div>
                 </>
               )}
             </section>

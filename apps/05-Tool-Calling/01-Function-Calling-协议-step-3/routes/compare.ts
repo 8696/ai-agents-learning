@@ -40,7 +40,71 @@ type SubRun = {
   totalMs: number;
   results: ExecResult[];
   timeline: TimelineEntry[];
+  mockReply: string;   // step-3 新增：mock 的模型最终回复（按 mode 决定"真实"或"编造"）
 };
+
+// ── 编造检测（step-3 新增 · 覆盖 MD 需求 2 验收「模型最终回复是否编造」）──
+// 编造定义：reply 里出现**不在 tool_result 里**的数字。
+// 实现：从所有 tool_result.ok 的 result 对象里 flatten 出所有数字 → 集合 sourceNumbers；
+//       从 reply 里 regex 提取数字 → 集合 replyNumbers；
+//       fakeNumbers = replyNumbers \ sourceNumbers；isHallucinated = fakeNumbers 非空。
+//
+// 这是 mock 演示（step-3 不调 LLM），用 mode 模拟「模型嫌慢编造」：
+//   parallel → mockReply 用真实数字（3500 / 22）→ isHallucinated = false
+//   serial   → mockReply 编造数字（5500 / 25）→ isHallucinated = true
+function extractNumbers(v: unknown, acc: number[] = []): number[] {
+  if (typeof v === "number" && Number.isFinite(v)) {
+    acc.push(v);
+  } else if (Array.isArray(v)) {
+    for (const item of v) extractNumbers(item, acc);
+  } else if (v && typeof v === "object") {
+    for (const val of Object.values(v as Record<string, unknown>)) extractNumbers(val, acc);
+  }
+  return acc;
+}
+
+function detectHallucination(reply: string, results: ExecResult[]): {
+  isHallucinated: boolean;
+  sourceNumbers: number[];
+  replyNumbers: number[];
+  fakeNumbers: number[];
+} {
+  // ① 从 tool_results 收集所有数字（源集）
+  const sourceNumbers: number[] = [];
+  for (const r of results) {
+    if (r.ok) extractNumbers(r.result, sourceNumbers);
+  }
+  const sourceSet = new Set(sourceNumbers);
+
+  // ② 从 reply 精准提取「可被引用的数字」—— 只看钱（¥ 后）和温度（°C 前）；
+  //   "5 月去 7 天" 这种带量词的数字不算引用（即使 LLM 编也是量词，不是数据）。
+  //   简化策略：先抓 ¥\s*(\d+...)，再抓 (\d+...)\s*°C；其它数字不参与编造判定。
+  const replyNumbers: number[] = [];
+  const moneyRe = /¥\s*(-?\d+(?:\.\d+)?)/g;
+  const tempRe = /(-?\d+(?:\.\d+)?)\s*°C/g;
+  let mm: RegExpExecArray | null;
+  while ((mm = moneyRe.exec(reply)) !== null) {
+    const n = Number(mm[1]);
+    if (Number.isFinite(n)) replyNumbers.push(n);
+  }
+  while ((mm = tempRe.exec(reply)) !== null) {
+    const n = Number(mm[1]);
+    if (Number.isFinite(n)) replyNumbers.push(n);
+  }
+
+  // ③ fake = reply 里出现但 tool_result 里没有
+  const fakeNumbers: number[] = [];
+  for (const n of replyNumbers) {
+    if (!sourceSet.has(n)) fakeNumbers.push(n);
+  }
+
+  return {
+    isHallucinated: fakeNumbers.length > 0,
+    sourceNumbers,
+    replyNumbers,
+    fakeNumbers,
+  };
+}
 
 // 单次 sub-dispatch（mode 决定走 Promise.all 还是 for await）—— 本文件独有，
 // 不抽到 lib/ 因为 plan.ts 也有类似逻辑但 ctx/logger 调用点不同；对比场景跑两份即可。
@@ -86,7 +150,7 @@ async function runOnce(
       results.push(r);
     }
   }
-  return { mode, totalMs: Date.now() - dispatchStart, results, timeline };
+  return { mode, totalMs: Date.now() - dispatchStart, results, timeline, mockReply: mode === "parallel" ? "5 月去东京 7 天机票约 ¥3500，平均气温 22°C，建议带薄外套和雨伞。" : "5 月去东京 7 天机票约 ¥5500，平均气温 25°C，建议带薄外套和雨伞。" };
 }
 
 // ── 路由 ──
@@ -121,13 +185,19 @@ export function mountCompareRoutes(router: Router): void {
     ]);
 
     const speedup = serialRun.totalMs / Math.max(parallelRun.totalMs, 1);
-    logger.info("compare.done", "两路跑完", "记 speedup 与各自 totalMs 便于核对", {
+    const parallelHallucination = detectHallucination(parallelRun.mockReply, parallelRun.results);
+    const serialHallucination = detectHallucination(serialRun.mockReply, serialRun.results);
+    logger.info("compare.done", "两路跑完", "记 speedup 与各自 totalMs + 编造检测结果便于核对", {
       parallelMs: parallelRun.totalMs,
       serialMs: serialRun.totalMs,
       speedup: speedup.toFixed(2),
+      parallelHallucinated: parallelHallucination.isHallucinated,
+      parallelFakeNumbers: parallelHallucination.fakeNumbers,
+      serialHallucinated: serialHallucination.isHallucinated,
+      serialFakeNumbers: serialHallucination.fakeNumbers,
     });
 
-    ctx.body = { scenario, parallelRun, serialRun, speedup };
-    logger.info("compare.sent", "responded to client", "已返回；含 parallelRun + serialRun + speedup 三段", { status: 200 });
+    ctx.body = { scenario, parallelRun, serialRun, speedup, parallelHallucination, serialHallucination };
+    logger.info("compare.sent", "responded to client", "已返回；含 parallelRun + serialRun + speedup + parallelHallucination + serialHallucination 五段", { status: 200 });
   });
 }

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-7 · 混合编排（路由层 hard-code）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/wait-demo-ui.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/gantt.js"></script>
+
+  <script type="text/babel">
+    /**
+     * 混合编排页：填 query → POST /api/hybrid → 看路径分类 + 每轮决策 + 路由层拒绝/硬接 + final reply。
+     *
+     * 关键实验（3 条路径）：
+     *   - 路径 A："5 月东京平均气温" → get_weather → final（不调 suggest）
+     *   - 路径 B："5 月东京带不带伞" → get_weather → final → 路由层硬接 suggest_items → final
+     *   - 路径 C："打包清单" → mock LLM 直接 suggest → 路由层拒绝 → get_weather → suggest → final
+     */
+    const { useState } = React;
+    const { useEnvInfo, PageNav, StatusPill, PageIntro, EnvFooter, ResultCard } = window.DemoUI;
+
+    // ── 3 条预设 query（路径 A/B/C）──
+    const PRESET_QUERIES = [
+      { label: "路径 A · 仅天气", query: "5 月东京平均气温", path: "weather-only" },
+      { label: "路径 B · 带伞（路由层硬接）", query: "5 月东京带不带伞", path: "umbrella" },
+      { label: "路径 C · 直接打包（路由层拒绝→退回）", query: "我要打包", path: "packing-direct" },
+    ];
+
+    function App() {
+      const { env } = useEnvInfo();
+      const [query, setQuery] = useState("5 月东京带不带伞");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+      const [result, setResult] = useState(null);
+
+      function run() {
+        setStatus("running");
+        setError(null);
+        setResult(null);
+        fetch("/api/hybrid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setResult(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      // ── 路径徽标 ──
+      function pathBadge(p) {
+        if (!p) return null;
+        const map = {
+          "weather-only": { label: "路径 A · 仅天气", cls: "bg-blue-200 text-blue-800" },
+          "umbrella": { label: "路径 B · 带伞（路由层硬接 suggest）", cls: "bg-purple-200 text-purple-800" },
+          "packing-direct": { label: "路径 C · 直接打包（被拒→退回）", cls: "bg-orange-200 text-orange-800" },
+        };
+        const x = map[p] || { label: p, cls: "bg-gray-200 text-gray-800" };
+        return <span className={"text-xs px-2 py-0.5 rounded " + x.cls}>{x.label}</span>;
+      }
+
+      // ── 路由层拒绝徽标 ──
+      function rejectedNote(t) {
+        if (!t.rejectedByRouter) return null;
+        return (
+          <div className="text-xs text-red-700 bg-red-50 border-l-2 border-red-300 px-2 py-1 rounded mt-2">
+            <strong>🚫 路由层拒绝</strong>：{t.rejectedByRouter.reason}（ok:false 回灌 → 模型下一轮看到 error 决定换方案）
+          </div>
+        );
+      }
+
+      // ── 路由层硬接徽标 ──
+      function hardcodedNote(t) {
+        if (!t.hardcodedByRouter) return null;
+        return (
+          <div className="text-xs text-purple-700 bg-purple-50 border-l-2 border-purple-300 px-2 py-1 rounded mt-2">
+            <strong>🔧 路由层 hard-code 硬接</strong>：路径 B · 模型调完 weather 后决定 final → 路由层自动跑 suggest_items（用 weather.rain_prob 派生参数）
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · step-7 · 混合编排（路由层 hard-code）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageNav />
+            <PageIntro
+              summary="混合编排：POST /api/hybrid → classifyQuery 判定路径（A 仅 weather / B weather+硬接 suggest / C 直接打包被拒→退回）→ while 循环 + 路由层 hard-code 两条约束（拒绝越权 + 路径 B 硬接）。"
+              steps={[
+                "填 query（或点预设按钮）→ POST /api/hybrid { query }",
+                "服务端：classifyQuery(query) → 教学路径分类（前端显示对应徽标）",
+                "while (rounds < MAX_ROUNDS=8) 循环，每轮由 decideHybridAction 决定下一步",
+                "路由层 hard-code 约束 1（拒绝越权）：suggest_items 必须在 get_weather 之后调；违反 → ok:false error 回灌 → 模型退回 weather",
+                "路由层 hard-code 约束 2（路径 B 硬接）：用户问带伞 → weather → 模型 final → 路由层自动跑 suggest_items → final",
+                "前端：每轮决策 + 路由层拒绝 / 硬接徽标 + final reply 全展开",
+              ]}
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">🔀 路径选择 + 输入</h2>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_QUERIES.map(function (p) {
+                  return (
+                    <button
+                      key={p.label}
+                      onClick={function () { setQuery(p.query); }}
+                      className="text-xs px-2 py-1 rounded border border-gray-300 hover:border-blue-500"
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="block text-sm text-gray-700">
+                query（classifyQuery 根据关键词判定路径）：
+                <input
+                  type="text"
+                  value={query}
+                  onChange={function (e) { setQuery(e.target.value); }}
+                  className="mt-1 block w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  placeholder="例如：5 月东京带不带伞（路径 B）"
+                />
+              </label>
+              <div>
+                <button
+                  onClick={run}
+                  disabled={status === "running"}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 while 跑中…" : "跑混合编排（看路由层 hard-code）"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                实验建议：① 路径 A "5 月东京平均气温" → 仅 get_weather · 模型直接 final；② 路径 B "5 月东京带不带伞" → get_weather → 路由层硬接 suggest_items；③ 路径 C "我要打包" → mock LLM 直接 suggest → 路由层拒绝 → 退回 weather → suggest。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">📊 while 循环结果</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!result && !error && (
+                <p className="text-sm text-gray-500">
+                  还没跑。填 query（或点预设）→ 点「跑混合编排」。
+                </p>
+              )}
+              {result && (
+                <>
+                  <div className="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">路径分类：</span>
+                      {pathBadge(result.path)}
+                    </div>
+                    <div>总轮数 = <span className="font-mono text-purple-700">{result.rounds}</span> · 总耗时 = <span className="font-mono text-blue-700">{result.totalMs} ms</span></div>
+                    <div>路由层硬接次数 = <span className="font-mono text-purple-700">{(result.trace || []).filter(function (t) { return t.hardcodedByRouter; }).length}</span> · 路由层拒绝次数 = <span className="font-mono text-red-700">{(result.trace || []).filter(function (t) { return t.rejectedByRouter; }).length}</span></div>
+                    {result.maxRoundsTriggered && (
+                      <div className="text-red-700">⚠️ MAX_ROUNDS 触发 —— 模型未收敛，业务降级</div>
+                    )}
+                  </div>
+
+                  <h3 className="text-xs font-semibold">每轮决策轨迹</h3>
+                  {(result.trace || []).map(function (t, idx) {
+                    const isReject = Boolean(t.rejectedByRouter);
+                    const isHardcode = Boolean(t.hardcodedByRouter);
+                    return (
+                      <div key={idx} className={"bg-white border rounded p-3 text-sm space-y-2 " + (isReject ? "border-red-300" : (isHardcode ? "border-purple-300" : "border-gray-300"))}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-xs">Round {t.round}</span>
+                          <span className={"text-xs px-2 py-0.5 rounded " + (isReject ? "bg-red-200 text-red-800" : (isHardcode ? "bg-purple-200 text-purple-800" : "bg-blue-200 text-blue-800"))}>
+                            {isReject ? "路由层拒绝" : (isHardcode ? "路由层硬接" : (t.decisionKind === "final" ? "final" : "tool_call · " + t.decisionTool))}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div>耗时: <span className="font-mono">{t.startMs}ms → {t.endMs}ms</span> ({t.durationMs}ms)</div>
+                          {t.decisionArgs && (
+                            <div>arguments: <code className="bg-gray-100 px-1 rounded">{JSON.stringify(t.decisionArgs)}</code></div>
+                          )}
+                          {t.decisionKind === "final" && (
+                            <div>final content: <span className="text-purple-700">{(t.result?.result?.summary || t.result?.summary || "").slice(0, 100)}</span></div>
+                          )}
+                        </div>
+                        {rejectedNote(t)}
+                        {hardcodedNote(t)}
+                        {t.result && (
+                          <div className="mt-2">
+                            <ResultCard
+                              r={{
+                                ok: t.result.ok,
+                                tool: t.result.tool,
+                                tool_call_id: t.result.tool_call_id,
+                                result: t.result.ok ? t.result.result : undefined,
+                                error: t.result.ok ? undefined : t.result.error,
+                              }}
+                              idx={idx}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {result.finalReply && (
+                    <div className="bg-green-50 border border-green-300 rounded p-3 text-sm space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs">final_reply（while 终态）</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-green-300 text-green-900">final</span>
+                      </div>
+                      <pre className="whitespace-pre-wrap text-xs bg-white p-2 rounded border border-green-200">
+                        {result.finalReply}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo", "ResultCard"], function () {
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    });
+  </script>
+</body>
+</html>

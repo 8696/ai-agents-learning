@@ -126,7 +126,15 @@ export function mountPlanRoutes(router: Router): void {
     const totalMs = Date.now() - dispatchStart;
     logger.info("dispatch.done", "执行完毕", "整批 tool_call 跑完；记 totalMs 便于和 gantt 视觉对账", { mode, totalMs, okCount: results.filter((r) => r.ok).length });
 
-    ctx.body = { scenario, mode, totalMs, results, timeline };
-    logger.info("plan.sent", "responded to client", "已返回", { status: 200, resultsCount: results.length, timelineCount: timeline.length });
+    // ── step-3 新增：mock 的"模型最终回复"（step-3 不调 LLM；按 mode 模拟"模型嫌慢编造结果"的踩坑）──
+    //   mode=parallel：mockReply 用真实数字（3500 / 22）→ 检测 = 真实
+    //   mode=serial  ：mockReply 编造（5500 / 25 都不在 tool_result 里）→ 检测 = 编造
+    //   这是 MD 需求 2 验收「模型最终回复是否编造」的可观察演示。
+    const mockReply = mode === "parallel"
+      ? "5 月去东京 7 天机票约 ¥3500，平均气温 22°C，建议带薄外套和雨伞。"
+      : "5 月去东京 7 天机票约 ¥5500，平均气温 25°C，建议带薄外套和雨伞。";
+
+    ctx.body = { scenario, mode, totalMs, results, timeline, mockReply };
+    logger.info("plan.sent", "responded to client", "已返回；含 mockReply 便于前端展示 + 编造检测", { status: 200, resultsCount: results.length, timelineCount: timeline.length, mode });
   });
 }

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-6 · 协议层数据形态 + 编造检测可观察</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    /**
+     * step-6 页面：用户输入 → 真 LLM（协议 A）→ 展示完整两轮请求/响应 + 编造检测。
+     *
+     * 教学锚点（覆盖 MD 例子 + 编造检测可观察）：
+     *   1. 用户输入 → POST /api/chat
+     *   2. Round 1 Request: messages=[user] + tools + tool_choice
+     *   3. Round 1 Response: 模型的 tool_calls（**JSON 字符串不是对象**）+ finish_reason
+     *   4. Execute: 每个 tool_call 过 Registry → tool_result
+     *   5. Round 2 Request: messages 含 assistant(tool_calls) + tool × N
+     *   6. Round 2 Response: final_reply
+     *   7. **编造检测**：reply 数字 vs tool_result 数字 → fake 列表
+     *
+     * 页面上 4 张数据卡 + 1 个编造检测栏，把"协议层到底发了什么"和"模型有没有编"两件事直接摆出来。
+     */
+    const { useState, useEffect } = React;
+
+    function StatusPill({ status }) {
+      const label = {
+        idle: "⏸ 待连接", running: "🔄 请求中", ok: "✅ 完成", error: "❌ 错误",
+      }[status] || "⏸ 待连接";
+      const cls = {
+        idle: "bg-gray-200", running: "bg-yellow-200", ok: "bg-green-200", error: "bg-red-200",
+      }[status] || "bg-gray-200";
+      return (
+        <span id="status-pill" className={"text-xs px-2 py-1 rounded " + cls}>
+          {label}
+        </span>
+      );
+    }
+
+    function EnvFooter({ env }) {
+      const port = env?.port || 50022;
+      const provider = env?.provider || "(待连接)";
+      const model = env?.model || "(待连接)";
+      const key = env?.hasKey ? "✅" : "❌";
+      const callsModel = env?.callsModel ? "调 LLM" : "本地 mock";
+      return (
+        <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+          <span id="env-info">
+            端口 {port} · {callsModel} · provider {provider} · model {model} · Key {key}
+          </span>
+        </footer>
+      );
+    }
+
+    function PageIntro() {
+      const steps = [
+        "页面加载 → GET /health 填页脚",
+        "用户在输入框打字 → 点「跑」",
+        "浏览器 POST /api/chat { input } → 服务端调真 LLM 协议 A",
+        "Round 1: user msg + tools + tool_choice='auto' → 模型决定调工具",
+        "Execute: 每个 tool_call 过 Registry → tool_results（含数字）",
+        "Round 2: 回灌 tool_result → 模型生成 final_reply",
+        "🔍 编造检测：扫 reply 数字 vs tool_result 数字 → 列 fake numbers",
+      ];
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：协议层数据长什么样（Round 1/2 的 Request/Response 全量）+ reply 是否引用了 tool_result。
+            真 LLM + 3 个 Tool（get_weather / search / calc · step-6 把 calc 标 safe 方便数字引用）。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            {steps.map(function (s, i) { return <li key={i}>{s}</li>; })}
+          </ol>
+        </section>
+      );
+    }
+
+    function DataCard({ title, badge, badgeClass, content, kind }) {
+      const bg = {
+        request: "bg-blue-50 border border-blue-300",
+        response: "bg-green-50 border border-green-300",
+        warn: "bg-red-50 border border-red-300",
+      }[kind] || "bg-white border border-gray-300";
+      return (
+        <div className={"rounded p-3 text-sm " + bg}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-semibold text-xs">{title}</span>
+            <span className={"text-xs px-2 py-0.5 rounded " + badgeClass}>{badge}</span>
+          </div>
+          <pre className="whitespace-pre-wrap text-xs max-h-64 overflow-auto bg-gray-900 text-gray-100 p-2 rounded">
+            {content}
+          </pre>
+        </div>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [input, setInput] = useState("北京今天多少度");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+      const [chat, setChat] = useState(null);
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function (e) { setError("GET /health 失败：" + String(e)); });
+      }, []);
+
+      function run() {
+        setStatus("running");
+        setError(null);
+        setChat(null);
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: input }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setChat(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      const hasKey = env?.hasKey;
+      const hallucination = chat?.hallucination;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · Function Calling 协议 · step-6 · 协议层数据形态 + 编造检测
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户输入（真发给 LLM）：
+                <input
+                  type="text"
+                  value={input}
+                  onChange={function (e) { setInput(e.target.value); }}
+                  className="mt-1 block w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  placeholder="例如：北京今天多少度 / 帮我算 1+1 / 搜 AI Agent"
+                />
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={run}
+                  disabled={status === "running" || hasKey === false}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 请求中…" : "跑（真调 LLM）"}
+                </button>
+                {hasKey === false && (
+                  <span className="text-xs text-red-700">⚠ 没配 LLM Key — 配 apps/.env 后重启服务</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                step-6 简化：calc 标 safe 让数字引用演示可行；真实场景 calc 必须 dangerous + 人工审批。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">📊 结果</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!chat && !error && (
+                <p className="text-sm text-gray-500">
+                  {"还没跑。填输入 → 点「跑」→ 下面会展示 4 张数据卡 + 1 个编造检测栏。"}
+                </p>
+              )}
+              {chat && (
+                <>
+                  <DataCard
+                    title={"① Round 1 Request · messages=[user] + tools + tool_choice='auto'"}
+                    badge="Request"
+                    badgeClass="bg-blue-200 text-blue-800"
+                    content={JSON.stringify({
+                      model: chat.round_1.request.model,
+                      messages: chat.round_1.request.messages,
+                      tools_count: chat.round_1.request.tools?.length ?? 0,
+                      tool_choice: chat.round_1.request.tool_choice,
+                    }, null, 2)}
+                    kind="request"
+                  />
+                  <DataCard
+                    title={"② Round 1 Response · 模型决定调工具（含 tool_calls）"}
+                    badge={"Response · finish_reason=" + (chat.round_1.response.choices[0]?.finish_reason ?? "?")}
+                    badgeClass="bg-green-200 text-green-800"
+                    content={JSON.stringify(chat.round_1.response.choices[0]?.message, null, 2)}
+                    kind="response"
+                  />
+                  <DataCard
+                    title={"③ tool_results（执行结果，作为 round-2 的 tool 消息回灌）"}
+                    badge={"tool_results · " + (chat.tool_results?.length ?? 0) + " 条"}
+                    badgeClass="bg-purple-200 text-purple-800"
+                    content={JSON.stringify(chat.tool_results, null, 2)}
+                    kind="response"
+                  />
+                  <DataCard
+                    title={"④ Round 2 Response · final_reply（模型基于 tool_result 生成）"}
+                    badge={"final_reply · finish_reason=" + (chat.round_2?.response.choices[0]?.finish_reason ?? "?")}
+                    badgeClass="bg-green-200 text-green-800"
+                    content={JSON.stringify({
+                      content: chat.final_reply,
+                      usage: chat.round_2?.response?.usage,
+                    }, null, 2)}
+                    kind="response"
+                  />
+
+                  <div id="hallucination" className={"border-2 rounded p-4 space-y-2 " + (hallucination?.isHallucinated ? "bg-red-50 border-red-400" : "bg-green-50 border-green-400")}>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold">🔍 编造检测（reply 数字 vs tool_result 数字）</h3>
+                      <span className={"text-xs px-2 py-0.5 rounded font-semibold " + (hallucination?.isHallucinated ? "bg-red-300 text-red-900" : "bg-green-300 text-green-900")}>
+                        {hallucination?.isHallucinated ? "❌ isHallucinated = true" : "✅ isHallucinated = false"}
+                      </span>
+                    </div>
+                    <div className="text-xs space-y-1 text-gray-700">
+                      <div>源数字（tool_result 里有的）= <code className="bg-white px-1 rounded">[{hallucination?.sourceNumbers?.join(", ") ?? ""}]</code></div>
+                      <div>reply 数字（final_reply 里抓的 ¥/°C 数字）= <code className="bg-white px-1 rounded">[{hallucination?.replyNumbers?.join(", ") ?? ""}]</code></div>
+                      <div>编造数字（reply 有但 source 没有）= <code className={"px-1 rounded font-semibold " + (hallucination?.fakeNumbers?.length > 0 ? "bg-red-200 text-red-900" : "bg-green-200 text-green-900")}>[{hallucination?.fakeNumbers?.join(", ") ?? ""}]</code></div>
+                    </div>
+                    <p className="text-[10px] text-gray-600">
+                      怎么扫的：source = flatten(tool_results) 里所有数字；reply = regex `¥\s*\d+` + `\d+\s*(?:°\s*C|℃)` 提取（避免 "5 月 / 7 天" 这种量词被误抓）；
+                      fake = reply - source。
+                      <br />
+                      <strong>检测范围</strong>：本 demo **只检测带单位的数字**（¥钱 / °C°F温度）——纯数字（如 "答案是 500"）需要语义判断，本条范围之外。
+                      真 LLM 可能老实也可能编造——这个 demo 把行为差异在页面上**自动可见**，让你看见它到底有没有引用 tool_result。
+                    </p>
+                  </div>
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

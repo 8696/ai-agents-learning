@@ -30,7 +30,10 @@
     "app:05-01-fc-protocol-step-2": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-2/server.ts",
     "app:05-01-fc-protocol-step-3": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-3/server.ts",
     "app:05-01-fc-protocol-step-4": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-4/server.ts",
-    "app:05-01-fc-protocol-step-5": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-5/server.ts"
+    "app:05-01-fc-protocol-step-5": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-5/server.ts",
+    "app:05-01-fc-protocol-step-6": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-6/server.ts",
+    "app:05-01-fc-protocol-step-7": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-7/server.ts",
+    "app:05-01-fc-protocol-step-8": "tsx 05-Tool-Calling/01-Function-Calling-协议-step-8/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

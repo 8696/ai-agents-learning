@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Function Calling 协议 · step-8 · 协议 B（Anthropic Messages API）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    /**
+     * step-8 页面：用户输入 → 真 LLM（协议 B · Anthropic Messages API）→ 展示完整两轮请求/响应。
+     *
+     * 教学锚点（覆盖协议 B 字段层物理形态）：
+     *   1. 用户输入 → POST /api/chat
+     *   2. Round 1 Request: messages=[user] + tools + max_tokens（**必填**）
+     *   3. Round 1 Response: content=[{type:"tool_use", id, name, input}]（**input 是对象**，vs 协议 A 的 JSON 字符串）
+     *   4. Execute: 每个 tool_use 过 Registry → tool_results
+     *   5. Round 2 Request: messages 含 assistant(content blocks) + user(content: [{type:"tool_result", tool_use_id, content}])
+     *   6. Round 2 Response: content blocks → final_reply (text blocks)
+     *
+     * 与 step-6 的对比：
+     *   - step-6 协议 A：tool_calls[i].function.arguments 是 JSON 字符串；回灌用 role:"tool"
+     *   - step-8 协议 B：tool_use.input 是对象；回灌用 role:"user" + tool_result blocks；max_tokens 必填
+     *
+     * 页面上 4 张数据卡 + 1 个字段差异对照栏，把"协议 B 字段长什么样"和"协议 A vs B 关键差异"摆出来。
+     */
+    const { useState, useEffect } = React;
+
+    function StatusPill({ status }) {
+      const label = {
+        idle: "⏸ 待连接", running: "🔄 请求中", ok: "✅ 完成", error: "❌ 错误",
+      }[status] || "⏸ 待连接";
+      const cls = {
+        idle: "bg-gray-200", running: "bg-yellow-200", ok: "bg-green-200", error: "bg-red-200",
+      }[status] || "bg-gray-200";
+      return (
+        <span id="status-pill" className={"text-xs px-2 py-0.5 rounded " + cls}>
+          {label}
+        </span>
+      );
+    }
+
+    function EnvFooter({ env }) {
+      const port = env?.port || 50024;
+      const provider = env?.provider || "(待连接)";
+      const model = env?.model || "(待连接)";
+      const key = env?.hasKey ? "✅" : "❌";
+      const callsModel = env?.callsModel ? "调 LLM" : "本地 mock";
+      return (
+        <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+          <span id="env-info">
+            端口 {port} · 协议 B（Anthropic Messages API）· {callsModel} · provider {provider} · model {model} · Key {key}
+            {env?.maxTokensB ? " · max_tokens=" + env.maxTokensB : ""}
+          </span>
+        </footer>
+      );
+    }
+
+    function PageIntro() {
+      const steps = [
+        "页面加载 → GET /health 填页脚（协议 B 模型 id + max_tokens 必填）",
+        "用户在输入框打字 → 点「跑」",
+        "浏览器 POST /api/chat { input } → 服务端调真 LLM 协议 B（Anthropic Messages API）",
+        "Round 1: user msg + tools + max_tokens → 模型返回 content blocks 含 tool_use",
+        "Execute: 每个 tool_use 过 Registry → tool_results（**input 已是对象**，无需 JSON.parse）",
+        "Round 2: 回灌 tool_result blocks（**role:user** + content:[{type:tool_result,...}]） → 模型生成 final_reply",
+        "📋 字段差异对照：与 step-6 协议 A 字段一一对照看（tool_use.input vs function.arguments / role:user vs role:tool / max_tokens 必填）",
+      ];
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：协议 B（Anthropic Messages API）字段层物理形态——2 轮 Round 1/2 的 Request/Response 全量展示。真 LLM + 3 个 Tool（get_weather / search / calc，与 step-6 同 mock 数据）。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            {steps.map(function (s, i) { return <li key={i}>{s}</li>; })}
+          </ol>
+        </section>
+      );
+    }
+
+    function DataCard({ title, badge, badgeClass, content, kind }) {
+      const bg = {
+        request: "bg-blue-50 border border-blue-300",
+        response: "bg-green-50 border border-green-300",
+        warn: "bg-red-50 border border-red-300",
+      }[kind] || "bg-white border border-gray-300";
+      return (
+        <div className={"rounded p-3 text-sm " + bg}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="font-semibold text-xs">{title}</span>
+            <span className={"text-xs px-2 py-0.5 rounded " + badgeClass}>{badge}</span>
+          </div>
+          <pre className="whitespace-pre-wrap text-xs max-h-64 overflow-auto bg-gray-900 text-gray-100 p-2 rounded">
+            {content}
+          </pre>
+        </div>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [input, setInput] = useState("北京今天多少度");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState(null);
+      const [chat, setChat] = useState(null);
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function (e) { setError("GET /health 失败：" + String(e)); });
+      }, []);
+
+      function run() {
+        setStatus("running");
+        setError(null);
+        setChat(null);
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: input }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (res.status >= 400) {
+              setError("HTTP " + res.status + " · " + (res.body.error || JSON.stringify(res.body)));
+              setStatus("error");
+              return;
+            }
+            setChat(res.body);
+            setStatus("ok");
+          })
+          .catch(function (e) {
+            setError(String(e));
+            setStatus("error");
+          });
+      }
+
+      const hasKey = env?.hasKey;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              05 · 01 · Function Calling 协议 · step-8 · 协议 B（Anthropic Messages API）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户输入（真发给 LLM 协议 B）：
+                <input
+                  type="text"
+                  value={input}
+                  onChange={function (e) { setInput(e.target.value); }}
+                  className="mt-1 block w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                  placeholder="例如：北京今天多少度 / 帮我搜 AI Agent"
+                />
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={run}
+                  disabled={status === "running" || hasKey === false}
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                >
+                  {status === "running" ? "🔄 请求中…" : "跑（真调协议 B）"}
+                </button>
+                {hasKey === false && (
+                  <span className="text-xs text-red-700">⚠ 没配 LLM Key — 配 apps/.env 后重启服务</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                step-8 跑协议 B（Anthropic Messages API）；与 step-6 协议 A 同骨架、不同字段层物理形态。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              <h2 className="text-sm font-semibold">📊 结果</h2>
+              {error && <p className="text-red-700 text-sm">{error}</p>}
+              {!chat && !error && (
+                <p className="text-sm text-gray-500">
+                  {"还没跑。填输入 → 点「跑」→ 下面会展示 4 张数据卡（协议 B 形态）+ 1 个字段差异对照栏。"}
+                </p>
+              )}
+              {chat && (
+                <>
+                  <DataCard
+                    title={"① Round 1 Request · messages=[user] + tools + max_tokens"}
+                    badge="Request"
+                    badgeClass="bg-blue-200 text-blue-800"
+                    content={JSON.stringify({
+                      model: chat.round_1.request.model,
+                      max_tokens: chat.round_1.request.max_tokens,
+                      messages: chat.round_1.request.messages,
+                      tools_count: chat.round_1.request.tools?.length ?? 0,
+                      tools_sample: chat.round_1.request.tools?.[0],
+                    }, null, 2)}
+                    kind="request"
+                  />
+                  <DataCard
+                    title={"② Round 1 Response · 模型决定调工具（content blocks 含 tool_use）"}
+                    badge={"Response · stop_reason=" + (chat.round_1.response.stop_reason ?? "?")}
+                    badgeClass="bg-green-200 text-green-800"
+                    content={JSON.stringify({
+                      content: chat.round_1.response.content,
+                      usage: chat.round_1.response.usage,
+                    }, null, 2)}
+                    kind="response"
+                  />
+                  <DataCard
+                    title={"③ tool_results（执行结果，作为 round-2 的 user + tool_result blocks 回灌）"}
+                    badge={"tool_results · " + (chat.tool_results?.length ?? 0) + " 条"}
+                    badgeClass="bg-purple-200 text-purple-800"
+                    content={JSON.stringify(chat.tool_results, null, 2)}
+                    kind="response"
+                  />
+                  <DataCard
+                    title={"④ Round 2 Response · final_reply（模型基于 tool_result 生成）"}
+                    badge={"final_reply · stop_reason=" + (chat.round_2?.response?.stop_reason ?? "?")}
+                    badgeClass="bg-green-200 text-green-800"
+                    content={JSON.stringify({
+                      content: chat.round_2?.response?.content,
+                      final_reply: chat.final_reply,
+                      usage: chat.round_2?.response?.usage,
+                    }, null, 2)}
+                    kind="response"
+                  />
+
+                  <div id="field-diff" className="border-2 border-indigo-300 bg-indigo-50 rounded p-4 space-y-2">
+                    <h3 className="text-sm font-semibold">📋 字段差异对照（协议 A · step-6 vs 协议 B · step-8）</h3>
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-indigo-100">
+                          <th className="border border-indigo-300 px-2 py-1 text-left">概念</th>
+                          <th className="border border-indigo-300 px-2 py-1 text-left">协议 A · OpenAI（step-6）</th>
+                          <th className="border border-indigo-300 px-2 py-1 text-left">协议 B · Anthropic（step-8）</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">工具 schema</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>{`{ type: "function", function: { name, description, parameters } }`}</code></td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>{`{ name, description, input_schema }`}</code>（无 function 包裹）</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">模型"决定调"</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>tool_calls[i].function.arguments</code> = <strong className="text-red-700">JSON 字符串</strong>（需 JSON.parse）</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>content[i].input</code> = <strong className="text-green-700">对象</strong>（直接用，无需解析）</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">回灌结果</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>{`{ role: "tool", tool_call_id, content }`}</code></td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>{`{ role: "user", content: [{ type: "tool_result", tool_use_id, content }] }`}</code></td>
+                        </tr>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">必填字段</td>
+                          <td className="border border-indigo-300 px-2 py-1">无（model + messages 即可）</td>
+                          <td className="border border-indigo-300 px-2 py-1"><strong className="text-red-700">max_tokens 必填</strong>（忘填 → 400）</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">终止原因</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>finish_reason</code></td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>stop_reason</code>（值集合略不同：end_turn / max_tokens / tool_use）</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">响应 content</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>message.content</code> = string | null</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>content[]</code> = blocks 数组（text / tool_use / ...）</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-indigo-300 px-2 py-1 font-mono">强制调用</td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>tool_choice: "required"</code></td>
+                          <td className="border border-indigo-300 px-2 py-1"><code>tool_choice: {`{ type: "any" }`}</code></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <p className="text-[10px] text-gray-600">
+                      **数据怎么走都一样**：模型给"决定" → 你执行 → 结果塞回去。**记骨架，不记字段名**。
+                      字段并排对照是模块 02-02 教学点（详 02-02 MD，那里已有 <code>app:02-02-protocol-ab-step-1</code> 真 LLM 双协议对照 demo）。
+                    </p>
+                  </div>
+                </>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

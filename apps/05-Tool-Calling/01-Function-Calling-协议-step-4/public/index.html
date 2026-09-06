@@ -90,10 +90,17 @@
               <h2 className="text-sm font-semibold">📍 场景导航（点进去才有业务按钮）</h2>
               <div className="grid grid-cols-1 gap-3">
                 <a href="/pages/chain.html" className="block border border-gray-200 rounded p-4 hover:border-blue-500">
-                  <div className="text-sm font-semibold">① 串行依赖链（search_doc → summarize）</div>
+                  <div className="text-sm font-semibold">① 串行依赖链（search_doc → summarize）· 正例</div>
                   <p className="text-xs text-gray-600 mt-1">
                     填 query + 选 style（tech/oneliner/bullets）→ POST /api/chain → 渲链式 gantt 时序图 + 2 条 tool_result + final summary。
                     适合：看清 B 用 A 的输出当参数这种「依赖链」的物理形态。
+                  </p>
+                </a>
+                <a href="/pages/chain-bad.html" className="block border border-red-300 rounded p-4 hover:border-red-500 bg-red-50">
+                  <div className="text-sm font-semibold text-red-800">② ❌ Promise.all 反例（有依赖链误用并发 → B 拿 undefined）</div>
+                  <p className="text-xs text-red-700 mt-1">
+                    填 query + 选 style → POST /api/chain-bad → 渲并发 gantt + 2 条 tool_result + ❌ final summary 缺数据。
+                    适合：观察「有依赖链误用 Promise.all → B 拿 undefined → summary 缺数据」的踩坑；与正例 chain.html 形成对比。
                   </p>
                 </a>
               </div>

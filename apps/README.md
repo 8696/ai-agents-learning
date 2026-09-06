@@ -42,6 +42,9 @@
 | `yarn app:05-01-fc-protocol-step-3` | `50019` | step-3 并行调用（mock · 不调 LLM）；3 个 async Tool + Promise.all + gantt 时序图 + 串/并行对比按钮（修 §5.4.A2 阻塞） |
 | `yarn app:05-01-fc-protocol-step-4` | `50020` | step-4 串行依赖链（mock · 不调 LLM）；search_doc → summarize（B 用 A 的输出当参数）；await 链式 + gantt 时序图 + final summary |
 | `yarn app:05-01-fc-protocol-step-5` | `50021` | step-5 模型自编排（mock · 不调 LLM）；while + decideNextAction mock LLM + 自纠触发（query 太短 → 扩 query 重试）+ MAX_ROUNDS 边界 |
+| `yarn app:05-01-fc-protocol-step-6` | `50022` | step-6 真 LLM（协议 A · openai.chat.completions）；两轮调用 + 4 张数据卡全量可视化 + 路由层 detectHallucination 自动扫 reply 数字 vs tool_result 数字差异 |
+| `yarn app:05-01-fc-protocol-step-7` | `50023` | step-7 混合编排（mock · 不调 LLM）；路由层 hard-code 两条约束（拒绝越权 + 路径 B 硬接）+ 模型决定要不要进两步链；3 条路径（A 仅 weather / B weather+硬接 suggest / C 直接打包被拒→退回） |
+| `yarn app:05-01-fc-protocol-step-8` | `50024` | step-8 协议 B（真 LLM · Anthropic Messages API）；单协议 B · 4 张数据卡全量可视化 + 字段差异对照表（协议 A step-6 vs 协议 B step-8）；不做协议 A vs B 同页并排（§5.3.13 硬约束 · 本条不是"对照"教学点；字段并排对照是模块 02-02 教学点） |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
