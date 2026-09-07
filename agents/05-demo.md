@@ -1010,8 +1010,8 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 - **文件里不写服务名**；**密钥打码**
 
 **每条格式**
-- **每条记录前空一行**（`apps/logger.ts` 的 `emit` 自动加 `\n`，业务代码不要自己再空）
-- 服务端文件：空行 + **基础信息单行** `YYYY-MM-DD HH:MM:SS.mmm +08:00 <LEVEL> <scope>` + 下一行 `  msg=…`（北京时）
+- **每条记录前空一行**；**msg / explain / data 三块之间也空一行**（`emit` 自动加，业务代码不要自己再空）
+- 服务端文件：空行 + 时间头单行 `YYYY-MM-DD HH:MM:SS.mmm +08:00 <LEVEL> <scope>` + 空行 + `  msg=…` + 空行 + `  explain=…` + 空行 + data（北京时）
 - data **下一行起** indent-2 多行 JSON。**有 `__code` 时其余字段同样多行**，禁止 compact 一行
 - **`data.__code`**：每次调用必带（工具也要）；打在「开始」条；结束条不必重复源码
 - **LLM / HTTP 响应打整个对象**；`字段释义` **只写本条教学用到的字段**（如 `finish_reason` / `tool_calls` / `usage`），不要给 SDK 每个键做词典
