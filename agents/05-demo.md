@@ -998,13 +998,12 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 ```
 
 **约定（业务代码写法）**
-- **请求编号**：一次页面请求 / 一次 HTTP handler 入口生成短号（4～6 位小写 hex，如 `a3f1`）。本请求内**每一条** `msg` 都以 `[请求#a3f1]` 开头，`data.请求编号` 同值。同一天的 log 里两个人同时点按钮才拆得开。
 - `scope`：**中文 + 嵌套竖线**。入口（handler）无竖线；每套一层加一根 `│`（后面有空格）：`│ 调用函数-callLlmOnce`、`││ 调用模型-对话补全`。不要靠「看时间猜谁包着谁」。
-- `msg`：**`[请求#xxxx]` + 调用类型 + 开始/结束 + 名字**。四种前缀，禁止只写「xxx开始 / xxx结束」：
-  - 业务函数 / 工具 / **封装**（`callLlmOnce` 等）：`[请求#a3f1] 调用函数开始：callLlmOnce`
-  - **真正出网的模型调用**：`[请求#a3f1] 调用模型开始：对话补全`
-  - **真正出网的 HTTP**（自己 fetch、不是 SDK 那次）：`[请求#a3f1] 调用HTTP开始：GET https://…`
-  - Agent / for 循环每一圈：`[请求#a3f1] 调用循环开始：第 1 轮 / 共 8 轮`（无限循环写已跑圈数）
+- `msg`：**调用类型 + 开始/结束 + 名字**。四种前缀，禁止只写「xxx开始 / xxx结束」：
+  - 业务函数 / 工具 / **封装**（`callLlmOnce` 等）：`调用函数开始：callLlmOnce`
+  - **真正出网的模型调用**：`调用模型开始：对话补全`
+  - **真正出网的 HTTP**（自己 fetch、不是 SDK 那次）：`调用HTTP开始：GET https://…`
+  - Agent / for 循环每一圈：`调用循环开始：第 1 轮 / 共 8 轮`（无限循环写已跑圈数）
   - 失败：同一句式加 `（失败）`，如 `调用函数结束：queryStock（失败）`
 - `explain`：**人话，必填**。① **为什么打这条**（= 为什么要调这个）② **当前到哪一步**。禁止「方便排错」「记录一下」
 - **出网 vs 封装（禁止两次都叫「调用模型」）**：SDK / fetch 那一次才写「调用模型」或「调用HTTP」。外面的 `callLlmOnce` / `handleChat` 写「调用函数」，`explain` 写明「里面那次才是出网」。两套五件套都可以留，类型不要重名。
@@ -1016,7 +1015,7 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 - data **下一行起** indent-2 多行 JSON。**有 `__code` 时其余字段同样多行**，禁止 compact 一行
 - **`data.__code`**：每次调用必带（工具也要）；打在「开始」条；结束条不必重复源码
 - **LLM / HTTP 响应打整个对象**；`字段释义` **只写本条教学用到的字段**（如 `finish_reason` / `tool_calls` / `usage`），不要给 SDK 每个键做词典
-- `data` 建议键：`请求编号` / `入参` / `返回值` / `字段释义` / `耗时ms` / `第几轮` / `本轮为什么是这些参数`
+- `data` 建议键：`入参` / `返回值` / `字段释义` / `耗时ms` / `第几轮` / `本轮为什么是这些参数`
 
 **内置序列化（data 不能崩）**
 
@@ -1067,17 +1066,17 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 ```ts
 logger.info(
   "││ 调用模型-对话补全",
-  "[请求#a3f1] 调用模型开始：对话补全",
+  "调用模型开始：对话补全",
   "为什么打：这是真正出网的那一次，不用它就没有 tool_calls。当前：在 callLlmOnce 里面，第 1 轮，messages 还没有 tool 结果。",
-  { 请求编号: "a3f1", 入参: request, __code: "const response = await llm.openai.chat.completions.create(request);" },
+  { 入参: request, __code: "const response = await llm.openai.chat.completions.create(request);" },
 );
 const t0 = Date.now();
 const response = await llm.openai.chat.completions.create(request);
 logger.info(
   "││ 调用模型-对话补全",
-  "[请求#a3f1] 调用模型结束：对话补全",
+  "调用模型结束：对话补全",
   "为什么打：要用 finish_reason 决定下一步。当前：await 已返回；下一步按 tool_calls 调 queryStock。",
-  { 请求编号: "a3f1", 返回值: response, 耗时ms: Date.now() - t0, 字段释义: { "choices[0].finish_reason": "tool_calls = 要调工具", "choices[0].message.tool_calls": "要执行的函数名和参数" } },
+  { 返回值: response, 耗时ms: Date.now() - t0, 字段释义: { "choices[0].finish_reason": "tool_calls = 要调工具", "choices[0].message.tool_calls": "要执行的函数名和参数" } },
 );
 ```
 
@@ -1086,9 +1085,9 @@ logger.info(
 ```ts
 logger.info(
   "│ 调用函数-callLlmOnce",
-  "[请求#a3f1] 调用函数开始：callLlmOnce",
+  "调用函数开始：callLlmOnce",
   "为什么打：路由只认这一层返回值。里面那次才是出网（看「调用模型开始：对话补全」）。当前：Round-1 即将问模型。",
-  { 请求编号: "a3f1", 入参: { messagesCount: 2 }, __code: "const out = await callLlmOnce(messages, tools);" },
+  { 入参: { messagesCount: 2 }, __code: "const out = await callLlmOnce(messages, tools);" },
 );
 ```
 
@@ -1097,17 +1096,17 @@ logger.info(
 ```ts
 logger.info(
   "││ 调用函数-queryStock",
-  "[请求#a3f1] 调用函数开始：queryStock",
+  "调用函数开始：queryStock",
   "为什么打：模型已经点名这个工具，不查库存就进不了第 2 轮。当前：第 1 轮 sku=SKU-88。",
-  { 请求编号: "a3f1", 入参: { sku: "SKU-88" }, __code: "const 返回值 = queryStock(\"SKU-88\");" },
+  { 入参: { sku: "SKU-88" }, __code: "const 返回值 = queryStock(\"SKU-88\");" },
 );
 const t0 = Date.now();
 const 返回值 = queryStock("SKU-88");
 logger.info(
   "││ 调用函数-queryStock",
-  "[请求#a3f1] 调用函数结束：queryStock",
+  "调用函数结束：queryStock",
   "为什么打：要把件数交回给模型。当前：available=12，下一拍 role=tool。",
-  { 请求编号: "a3f1", 返回值, 耗时ms: Date.now() - t0 },
+  { 返回值, 耗时ms: Date.now() - t0 },
 );
 ```
 
@@ -1115,16 +1114,16 @@ logger.info(
 
 句式用「调用循环」，不要写成「第 1 轮开始」。每一圈：
 
-1. `[请求#a3f1] 调用循环开始：第 1 轮 / 共 8 轮`（`scope` 如 `│ 调用循环`）
+1. `调用循环开始：第 1 轮 / 共 8 轮`（`scope` 如 `│ 调用循环`）
 2. 本轮参数 + **为什么是这些参数**
 3. 圈里的子调用走五件套（竖线多一根）
-4. `[请求#a3f1] 调用循环结束：第 1 轮` + 本轮结果 + `耗时ms`
+4. `调用循环结束：第 1 轮` + 本轮结果 + `耗时ms`
 
 禁止只打「进入循环」「循环结束」。圈数多也打满。
 
 **自查（落完 Demo 翻一遍日志，任一条「否」= 没打完）**
 
-- 相邻两条之间是否有空行？同一请求是否都带同一个 `[请求#…]`？
+- 相邻两条之间是否有空行？
 - `scope` 能否看出嵌套（`│` 层数）？封装是否误写成「调用模型」？
 - `msg` 是否是四种前缀之一 + 开始/结束？失败是否带 `（失败）`？结束是否有 `耗时ms`？
 - `explain` 是否有「为什么打」和「当前到哪」？
