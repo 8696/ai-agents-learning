@@ -135,8 +135,7 @@ export function mountChainBadRoutes(router: Router): void {
 
     const settled = await Promise.all([...promises, promiseB]);
 
-    // 整理：step1 = searchDoc，step2 = summarize
-    const step1 = settled.find((r) => r.tool === "search_doc");
+    // 整理：找到 summarize 这一步的结果来构造 finalSummary；search_doc 的结果故意不读（演示反例：summary 拿不到 search_doc 的 hits）
     const step2 = settled.find((r) => r.tool === "summarize");
     const finalSummary = (step2?.ok ? (step2.result as { summary?: string })?.summary : null) ?? null;
 
