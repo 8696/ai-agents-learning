@@ -25,12 +25,14 @@
 
 **记忆策略**：Agent 偏好 / 行为约定只写 [AGENTS.md](AGENTS.md) 本文件 + [agents/](agents/)；**不要写 Claude 记忆（`memory/`）**。理由：偏好要进仓库跟版本走、Agent 间一致；Claude 记忆只对本机单会话、且本仓库硬规定它不参与契约。
 
-**日志标准（业务代码必读，2026-09-04 用户确认生效）**：落 / 改任何 demo / 业务代码时，日志严格按 [§5.6](AGENTS.md#56-详细日志高频错误表层摘要) + [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制) 标准：
+**日志标准（业务代码必读，2026-09-07 起对新 Demo 强制；旧锁定 Demo 不回头补）**：落 / 改 demo 时严格按 [§5.6](AGENTS.md#56-详细日志高频错误表层摘要) + [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制)：
 
-- **API（四参）**：`logger.info(scope, msg, explain, data?)` / `warn` / `error` / `debug`
-- **`scope` 中文节点名**（在哪）；**`msg` 一句中文动作**（做什么）；**`explain` 必填人话释义**（为什么 / 给谁看）；**`data` 任意对象**（含 `__code` 自动源代码块）
-- 文件 `apps/{demo}/logs/{YYYY-MM-DD}.log` 按 BJT 日切；msg / explain / data / code 块缩进 2 下一行起；**不写**服务名；前端不写日志
-- 详细优先、宁啰嗦不省
+- **给人看、全中文、怕多不怕少**；`explain` 必须写清**为什么这么调**和**当前到哪一步**
+- **每次调用五件套（所有函数/工具/模型/HTTP 都一样）**：开始 → 入参 → 源代码 `__code` → 返回值 → 结束；缺一头就不算打完
+- **核心档**再加：函数体逐步、返回值关键字段人话释义（模型/HTTP 打整个对象）
+- **工具档**：函数体可一句带过，五件套仍要（含 `__code`）；**循环每一圈打满**
+- **禁止**多余中间态（例如「发出」「已交给提供商」）——和「开始」分不清
+- **API（四参）**：`logger.info(scope, msg, explain, data?)`；前端不写日志；密钥打码
 
 ---
 
@@ -175,7 +177,13 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 
 ### 5.6 详细日志（高频错误·表层摘要）
 
-完整细则 [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制)。落 Demo 必看：详细优先；`apps/{demo}/logs/`；**四参** `logger.info(scope, msg, explain, data?)` / `warn` / `error` / `debug`，`explain` **必填**（人话释义）；业务每个打点都打；顶层 `apps/logger.ts`；**格式**：基础信息（BJT `YYYY-MM-DD HH:MM:SS.mmm +08:00` + level + scope）**单行**，msg / explain / data / code 块缩进 2 下一行起多行 JSON（grep head 干净、不用 jq）；文件名 `{YYYY-MM-DD}.log` 按 BJT 切（**无 serviceName 前缀**）；文件**不写**服务名；`scope` 中文节点、`msg` 中文动作、`explain` 中文人话、`__code` 源代码块、LLM 响应整个对象（不挑字段）；前端**不写日志**（页面 §5.3.10/11/2 #4 已展示）；**lock-time freeze**（锁定那一刻拷顶层 logger.ts 到 demo/lib/logger.ts，未来顶层改不动已锁定 demo）。
+完整细则 [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制)。落 / 改**新** Demo 必看（**已锁定旧 Demo 不回头补**，除非点名）：
+
+- **给人看**：全中文；`explain` 写清**为什么这么调**、**当前到哪一步**；怕多不怕少
+- **每次调用五件套（工具也一样）**：开始 → 入参 → `__code` 源码 → 返回值 → 结束；禁止「发出」这类和开始分不清的中间态
+- **核心档**（本条主路径 / 调模型 / 外部 HTTP）：函数体逐步写透 + 返回值字段人话；**工具档**函数体可一句带过
+- **循环每一圈打满**（第几轮、参数、为什么、结果）
+- 四参 API / 路径 / freeze 不变；前端不写日志；密钥打码
 
 ---
 
