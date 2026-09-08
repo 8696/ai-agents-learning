@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模块 05 · 02 · Tool Description · step-4 少样示例单次对照</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const COLOR = {
+      baselineCard: "border-red-300 bg-red-50",
+      improvedCard: "border-green-300 bg-green-50",
+      neutralCard: "border-gray-300 bg-white",
+      diffSame: "bg-gray-100 text-gray-600",
+      diffDiff: "bg-yellow-100 text-yellow-900",
+      diffBad: "bg-red-100 text-red-800",
+      diffGood: "bg-green-100 text-green-800",
+      verdict: "bg-yellow-50 border-yellow-300",
+    };
+
+    // ── 4 档 content 识破类型（跟 step-3 共享）──
+    const NEG_KEYWORDS = [
+      "订单详情", "不是物流", "不归本工具", "那是订单", "那是 order", "订单地址", "收货地址",
+      "order detail", "this is for", "not for logistics", "查订单详情", "order information",
+    ];
+    const MISSING_KEYWORDS = [
+      "没有提供订单", "请提供订单", "缺订单号", "需要订单号", "无法查询", "无法查",
+      "请告诉我您的订单", "请告诉我订单号", "请提供您的订单号", "需要您的订单号",
+      "please provide", "missing order", "missing the order",
+      "I need", "i need", "need an order", "need the order", "need order_id",
+      "need your order", "please provide the", "need to provide", "can you provide",
+    ];
+    function detectRecognizeReason(content) {
+      if (!content) return "none";
+      const s = String(content).toLowerCase();
+      const hitNeg = NEG_KEYWORDS.some((k) => s.includes(k.toLowerCase()));
+      const hitMissing = MISSING_KEYWORDS.some((k) => s.includes(k.toLowerCase()));
+      if (hitNeg && hitMissing) return "both";
+      if (hitNeg) return "neg";
+      if (hitMissing) return "missing";
+      return "none";
+    }
+    function recognizeLabel(d) {
+      if (d === "neg") return "✅ 反例生效";
+      if (d === "missing") return "✅ 缺字段问 user";
+      if (d === "both") return "✅ 反例 + 缺字段";
+      return "❌ 没调但没说明";
+    }
+
+    // ── 5 档核心对照（query 类型 + pickedToolName + content）──
+    function classifyQuery(q) {
+      const s = String(q || "");
+      if (/快递|物流|到哪|没到|没收到|几天|包裹|派送|送货|签收|轨迹/.test(s)) return "logistics";
+      if (/地址|寄到|金额|状态|收货|订单详情|订单什么|多少钱|订单状态/.test(s)) return "order_detail";
+      return "boundary";
+    }
+    function classifyPick(picked, qType, content) {
+      if (picked === "query_logistics") {
+        if (qType === "logistics") return "✅对调（该调且调了）";
+        if (qType === "order_detail") return "❌瞎调（订单详情类不该调却调）";
+        return "❌瞎调（边界场景不该调却调）";
+      } else {  // picked === null
+        if (qType === "logistics") {
+          const reason = detectRecognizeReason(content);
+          if (reason === "missing" || reason === "both") {
+            return "✅识破（物流类·缺字段问 user）";
+          }
+          return "❌漏调（物流类该调却没调）";
+        }
+        if (qType === "order_detail") return "✅识破（订单详情类不该调且没调）";
+        return "✅没调（边界场景，不调对）";
+      }
+    }
+
+    function fmt(v, fallback) {
+      if (v === null || v === undefined) return fallback ?? "—";
+      if (typeof v === "object") return JSON.stringify(v);
+      return String(v);
+    }
+
+    function fmtContentPreview(content) {
+      if (!content) return "(空)";
+      const s = String(content);
+      return s.length > 80 ? s.slice(0, 80) + "…" : s;
+    }
+
+    // 高亮 few-shot 示例
+    function highlightDescription(description) {
+      const exampleRegex = /(\*\*示例[^*]*\*\*)/g;
+      const parts = String(description).split(exampleRegex);
+      return parts.map((p, i) => {
+        if (exampleRegex.test(p)) {
+          return <span key={i} className="text-green-700 font-bold">{p}</span>;
+        }
+        return <span key={i}>{p}</span>;
+      });
+    }
+
+    function ToolsList({ tools, title }) {
+      return (
+        <div className="text-xs space-y-2">
+          <div className="font-medium text-gray-700">{title}</div>
+          {tools.map((t, i) => (
+            <div key={i} className="border border-gray-300 rounded p-2 bg-white">
+              <div className="font-mono text-blue-700">{t.function.name}</div>
+              <div className="text-gray-700 mt-1 whitespace-pre-wrap">{highlightDescription(t.function.description)}</div>
+              <div className="mt-1 text-gray-500">
+                参数：
+                {Object.entries(t.function.parameters.properties).map(([k, v]) => (
+                  <div key={k} className="ml-2 mt-1">
+                    <span className="font-mono">{k}</span> ({v.type})
+                    {t.function.parameters.required.includes(k) && <span className="text-red-600"> *</span>}
+                    {v.description && <span className="text-gray-500"> · {v.description}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function OneCallCard({ result, expectedName, cardColor }) {
+      if (!result) {
+        return (
+          <section className="border-2 border-dashed rounded p-3 bg-gray-50 min-h-[200px] flex items-center justify-center">
+            <span className="text-sm text-gray-500">未跑（点上方按钮调一次）</span>
+          </section>
+        );
+      }
+      if (!result.ok) {
+        return (
+          <section className={`border-2 ${cardColor} rounded p-3`}>
+            <div className="text-sm text-red-700">LLM 调用失败（catch 路径）</div>
+            <pre className="text-xs mt-1 whitespace-pre-wrap">{JSON.stringify(result.response, null, 2)}</pre>
+          </section>
+        );
+      }
+      const picked = result.pickedToolName;
+      const args = result.pickedToolArgs;
+      const finishReason = result.response?.choices?.[0]?.finish_reason ?? "?";
+      const content = result.response?.choices?.[0]?.message?.content ?? null;
+      const usage = result.response?.usage ?? {};
+      const argOid = args && typeof args === "object" && "order_id" in args ? args.order_id : null;
+      const reason = detectRecognizeReason(content);
+      let tag = "";
+      if (picked === null) {
+        tag = recognizeLabel(reason);
+      } else {
+        tag = "❌ 瞎调";
+      }
+
+      return (
+        <section className={`border-2 rounded p-3 space-y-2 ${cardColor}`}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">{expectedName}</h3>
+            <span className={`text-xs px-2 py-0.5 rounded ${tag.startsWith("✅") ? COLOR.diffGood : tag.startsWith("❌") ? COLOR.diffBad : "bg-gray-100 text-gray-700"}`}>
+              {tag}
+            </span>
+          </div>
+          <ToolsList tools={result.tools} title="本次发给模型的 Tool 描述（看有没有 **示例** 行）" />
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div><span className="text-gray-500">pickedToolName = </span><span className="font-mono">{fmt(picked, "(没调)")}</span></div>
+            <div><span className="text-gray-500">finish_reason = </span><span className="font-mono">{finishReason}</span></div>
+            <div><span className="text-gray-500">order_id = </span><span className="font-mono">{fmt(argOid, "(无)")}</span></div>
+            <div><span className="text-gray-500">识破类型 = </span><span className="font-mono">{picked === null ? recognizeLabel(reason) : "（调了 tool，不算识破）"}</span></div>
+            <div className="col-span-2"><span className="text-gray-500">content = </span><span className="font-mono">{fmtContentPreview(content)}</span></div>
+            <div><span className="text-gray-500">prompt_tokens = </span><span className="font-mono">{fmt(usage.prompt_tokens)}</span></div>
+            <div><span className="text-gray-500">completion_tokens = </span><span className="font-mono">{fmt(usage.completion_tokens)}</span></div>
+            <div><span className="text-gray-500">total_tokens = </span><span className="font-mono">{fmt(usage.total_tokens)}</span></div>
+            <div><span className="text-gray-500">耗时 ms = </span><span className="font-mono">{fmt(result.elapsedMs)}</span></div>
+          </div>
+        </section>
+      );
+    }
+
+    function DiffTable({ baseline, improved, query }) {
+      if (!baseline || !improved || !baseline.ok || !improved.ok) return null;
+
+      const bPicked = baseline.pickedToolName;
+      const iPicked = improved.pickedToolName;
+      const bContent = baseline.response?.choices?.[0]?.message?.content ?? null;
+      const iContent = improved.response?.choices?.[0]?.message?.content ?? null;
+      const bReason = detectRecognizeReason(bContent);
+      const iReason = detectRecognizeReason(iContent);
+      const bArgs = baseline.pickedToolArgs;
+      const iArgs = improved.pickedToolArgs;
+      const bOid = bArgs && typeof bArgs === "object" && "order_id" in bArgs ? bArgs.order_id : null;
+      const iOid = iArgs && typeof iArgs === "object" && "order_id" in iArgs ? iArgs.order_id : null;
+      const bFr = baseline.response?.choices?.[0]?.finish_reason;
+      const iFr = improved.response?.choices?.[0]?.finish_reason;
+      const bPrompt = baseline.response?.usage?.prompt_tokens;
+      const iPrompt = improved.response?.usage?.prompt_tokens;
+      const bComplete = baseline.response?.usage?.completion_tokens;
+      const iComplete = improved.response?.usage?.completion_tokens;
+      const bElapsed = baseline.elapsedMs;
+      const iElapsed = improved.elapsedMs;
+
+      const queryType = classifyQuery(query);
+      const bClass = classifyPick(bPicked, queryType, bContent);
+      const iClass = classifyPick(iPicked, queryType, iContent);
+
+      let coreLabel = "";
+      let coreBg = COLOR.diffSame;
+      const bOK = bClass.startsWith("✅");
+      const iOK = iClass.startsWith("✅");
+      if (bOK && iOK) {
+        if (queryType === "logistics") {
+          coreLabel = "🟢 两边都调对（物流类 · few-shot 也没误伤）";
+          coreBg = COLOR.diffGood;
+        } else if (queryType === "order_detail") {
+          coreLabel = "✅ 两边都识破（订单详情类）";
+          coreBg = COLOR.diffGood;
+        } else {
+          coreLabel = "🟡 两边都没调（边界场景，看不出 few-shot 差异）";
+          coreBg = COLOR.diffSame;
+        }
+      } else if (!bOK && iOK) {
+        coreLabel = "✅ A " + bClass + "、B " + iClass + " —— few-shot 生效";
+        coreBg = COLOR.diffGood;
+      } else if (bOK && !iOK) {
+        coreLabel = "❌ A " + bClass + "、B " + iClass + " —— 罕见（few-shot 把模型搞迷糊）";
+        coreBg = COLOR.diffBad;
+      } else {
+        coreLabel = "❌ A " + bClass + "、B " + iClass + " —— few-shot 不够强";
+        coreBg = COLOR.diffBad;
+      }
+
+      const rows = [
+        { label: "【核心对照】pickedToolName 是否符合 query 期望", b: bClass, i: iClass, diff: coreBg, core: true },
+        { label: "content 识破类型（picked===null 时才显示，否则 n/a）", b: bPicked === null ? recognizeLabel(bReason) : "n/a（调了 tool）", i: iPicked === null ? recognizeLabel(iReason) : "n/a（调了 tool）", diff: bReason === iReason ? COLOR.diffSame : COLOR.diffDiff },
+        { label: "pickedToolName", b: fmt(bPicked, "(没调)"), i: fmt(iPicked, "(没调)"), diff: bPicked === iPicked ? COLOR.diffSame : COLOR.diffDiff },
+        { label: "finish_reason", b: fmt(bFr), i: fmt(iFr), diff: bFr === iFr ? COLOR.diffSame : COLOR.diffDiff },
+        { label: "order_id（核心对照字段 · few-shot 决定填什么）", b: fmt(bOid, "(无)"), i: fmt(iOid, "(无)"), diff: JSON.stringify(bOid) === JSON.stringify(iOid) ? COLOR.diffSame : COLOR.diffDiff },
+        { label: "response.content", b: fmtContentPreview(bContent), i: fmtContentPreview(iContent), diff: bContent === iContent ? COLOR.diffSame : COLOR.diffDiff },
+        { label: "prompt_tokens", b: fmt(bPrompt), i: fmt(iPrompt), diff: COLOR.diffSame, hint: bPrompt !== undefined && iPrompt !== undefined ? `Δ ${iPrompt - bPrompt}` : "" },
+        { label: "completion_tokens", b: fmt(bComplete), i: fmt(iComplete), diff: COLOR.diffSame, hint: bComplete !== undefined && iComplete !== undefined ? `Δ ${iComplete - bComplete}` : "" },
+        { label: "耗时 ms", b: fmt(bElapsed), i: fmt(iElapsed), diff: COLOR.diffSame, hint: `Δ ${iElapsed - bElapsed}` },
+      ];
+
+      function diffLabel(row) {
+        if (row.core) return "";
+        if (row.diff === COLOR.diffSame) return "相同";
+        if (row.diff === COLOR.diffDiff) return "不同";
+        return "";
+      }
+
+      return (
+        <section className={`border-2 rounded p-3 ${COLOR.verdict}`}>
+          <h3 className="font-semibold text-sm mb-2">📊 完整差异点（A 组 vs B组）</h3>
+          <div className={`mb-3 text-sm font-medium p-2 rounded ${coreBg}`}>
+            【核心对照】{coreLabel}
+          </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-1">字段</th>
+                <th className="text-left p-1">A 组（差 · 描述无 few-shot）</th>
+                <th className="text-left p-1">B 组（好 · 描述含 1 个 few-shot 示例）</th>
+                <th className="text-left p-1">差异</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-b border-gray-200">
+                  <td className="p-1 font-medium">{r.label}</td>
+                  <td className={`p-1 font-mono break-all ${r.diff}`}>{r.b}</td>
+                  <td className={`p-1 font-mono break-all ${r.diff}`}>{r.i}</td>
+                  <td className="p-1">{diffLabel(r)}{r.hint && <span className="text-gray-500 ml-1">{r.hint}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-600 mt-2">query 默认「我那个订单到哪了」（模糊 · 无具体 order_id）→ 期望 pickedToolName=query_logistics + order_id 由 few-shot 决定（A 组瞎填 / B 组按示例抽 "12345"）。</p>
+        </section>
+      );
+    }
+
+    function App() {
+      const [query, setQuery] = useState("我那个订单到哪了");
+      const [baselineResult, setBaselineResult] = useState(null);
+      const [improvedResult, setImprovedResult] = useState(null);
+      const [busySide, setBusySide] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const inputRef = useRef(null);
+
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(h => {
+          const envSpan = document.getElementById("env-info");
+          if (envSpan) {
+            envSpan.textContent = `端口 ${h.port} · 协议 A · provider ${h.provider ?? "?"} · model ${h.model ?? "?"} · Key ${h.hasKey ? "✅" : "❌"}`;
+          }
+          if (!h.hasKey && inputRef.current) inputRef.current.disabled = true;
+        }).catch(() => {
+          const envSpan = document.getElementById("env-info");
+          if (envSpan) envSpan.textContent = "端口 50028 · 协议 A · /health 未连上";
+        });
+      }, []);
+
+      async function runOne(side) {
+        if (!query.trim()) {
+          setErrorText("query 不能为空");
+          return;
+        }
+        setBusySide(side);
+        setErrorText("");
+        try {
+          const r = await fetch(`/api/compare-${side}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query }),
+          });
+          const data = await r.json();
+          if (!r.ok) {
+            setErrorText(`${side} 调用失败：${data.error || "HTTP " + r.status}`);
+            return;
+          }
+          if (side === "baseline") setBaselineResult(data);
+          else setImprovedResult(data);
+        } catch (err) {
+          setErrorText(`fetch 异常：${String(err)}`);
+        } finally {
+          setBusySide(null);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">模块 05 · 02 · Tool Description · step-4 少样示例单次对照</h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">
+              {busySide ? `🔄调${busySide === "baseline" ? "A 组" : "B 组"}中` : "⏸待连接"}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>同一个 user query（模糊 · 无具体 order_id）调两次独立的 LLM，一次 A 组 · 描述无 few-shot，一次 B 组 · 描述含 1 个 few-shot 示例</b>，
+                下方「完整差异点」表把两次调用的 pickedToolName / order_id 字段填法（few-shot 决定）/ content / token / 耗时全列出来对比。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>在下方输入框写 user query（默认是「我那个订单到哪了」—— 模糊，无具体 order_id）</li>
+                <li>点「调一次 A 组（描述无 few-shot）」 → 一次 LLM 调用，结果存到左卡片</li>
+                <li>点「调一次 B 组（描述含 few-shot）」 → 又一次 LLM 调用，结果存到右卡片</li>
+                <li>两份结果都出来后，下方「完整差异点」表自动列出两边的所有可观察差异（变体 4「少样示例」实证）</li>
+              </ol>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div>
+                <label className="text-sm text-gray-700 block mb-1">User query（模糊订单号 · 验证 few-shot 决定填法）</label>
+                <textarea
+                  ref={inputRef}
+                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <p className="text-xs text-gray-500 mt-1">点了「调一次 A 组」会发生什么：服务端用「描述无 few-shot」的 Tool 调一次模型，看模型在模糊 query 下 order_id 怎么填。</p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  id="btn-baseline"
+                  className="bg-red-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  onClick={() => runOne("baseline")}
+                  disabled={busySide !== null}
+                >
+                  {busySide === "baseline" ? "调 A 组中..." : "调一次 A 组（描述无 few-shot）"}
+                </button>
+                <button
+                  id="btn-improved"
+                  className="bg-green-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  onClick={() => runOne("improved")}
+                  disabled={busySide !== null}
+                >
+                  {busySide === "improved" ? "调 B 组中..." : "调一次 B 组（描述含 few-shot）"}
+                </button>
+                <button
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  onClick={() => setQuery("我那个订单到哪了")}
+                  disabled={busySide !== null}
+                >
+                  改回示例 X（模糊 · 期望按 few-shot 抽 order_id）
+                </button>
+                <button
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  onClick={() => setQuery("我那单 67890 到了吗")}
+                  disabled={busySide !== null}
+                >
+                  改示例 Y（模糊 + 数字 · few-shot 会从 query 抽吗？）
+                </button>
+                <button
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  onClick={() => setQuery("我的快递 12345 到哪了")}
+                  disabled={busySide !== null}
+                >
+                  改示例 Z（few-shot 原文 · 应该稳填 order_id="12345"）
+                </button>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              {errorText && (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-700">错误：{errorText}</div>
+              )}
+              {!baselineResult && !improvedResult && !errorText && (
+                <p className="text-sm text-gray-500">还没调任何一侧 —— 点「调一次 A 组」或「调一次 B 组」开始（两边可以独立调，先后无所谓）。</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <OneCallCard
+                  result={baselineResult}
+                  expectedName="A 组（差 · 描述无 few-shot）"
+                  cardColor={COLOR.baselineCard}
+                />
+                <OneCallCard
+                  result={improvedResult}
+                  expectedName="B 组（好 · 描述含 1 few-shot 示例）"
+                  cardColor={COLOR.improvedCard}
+                />
+              </div>
+              <DiffTable baseline={baselineResult} improved={improvedResult} query={query} />
+            </section>
+
+            <section className="bg-white shadow rounded p-4 text-xs text-gray-600 space-y-2">
+              <p><b>怎么看日志：</b>每次单端点调用会写一条独立日志到 <code>apps/05-Tool-Calling/02-Tool-Description-step-4/logs/{`{YYYY-MM-DD}.log`}</code>（按 BJT 日切）：compare.baseline.received → ... → compare.baseline.sent；compare.improved.received → ... → compare.improved.sent。</p>
+              <p><b>本次实验教学点对应：</b>变体 4「少样示例」（description 含 1 个 few-shot 示例影响模型处理模糊 query 的填法稳定性）。其他变体（触发条件 / 参数语义 / 反例 / enum 约束 / 跨 Provider 等）见 <code>docs/学习模块/05-Tool-Calling/02-Tool-Description.md</code> 需求清单。</p>
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">端口 50028 · 协议 A · 待 /health</span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

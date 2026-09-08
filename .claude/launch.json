@@ -72,6 +72,54 @@
       "port": 50020,
       "url": "http://127.0.0.1:50020/",
       "autoPort": false
+    },
+    {
+      "name": "05-02-description-step-1",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-02-description-step-1"],
+      "port": 50025,
+      "url": "http://127.0.0.1:50025/",
+      "autoPort": false
+    },
+    {
+      "name": "05-02-description-step-2",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-02-description-step-2"],
+      "port": 50026,
+      "url": "http://127.0.0.1:50026/",
+      "autoPort": false
+    },
+    {
+      "name": "05-02-description-step-3",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-02-description-step-3"],
+      "port": 50027,
+      "url": "http://127.0.0.1:50027/",
+      "autoPort": false
+    },
+    {
+      "name": "05-02-description-step-4",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-02-description-step-4"],
+      "port": 50028,
+      "url": "http://127.0.0.1:50028/",
+      "autoPort": false
+    },
+    {
+      "name": "05-02-description-step-5",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-02-description-step-5"],
+      "port": 50029,
+      "url": "http://127.0.0.1:50029/",
+      "autoPort": false
+    },
+    {
+      "name": "05-02-description-step-6",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-02-description-step-6"],
+      "port": 50030,
+      "url": "http://127.0.0.1:50030/",
+      "autoPort": false
     }
   ]
 }

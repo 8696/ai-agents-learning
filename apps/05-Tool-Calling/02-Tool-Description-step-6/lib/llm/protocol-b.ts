@@ -1,0 +1,110 @@
+/**
+ * 职责：协议 B 封装 —— Anthropic Messages API（含 tools + tool_choice）。
+ * 数据流：messages + tools → llm.anthropic.messages.create() → response。
+ *
+ * step-6 关键差异（vs step-1~5 协议 A）：
+ *   - **API 路径**：`messages.create` 而不是 `chat.completions.create`
+ *   - **必填字段**：`max_tokens` 不填直接 400（对齐 Anthropic Messages API 硬约束）
+ *   - **tools 形状**：`{ name, description, input_schema }`（无 `function` 包裹、无 `parameters`）
+ *   - **tool_use 决定调**：`content: [{ type: "tool_use", id, name, input }]`（input 是对象，不是 JSON 字符串）
+ *   - **回灌 tool_result**：用 `role: "user"`, `content: [{ type: "tool_result", tool_use_id, content }]`（不是 `role: "tool"`）
+ *   - **响应 content**：数组结构（blocks），不是协议 A 的 `message.content: string | null`
+ *   - **Enum 字段**：`input_schema.properties[k].enum: string[]`（OpenAI 也支持，shape 一样）
+ *
+ * 教学锚点（本文件的核心价值）：
+ *   下面每个类型的字段都标了"是什么 / 为什么"——把这些字段在协议 B 层的物理意义讲透。
+ *   前端在 /api/compare-improved 返回值里拿到完整 request/response + tool_use，把"协议 B 跟 A 长什么样不一样"在页面**自动可见**。
+ */
+import { getLlm } from "../../../../llm.js";
+import { logger } from "../logger.js";
+
+// ── Anthropic tools 数组里单项的形状 ──
+//   每一项 = 一份「工具契约」告诉模型：你可以调这个，参数长这样（JSON Schema）。
+export type AnthropicToolSchema = {
+  name: string;
+  description: string;
+  input_schema: {
+    type: "object";
+    properties: Record<string, { type: string; description?: string; enum?: string[] }>;
+    required: string[];
+  };
+};
+
+// ── OpenAI 工具格式 → Anthropic 工具格式 翻译 ──
+//   OpenAI: { type:"function", function:{ name, description, parameters:{...} } }
+//   Anthropic: { name, description, input_schema:{...} }
+//   同一份 Tool schema 用这个函数翻译后就能给 Anthropic SDK 用
+export function openAIToAnthropicSchema(openAITools: Array<{
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: "object";
+      properties: Record<string, { type: string; description?: string; enum?: string[] }>;
+      required: string[];
+    };
+  };
+}>): AnthropicToolSchema[] {
+  return openAITools.map((t) => ({
+    name: t.function.name,
+    description: t.function.description,
+    input_schema: {
+      type: t.function.parameters.type,
+      properties: t.function.parameters.properties,
+      required: t.function.parameters.required,
+    },
+  }));
+}
+
+// ── Anthropic 风格 messages 数组里单项的形状（覆盖所有 role + content blocks）──
+export type AnthropicChatMsg =
+  | { role: "user"; content: string }
+  | { role: "assistant"; content: AnthropicContentBlock[] }
+  | { role: "user"; content: AnthropicContentBlock[] };  // 回灌 tool_result 用 user + tool_result blocks
+
+export type AnthropicContentBlock =
+  | { type: "text"; text: string }
+  | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
+  | { type: "tool_result"; tool_use_id: string; content: string | AnthropicContentBlock[]; is_error?: boolean };
+
+// ── 请求体（Anthropic Messages API）──
+export type ProtocolBRequest = {
+  model: string;
+  messages: AnthropicChatMsg[];
+  system?: string;
+  tools?: AnthropicToolSchema[];
+  tool_choice?: { type: "auto" | "any" | "tool"; name?: string };
+  max_tokens: number;  // **必填**
+  temperature?: number;
+};
+
+// ── 响应体（Anthropic Messages API）──
+export type ProtocolBResponse = {
+  id: string;
+  type: "message";
+  role: "assistant";
+  model: string;
+  content: AnthropicContentBlock[];
+  stop_reason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use";
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+};
+
+/** 真调一次协议 B。返回完整 response 让前端可视化。 */
+export async function callProtocolB(request: ProtocolBRequest): Promise<ProtocolBResponse> {
+  const llm = getLlm();
+  logger.debug("protocol-b.call", "→ anthropic.messages.create", "调 Anthropic 协议 B 发起请求；完整打 request 便于核对 model / messages / tools / max_tokens", {
+    model: request.model,
+    max_tokens: request.max_tokens,
+    messagesCount: request.messages.length,
+    toolsCount: request.tools?.length ?? 0,
+    __code: `await llm.anthropic.messages.create(${JSON.stringify(request, null, 2)});`,
+  });
+  // SDK 类型与 Anthropic API 略有差异；这里 as unknown as 跳过类型校验，运行期 SDK 内部会校验
+  const response = (await llm.anthropic.messages.create(request as never)) as unknown as ProtocolBResponse;
+  logger.debug("protocol-b.done", "← got response", "协议 B 返回；完整打响应便于追 SDK 自带字段（id / content blocks / stop_reason / usage）", response);
+  return response;
+}

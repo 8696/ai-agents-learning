@@ -249,6 +249,31 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
 
   `lib/http/runtime-ctx.ts` 把该数字写成 `z.coerce.number().default(...)`（不要写在 `server.ts` 里再 parse 一次）；启动必须打印 `http://127.0.0.1:{PORT}/`。
   可用环境变量 `PORT=` **单次**覆盖（只影响这一次进程）。**禁止**把 `PORT` 写进共享的 `apps/.env`（否则所有 Demo 被拧成同一个口）。
+
+**新约束（2026-09-08 起）**：每个 demo 的 `apps/package.json` script 命令必须 **inline `PORT=<该demo默认端口>`**，例如 `"app:05-02-description-step-1": "PORT=50025 tsx 05-Tool-Calling/02-Tool-Description-step-1/server.ts"`。
+
+| 责任 | 在哪 |
+| ---- | ---- |
+| **主端口源**（新建 / 改 demo 时改这里） | `apps/package.json` script 命令 inline `PORT=<N>` |
+| **占用表**（默认端口列） | `apps/README.md` 表格 |
+| **页脚 fallback / README 端口行** | demo 自己的 `public/components/layout.js`、`README.md` |
+| **兜底**（仅在 script 没 inline 且 `process.env.PORT` 也空时才用） | `lib/http/runtime-ctx.ts` 的 `z.coerce.number().default(<N>)` |
+
+理由：端口从 50000 起顺序分配 + 多 demo 并行跑，单看 `runtime-ctx.ts` 看不出「这条 demo 默认几号」。把端口 inline 进 yarn script = 跑这条 demo 时一眼看到 `PORT=50025`。`.default()` 仍保留（兜底），但不再是主要指定方式；学习者跑 `PORT=其他 yarn app:...` 单次覆盖也仍生效。
+
+**新建 demo 端口分配流程**（2026-09-08 起，端口的唯一权威源 = `apps/package.json`）：
+
+1. **解析** `apps/package.json`：grep 所有 `"app:.*PORT=<N> tsx` 的最后一条，拿到 N = 当前最大端口
+   - 不要查 `apps/README.md` 占用表（占用表是镜像，不是源；模块/小节号也不参与计算）
+   - 不要按 §5.3.14 的「5{模块}{小节+10×(N-1)}」公式（撞车备用，仅在显式撞车时 +10 继续）
+2. **新 demo 端口 = N+1**（例：当前最后一条是 `PORT=50025` → 新 demo = `PORT=50026`）
+3. **同步 4 份**到同一个 N+1：
+   - `apps/package.json` script 命令 inline `PORT=<N+1>`（**主端口源**）
+   - `apps/{demo}/lib/http/runtime-ctx.ts` `.default(<N+1>)`（兜底）
+   - `apps/{demo}/public/components/layout.js` 页脚 fallback + `apps/{demo}/README.md` 端口行
+   - `apps/README.md` 占用表 append 新行（默认端口列 = N+1）
+4. **验证**：`cd apps && node ../scripts/check-demo.cjs` 必须「默认端口全仓库不重复」+「yarn app:* 没有 CLI 入口」全过
+
   **禁止**：3000 / 5180 / 8080 / 5173 这类随手写的口；一份 Demo 为每个场景页再 listen 一个口（多页共用一个进程、一个口）；页脚 fallback 抄别条的数字。
 - **`package.json` script**：名字 `app:{模块两位}-{小节两位}-{英文短名}-step-{N}`；命令 `tsx {模块文件夹}/{小节文件夹}-step-{N}/server.ts`（在 `apps/` 下跑）。**不再单独入口层**（不要再写一个只转发的 `index.ts`）。
 - **不引**：express / fastify / sirv / 任何非 koa web 框架；htm / preact / 任何 React 替代品；vite / webpack / parcel / esbuild / 任何打包器。

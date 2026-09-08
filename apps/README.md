@@ -45,6 +45,12 @@
 | `yarn app:05-01-fc-protocol-step-6` | `50022` | step-6 真 LLM（协议 A · openai.chat.completions）；两轮调用 + 4 张数据卡全量可视化 + 路由层 detectHallucination 自动扫 reply 数字 vs tool_result 数字差异 |
 | `yarn app:05-01-fc-protocol-step-7` | `50023` | step-7 混合编排（mock · 不调 LLM）；路由层 hard-code 两条约束（拒绝越权 + 路径 B 硬接）+ 模型决定要不要进两步链；3 条路径（A 仅 weather / B weather+硬接 suggest / C 直接打包被拒→退回） |
 | `yarn app:05-01-fc-protocol-step-8` | `50024` | step-8 协议 B（真 LLM · Anthropic Messages API）；单协议 B · 4 张数据卡全量可视化 + 字段差异对照表（协议 A step-6 vs 协议 B step-8）；不做协议 A vs B 同页并排（§5.3.13 硬约束 · 本条不是"对照"教学点；字段并排对照是模块 02-02 教学点） |
+| `yarn app:05-02-description-step-1` | `50025` | 模块 05 · 02 · Tool Description 对照实验：同 query 配「差描述 / 好描述」两套 Tool 各调一次模型，对照 tool_call 选择（变体 1「触发条件」实证） |
+| `yarn app:05-02-description-step-2` | `50026` | 模块 05 · 02 · Tool Description step-2：单 Tool · 唯一差异 = order_id 字段有无 description；user 用城市名当订单号，看模型是否瞎填（变体 2「参数语义」实证） |
+| `yarn app:05-02-description-step-3` | `50027` | 模块 05 · 02 · Tool Description step-3：单 Tool · 唯一差异 = query_logistics.description 含不含「不要用于查订单详情」反例；user 问订单地址，看模型是否瞎调（变体 3「反例」实证） |
+| `yarn app:05-02-description-step-4` | `50028` | 模块 05 · 02 · Tool Description step-4：单 Tool · 唯一差异 = query_logistics.description 含不含 1 个 few-shot 示例；user 问模糊订单号，看模型是否按示例规范填（变体 4「少样示例」实证） |
+| `yarn app:05-02-description-step-5` | `50029` | 模块 05 · 02 · Tool Description step-5：单 Tool · 唯一差异 = priority 字段是否用 enum 限定 ['low','medium','high']；user 问"急"类 query，看模型幻觉 enum 外值 vs 稳填 enum 内（变体 5「Enum 约束」实证） |
+| `yarn app:05-02-description-step-6` | `50030` | 模块 05 · 02 · Tool Description step-6：同 Tool schema · 唯一差异 = 协议 A `openai.chat.completions` vs 协议 B `anthropic.messages`；验证「step-1~5 综合最优 Tool schema」跨 Provider 是否通用（变体 6「跨 Provider 兼容」实证） |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
