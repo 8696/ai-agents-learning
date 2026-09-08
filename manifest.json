@@ -4286,6 +4286,609 @@
                 "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/server.ts"
               }
             ]
+          },
+          {
+            "label": "03-Tool-Choice-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "call-with-tool-choice.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/lib/llm/call-with-tool-choice.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "choice.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/routes/choice.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Tool-Choice-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "call-with-forced-choice.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/lib/llm/call-with-forced-choice.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "force.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/routes/force.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Tool-Choice-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "call-with-mapped-choice.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/lib/llm/call-with-mapped-choice.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "switches",
+                    "children": [
+                      {
+                        "label": "product-switches.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/lib/switches/product-switches.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "switch.ts",
+                    "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/routes/switch.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-Tool-Gateway-幂等-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "audit",
+                    "children": [
+                      {
+                        "label": "audit-log.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/audit/audit-log.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "gateway",
+                    "children": [
+                      {
+                        "label": "hooks.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/gateway/hooks.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-b.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/llm/protocol-b.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "delete-user.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/tools/delete-user.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-Tool-Gateway-幂等-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-b.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/lib/llm/protocol-b.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "create-order.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/lib/tools/create-order.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-Tool-Gateway-幂等-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-b.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/lib/llm/protocol-b.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "read-recent-emails.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/lib/tools/read-recent-emails.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-Tool-Gateway-幂等-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-b.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/lib/llm/protocol-b.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "divide.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/lib/tools/divide.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/server.ts"
+              }
+            ]
           }
         ]
       },
