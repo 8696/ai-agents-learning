@@ -54,6 +54,10 @@
 | `yarn app:05-03-tool-choice-step-1` | `50031` | 模块 05 · 03 · Tool Choice step-1：同 tools + 同 query，前端切换 auto/none/required；三档结果常驻对照 hasToolCalls（变体 1–3 起手） |
 | `yarn app:05-03-tool-choice-step-2` | `50032` | 模块 05 · 03 · Tool Choice step-2：双 Tool（物流+天气）；required 任选 vs 钉死 name；对照 firstToolName（变体 4） |
 | `yarn app:05-03-tool-choice-step-3` | `50033` | 模块 05 · 03 · Tool Choice step-3：产品开关「只聊天/允许工具/强制查库」→ none/auto/required 映射（变体 5） |
+| `yarn app:05-04-tool-gateway-step-1` | `50034` | 模块 05 · 04 · Tool Gateway step-1：协议 B（Anthropic Messages API）真 LLM + delete_user Gateway 三钩子（鉴权 / 配额 / 危险）+ 二次确认（变体 1） |
+| `yarn app:05-04-tool-gateway-step-2` | `50035` | 模块 05 · 04 · Tool Gateway step-2：变体 2 create_order 幂等（调 LLM 协议 B · 同 idempotency_key 调 3 次 /api/chat → DB 只插 1 行） |
+| `yarn app:05-04-tool-gateway-step-3` | `50036` | 模块 05 · 04 · Tool Gateway step-3：变体 3 read_recent_emails 委托授权（调 LLM 协议 B · per-user OAuth + fail-closed + 未 OAuth 拒绝） |
+| `yarn app:05-04-tool-gateway-step-4` | `50037` | 模块 05 · 04 · Tool Gateway step-4：变体 4 Tool 抛错结构化（调 LLM 协议 B · 3 按钮演示成功 / 业务错 / 参数错 → handler throw → 结构化错误 → Round 2 模型改输入） |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

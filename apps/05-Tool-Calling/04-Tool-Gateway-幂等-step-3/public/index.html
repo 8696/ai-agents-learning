@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tool Gateway · step-3 · 变体 3 · read_recent_emails 委托授权（调 LLM）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+    const { StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+
+    function ContentBlocksView({ blocks, label }) {
+      if (!Array.isArray(blocks)) {
+        return (
+          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-2">
+            <div className="font-medium">{label}</div>
+            <pre className="whitespace-pre-wrap mt-1 text-gray-700">{JSON.stringify(blocks, null, 2)}</pre>
+          </div>
+        );
+      }
+      return (
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-gray-600">{label}</div>
+          {blocks.map((b, i) => {
+            if (b.type === "text") {
+              return (
+                <div key={i} className="border border-gray-300 bg-white rounded p-2 text-xs">
+                  <span className="px-1 rounded bg-gray-100 mr-1">text</span>
+                  <span className="text-gray-800 whitespace-pre-wrap">{b.text || "(空)"}</span>
+                </div>
+              );
+            }
+            if (b.type === "tool_use") {
+              return (
+                <div key={i} className="border border-blue-300 bg-blue-50 rounded p-2 text-xs">
+                  <span className="px-1 rounded bg-blue-100 mr-1">tool_use</span>
+                  <span className="font-medium">id={b.id}</span> · <span className="font-medium">name={b.name}</span>
+                  <pre className="whitespace-pre-wrap mt-1 text-gray-800 bg-white border border-gray-200 rounded p-2 max-h-32 overflow-auto">
+                    input = {JSON.stringify(b.input, null, 2)}
+                  </pre>
+                </div>
+              );
+            }
+            if (b.type === "tool_result") {
+              return (
+                <div key={i} className={"border rounded p-2 text-xs " + (b.is_error ? "border-red-300 bg-red-50" : "border-green-300 bg-green-50")}>
+                  <span className="px-1 rounded bg-gray-100 mr-1">tool_result</span>
+                  <span className="font-medium">tool_use_id={b.tool_use_id}</span>
+                  {b.is_error ? <span className="ml-1 text-red-700">is_error=true</span> : null}
+                  <pre className="whitespace-pre-wrap mt-1 text-gray-800 bg-white border border-gray-200 rounded p-2 max-h-32 overflow-auto">
+                    content = {typeof b.content === "string" ? b.content : JSON.stringify(b.content, null, 2)}
+                  </pre>
+                </div>
+              );
+            }
+            return (
+              <div key={i} className="border border-gray-300 bg-white rounded p-2 text-xs">
+                <pre className="whitespace-pre-wrap text-gray-700">{JSON.stringify(b, null, 2)}</pre>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function RoundCard({ title, r1 }) {
+      if (!r1) return null;
+      const respBlocks = r1.ok ? (r1.response && r1.response.content) || [] : null;
+      return (
+        <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
+          <div className="flex justify-between text-sm font-semibold">
+            <span>{title}</span>
+            <span className="text-xs text-gray-500">{r1.ok ? "✅ 200" : "❌ " + (r1.upstreamStatus || "err")}</span>
+          </div>
+          <div className="text-xs text-gray-700">
+            <div>Request.model：<code className="bg-gray-100 px-1 rounded">{r1.request && r1.request.model}</code></div>
+            <div>Request.tools 数：{r1.request && r1.request.tools ? r1.request.tools.length : "?"}</div>
+            <div>Request.max_tokens：{r1.request && r1.request.max_tokens}</div>
+          </div>
+          {r1.ok ? (
+            <div className="space-y-2">
+              <ContentBlocksView blocks={respBlocks} label={"Response.content · stop_reason=" + (r1.response.stop_reason || "?")} />
+              <div className="text-xs text-gray-500">usage：{JSON.stringify(r1.response.usage || {})}</div>
+            </div>
+          ) : (
+            <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+              <div className="font-medium">上游错误</div>
+              <div>{r1.error}</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [actorUserId, setActorUserId] = useState("alice");
+      const [input, setInput] = useState("帮我读一下最近的 5 封邮件");
+      const [max, setMax] = useState(5);
+      const [data, setData] = useState(null);
+      const [pageError, setPageError] = useState(null);
+      const busy = status === "loading";
+
+      async function runChat() {
+        setPageError(null);
+        setStatus("loading");
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              input: input + "（max=" + max + "）",
+              actor: { userId: actorUserId, role: "user" },
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            setPageError((json.error || "HTTP " + res.status) + (json.upstream_status ? " · upstream=" + json.upstream_status : ""));
+          } else {
+            setPageError(null);
+          }
+          setData(json);
+          setStatus(res.ok ? "ok" : "error");
+        } catch (e) {
+          setPageError(String(e));
+          setStatus("error");
+          setData({ error: String(e) });
+        }
+      }
+
+      let outContent;
+      if (!data) {
+        outContent = (
+          <div className="border border-dashed border-gray-300 rounded p-3 bg-gray-50 text-xs text-gray-400">
+            尚未跑过；选 actor userId（alice / bob / platform-god / carol）→ 点按钮调模型
+          </div>
+        );
+      } else if (data.error) {
+        outContent = (
+          <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{data.error}</div>
+        );
+      } else {
+        const toolResults = data.tool_results || [];
+        const readResult = toolResults.find((r) => r.tool === "read_recent_emails");
+        outContent = (
+          <div className="space-y-2">
+            <RoundCard title={"Round 1 · 协议 B messages + tools"} r1={data.round_1} />
+            {readResult ? (
+              <div className={"border rounded p-3 space-y-2 " + (readResult.ok ? "border-green-400 bg-green-50" : "border-red-300 bg-red-50")}>
+                <div className="flex justify-between text-sm font-medium">
+                  <span>read_recent_emails · {readResult.tool}</span>
+                  <span>{readResult.ok ? "✅ per-user OAuth 命中" : "❌ " + (readResult.code || "rejected")}</span>
+                </div>
+                <pre className="whitespace-pre-wrap text-gray-800 bg-white border border-gray-200 rounded p-2 max-h-64 overflow-auto">
+                  {readResult.ok ? JSON.stringify(readResult.result, null, 2) : JSON.stringify({ error: readResult.error, code: readResult.code }, null, 2)}
+                </pre>
+                <div className="text-xs text-gray-600">
+                  {readResult.ok
+                    ? "→ 资源 = 该用户自己的（per-user 隔离）。alice 看到的邮件 ≠ bob 看到的邮件。"
+                    : readResult.code === "FORBIDDEN" && readResult.error && readResult.error.indexOf("平台") >= 0
+                      ? "→ fail-closed：平台上帝 Key 一律拒。Agent 平台只能存「刷新 Token 的能力」，不能存「能代表任意用户调接口的 Key」。"
+                      : "→ 该 userId 未完成 OAuth 授权；Agent 不能代读其邮件。"}
+                </div>
+              </div>
+            ) : (
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 text-xs text-gray-600">
+                模型没调 read_recent_emails —— 写更明确的「读邮件」请求。
+              </div>
+            )}
+            {data.round_2 ? <RoundCard title={"Round 2 · messages + tool_result blocks 回灌"} r1={data.round_2} /> : null}
+            <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+              <div className="text-sm font-semibold">final_reply</div>
+              <div className="text-sm text-gray-800 whitespace-pre-wrap">{data.final_reply || "(空)"}</div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Tool Gateway · step-3 · 变体 3 · read_recent_emails 委托授权（调 LLM）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <main id="page-main" className="container mx-auto p-4 space-y-4 flex-1">
+            <PageIntro />
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <div id="controls" className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="md:col-span-2 space-y-1">
+                    <label>query（让模型决定调 read_recent_emails）</label>
+                    <textarea
+                      className="w-full border rounded px-3 py-2 min-h-[60px]"
+                      value={input}
+                      disabled={busy}
+                      onChange={(e) => setInput(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label>actor userId（per-user OAuth + fail-closed）</label>
+                    <select
+                      className="w-full border rounded px-3 py-2"
+                      value={actorUserId}
+                      disabled={busy}
+                      onChange={(e) => setActorUserId(e.target.value)}
+                    >
+                      <option value="alice">alice（已 OAuth）</option>
+                      <option value="bob">bob（已 OAuth）</option>
+                      <option value="platform-god">platform-god（fail-closed）</option>
+                      <option value="carol">carol（未 OAuth）</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label>max（返回邮件上限 · 1-20）</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      className="w-full border rounded px-3 py-2"
+                      value={max}
+                      disabled={busy}
+                      onChange={(e) => setMax(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <button
+                    type="button"
+                    disabled={busy || !input.trim()}
+                    onClick={runChat}
+                    className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                  >
+                    调模型发请求（POST /api/chat）
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    期望：alice / bob → per-user 邮件；platform-god → FORBIDDEN（fail-closed）；carol → FORBIDDEN（未 OAuth）
+                  </span>
+                </div>
+                {pageError ? (
+                  <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">{pageError}</div>
+                ) : null}
+              </div>
+              <div className="border-t pt-3 space-y-2">
+                <div className="text-sm font-medium text-gray-700">输出 · 协议 B 数据卡 + per-user OAuth 三步结果</div>
+                <div id="output" className="space-y-2">{outContent}</div>
+              </div>
+            </section>
+          </main>
+          <EnvFooter />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

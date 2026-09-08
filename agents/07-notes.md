@@ -217,7 +217,7 @@ step-N 增加触发**两层更新**：
 ```
 时间线：
   T0  本条 MD 沉淀「是什么 tool_call / 为什么需要 / 协议字段」+ 答「画一圈」+ 写 Demo 子节进度表（空）
-  T1  落 step-1（mock round-trip）→ 表加 step-1 行（🔄），「教学点」=「tool_call 协议结构（mock）」
+  T1  落 step-1（真调 LLM round-trip）→ 表加 step-1 行（🔄），「教学点」=「tool_call 协议结构 + 真调 LLM」
   T2  锁定 step-1 → step-1 行（✅），「教学点」描述订正为「tool_call 协议结构 + 3 类错误态」
   T3  落 step-2（并行 tool_call）→ 表加 step-2 行（🔄），「教学点」=「并行 tool_call（Promise.all）」
   T4  step-2 跑出来发现新踩坑：「并行中两个 tool_call 同名 → Zod schema 撞车」

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tool Gateway · step-1 · 协议 B + 三钩子</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+    const { StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+
+    // ── 单条工具结果卡（含钩子判定链） ──
+    function ToolResultCard({ tr, idx }) {
+      const trace = tr.hookTrace || [];
+      // #14：retryAfterMs 端到端透传——前端看得见，模型下轮也看得见
+      const hasRetryAfter = !tr.ok && (tr.code === "RATE_LIMITED" || tr.code === "NEEDS_CONFIRM") && tr.retryAfterMs;
+      return (
+        <div className={"border rounded p-3 space-y-2 " + (tr.ok ? "border-green-400 bg-green-50" : "border-amber-400 bg-amber-50")}>
+          <div className="flex justify-between text-sm font-medium">
+            <span>tool_use #{idx + 1} · {tr.tool}</span>
+            <span>{tr.ok ? "✅ 三钩子全过" : "❌ " + (tr.code || "rejected")}</span>
+          </div>
+          <div className="space-y-1">
+            {trace.map((h, i) => {
+              const cls = h.allowed
+                ? "border-green-300 bg-white"
+                : h.code === "NEEDS_CONFIRM"
+                  ? "border-amber-400 bg-amber-50"
+                  : "border-red-300 bg-red-50";
+              return (
+                <div key={i} className={"border rounded p-2 text-xs " + cls}>
+                  <div className="flex justify-between font-medium">
+                    <span>钩子 {i + 1} · {h.hook}</span>
+                    <span>{h.allowed ? "✅ pass" : "❌ " + (h.code || "reject")}</span>
+                  </div>
+                  <div className="mt-1 text-gray-700">{h.reason}</div>
+                </div>
+              );
+            })}
+          </div>
+          {hasRetryAfter ? (
+            <div className="border border-amber-400 bg-amber-50 rounded p-2 text-xs">
+              <div className="font-semibold text-amber-900">⏱ retryAfterMs = {tr.retryAfterMs}</div>
+              <div className="text-amber-900">
+                换算：≈ {Math.round(tr.retryAfterMs / 1000 / 60)} 分钟 / ≈ {Math.round(tr.retryAfterMs / 1000 / 3600)} 小时
+                → 模型下轮告诉用户「{tr.code === "RATE_LIMITED" ? "今天调满了，下个月再试" : "需要二次确认"}」
+              </div>
+            </div>
+          ) : null}
+          <div className="text-xs">
+            <div className="font-medium text-gray-600">tool_result（喂回 Round 2）：</div>
+            <pre className="whitespace-pre-wrap mt-1 text-gray-800 bg-white border border-gray-200 rounded p-2 max-h-32 overflow-auto">
+              {tr.ok
+                ? JSON.stringify(tr.result, null, 2)
+                : JSON.stringify({ error: tr.error, code: tr.code, retryAfterMs: tr.retryAfterMs }, null, 2)}
+            </pre>
+          </div>
+        </div>
+      );
+    }
+
+    // ── 协议 B content blocks 渲染（text / tool_use / tool_result） ──
+    function ContentBlocksView({ blocks, label }) {
+      if (!Array.isArray(blocks)) {
+        return (
+          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-2">
+            <div className="font-medium">{label}</div>
+            <pre className="whitespace-pre-wrap mt-1 text-gray-700">{JSON.stringify(blocks, null, 2)}</pre>
+          </div>
+        );
+      }
+      return (
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-gray-600">{label}</div>
+          {blocks.map((b, i) => {
+            if (b.type === "text") {
+              return (
+                <div key={i} className="border border-gray-300 bg-white rounded p-2 text-xs">
+                  <span className="px-1 rounded bg-gray-100 mr-1">text</span>
+                  <span className="text-gray-800 whitespace-pre-wrap">{b.text || "(空)"}</span>
+                </div>
+              );
+            }
+            if (b.type === "tool_use") {
+              return (
+                <div key={i} className="border border-blue-300 bg-blue-50 rounded p-2 text-xs">
+                  <span className="px-1 rounded bg-blue-100 mr-1">tool_use</span>
+                  <span className="font-medium">id={b.id}</span> · <span className="font-medium">name={b.name}</span>
+                  <pre className="whitespace-pre-wrap mt-1 text-gray-800 bg-white border border-gray-200 rounded p-2 max-h-32 overflow-auto">
+                    input = {JSON.stringify(b.input, null, 2)}
+                  </pre>
+                </div>
+              );
+            }
+            if (b.type === "tool_result") {
+              return (
+                <div key={i} className={"border rounded p-2 text-xs " + (b.is_error ? "border-red-300 bg-red-50" : "border-green-300 bg-green-50")}>
+                  <span className="px-1 rounded bg-gray-100 mr-1">tool_result</span>
+                  <span className="font-medium">tool_use_id={b.tool_use_id}</span>
+                  {b.is_error ? <span className="ml-1 text-red-100">is_error=true</span> : null}
+                  <pre className="whitespace-pre-wrap mt-1 text-gray-800 bg-white border border-gray-200 rounded p-2 max-h-32 overflow-auto">
+                    content = {typeof b.content === "string" ? b.content : JSON.stringify(b.content, null, 2)}
+                  </pre>
+                </div>
+              );
+            }
+            return (
+              <div key={i} className="border border-gray-300 bg-white rounded p-2 text-xs">
+                <pre className="whitespace-pre-wrap text-gray-700">{JSON.stringify(b, null, 2)}</pre>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ── 单轮 Request / Response 卡 ──
+    function RoundCard({ title, r1, idx }) {
+      if (!r1) return null;
+      const respBlocks = r1.ok ? (r1.response && r1.response.content) || [] : null;
+      return (
+        <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
+          <div className="flex justify-between text-sm font-semibold">
+            <span>{title}</span>
+            <span className="text-xs text-gray-500">{r1.ok ? "✅ 200" : "❌ " + (r1.upstreamStatus || "err")}</span>
+          </div>
+          <div className="text-xs text-gray-700">
+            <div className="font-medium">Request.model：<code className="bg-gray-100 px-1 rounded">{r1.request && r1.request.model}</code></div>
+            <div>Request.messages 数：{r1.request && r1.request.messages ? r1.request.messages.length : "?"}</div>
+            <div>Request.tools 数：{r1.request && r1.request.tools ? r1.request.tools.length : "?"}</div>
+            <div>Request.max_tokens：{r1.request && r1.request.max_tokens}</div>
+          </div>
+          {r1.ok ? (
+            <div className="space-y-2">
+              <ContentBlocksView blocks={respBlocks} label={"Response.content（协议 B blocks 数组） · stop_reason=" + (r1.response.stop_reason || "?")} />
+              <div className="text-xs text-gray-500">
+                usage：{JSON.stringify(r1.response.usage || {})}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+              <div className="font-medium">上游错误</div>
+              <div>{r1.error}</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [input, setInput] = useState("请把用户 42 删除，原因是测试账号。");
+      const [actorRole, setActorRole] = useState("admin");
+      const [actorId, setActorId] = useState("alice");
+      const [confirmToken, setConfirmToken] = useState(""); // 空 = 不带 → 触发 NEEDS_CONFIRM
+      const [data, setData] = useState(null);
+      const [pageError, setPageError] = useState(null);
+
+      const busy = status === "loading";
+
+      async function runChat() {
+        setPageError(null);
+        setStatus("loading");
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              input,
+              actor: { userId: actorId, role: actorRole },
+              confirmToken: confirmToken || undefined,
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            setPageError((json.error || "HTTP " + res.status) + (json.upstream_status ? " · upstream=" + json.upstream_status : ""));
+          } else {
+            setPageError(null);
+          }
+          setData(json);
+          setStatus(res.ok ? "ok" : "error");
+        } catch (e) {
+          const msg = String(e);
+          setPageError(msg);
+          setStatus("error");
+          setData({ error: msg });
+        }
+      }
+
+      const toolUses = (data && data.model_tool_uses) || [];
+      const toolResults = (data && data.tool_results) || [];
+
+      return (
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Tool Gateway · step-1 · 协议 B + 三钩子
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4 flex-1">
+            <PageIntro />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="md:col-span-2 space-y-1">
+                  <label>用户 query（让模型决定调不调 delete_user；写明 user_id + reason 更容易触发）</label>
+                  <textarea
+                    className="w-full border rounded px-3 py-2 min-h-[60px]"
+                    value={input}
+                    disabled={busy}
+                    onChange={(e) => setInput(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label>actor role（演示鉴权；user → 鉴权失败）</label>
+                  <select
+                    className="w-full border rounded px-3 py-2"
+                    value={actorRole}
+                    disabled={busy}
+                    onChange={(e) => setActorRole(e.target.value)}
+                  >
+                    <option value="admin">admin</option>
+                    <option value="user">user（鉴权会失败 → FORBIDDEN）</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label>actor id（任填 · 配额按 userId 计数）</label>
+                  <input
+                    className="w-full border rounded px-3 py-2"
+                    value={actorId}
+                    disabled={busy}
+                    onChange={(e) => setActorId(e.target.value)}
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <label>confirm_token（不填 = 触发 NEEDS_CONFIRM；填 "I-CONFIRM" = 二次确认通过）</label>
+                  <input
+                    className="w-full border rounded px-3 py-2"
+                    value={confirmToken}
+                    placeholder="（空 = 不带）"
+                    disabled={busy}
+                    onChange={(e) => setConfirmToken(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  disabled={busy || !input.trim()}
+                  onClick={runChat}
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  调模型发请求（POST /api/chat）
+                </button>
+                <span className="text-xs text-gray-500">
+                  期望：role=user → FORBIDDEN；不填 confirm_token → NEEDS_CONFIRM；都填 → 三钩子全过
+                </span>
+              </div>
+
+              {pageError && (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                  {pageError}
+                </div>
+              )}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <div className="text-sm font-medium">输出区 · 协议 B 4 张数据卡 + 钩子判定链 + 审计</div>
+
+              {!data ? (
+                <div className="border border-dashed border-gray-300 rounded p-3 bg-gray-50 min-h-[200px]">
+                  <p className="text-xs text-gray-400">尚未跑过；点上方按钮调模型 → 走 Gateway 三钩子</p>
+                </div>
+              ) : data.error ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">
+                  {data.error}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <RoundCard title={"Round 1 · 协议 B messages=[user] + tools + max_tokens"} r1={data.round_1} idx={1} />
+
+                  {toolUses.length > 0 ? (
+                    <div className="border border-blue-400 bg-blue-50 rounded p-3 space-y-2">
+                      <div className="text-sm font-semibold text-blue-900">
+                        执行 · model_tool_uses → executeTool → Gateway 三钩子
+                      </div>
+                      {toolUses.map((tu, i) => {
+                        const tr = toolResults[i] || {};
+                        return (
+                          <div key={i} className="space-y-1">
+                            <div className="text-xs text-gray-700">
+                              tool_use #{i + 1}：id=<code className="bg-white px-1 rounded">{tu.id}</code> · name=<code className="bg-white px-1 rounded">{tu.name}</code>
+                            </div>
+                            <ToolResultCard tr={tr} idx={i} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="border border-gray-300 bg-gray-50 rounded p-3 text-xs text-gray-600">
+                      模型没发任何 tool_use —— 试写更明确的删除请求（如「删用户 42」）。
+                    </div>
+                  )}
+
+                  {data.round_2 ? (
+                    <RoundCard title={"Round 2 · messages + tool_result blocks 回灌"} r1={data.round_2} idx={2} />
+                  ) : null}
+
+                  <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                    <div className="text-sm font-semibold">final_reply（模型第二轮拼好的答）</div>
+                    <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                      {data.final_reply || "(空)"}
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500">
+                    actor：{JSON.stringify(data.actor || {})} · confirm_token：{data.confirm_token ?? "(未带)"}
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

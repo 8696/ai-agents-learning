@@ -42,7 +42,11 @@
     "app:05-02-description-step-6": "PORT=50030 tsx 05-Tool-Calling/02-Tool-Description-step-6/server.ts",
     "app:05-03-tool-choice-step-1": "PORT=50031 tsx 05-Tool-Calling/03-Tool-Choice-step-1/server.ts",
     "app:05-03-tool-choice-step-2": "PORT=50032 tsx 05-Tool-Calling/03-Tool-Choice-step-2/server.ts",
-    "app:05-03-tool-choice-step-3": "PORT=50033 tsx 05-Tool-Calling/03-Tool-Choice-step-3/server.ts"
+    "app:05-03-tool-choice-step-3": "PORT=50033 tsx 05-Tool-Calling/03-Tool-Choice-step-3/server.ts",
+    "app:05-04-tool-gateway-step-1": "PORT=50034 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-1/server.ts",
+    "app:05-04-tool-gateway-step-2": "PORT=50035 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-2/server.ts",
+    "app:05-04-tool-gateway-step-3": "PORT=50036 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-3/server.ts",
+    "app:05-04-tool-gateway-step-4": "PORT=50037 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-4/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

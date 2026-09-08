@@ -115,7 +115,7 @@ Demo 只用 `getLlm()` / `getLlmOptional()`，不要再直接读 `PROVIDER_IDS` 
 Demo 判断
 - 小节：{该行「重点」}
 - 结论：无 | 伪代码 | 可运行
-- step-1 起手：一句话点明本条 step-1 只演示什么（如「1 函数 mock tool_call JSON」/「请求/响应 shape 静态展示」/「单 tool_call happy path」）
+- step-1 起手：一句话点明本条 step-1 只演示什么（如「调 LLM 真跑一次 happy path」/「请求/响应 shape 静态展示」/「单 tool_call 真调 LLM 闭环」）
 - 锁定时机：学习者主动决定（不是自动触发；详见 §5.3.14）
 - 理由：{对照「本条要能讲清」}
 - 落点：— | 该条 MD 机制节 | apps/{模块文件夹}/{小节文件夹}-step-{N}/ · yarn app:{模块两位}-{小节两位}-{英文短名}-step-{N}
@@ -165,6 +165,19 @@ apps/{模块文件夹}/{小节文件夹}/
 ### 5.3 小节 Demo 完整版（前后端 · React + koa，2026-09-02 维护模式起生效）
 
 `§5.2`「最小可运行」对外部小节不充分：起进程看一次响应就关掉，看不到错误态、看不到对照。**2026-09-03 起：凡结论是「可运行」的外部小节一律按 §5.3 全栈版写**（调 API 与纯本地计算都要有页面）。禁止用「happy path + 一个行为」交差，禁止只留终端 `index.ts`。
+
+#### 5.3.0 Demo 默认调大模型（硬规则，2026-09-08 起）
+
+落 Demo **默认情况下必须真调用大模型**。**禁止**用本地 mock / 固定返回值 / hard-coded JSON 冒充模型响应（包括「1 个函数返回假数据 + 1 个按钮 + 1 个 #output」这类最小闭环起手）。
+
+**Why**：本仓库核心是学 LLM 应用；调不到真模型的 Demo = 没教学价值。Mock 出来的「成功」和真模型的「成功」不是同一回事——响应延迟、token 流、错误态、模型行为差异都不在 mock 里。学完只跑过 mock 等于没碰 LLM。
+
+**例外（这两种仍可不调 LLM，照常打日志 + 过 check-demo）**：
+
+- **本地计算**：Token encode / Zod parse / 余弦 / 玩具向量表 / 任何不调 LLM 的纯函数（§5.0.x、§5.3 / §647 已有专门路径）
+- **纯协议形状 / UI 渲染层演示**：tool_call 请求 / 响应 JSON 形状演示、纯前端 UI 渲染层（调 LLM 也看不到形状差；这种情况用静态 JSON 当作「形状样例」≠ 充当「模型响应」，且 §5.2 Demo 判断块要写明是「形状演示」）
+
+**生效范围**：本规则对**此后新落 / 新改**的 Demo / step 强制。已锁定旧 Demo **不回头补**（除非点名），与 §5.6 日志一致。
 
 #### 5.3.1 适用范围
 
@@ -306,6 +319,12 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
        与本规则"完全 ESM 禁用"冲突。7.26.4 默认是 classic runtime（输出 React.createElement）。
        不要在 script type="text/babel" 块上加 data-presets / data-plugins——Babel 默认行为即可。 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4 强制：**JSX 块内不允许 TypeScript 语法**（2026-09-08 沉淀 · step-2 白屏事故）
+       Babel Standalone 默认只编译 JSX → JS，**不解析 TS 类型注解**。
+       浏览器运行时遇到 TS 泛型 / 类型注解 → ReferenceError（如 "number is not defined"）。
+       禁止：useRef<number>(null) · interface Foo {} · type Bar = ... · const x: string = ...
+       允许：纯 JS · 运行时类型用 propTypes / 注释 · type 断言全删。 -->
 
   <!-- 自定义 CSS 仅当 public/app.css 真实存在时才加这一行；禁止用它替换 Tailwind -->
 </head>
@@ -820,7 +839,7 @@ step-N 文件夹是当前**工作区**，不是状态机：
 | **半成品**（开始有 endpoint + UI + happy path） | **部分要求**（至少有 happy path + loading）；不强制 health / env-info / 两类错误 |
 | **锁定那一刻** | **必须**满足 6 项；check-demo.cjs 过 |
 
-**闸门只在「锁定」时校验**。step-1 起手可以小到「1 个 mock 函数 + 1 个按钮 + 1 个 #output」，不需要 health / env-info / 两类错误。等学习者说「锁定」，再补齐 §5.3.2 → 过 check-demo。
+**闸门只在「锁定」时校验**。step-1 起手可以小到「1 个端点 + 1 个按钮 + 1 个 #output，调真 LLM」，不需要 health / env-info / 两类错误。等学习者说「锁定」，再补齐 §5.3.2 → 过 check-demo。（§5.3.0 硬规则：默认调真模型，**禁止**用本地 mock 凑最小闭环；本地计算 / 纯协议形状演示例外）
 
 ##### 交互检查点协议（每步之间必走）
 
@@ -858,7 +877,7 @@ step-N 当前状态跑通后，**必须**走完以下流程再决定下一步，
 §5.2 Demo 判断块**不预判 N**，只写 step-1 起手。原则：
 
 - `step-1` = **能多小就多小**；目的是让学习者**看见**概念或**跑一遍**最简闭环
-- **推荐起手 A**：「1 个函数 + 1 个按钮 + 1 个 #output」，mock 返回固定数据；不调 LLM
+- **推荐起手 A**：「1 个端点 + 1 个按钮 + 1 个 #output」，调真 LLM 跑一次 happy path；§5.3.0 硬规则禁止本地 mock 凑闭环
 - 其他可选项 B（请求/响应 JSON 静态展示）/ C（纯伪代码）——教练按本条特性选
 - §5.3.2 6 项**不要求**（这是 sketch，不是完整版）
 - 由浅入深：先让学习者**看见**概念长什么样 → 再**用**概念做事 → 先**跑起来** → 再**打磨成完整版**
@@ -890,7 +909,7 @@ apps/{模块文件夹}/
 | 新加 UI 场景页 | `public/pages/{场景}.html`；`index.html` 加导航链接 |
 | 新加共享组件 | `public/components/{职责}.js` 挂 `window.DemoUI` |
 | 替换既有行为 | 改当前 step 的对应文件；**不**回去改上一步 |
-| mock / 测试值 | 改当前 step 自己的；上一步保留旧值 |
+| 请求示例 / 入参样例 | 改当前 step 自己的；上一步保留旧值 |
 
 **禁止**：在 `step-N` 基础上「加开关变量 + 条件渲染」做出 `step-(N+1)`；那样回头看 `step-N` 会发现代码里有「未启用分支」。要追加就实打实写一遍新代码——重复几十行是可接受成本；隐藏分支不可接受。
 

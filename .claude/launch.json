@@ -120,6 +120,38 @@
       "port": 50030,
       "url": "http://127.0.0.1:50030/",
       "autoPort": false
+    },
+    {
+      "name": "05-04-tool-gateway-step-1",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-04-tool-gateway-step-1"],
+      "port": 50034,
+      "url": "http://127.0.0.1:50034/",
+      "autoPort": false
+    },
+    {
+      "name": "05-04-tool-gateway-step-2",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-04-tool-gateway-step-2"],
+      "port": 50035,
+      "url": "http://127.0.0.1:50035/",
+      "autoPort": false
+    },
+    {
+      "name": "05-04-tool-gateway-step-3",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-04-tool-gateway-step-3"],
+      "port": 50036,
+      "url": "http://127.0.0.1:50036/",
+      "autoPort": false
+    },
+    {
+      "name": "05-04-tool-gateway-step-4",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:05-04-tool-gateway-step-4"],
+      "port": 50037,
+      "url": "http://127.0.0.1:50037/",
+      "autoPort": false
     }
   ]
 }
