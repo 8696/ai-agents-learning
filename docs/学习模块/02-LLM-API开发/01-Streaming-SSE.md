@@ -292,15 +292,6 @@ prompt：`用一句话介绍你自己，30 字以内。`（MiniMax-M3 模型，2
   **三种模式互不兼容**，写客户端不能假设。
   **计费维度**：`completion_tokens` **包含** thinking + 回答；thinking 通常**单独计费**（可能比回答贵）；`usage.completion_tokens_details.reasoning_tokens` 是 thinking 部分。本 demo MiniMax-M3 实证：`completion_tokens=117` 中 `reasoning_tokens=102`，**真实可见回答的 token 数 ≈ 15**。
   **最常见翻车**：直接 `textContent += delta.content` 到 UI → **思考过程被渲染给用户**。
-- **追问：能把 `/api/real` 改成 nodejs 端**原样输出**给前端、不做修改吗？** → 答：可以，但有个**坑**——OpenAI SDK v4 的 `stream` 迭代返回的是 **zod 类实例（`ChatCompletionChunk`）**，不是 plain object。**直接 `JSON.stringify(chunk)` 会得 `{}`**（zod 实例的属性不通过 enumerable 暴露）。正确做法：
-  ```ts
-  const plain = JSON.parse(JSON.stringify(chunk)); // 把 zod 实例彻底 plain 化
-  res.write(`data: ${JSON.stringify(plain)}\n\n`);
-  ```
-  这样前端拿到的就是 SDK 解析后的同一份完整 JSON（含 `id` / `object` / `model` / `created` / `choices` / `usage` / `service_tier` / `base_resp`），与 HTTP wire format 一致。
-  **对照**：原 demo 把 chunk 包成 `{idx, content, usage}` 是「教学简化」；改成原样转发后，**学习者能从浏览器控制台直接看到真实 OpenAI chunk JSON**，对照 SDK 内部结构与 wire format。
-  本 demo 实证帧 #1：`{"id":"...","choices":[{"index":0,"delta":{"role":"assistant"}}],"created":...,"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null,"service_tier":"standard"}`——**第一帧只有 role、没有 content**（角色定位帧，常见）。
-  **本条不写进踩坑 / 易混**：这是 SDK 库选型坑（zod / class instance），不是 SSE 协议本身的问题；写到「我追问过的」就够了。
 
 ## 取舍
 
@@ -317,6 +308,7 @@ prompt：`用一句话介绍你自己，30 字以内。`（MiniMax-M3 模型，2
 4. 长连接被掐 → 客户端傻等。加心跳（`: keep-alive\n\n`） + 客户端超时。
 5. WebSocket 带 Key 进 URL → 泄漏到日志 / Referer / 代理。**SSE 走 Header**，不要退而求其次用 WebSocket + URL。
 6. `stream: true` 忘了设 → 服务端按一次性返，客户端流式读也读不到东西。
+7. **OpenAI SDK v4 流式 chunk 是 zod 类实例**，不是 plain object——直接 `JSON.stringify(chunk)` 会得 `{}`。原样转发给前端要先 `JSON.parse(JSON.stringify(chunk))` plain 化，否则浏览器看到的全是空对象。这是 SDK 库选型坑（zod / class instance），不是 SSE 协议本身的问题。
 7. 流式响应**中途出错**（网络断 / 模型报错）：服务端可能**不返回 `[DONE]`**就关连接。客户端要处理 `reader.read()` 的 `done: true` 时的「残余 buffer」——可能有错误 JSON 没切完。
 8. **按帧数 / `content.length` 反推 token 数** — 不可行。`delta.content` 是解码后字符串，与模型 token 不一一对应（详见 [§7 易混](#7-token--frame--content-长度)）。token 数**唯一**信源是 `usage`（整段结束才报）。想实时控制成本 = 等结束拿 `usage.completion_tokens` 计费。
 9. **直接把 `delta.content` 累加到 DOM 渲染给最终用户** — 带 reasoning 的模型会把 `<think>...` 嵌在 content 里（MiniMax-M3 / Qwen 早期模式）或在独立字段里（DeepSeek），**必须分开渲染**：thinking 给开发者 / 调试面板，**只把 `<think>...` 之外的回答**给用户（详见 [§8 易混](#8-thinking--answer--三种字段模式)）。直接 `textContent += chunk.content` = 用户看见「思考过程 + 答案」混在一起。

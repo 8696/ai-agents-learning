@@ -156,7 +156,6 @@ Zero-shot 原文常先有思考块再给 JSON；网关剥掉思考后 Zod 能吃
 - 问了：他们区别是什么 → 答在「是什么」+「易混点」（Zero / Few 差在 k；ICL 是机制；都不改权重）
 - 问了：还有第三种吗 → 答在「同一根尺子」：One / Many 不是第三种哲学；Fine-tune / RAG / CoT 是换轴
 - 问了：不同场景该用哪一种 → 答在「场景怎么选」+「哪种更稳」
-- 问了：用的哪个协议 → 答在本条 Demo：只跑 **协议 A**（`openai` + MiniMax-M3），避免和「有没有样例」缠在一起；上一节才并排 A/B
 - 问了：报错 `Unexpected token '<'` / `"<think>The"... is not valid JSON` → 答在「踩坑」：不是 HTTP 挂了，是 Zero-shot 整段不是 JSON
 - 问了：应该先去掉思考模式内容再当 JSON → 答在「取舍」：网关先剥再 parse；Demo 已改；`hadThinking` 仍标明嘴边是否夹了思考
 

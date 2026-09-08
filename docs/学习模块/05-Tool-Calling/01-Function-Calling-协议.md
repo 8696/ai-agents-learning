@@ -458,22 +458,13 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 
 | 问题 | 针对什么 | 回答 |
 |------|---------|------|
-| 「落 demo 时怎么落？」 | 首次接触 demo 落地流程，不知道从哪开始 | 答在[agents/05-demo.md §5.3.14](../../agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新) + 本轮给的「落 Demo 流程」块 |
-| 「进入 step-2，把模型加入进去，先写协议 A 的」 | 下一步 demo 的方向（mock vs 真 LLM + 协议选型） | 答在 step-2 README + #llm-protocol 4 卡 |
 | 「调用模型的请求参数和响应参数原理是什么？前端看得到」 | 协议 A 字段语义 + 想「看见」协议层数据 | 答在 [step-2 lib/llm/protocol-a.ts](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-2/lib/llm/protocol-a.ts) 类型注释（每个字段"是什么 / 为什么"）+ 前端 #llm-protocol 把同一份注释的**物理形态**摆出来 |
 | 「step-2 Gateway 拦截演示不出来怎么办？」 | Gateway 在 step-2 没演示到，怕教学点缺失 | 模型自己读 `description` 主动拒绝 dangerous tool；Gateway 是**第二道防线**（防 prompt injection），不是**第一道**（第一道是模型自律）。要强制演示需绕开模型直接喂 dangerous tool_call 给 Registry（step-3 候选） |
 | 「重新讲解本条」 | 本条已沉淀过但漏了「含并行调用」教学点 + 需求清单 | 答在 2026-09-04 沉淀增量：「含并行调用」点名 §5.4.A2 阻塞 + 「需求清单」独立节（含 step-3 起步 spec：旅游规划助手 + 串/并行对比）+ §5.4.B 增量重跑新增业务需求行 |
-| 「下一个 demo 应该包含什么功能比较合适，为什么」 | step-3 设计时不知道该加什么 demo | 答在 2026-09-04 沉淀增量：3 Tool（search_flight 80ms / get_weather 50ms / get_packing_list 30ms，全 async）+ Promise.all 真并发 + gantt 时序图 + 串/并行对比按钮（独立 mock 路线 = 修法 2） |
-| 「为什么这里不是做成三个 html，我记得不是说要拆吗」 | 拆页面 vs 拆文件的规则不清 | 答在 agents/05-demo.md §5.3.8 「页与接口 1:1」规则（每个独立场景 = 单独 page + 单独 route 文件）+ step-3 重构为 public/index.html + public/pages/single.html + public/pages/compare.html + routes/plan.ts + routes/compare.ts |
-| 「写到 agents 里面去，一个 demo 里面一个单独的功能也要用一个单独的页面。然后服务端的也是」 | 上条追问的延伸——明确「拆」是按场景拆不是按 mode 拆 | 答在 2026-09-04 维护模式沉淀到 agents/05-demo.md §5.3.8「页与接口 1:1」规则；反例：单 `/api/plan` 用 mode 同时服务「跑单跑」+「对比」两个独立场景；正例：单跑 → routes/plan.ts / 对比 → routes/compare.ts（前者 mode 切换 parallel|serial 是同一场景 sub-variant，**不**触发拆分） |
+| 「拆页面 vs 拆文件的规则」 | 拆页面 vs 拆文件的规则不清 | 答在 agents/05-demo.md §5.3.8 「页与接口 1:1」规则（每个独立场景 = 单独 page + 单独 route 文件）。**正例**：单跑 → routes/plan.ts / 对比 → routes/compare.ts（前者 mode 切换 parallel\|serial 是同一场景 sub-variant，**不**触发拆分）。**反例**：单 `/api/plan` 用 mode 同时服务「跑单跑」+「对比」两个独立场景。规则 = **按场景拆，不按 mode 拆** |
 | 「并行和串行的在代码中应用场景是什么？什么情况下使用哪种？」 | 并行/串行的选型标准 | 答在本节「选型准则」节（主轴 = 依赖关系）+ 「例子 5 · 串行依赖」+ 「踩坑」节新增「独立 IO 写串行」反例 |
-| 「先沉淀然后接着讲」 | 想沉淀但不打断讲课节奏 | 沉淀：增量更新「选型准则」节 + 「例子 5」+ 「踩坑：独立 IO 写串行」+ 「我追问过的」追加 4 条 + 选型准则 → 讲课：依赖链代码模式（单链 A → B · 模型自己编排 vs 路由层 hard-code · 三种编排方式对比 · 反例放进 Promise.all · 链路深度 vs 成本） |
-| 「可以，加一个（chain）」 | 上条「接着讲」举例中的「链 A → B」想真落 demo | 落 step-4 = copy 锁定的 step-3 + 替换 chain 场景：2 个 Tool（search_doc 80ms + summarize 50ms）+ await 链式 routes/chain.ts + pages/chain.html（query + style 三选一）+ gantt 链式时序 + final summary |
-| 「模型自己编排链这个说了吗」 | 担心「模型自编排」这一变体没被讲到 | 答：本轮先讲后沉：例子 5.5 已补 while + finish_reason === "tool_calls" 骨架代码块 + 三种编排方式对比表 + 链路深度 vs 成本；§5.4.B 标 ✅（知识沉淀；step-N 演示不是本条必做，对应模块是 07 / 11）；之前的"接着讲"确实漏沉了 |
-| 「step5 应该讲什么」 | 下一步 demo 选哪个方向（A 模型自编排 / B 串行依赖 / C 错误自纠） | 答：本轮三候选 A/B/C；学习者选 A（模型自编排 + 错误自纠）；落 step-5：while + decideNextAction mock + 自纠触发（query 短 → 扩 query）+ MAX_ROUNDS 边界（query 含 ❌ 标记触发）；实测三场景：AI 自纠成功 / Function Calling 2 轮收敛 / ❌ MAX_ROUNDS 触发 |
-| 「按 A 走」 | 上条追问选了 A 后要怎么落 | 落 step-5（copy step-4 + 替换 chain 为 self-correct 场景）：2 个 Tool（search_doc + summarize，search_doc 加 ❌ 标记永久返空 + length<3 触发空结果）+ routes/self-correct.ts while + MAX_ROUNDS + decideNextAction mock + final reply；pages/self-correct.html（query 输入 + 每轮决策轨迹 + 自纠标记 + final reply） |
+| 「模型自己编排链这个说了吗」 | 担心「模型自编排」这一变体没被讲到 | 答：本轮先讲后沉：例子 5.5 已补 while + finish_reason === "tool_calls" 骨架代码块 + 三种编排方式对比表 + 链路深度 vs 成本；§5.4.B 标 ✅（知识沉淀；step-N 演示不是本条必做，对应模块是 07 / 11）。**编排方式三档对比**：① 路由层 hard-code（如 step-3 Promise.all 并行）② 模型单链自编排（while + finish_reason 终止，如 step-5）③ 多 Agent 编排（RouterAgent / WorkerAgent 分发，本仓库模块 14） |
 | 「为什么我刚刚不问你，你都不会告诉我，这个自我编排这个模式？我在agents不是约定的是由浅入深吗？为什么感觉你这个东西都会忘记？是不是这个有问题啊？」 | 怀疑 Agent 没主动讲核心变体（违反由浅入深约定） | **2026-09-04 最重要的一条追问**。承认错误：把 MD 需求清单当"本条要 demo 的清单"（2 条 happy-path）而不是"核心概念的所有变体"（5 个变体）。修补 6 处：① agents/06-teach.md §6.3 讲完前自查触发器（含 case study + 判别信号）② AGENTS.md §1 底线扩 4 条（含「核心概念所有变体未覆盖 = 没讲完」）③ MD 需求清单 2 条 → 5 条 ④ agents/{03-progress,05-demo,07-notes} 三处加 §6.3 工作流钩子 ⑤ MD §5.4.B 闸门表扩到 5 条证据行 ⑥ memory 写入 feedback 记忆。下次进 02 Tool Description 前必须主动列变体 |
-| 「按照这个改」 | 上条修补清单的执行确认 | 已落实：6 改动全 grep 验证（12 处 §6.3 引用 + 5 条 §5.4.B 证据行 + Case study 块） |
 | 「你确定吗？确定落好了，我要不是自己发现，这就过了，知识都没学完」 | 怀疑前面「全部改完」的承诺是否真的做到了 | 承认前面那次嘴上说"全部改完"是过于自信；列了 5 个真正的缺口（A 工作流钩子 / B demo 判断块 / C 沉淀对齐 / D 闸门表扩到 5 行 / E case study），全部补完。本轮 grep 验证 12 处引用 + 5 行证据 + case study 在位 |
 | 「什么是编造数字」 | 编造 vs 模型解析错 vs JSON Mode 误生成的混淆 | 答在本节「例子 6」首段 + 易混点末条「编造 ≠ JSON Mode 误生成」 |
 | 「为什么要切两个 mode」 | 编造检测 demo 需要对照演示的混淆 | mode 决定 mockReply 真/编对照演示；让"凭空"两个字靠对照才说得清；单 mode 没法演示"用 vs 不用"基准。**单 mode 也能检测**（一段 reply + 一个 tool_result 就能判"哪几个数字不在源集里"），两 mode 是为了演示"两种行为模式的差异" |

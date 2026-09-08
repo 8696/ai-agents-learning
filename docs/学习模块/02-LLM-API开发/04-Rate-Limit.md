@@ -223,17 +223,11 @@ LLM API 一定有 429 是设计，不是 bug：LLM 推理贵、GPU 资源有限�
 
 > 按 `问了 → 答在哪` 排；只记发生过的，不编。
 
-- **问**：`demo:02-rate-limit` 里 `02` 是模块还是章节？至少应该跟章节对应吧，应该是 `04`。
-  **答**：AGENTS.md §5.2 原写「`{模块两位}` = 进度表模块编号」，所以 `02` 算规范用法；但仓库现状混了 `demo:03-abort-controller` 这种章节命名，不一致。**进维护模式改规范**：`app:{模块两位}-{小节两位}-{英文短名}`，全仓库 8 个 demo 改名 + AGENTS.md 5 处同步 + `.claude/settings.local.json` Bash 白名单同步
-  → 见 [AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)、[apps/package.json](../../../apps/package.json)
+- **问**：真 API 撞 429 的并发阈值是多少？
+  **答**：实测 MiniMax-M3 个人 Key RPM 配额宽裕，**20 并发 ≈ 2 RPS**（每请求 1~10 秒），远低于限速；**真要撞 429 需并发 50+ 或更短请求**。这条不是 bug，是个人 Key 配额上限决定的预期。生产 Agent 看到 429 = 个人 Key 配额被撞 / 共享 Key 触发了硬上限；纯 mock demo 永远撞不到。
 
-- **问**：当前 mock demo 能改用真 API 吗？
-  **答**：可以；按 4 个选项（保持 mock-only / 加 /api/real / 加 /api/real-burst / 两个都加）。**推荐 4**：单次默认跑 ~0.001 元，并发撞 429 按需开启 ~0.02 元。
-  → 见 `/pages/real.html`（`GET /api/real` · `GET /api/real-burst`）
-
-- **问**：burst 并发 20 没撞出 429，是 bug 还是预期？
-  **答**：**预期**。MiniMax-M3 个人 Key RPM 配额宽裕，20 并发实际只占 ~2 RPS（每请求 1~10 秒），远低于限速。要撞需并发 50+ 或更短请求。**选项**：保持 20 / 默认 50 / 加 `?concurrency=` 参数让学习者自己调
-  → 真 API 页点 burst（`GET /api/real-burst?concurrency=`）+ 聚合输出
+- **问**：mock demo 要不要带真 API 入口？
+  **答**：取舍——mock-only 跑得快、不烧钱、看不到真实 429；接真 API 教学价值高但每次跑都花钱（单次 ~0.001 元，并发撞 429 路径 ~0.02 元）。**推荐两个都加**：`/api/real` 单次看 token + headers，`/api/real-burst` 并发撞 429（带 `?concurrency=` 参数让学习者自己调），学习者按需切。
 
 ---
 

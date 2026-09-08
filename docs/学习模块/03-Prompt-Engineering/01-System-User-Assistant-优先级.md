@@ -158,9 +158,7 @@ return JSON.parse(cleaned);
 
 | 追问 | 答在 |
 |------|------|
-| 问：要写代码、能描述优先级、要看多轮结果、协议 A/B 都要 | 「§5.2 Demo 判断块 + 本条产出预告」段：Demo 改判**可运行**，落 `apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/`，yarn `app:03-01-system-user-assistant-priority-step-1` |
 | 问：`load-root-env.js` 为什么是 `.js` 后缀 | 「为什么是 .js」段：NodeNext + ESM 强制要求显式扩展名（TS 编译产物是 `.js`；运行时 Node ESM 只解析 `.js`；裸路径 / `.ts` 都会挂） |
-| 问：把它写成网页 | Demo 从 CLI 改成 HTTP server + Tailwind HTML，端口 5180，3 个 Case 卡片 + A/B 并排输出 + verdict pill |
 | 问：Case 1 协议 A 实际是完成了，只是把思考放在了内容里 —— 判断错了 | 「易混点」段第 5 行 + 「踩坑」段 + 「judgeCase1 改语义」：`judgeCase1` 改为"剥 think → 找 JSON → 判优先级"；现在 A 和 B 都是 `SYSTEM_WIN` |
 | 问：协议 A 怎么关闭思考模式 | 「例子 6」+ 「取舍」段：API 不给关，工程答案三档（推荐 ① 适配层剥 regex；推荐 ② 换协议 B 不传 `thinking`；不推荐 ③ System 写"不要思考"反向锚定） |
 
