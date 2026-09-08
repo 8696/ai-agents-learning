@@ -3,6 +3,9 @@
  * 数据流：{ llm, message, signal? } → chat.completions.create(stream:true) → 逐 chunk 抽出 delta / usage。
  * 为什么单独成文件：三个 run-* 只差「传不传 signal、何时 abort」，请求体和拆字段必须同一份，
  *   否则对照页上「① 帧数 vs ② 帧数」会因为拆法不一致而比歪。
+ *
+ * 日志（§5.3.16）：工具档（createChatStream 拼装 + 建流）—— 五件套（含 __code）仍要；
+ *   createChatStream 是本 Demo 唯一调 SDK 的入口——记下「signal 是否带」便于事后核对三个场景的差异。
  */
 import type { Llm } from "../../../../llm.js";
 import type OpenAI from "openai";
@@ -40,40 +43,81 @@ export async function createChatStream(
   message: string,
   signal?: AbortSignal,
 ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
+  const tFuncStart = Date.now();
   const params = buildChatStreamParams(llm, message);
 
   logger.info(
-    "llm.request",
-    "→ openai.chat.completions.create (stream:true)",
-    "建上游流；带不带 signal 决定后面 abort() 能不能传到 SDK，记下 model + messages 数 + __code 便于核对请求体",
+    "│ 流式拼装-buildChatStreamParams",
+    "调用函数开始：buildChatStreamParams",
+    "为什么打：三个端点共用同一份请求体；不打就丢了「差只在 signal」这条核心对照。当前：即将拼 chat.completions.create 请求体。",
     {
-      model: llm.modelA,
-      messagesCount: params.messages.length,
-      stream: true,
-      signal: signal ? "已传 AbortSignal" : "未传",
-      signalAbortedAtStart: signal?.aborted ?? null,
+      入参: { messagePreview: message.slice(0, 80), messageLen: message.length },
+      __code: `return { model: llm.modelA, messages: [{ role: "user", content: message }], stream: true, stream_options: { include_usage: true } };`,
+    },
+  );
+  logger.info(
+    "│ 流式拼装-buildChatStreamParams",
+    "调用函数结束：buildChatStreamParams",
+    "为什么打：createChatStream 要把 params 当入参传给 SDK；打返回值便于核对「三场景请求体真的一致」。当前：params 已拼好。",
+    {
+      返回值: { model: params.model, messagesCount: params.messages.length, stream: params.stream },
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
+
+  const tModelStart = Date.now();
+  logger.info(
+    "││ 调用模型-对话补全",
+    "调用模型开始：对话补全",
+    "为什么打：本 Demo 唯一的真出网层；不打就没有帧数 / usage。当前：即将发出 stream:true 请求；带不带 signal 决定后面 abort() 能不能传到 SDK。",
+    {
+      入参: {
+        model: params.model,
+        messagesCount: params.messages.length,
+        stream: params.stream,
+        signal: signal ? "已传 AbortSignal" : "未传",
+        signalAbortedAtStart: signal?.aborted ?? null,
+      },
       __code: `await llm.openai.chat.completions.create(${JSON.stringify(params, null, 2)}${signal ? ", { signal }" : ""});`,
     },
   );
 
   let stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
-  if (signal) {
-    stream = await llm.openai.chat.completions.create(params, { signal });
-  } else {
-    stream = await llm.openai.chat.completions.create(params);
+  try {
+    if (signal) {
+      stream = await llm.openai.chat.completions.create(params, { signal });
+    } else {
+      stream = await llm.openai.chat.completions.create(params);
+    }
+    logger.info(
+      "││ 调用模型-对话补全",
+      "调用模型结束：对话补全",
+      "为什么打：create 返回 AsyncIterable<ChatCompletionChunk>，不是单一响应对象；记 SDK 调用成功、流已就绪，后续 chunk 在 run-* 里逐帧处理。当前：await 已返回。",
+      {
+        返回值: {
+          streamType: stream && typeof (stream as AsyncIterable<unknown>)[Symbol.asyncIterator] === "function"
+            ? "AsyncIterable<ChatCompletionChunk>"
+            : typeof stream,
+        },
+        耗时ms: Date.now() - tModelStart,
+        字段释义: {
+          streamType: "OpenAI 流式 create 返回 AsyncIterable，不是单一对象",
+        },
+      },
+    );
+  } catch (error: unknown) {
+    logger.error(
+      "││ 调用模型-对话补全",
+      "调用模型结束：对话补全（失败）",
+      "为什么打：create 可能立刻抛（Key 错 / 网络不通 / signal 已 aborted）。abort 路径这里也会抛 AbortError，由调用方（run-cancel）isAbortError 判别。当前：create 抛错。",
+      {
+        返回值: { message: error instanceof Error ? error.message : String(error), name: error instanceof Error ? error.name : String(error) },
+        耗时ms: Date.now() - tModelStart,
+        错误: error,
+      },
+    );
+    throw error;
   }
-
-  logger.info(
-    "llm.response",
-    "← got stream iterator",
-    "create 返回 AsyncIterable<ChatCompletionChunk>，不是单一响应对象；记 SDK 调用成功、流已就绪，后续 chunk 在 run-* 里逐帧处理",
-    {
-      model: llm.modelA,
-      streamType: "AsyncIterable<ChatCompletionChunk>",
-      signal: signal ? "已传 AbortSignal" : "未传",
-    },
-  );
-
   return stream;
 }
 

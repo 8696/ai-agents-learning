@@ -6,12 +6,8 @@
  *   - classifyQuery：根据 query 关键词判定走哪条路径（路径 A 仅 weather / 路径 B weather+硬接 suggest / 路径 C 直接打包被拒→退回）
  *   - decideHybridAction：模拟真实 LLM 在 while 循环里的决策，看 query 路径 + lastResult 决定下一步
  *
- * 教学锚点（覆盖 MD 易混点"三种编排方式对比 · 混合编排"）：
- *   - 路由层 hard-code 约束 1（拒绝越权调用）：suggest_items 必须在 get_weather 之后调，否则模型拿 ok:false error 反馈强制回到 weather（路径 C 演示）
- *   - 路由层 hard-code 约束 2（路径 B 硬接）：用户问"带不带伞" → 模型调 get_weather → 模型 final → 路由层自动再调 suggest_items
- *   - 模型自决要不要进两步链：路径 A 仅调 weather；路径 B weather → 硬接 suggest；路径 C 先被打回 weather → 再 suggest
- *
- * 日志（§5.3.16）：gateway.rejected / zod.fail / execute.ok / execute.fail / decide.next-action / classify.query 都打。
+ * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / classifyQuery / decideHybridAction / checkChainConstraint / shouldHardcodeSuggestItems 是工具档——五件套（含 __code）仍要。
  */
 import { getWeatherTool } from "./hybrid-get-weather.js";
 import { suggestItemsTool } from "./hybrid-suggest-items.js";
@@ -34,15 +30,42 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   const tool = TOOLS[name as ToolName];
   if (!tool) {
     const reason = `unknown tool: ${name}（未注册）`;
-    logger.warn("registry.gateway.rejected", "未注册工具", "LLM 想调的工具不在白名单", { name, reason });
+    logger.warn(
+      "│ 网关-gatewayCheck",
+      "调用函数结束：gatewayCheck",
+      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      {
+        返回值: { allowed: false, reason },
+        name,
+        耗时ms: Date.now(),
+      },
+    );
     return { allowed: false, reason };
   }
   if (tool.dangerous) {
     const reason = `dangerous tool ${name} requires manual approval`;
-    logger.warn("registry.gateway.rejected", "危险工具", "工具被标 dangerous", { name, reason });
+    logger.warn(
+      "│ 网关-gatewayCheck",
+      "调用函数结束：gatewayCheck（dangerous）",
+      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      {
+        返回值: { allowed: false, reason },
+        name,
+        耗时ms: Date.now(),
+      },
+    );
     return { allowed: false, reason };
   }
-  logger.debug("registry.gateway.allowed", "gateway 放行", "工具通过 gateway 校验", { name });
+  logger.debug(
+    "│ 网关-gatewayCheck",
+    "调用函数结束：gatewayCheck",
+    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    {
+      返回值: { allowed: true },
+      name,
+      耗时ms: Date.now(),
+    },
+  );
   return { allowed: true };
 }
 
@@ -52,18 +75,46 @@ export async function executeTool(
   args: unknown,
   toolCallId: string,
 ): Promise<ExecResult> {
-  // ① Gateway 先过
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ 工具执行-executeTool",
+    "调用函数开始：executeTool",
+    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。",
+    {
+      入参: { toolCallId, name, rawArgs: args },
+      __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nreturn { ok: true, ..., result: tool.handler(parsed.data) };`,
+    },
+  );
+
   const gate = gatewayCheck(name);
   if (!gate.allowed) {
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（gateway 拒绝）",
+      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
+        reason: gate.reason,
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" };
   }
 
-  // ② Zod 校验参数
   const tool = TOOLS[name as ToolName];
   const parsed = tool.schema.safeParse(args);
   if (!parsed.success) {
     const issues = parsed.error.issues;
-    logger.warn("registry.zod.fail", "参数 Zod 校验失败", "工具名合法但参数 schema 不匹配", { name, toolCallId, issues });
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（Zod 校验失败）",
+      "为什么打：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
+        issues: JSON.parse(JSON.stringify(issues)),
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return {
       ok: false,
       tool: name,
@@ -72,14 +123,30 @@ export async function executeTool(
     };
   }
 
-  // ③ 真正执行（async handler）
   try {
     // @ts-ignore
     const result = await tool.handler(parsed.data);
-    logger.info("registry.execute.ok", "执行成功", "工具实际跑通", { name, toolCallId, resultPreview: summarize(result) });
+    logger.info(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool",
+      "为什么打：工具实际跑通；只打 result 摘要。",
+      {
+        返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, tool: name, tool_call_id: toolCallId, result };
   } catch (err: unknown) {
-    logger.error("registry.execute.fail", "执行抛错", "handler 内部抛异常", { name, toolCallId, err: err instanceof Error ? err.message : String(err) });
+    logger.error(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（失败）",
+      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -96,47 +163,47 @@ function summarize(v: unknown): unknown {
 
 // ── 给前端"Registry 面板"用 ──
 export function getToolsMeta() {
-  return Object.values(TOOLS).map((t) => ({
+  const t0 = Date.now();
+  const meta = Object.values(TOOLS).map((t) => ({
     name: t.name,
     description: t.description,
     dangerous: t.dangerous,
   }));
+  logger.debug(
+    "│ Registry-getToolsMeta",
+    "调用函数结束：getToolsMeta",
+    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    {
+      返回值: { count: meta.length, tools: meta },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return meta;
 }
-
-// ───────────────────────────────────────────────────────────────────
-// step-7 核心：路径分类 + 模型决策 mock（混合编排的"模型自决"侧）
-//
-// 真实 Agent 里 decideHybridAction 是 LLM 调用：`llm.chat({ messages, tools })` → 拿 assistantMsg.tool_calls / null
-// step-7 用纯函数模拟，让 demo 确定性可复现（不依赖真实模型行为）。
-//
-// 路径分类规则（教学演示用）：
-//   路径 A · weather-only：query 含"天气/温度/平均"但不涉打包 → 模型只调 get_weather，不进 suggest_items 链
-//   路径 B · umbrella：query 含"带伞/雨/打包/带什么" → 模型调 get_weather，路由层硬接 suggest_items
-//   路径 C · packing-direct：query 仅"打包/清单"无天气 → mock LLM 想直接调 suggest_items，路由层拒绝 → 强制回到 weather
-//
-// 决策矩阵（按 round + path + lastResult）：
-//   路径 A round 1：tool_call get_weather
-//   路径 A round 2：weather ok → final（路由层不硬接，因为 state.suggestItemsCalled 不需要）
-//   路径 B round 1：tool_call get_weather
-//   路径 B round 2：weather ok → final（**路由层硬接 suggest_items 后**再走模型 final）
-//   路径 C round 1：tool_call suggest_items(items=["umbrella"], rain_prob=undefined) → 路由层拒绝 → 模型看 error
-//   路径 C round 2：lastResult.error 含"必须先调 get_weather" → tool_call get_weather
-//   路径 C round 3：weather ok → tool_call suggest_items(rain_prob=lastResult.result.rain_prob)
-//   路径 C round 4：suggest_items ok → final
-// ───────────────────────────────────────────────────────────────────
 
 export type HybridPath = "weather-only" | "umbrella" | "packing-direct";
 
 export function classifyQuery(originalQuery: string): HybridPath {
+  const t0 = Date.now();
   const hasUmbrella = /(带.*伞|下雨|雨季|打包清单|带什么|打包建议|行李)/.test(originalQuery);
   const hasWeather = /(天气|温度|平均|气候|几度|气温)/.test(originalQuery);
   let path: HybridPath;
   if (hasUmbrella) path = "umbrella";
   else if (hasWeather) path = "weather-only";
   else path = "packing-direct";
-  logger.info("classify.query", "query 路径分类", "根据关键词判定走哪条教学路径；前端页会显示对应徽标", {
-    originalQuery, hasUmbrella, hasWeather, path,
-  });
+  logger.info(
+    "│ 分类-classifyQuery",
+    "调用函数结束：classifyQuery",
+    "为什么打：route 要把路径写进 ctx.body 交给页面 stats 区；前端页会显示对应徽标。",
+    {
+      返回值: { path, hasUmbrella, hasWeather },
+      originalQuery,
+      耗时ms: Date.now() - t0,
+      字段释义: {
+        path: "路径 A 仅 weather / 路径 B weather+硬接 suggest / 路径 C 直接打包被拒→退回",
+      },
+    },
+  );
   return path;
 }
 
@@ -152,103 +219,106 @@ export function decideHybridAction(
   weatherCalled: boolean,
   suggestItemsCalled: boolean,
 ): HybridDecision {
+  const t0 = Date.now();
+  logger.info(
+    "│ mock 决策-decideHybridAction",
+    "调用函数开始：decideHybridAction",
+    "为什么打：route 只认这一层返回的 HybridDecision；每轮路由层调用它决定下一步。",
+    {
+      入参: { round, path, weatherCalled, suggestItemsCalled, hasLastResult: Boolean(lastResult) },
+      __code: `// path+round+state → HybridDecision`,
+    },
+  );
+
+  let decision: HybridDecision;
+
   // ── 路径 A · weather-only ──
   if (path === "weather-only") {
     if (round === 1) {
-      logger.info("decide.next-action", "路径 A · Round 1 调 get_weather", "模型决定查天气；不调 suggest_items（用户没问打包）", { originalQuery });
-      return {
+      decision = {
         kind: "tool_call",
         tool: "get_weather",
         arguments: { city: "东京", month: 5 },
         tool_call_id: `call_A1`,
       };
-    }
-    if (lastResult?.ok && lastResult.tool === "get_weather") {
+    } else if (lastResult?.ok && lastResult.tool === "get_weather") {
       const c = lastResult.result as { city: string; month: number; avg_temp: number; rain_prob: number };
-      logger.info("decide.next-action", "路径 A · Round 2 final", "模型拿到 weather → 不进 suggest_items 链（用户没问打包） → 直接 final", { round });
-      return {
+      decision = {
         kind: "final",
         content: `${c.city} ${c.month} 月平均气温 ${c.avg_temp}°C，雨季概率 ${c.rain_prob}。`,
       };
+    } else {
+      decision = { kind: "final", content: "(路径 A 兜底 final)" };
     }
-  }
-
-  // ── 路径 B · umbrella ──
-  if (path === "umbrella") {
+  } else if (path === "umbrella") {
     if (round === 1) {
-      logger.info("decide.next-action", "路径 B · Round 1 调 get_weather", "模型决定先查天气（路由层会自动硬接 suggest_items）", { originalQuery });
-      return {
+      decision = {
         kind: "tool_call",
         tool: "get_weather",
         arguments: { city: "东京", month: 5 },
         tool_call_id: `call_B1`,
       };
-    }
-    if (lastResult?.ok && lastResult.tool === "get_weather") {
-      // 模型决定 final，但路由层会硬接 suggest_items（在 routes/hybrid.ts 处理）
-      const c = lastResult.result as { city: string; month: number; avg_temp: number; rain_prob: number };
-      logger.info("decide.next-action", "路径 B · Round 2 final（路由层将硬接 suggest_items）", "模型决定不再调 → final；路由层随后自动跑 suggest_items", { round, rain_prob: c.rain_prob });
-      return {
+    } else if (lastResult?.ok && lastResult.tool === "get_weather") {
+      // 仅类型断言（路径 B 路由层会硬接 suggest_items 后再让模型综合，所以这里不读字段）
+      void (lastResult.result as { city: string; month: number; avg_temp: number; rain_prob: number });
+      decision = {
         kind: "final",
         content: `(临时 final · 路由层硬接 suggest_items 后会再次让我综合 → 见 Round 3)`,
       };
-    }
-    if (lastResult?.ok && lastResult.tool === "suggest_items") {
-      // 路由层硬接 suggest_items 已跑完 → 模型综合 final
+    } else if (lastResult?.ok && lastResult.tool === "suggest_items") {
       const s = lastResult.result as { summary: string };
-      logger.info("decide.next-action", "路径 B · Round 3 综合 final", "模型拿到 suggest_items 结果 → 综合 final", { round });
-      return {
+      decision = {
         kind: "final",
         content: `${s.summary}（综合天气 + 打包建议）`,
       };
+    } else {
+      decision = { kind: "final", content: "(路径 B 兜底 final)" };
     }
-  }
-
-  // ── 路径 C · packing-direct（演示路由层拒绝越权调用）──
-  if (path === "packing-direct") {
+  } else {
+    // path === "packing-direct"
     if (round === 1) {
-      // mock LLM 故意跳过 weather 直接调 suggest_items（rain_prob 暂时 undefined —— 会被 Zod 拦下前先被路由层拦下）
-      logger.info("decide.next-action", "路径 C · Round 1 直接 suggest_items（rain_prob=undefined）", "mock LLM 跳过 weather → 路由层 hard-code 会拒绝；演示硬约束", { originalQuery });
-      return {
+      decision = {
         kind: "tool_call",
         tool: "suggest_items",
         arguments: { items: ["umbrella", "jacket"], rain_prob: undefined },
         tool_call_id: `call_C1`,
       };
-    }
-    if (lastResult && !lastResult.ok && lastResult.error?.includes("请先调 get_weather")) {
-      // 上一轮被路由层拒绝 → 模型看 error 决定先调 weather
-      logger.info("decide.next-action", "路径 C · Round 2 退回 get_weather", "模型看到路由层拒绝 error → 决定先调 get_weather", { round });
-      return {
+    } else if (lastResult && !lastResult.ok && lastResult.error?.includes("请先调 get_weather")) {
+      decision = {
         kind: "tool_call",
         tool: "get_weather",
         arguments: { city: "东京", month: 5 },
         tool_call_id: `call_C2`,
       };
-    }
-    if (lastResult?.ok && lastResult.tool === "get_weather") {
-      // weather 完成 → 调 suggest_items（用 rain_prob）
+    } else if (lastResult?.ok && lastResult.tool === "get_weather") {
       const c = lastResult.result as { rain_prob: number };
-      logger.info("decide.next-action", "路径 C · Round 3 调 suggest_items", "weather 已跑 → 用 rain_prob 派生 suggest_items", { rain_prob: c.rain_prob, round });
-      return {
+      decision = {
         kind: "tool_call",
         tool: "suggest_items",
         arguments: { items: ["umbrella", "jacket"], rain_prob: c.rain_prob },
         tool_call_id: `call_C3`,
       };
-    }
-    if (lastResult?.ok && lastResult.tool === "suggest_items") {
+    } else if (lastResult?.ok && lastResult.tool === "suggest_items") {
       const s = lastResult.result as { summary: string };
-      logger.info("decide.next-action", "路径 C · Round 4 final", "suggest_items 完成 → 模型综合 final", { round });
-      return {
+      decision = {
         kind: "final",
         content: `${s.summary}（被路由层拒绝一次后退回 weather → suggest 完成）`,
       };
+    } else {
+      decision = { kind: "final", content: "(路径 C 兜底 final)" };
     }
   }
 
-  // 兜底
-  return { kind: "final", content: "(未匹配路径分支)" };
+  logger.info(
+    "│ mock 决策-decideHybridAction",
+    "调用函数结束：decideHybridAction",
+    "为什么打：route 要把 HybridDecision 用于推进循环；记 decision.kind + tool 便于核对。",
+    {
+      返回值: { decision: { kind: decision.kind, tool: decision.kind === "tool_call" ? decision.tool : undefined, arguments: decision.kind === "tool_call" ? decision.arguments : undefined } },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return decision;
 }
 
 // ── 路由层 hard-code 约束工具函数 ──
@@ -257,11 +327,33 @@ export function checkChainConstraint(
   decisionTool: string,
   weatherCalled: boolean,
 ): { allowed: boolean; reason?: string } {
+  const t0 = Date.now();
   if (decisionTool === "suggest_items" && !weatherCalled) {
     const reason = "路由层 hard-code 约束：suggest_items 必须在 get_weather 之后调（rain_prob 必须来自上游 tool_result）；请先调 get_weather";
-    logger.warn("router.chain.rejected", "拒绝越权调用 suggest_items", "路由层硬约束违反：先 weather 后 suggest_items；让模型看到 error 强制回到 weather", { decisionTool, weatherCalled, reason });
+    logger.warn(
+    "│ 约束-checkChainConstraint",
+    "调用函数结束：checkChainConstraint",
+    "为什么打：路由层硬约束违反：先 weather 后 suggest_items；让模型看到 error 强制回到 weather。warn 是「业务失败但能走通」的等级。",
+    {
+      返回值: { allowed: false, reason },
+      decisionTool,
+      weatherCalled,
+      耗时ms: Date.now() - t0,
+    },
+  );
     return { allowed: false, reason };
   }
+  logger.debug(
+    "│ 约束-checkChainConstraint",
+    "调用函数结束：checkChainConstraint",
+    "为什么打：debug 是「细节」等级；约束命中 ok 时不打 info 免刷屏。",
+    {
+      返回值: { allowed: true },
+      decisionTool,
+      weatherCalled,
+      耗时ms: Date.now() - t0,
+    },
+  );
   return { allowed: true };
 }
 
@@ -271,5 +363,19 @@ export function shouldHardcodeSuggestItems(
   weatherCalled: boolean,
   suggestItemsCalled: boolean,
 ): boolean {
-  return path === "umbrella" && weatherCalled && !suggestItemsCalled;
+  const t0 = Date.now();
+  const result = path === "umbrella" && weatherCalled && !suggestItemsCalled;
+  logger.debug(
+    "│ 硬接-shouldHardcodeSuggestItems",
+    "调用函数结束：shouldHardcodeSuggestItems",
+    "为什么打：debug 是「细节」等级；判定当前是否触发路径 B 硬接。",
+    {
+      返回值: { shouldHardcode: result },
+      path,
+      weatherCalled,
+      suggestItemsCalled,
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return result;
 }

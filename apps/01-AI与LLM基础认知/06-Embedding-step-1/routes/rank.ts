@@ -1,6 +1,10 @@
 /**
  * 职责：余弦正例端点 —— 按分数排序，或故意撞零向量。
  * 数据流：{ query, vsZero? } → rankByCosine 或 400。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（handlePostRank 封装层）；
+ *   闸门挡掉已在 lib/http/request-guards.ts 写 warn；
+ *   零向量按预期抛错是「对照演示成功」——记 info 而非 error。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -11,46 +15,55 @@ import { EMBEDDING } from "../lib/vec/tables.js";
 
 export function mountRankRoutes(router: Router): void {
   router.post("/api/rank", (ctx: Context) => {
+    const tHandlerStart = Date.now();
     logger.info(
-      "路由-/api/rank-入站",
-      "POST /api/rank 进入",
-      "正例端点入口：可能走排序路径，也可能走 vsZero 撞零向量路径",
-      { rawBody: ctx.request.body },
+      "api.rank",
+      "调用函数开始：handlePostRank",
+      "为什么打：route 只认这一层返回的 ranked 或 400；里面 rankByCosine / cosineAgainstZero 是「真活」。当前：POST /api/rank 进入，可能走排序路径，也可能走 vsZero 撞零向量路径。",
+      {
+        入参: { rawBody: ctx.request.body },
+        __code: `const body = readQueryBody(ctx);\nif (body.vsZero) { try { cosineAgainstZero(body.query); } catch { ctx.status=400; } }\nelse { ctx.body = { ..., ranked: rankByCosine(body.query) }; }`,
+      },
     );
+
     const body = readQueryBody(ctx);
     if (!body) {
-      logger.warn(
-        "路由-/api/rank-闸门失败",
-        "readQueryBody 返回 null（已回 400）",
-        "闸门已经把 400 写回 ctx.body；这里只打日志便于复盘哪类失败最常见",
-        { rawBody: ctx.request.body },
+      logger.info(
+        "api.rank",
+        "调用函数结束：handlePostRank",
+        "为什么打：闸门已回 400，route 不用再算 ranked。当前：readQueryBody 已返回 null（闸门在内部写过 warn），route 直接 return。",
+        {
+          返回值: { httpStatus: 400, ranked: null },
+          耗时ms: Date.now() - tHandlerStart,
+        },
       );
       return;
     }
-    logger.info(
-      "路由-/api/rank-通过闸门",
-      "query 合法，准备走分支",
-      "正例分支点：vsZero 走撞零向量演示 400；否则走余弦排序主流程",
-      { query: body.query, vsZero: body.vsZero },
-    );
 
     if (body.vsZero) {
       try {
         const score = cosineAgainstZero(body.query);
-        ctx.body = { error: "不应到达：零向量居然算出了分数", score };
         logger.error(
-          "路由-/api/rank-零向量异常通过",
-          "零向量居然算出了分数，预期抛错却返回了值",
-          "正常应当 throw 后被 catch；这里出现说明上游有改动；记下 score 便于复盘",
-          { query: body.query, score },
+          "api.rank",
+          "调用函数结束：handlePostRank（失败）",
+          "为什么打：对照演示——零向量应当 throw 让 catch 转 400；如果没抛就说明 cosine 改动让它能算了。当前：异常路径——零向量居然算出了分数。",
+          {
+            返回值: { httpStatus: 200, score, branch: "vsZero-not-thrown" },
+            耗时ms: Date.now() - tHandlerStart,
+            错误: new Error("零向量未按预期抛错"),
+          },
         );
+        ctx.body = { error: "不应到达：零向量居然算出了分数", score };
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         logger.info(
-          "路由-/api/rank-零向量撞闸门-按预期抛错",
-          "零向量抛错被捕获，回 400 + 中文提示",
-          "对照演示：让页面看见「算不了余弦」路径；记下 message 便于核对文案",
-          { query: body.query, message },
+          "api.rank",
+          "调用函数结束：handlePostRank",
+          "为什么打：对照演示——零向量抛错被捕获，回 400 + 中文提示。info 不是 error，因为这是「对照演示成功」路径。当前：已回 400。",
+          {
+            返回值: { httpStatus: 400, error: message, branch: "vsZero-thrown" },
+            耗时ms: Date.now() - tHandlerStart,
+          },
         );
         ctx.status = 400;
         ctx.body = { error: message };
@@ -66,14 +79,17 @@ export function mountRankRoutes(router: Router): void {
       takeaway: "分数越接近 1 越同向。宠物→猫/狗高、→石头低。Token 管哪个号，Embedding 管哪边近。",
     };
     logger.info(
-      "路由-/api/rank-出站",
-      "POST /api/rank 响应拼好返回",
-      "正例出口：记下行数 + top1 / bottom1 分数，便于核对排序是否符合直觉",
+      "api.rank",
+      "调用函数结束：handlePostRank",
+      "为什么打：route 要把 ranked + takeaway 写进 ctx.body 交给页面。当前：rankByCosine 已返回，sort 已完成。",
       {
-        query: body.query,
-        rankedCount: ranked.length,
-        topScore: ranked[0]?.score,
-        bottomScore: ranked[ranked.length - 1]?.score,
+        返回值: {
+          query: body.query,
+          rankedCount: ranked.length,
+          topScore: ranked[0]?.score,
+          bottomScore: ranked[ranked.length - 1]?.score,
+        },
+        耗时ms: Date.now() - tHandlerStart,
       },
     );
   });

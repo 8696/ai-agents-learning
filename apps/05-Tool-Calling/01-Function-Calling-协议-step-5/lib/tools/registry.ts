@@ -11,7 +11,8 @@
  *   - 自纠：search_doc 返空 hits → 模型换 query → 重试 → 拿到 hits → 调 summarize
  *   - MAX_ROUNDS 边界：超 8 轮未收敛 → 业务降级（返 structured error）
  *
- * 日志（§5.3.16）：gateway.rejected / zod.fail / execute.ok / execute.fail / decide.next-action 都打。
+ * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / decideNextAction 是工具档——五件套（含 __code）仍要。
  */
 import { searchDocTool } from "./chain-search-doc.js";
 import { summarizeTool } from "./chain-summarize.js";
@@ -34,15 +35,42 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   const tool = TOOLS[name as ToolName];
   if (!tool) {
     const reason = `unknown tool: ${name}（未注册）`;
-    logger.warn("registry.gateway.rejected", "未注册工具", "LLM 想调的工具不在白名单", { name, reason });
+    logger.warn(
+      "│ 网关-gatewayCheck",
+      "调用函数结束：gatewayCheck",
+      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      {
+        返回值: { allowed: false, reason },
+        name,
+        耗时ms: Date.now(),
+      },
+    );
     return { allowed: false, reason };
   }
   if (tool.dangerous) {
     const reason = `dangerous tool ${name} requires manual approval`;
-    logger.warn("registry.gateway.rejected", "危险工具", "工具被标 dangerous", { name, reason });
+    logger.warn(
+      "│ 网关-gatewayCheck",
+      "调用函数结束：gatewayCheck（dangerous）",
+      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      {
+        返回值: { allowed: false, reason },
+        name,
+        耗时ms: Date.now(),
+      },
+    );
     return { allowed: false, reason };
   }
-  logger.debug("registry.gateway.allowed", "gateway 放行", "工具通过 gateway 校验", { name });
+  logger.debug(
+    "│ 网关-gatewayCheck",
+    "调用函数结束：gatewayCheck",
+    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    {
+      返回值: { allowed: true },
+      name,
+      耗时ms: Date.now(),
+    },
+  );
   return { allowed: true };
 }
 
@@ -52,9 +80,30 @@ export async function executeTool(
   args: unknown,
   toolCallId: string,
 ): Promise<ExecResult> {
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ 工具执行-executeTool",
+    "调用函数开始：executeTool",
+    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：handler 是 async → 路由层自己决定 await 还是 Promise.all。",
+    {
+      入参: { toolCallId, name, rawArgs: args },
+      __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nconst result = await tool.handler(parsed.data);`,
+    },
+  );
+
   // ① Gateway 先过
   const gate = gatewayCheck(name);
   if (!gate.allowed) {
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（gateway 拒绝）",
+      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
+        reason: gate.reason,
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" };
   }
 
@@ -63,7 +112,16 @@ export async function executeTool(
   const parsed = tool.schema.safeParse(args);
   if (!parsed.success) {
     const issues = parsed.error.issues;
-    logger.warn("registry.zod.fail", "参数 Zod 校验失败", "工具名合法但参数 schema 不匹配", { name, toolCallId, issues });
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（Zod 校验失败）",
+      "为什么打：工具名合法但参数 schema 不匹配。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
+        issues: JSON.parse(JSON.stringify(issues)),
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return {
       ok: false,
       tool: name,
@@ -76,10 +134,27 @@ export async function executeTool(
   try {
     // @ts-ignore
     const result = await tool.handler(parsed.data);
-    logger.info("registry.execute.ok", "执行成功", "工具实际跑通", { name, toolCallId, resultPreview: summarize(result) });
+    logger.info(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool",
+      "为什么打：工具实际跑通；只打 result 摘要。",
+      {
+        返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, tool: name, tool_call_id: toolCallId, result };
   } catch (err: unknown) {
-    logger.error("registry.execute.fail", "执行抛错", "handler 内部抛异常", { name, toolCallId, err: err instanceof Error ? err.message : String(err) });
+    logger.error(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（失败）",
+      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -96,11 +171,22 @@ function summarize(v: unknown): unknown {
 
 // ── 给前端"Registry 面板"用 ──
 export function getToolsMeta() {
-  return Object.values(TOOLS).map((t) => ({
+  const t0 = Date.now();
+  const meta = Object.values(TOOLS).map((t) => ({
     name: t.name,
     description: t.description,
     dangerous: t.dangerous,
   }));
+  logger.debug(
+    "│ Registry-getToolsMeta",
+    "调用函数结束：getToolsMeta",
+    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    {
+      返回值: { count: meta.length, tools: meta },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return meta;
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -125,25 +211,54 @@ export function decideNextAction(
   originalQuery: string,
   lastResult: ExecResult | null,
 ): Decision {
+  const t0 = Date.now();
+  logger.info(
+    "│ mock 决策-decideNextAction",
+    "调用函数开始：decideNextAction",
+    "为什么打：route 只认这一层返回的 Decision；每轮路由层调用它决定下一步。当前：mock 模型在 while 循环里看上一轮 tool_result 决定下一步。",
+    {
+      入参: { round, originalQuery, hasLastResult: Boolean(lastResult) },
+      __code: `if (round === 1) return { kind: "tool_call", tool: "search_doc", arguments: { query: originalQuery } };\n// ... 看 lastResult 决定下一步`,
+    },
+  );
+
   // Round 1: 总是先 search_doc 用原 query
   if (round === 1) {
-    logger.info("decide.next-action", "Round 1 决定", "模型第一步：search_doc(originalQuery)", { originalQuery });
-    return {
+    const decision: Decision = {
       kind: "tool_call",
       tool: "search_doc",
       arguments: { query: originalQuery },
       tool_call_id: `call_${round}`,
     };
+    logger.info(
+      "│ mock 决策-decideNextAction",
+      "调用函数结束：decideNextAction",
+      "为什么打：Round 1 模型第一步：search_doc(originalQuery)。",
+      {
+        返回值: { decision: { kind: decision.kind, tool: decision.kind === "tool_call" ? decision.tool : undefined, arguments: decision.kind === "tool_call" ? decision.arguments : undefined } },
+        耗时ms: Date.now() - t0,
+      },
+    );
+    return decision;
   }
 
   // Round 2+: 看上一轮 tool_result 决定
   if (!lastResult || !lastResult.ok) {
     // 上一轮失败了 —— 真实场景下模型会看 error 决定换方案；这里简化：直接 final 报 error
-    logger.info("decide.next-action", "上一轮失败 → final", "模型看到 ok:false / error → 决定不再调，返 error 当 final", { round });
-    return {
+    const decision: Decision = {
       kind: "final",
       content: `(模型自纠终止：上一轮 tool_result 失败：${lastResult?.ok === false ? lastResult.error : "无结果"})`,
     };
+    logger.info(
+      "│ mock 决策-decideNextAction",
+      "调用函数结束：decideNextAction",
+      "为什么打：模型看到 ok:false / error → 决定不再调，返 error 当 final。",
+      {
+        返回值: { decision: { kind: "final", contentPreview: decision.content.slice(0, 50) } },
+        耗时ms: Date.now() - t0,
+      },
+    );
+    return decision;
   }
 
   // 上一轮是 search_doc
@@ -153,33 +268,59 @@ export function decideNextAction(
     if (hits.length === 0) {
       // ── 自纠触发 ──
       const broadened = `${originalQuery} 原理 实践`;
-      logger.info("decide.next-action", "空 hits → 自纠", "模型看到 tool_result.hits=[] → 决定扩 query 重试 search_doc", {
-        fromQuery: originalQuery,
-        toQuery: broadened,
-        round,
-      });
-      return {
+      const decision: Decision = {
         kind: "tool_call",
         tool: "search_doc",
         arguments: { query: broadened },
         tool_call_id: `call_${round}`,
       };
+      logger.info(
+        "│ mock 决策-decideNextAction",
+        "调用函数结束：decideNextAction",
+        "为什么打：模型看到 tool_result.hits=[] → 决定扩 query 重试 search_doc（自纠触发）。",
+        {
+          返回值: { decision: { kind: "tool_call", tool: "search_doc", arguments: decision.arguments }, fromQuery: originalQuery, toQuery: broadened },
+          耗时ms: Date.now() - t0,
+          字段释义: {
+            自纠: "空 hits → 改 query 重新搜（典型模型自纠模式）",
+          },
+        },
+      );
+      return decision;
     }
     // 拿到 hits → summarize
-    logger.info("decide.next-action", "拿到 hits → summarize", "模型看到 tool_result.hits 非空 → 决定调 summarize", { hitCount: hits.length, round });
-    return {
+    const decision: Decision = {
       kind: "tool_call",
       tool: "summarize",
       arguments: { content: lastResult.result, style: "tech" },
       tool_call_id: `call_${round}`,
     };
+    logger.info(
+      "│ mock 决策-decideNextAction",
+      "调用函数结束：decideNextAction",
+      "为什么打：模型看到 tool_result.hits 非空 → 决定调 summarize。",
+      {
+        返回值: { decision: { kind: "tool_call", tool: "summarize", arguments: { content: "(hits)", style: "tech" } }, hitCount: hits.length },
+        耗时ms: Date.now() - t0,
+      },
+    );
+    return decision;
   }
 
   // 上一轮是 summarize → final（直接拿 summary 当 final_reply）
   const c = lastResult.result as { summary?: string };
-  logger.info("decide.next-action", "summarize 完成 → final", "模型拿到 summary → 决定不再调，返 final", { round });
-  return {
+  const decision: Decision = {
     kind: "final",
     content: c?.summary ?? "(无 summary)",
   };
+  logger.info(
+    "│ mock 决策-decideNextAction",
+    "调用函数结束：decideNextAction",
+    "为什么打：模型拿到 summary → 决定不再调，返 final。",
+    {
+      返回值: { decision: { kind: "final", contentPreview: decision.content.slice(0, 50) } },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return decision;
 }

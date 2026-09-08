@@ -1,6 +1,9 @@
 /**
  * 职责：POST /api/choice —— 同 tools / 同 query，只换 tool_choice 跑一档。
  * 数据流：body Zod 闸门 → callWithToolChoice → 页面结果槽（前端按档位保留三份对照）。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（handleChoice 封装层）；
+ *   闸门挡掉（400/503）单独打 warn；thinking × required 边界单独打 warn；上游异常 502 单独打 error。
  */
 import type Router from "@koa/router";
 import type { Context, Next } from "koa";
@@ -17,14 +20,17 @@ const BodySchema = z.object({
 
 export function mountChoiceRoutes(router: Router): void {
   router.post("/api/choice", async (ctx: Context, _next: Next) => {
-    const scope = "POST-/api/choice";
+    const tHandlerStart = Date.now();
     const t0 = Date.now();
 
     logger.info(
-      scope,
+      "api.choice",
       "调用函数开始：handleChoice",
-      "为什么打：前端点了「跑这一档」，入口要先过 Zod 再调模型。当前：收到 body。",
-      { 入参: ctx.request.body, __code: "const parsed = BodySchema.safeParse(ctx.request.body);" },
+      "为什么打：route 只认这一层返回的结果包；里面 callWithToolChoice 是「真活」。当前：前端点了「跑这一档」，入口要先过 Zod 再调模型。",
+      {
+        入参: { body: ctx.request.body, bodyKeys: Object.keys((ctx.request.body ?? {}) as object) },
+        __code: "const parsed = BodySchema.safeParse(ctx.request.body);",
+      },
     );
 
     const parsed = BodySchema.safeParse(ctx.request.body);
@@ -36,10 +42,13 @@ export function mountChoiceRoutes(router: Router): void {
         detail: parsed.error.flatten(),
       };
       logger.warn(
-        scope,
-        "调用函数结束：handleChoice（失败）",
+        "api.choice",
+        "调用函数结束：handleChoice（闸门拒绝）",
         "为什么打：空 query / 非法 toolChoice 是教学用的第一类错误（400）。当前：未出网。",
-        { 返回值: ctx.body, 耗时ms: Date.now() - t0 },
+        {
+          返回值: { httpStatus: 400, error: "入参不合法" },
+          耗时ms: Date.now() - t0,
+        },
       );
       return;
     }
@@ -53,10 +62,13 @@ export function mountChoiceRoutes(router: Router): void {
         detail: "请在 apps/.env 配置当前 LLM_PROVIDER 对应的 API Key",
       };
       logger.warn(
-        scope,
-        "调用函数结束：handleChoice（失败）",
+        "api.choice",
+        "调用函数结束：handleChoice（闸门拒绝）",
         "为什么打：缺 Key 是第二类错误（503），与 400 入参错误分开。当前：未出网。",
-        { 返回值: ctx.body, 耗时ms: Date.now() - t0 },
+        {
+          返回值: { httpStatus: 503, error: "未配置 LLM Key" },
+          耗时ms: Date.now() - t0,
+        },
       );
       return;
     }
@@ -120,10 +132,13 @@ export function mountChoiceRoutes(router: Router): void {
       };
 
       logger.info(
-        scope,
+        "api.choice",
         "调用函数结束：handleChoice",
         "为什么打：本档跑完，前端会把结果写入对应档位槽位并保留对照。当前：成功响应。",
-        { 返回值: ctx.body, 耗时ms: Date.now() - t0 },
+        {
+          返回值: { toolChoice, httpStatus: 200, hasToolCalls: result.hasToolCalls, protocolOk: (ctx.body as { teaching?: { protocolOk?: boolean } }).teaching?.protocolOk, elapsedMs: result.elapsedMs },
+          耗时ms: Date.now() - t0,
+        },
       );
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -133,7 +148,6 @@ export function mountChoiceRoutes(router: Router): void {
         (/required/i.test(message) || /object/i.test(message));
 
       if (thinkingConflict) {
-        // 教学边界：thinking / reasoning 开着时，网关拒绝 required / 指定对象形态（变体 6）
         ctx.status = 400;
         ctx.body = {
           ok: false,
@@ -156,10 +170,13 @@ export function mountChoiceRoutes(router: Router): void {
           },
         };
         logger.warn(
-          scope,
+          "api.choice",
           "调用函数结束：handleChoice（失败）",
           "为什么打：thinking × required/object 是本条可观察边界（400），与普通 502 上游失败分开。当前：网关拒收强制 Choice。",
-          { 返回值: ctx.body, 耗时ms: Date.now() - t0 },
+          {
+            返回值: { httpStatus: 400, code: "thinking_x_forced_choice" },
+            耗时ms: Date.now() - t0,
+          },
         );
         return;
       }
@@ -171,11 +188,16 @@ export function mountChoiceRoutes(router: Router): void {
         detail: message,
       };
       logger.error(
-        scope,
+        "api.choice",
         "调用函数结束：handleChoice（失败）",
         "为什么打：上游模型/网关错误走 502，与 400/503 分开。当前：捕获 create 异常。",
-        { 返回值: { error, body: ctx.body }, 耗时ms: Date.now() - t0 },
+        {
+          返回值: { httpStatus: 502, error: message },
+          耗时ms: Date.now() - t0,
+          错误: error,
+        },
       );
     }
+    void tHandlerStart;
   });
 }

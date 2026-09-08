@@ -17,7 +17,8 @@
  *
  * 教学锚点（覆盖 MD 需求 1）：模型一次返回 3 个 tool_call → Promise.all 并发 → 时序图 3 个 bar 同时起步。
  *
- * 日志（§5.3.16）：plan.received / dispatch.start / dispatch.done / plan.sent 都打。
+ * 日志（§5.3.16）：调用函数 五件套（handlePostPlan 封装层）；
+ *   闸门挡掉单独打 warn；子调用 executeTool 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -44,29 +45,70 @@ type TimelineEntry = {
 // ── 路由 ──
 export function mountPlanRoutes(router: Router): void {
   router.get("/api/tools", (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const meta = getToolsMeta();
-    logger.info("tools.list", "GET /api/tools", "前端拉工具列表", { count: meta.length });
+    logger.info(
+      "api.tools",
+      "调用函数开始：handleGetTools",
+      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      {
+        入参: { endpoint: "GET /api/tools" },
+        __code: `ctx.body = { tools: getToolsMeta() };`,
+      },
+    );
     ctx.body = { tools: meta };
+    logger.info(
+      "api.tools",
+      "调用函数结束：handleGetTools",
+      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
+      {
+        返回值: { count: meta.length },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 
   router.post("/api/plan", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const body = (ctx.request.body ?? {}) as { scenario?: unknown; mode?: unknown };
     const scenario = typeof body.scenario === "string" ? body.scenario : "";
     const mode = typeof body.mode === "string" ? body.mode : "";
 
-    logger.info("plan.received", "POST /api/plan", "前端发来单跑请求；记 scenario + mode 决定走 Promise.all 还是 for await", {
-      scenario, mode, bodyKeys: Object.keys(body),
-    });
+    logger.info(
+      "api.plan",
+      "调用函数开始：handlePostPlan",
+      "为什么打：route 只认这一层返回的响应包；里面 planToolCalls + executeTool 是「真活」。当前：前端发来单跑请求；记 scenario + mode 决定走 Promise.all 还是 for await。",
+      {
+        入参: { scenario, mode, bodyKeys: Object.keys(body) },
+        __code: `const calls = planToolCalls(scenario);\n// mode==parallel: Promise.all; mode==serial: for await`,
+      },
+    );
 
     // §5.3.12 入参闸门：scenario/mode 非法 → 400（不抛异常）
     if (scenario !== "tokyo-may-7days") {
-      logger.warn("plan.bad-input", "scenario 不在白名单", "scenario 必须是 tokyo-may-7days；其它都按 400 处理", { scenario });
+      logger.warn(
+        "api.plan",
+        "调用函数结束：handlePostPlan（闸门拒绝）",
+        "为什么打：scenario 必须是 tokyo-may-7days；其它都按 400 处理。warn 是「业务失败但能走通」的等级。",
+        {
+          返回值: { httpStatus: 400, error: "scenario 必须是 tokyo-may-7days" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "scenario 必须是 tokyo-may-7days" };
       return;
     }
     if (mode !== "parallel" && mode !== "serial") {
-      logger.warn("plan.bad-input", "mode 非法", "mode 必须是 parallel | serial；其它都按 400 处理", { mode });
+      logger.warn(
+        "api.plan",
+        "调用函数结束：handlePostPlan（闸门拒绝）",
+        "为什么打：mode 必须是 parallel | serial；其它都按 400 处理。",
+        {
+          返回值: { httpStatus: 400, error: "mode 必须是 parallel | serial" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "mode 必须是 parallel | serial" };
       return;
@@ -84,7 +126,20 @@ export function mountPlanRoutes(router: Router): void {
       // ── 关键：Promise.all 让 3 个 handler 真的同时跑 ──
       // 每个 promise 内部立刻记 startMs；handler 完成后记 endMs。
       // gantt 时序图能看到 3 个 bar 的 startMs 几乎相同（差 < 1ms），endMs 各自 ≈ handler sleep
-      logger.info("dispatch.start", "Promise.all 并发执行", "并行 dispatch；3 个 handler 几乎同时起步，3 个 sleep 同时倒数", { count: calls.length, toolCallIds: calls.map((c) => c.id) });
+      logger.info(
+        "││ dispatch-plan",
+        "调用循环开始：并行 dispatch（Promise.all）",
+        "为什么打：Promise.all 让 3 个 handler 真的同时跑；3 个 sleep 同时倒数；gantt 时序图能看到 3 个 bar 的 startMs 几乎相同。",
+        {
+          第几轮: 1,
+          总轮数: 1,
+          本轮为什么是这些参数: {
+            count: calls.length,
+            toolCallIds: calls.map((c) => c.id),
+            reason: "本路由单跑模式只触发一次并行批；calls 来自 planToolCalls(scenario)。",
+          },
+        },
+      );
       const promises = calls.map((c) => {
         const startMs = Date.now() - dispatchStart;
         return executeTool(c.name, c.arguments, c.id).then((r) => {
@@ -105,7 +160,20 @@ export function mountPlanRoutes(router: Router): void {
       results.push(...settled);
     } else {
       // ── 对照：for await 串行 —— 总耗时 ≈ sum(handler sleeps) ──
-      logger.info("dispatch.start", "for await 串行执行", "串行 dispatch；上一个 handler 完成才跑下一个；总耗时 = sum", { count: calls.length, toolCallIds: calls.map((c) => c.id) });
+      logger.info(
+        "││ dispatch-plan",
+        "调用循环开始：串行 dispatch（for await）",
+        "为什么打：串行 dispatch；上一个 handler 完成才跑下一个；总耗时 = sum。",
+        {
+          第几轮: 1,
+          总轮数: 1,
+          本轮为什么是这些参数: {
+            count: calls.length,
+            toolCallIds: calls.map((c) => c.id),
+            reason: "串行对照；总耗时 = sum(handler sleeps)。",
+          },
+        },
+      );
       for (const c of calls) {
         const startMs = Date.now() - dispatchStart;
         const r = await executeTool(c.name, c.arguments, c.id);
@@ -124,7 +192,15 @@ export function mountPlanRoutes(router: Router): void {
     }
 
     const totalMs = Date.now() - dispatchStart;
-    logger.info("dispatch.done", "执行完毕", "整批 tool_call 跑完；记 totalMs 便于和 gantt 视觉对账", { mode, totalMs, okCount: results.filter((r) => r.ok).length });
+    logger.info(
+      "││ dispatch-plan",
+      "调用循环结束：dispatch 收尾",
+      "为什么打：整批 tool_call 跑完；记 totalMs 便于和 gantt 视觉对账。",
+      {
+        第几轮: 1,
+        本轮结果: { mode, totalMs, okCount: results.filter((r) => r.ok).length },
+      },
+    );
 
     // ── step-3 新增：mock 的"模型最终回复"（step-3 不调 LLM；按 mode 模拟"模型嫌慢编造结果"的踩坑）──
     //   mode=parallel：mockReply 用真实数字（3500 / 22）→ 检测 = 真实
@@ -135,6 +211,14 @@ export function mountPlanRoutes(router: Router): void {
       : "5 月去东京 7 天机票约 ¥5500，平均气温 25°C，建议带薄外套和雨伞。";
 
     ctx.body = { scenario, mode, totalMs, results, timeline, mockReply };
-    logger.info("plan.sent", "responded to client", "已返回；含 mockReply 便于前端展示 + 编造检测", { status: 200, resultsCount: results.length, timelineCount: timeline.length, mode });
+    logger.info(
+      "api.plan",
+      "调用函数结束：handlePostPlan",
+      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 mockReply 便于前端展示 + 编造检测。",
+      {
+        返回值: { status: 200, resultsCount: results.length, timelineCount: timeline.length, mode, mockReply },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 }

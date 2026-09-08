@@ -49,8 +49,8 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info(
     "server.startup",
-    "模块 00 · mini-app HTTP + SSE 已启动（§5.3.8 分层 · 仅协议 A）",
-    "启动横幅：把端口、协议、Provider、Model、Key 状态、可用端点一次性打到日志，后续接 production 也按这份扫一眼服务是否就绪",
+    "模块 00 · mini-app HTTP + SSE 已启动",
+    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、协议、Provider、Model、Key 状态、可用端点）：后续接 production 也按这份扫一眼服务是否就绪。",
     {
       port: PORT,
       bind: "127.0.0.1",

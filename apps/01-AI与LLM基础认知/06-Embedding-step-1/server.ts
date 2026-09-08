@@ -32,13 +32,24 @@ app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
   logger.info(
-    "启动-服务监听",
-    "Embedding Demo 服务已起来",
-    "入口装配完成（bodyParser / routes / static 都挂上）；记下 PORT + LLM 配置便于核对",
+    "server.startup",
+    "模块 01 · 06 Embedding Demo 已启动（玩具向量 · 不调 LLM）",
+    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：本条是纯本地玩具向量表——callsModel=false，Key 缺失也不影响主流程。",
     {
       port: PORT,
-      endpoints: ["GET /health", "POST /api/token-id", "POST /api/rank"],
-      pages: ["/", "/pages/token-id.html", "/pages/cosine.html"],
+      bind: "127.0.0.1",
+      callsModel: false,
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm),
+      endpoints: {
+        "GET  /": "总览",
+        "GET  /pages/token-id.html": "Token ID 反例 · 整数差值没有语义",
+        "GET  /pages/cosine.html": "余弦正例 · 排序 + 零向量撞闸门",
+        "GET  /health": "{ ok, port, provider, model, hasKey, callsModel:false, words, embedding }",
+        "POST /api/token-id": "Body: { query } → { rows, takeaway }",
+        "POST /api/rank": "Body: { query, vsZero? } → { ranked, takeaway } 或 400",
+      },
     },
   );
   console.log("──── 模块 01 · 06 Embedding Demo（玩具向量 · 不调 LLM）· 已启动 ────");

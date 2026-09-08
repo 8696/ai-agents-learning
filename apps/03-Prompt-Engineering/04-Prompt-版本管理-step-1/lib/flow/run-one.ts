@@ -1,11 +1,10 @@
 /**
  * 职责：某一版 Prompt 打一次协议 A，并算出长度 / 推理标记 / preview。
  * 数据流：{ llm, mode, text, promptSuffix } → chat.completions.create → CompareRow。
- * ① User = promptSuffix + "\\n\\n问题：" + text，两版只换 suffix。
+ * ① User = promptSuffix + "\n\n问题：" + text，两版只换 suffix。
  * ② temperature 固定 0：本条比的是 Prompt 文本，不是采样随机性。
  *
- * 日志（§5.3.16）：每个版本号（v1/v2）每次调 LLM 都打 —— llm.request / llm.response / llm.error；
- *   mode 写进 data 便于日志里区分哪一版跑的。
+ * 日志（§5.3.16）：调用函数 五件套（runOne 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
  */
 import type { Llm } from "../../../../llm.js";
 import { SYSTEM_PROMPT } from "../version/presets.js";
@@ -55,6 +54,7 @@ export async function runOne(input: {
   text: string;
   promptSuffix: string;
 }): Promise<CompareRow> {
+  const tFuncStart = Date.now();
   // ── 协议 A request 拼装 + 入口打点 ──
   // 协议 A 走 input.llm.openai.chat.completions.create；这里把 messages / temperature / max_tokens
   // 拼成单一 request 便于下面 __code 整块打，也能直接复用给 mock 或回放。
@@ -72,18 +72,31 @@ export async function runOne(input: {
   };
 
   logger.info(
-    "llm.request",
-    `→ [${input.mode}] openai.chat.completions.create`,
-    `单版（${input.mode}）调协议 A 发起 chat；记 mode + promptSuffix 便于日志里区分是哪一版跑的，__code 整块打便于核对 messages 拼装是否对（同一题只换 suffix）`,
+    "│ 单版-runOne",
+    "调用函数开始：runOne",
+    "为什么打：compareVersions 只认这一层返回的 CompareRow；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：即将按 mode 拼 messages；同一题只换 promptSuffix。",
     {
-      mode: input.mode,
-      model: request.model,
-      temperature: request.temperature,
-      max_tokens: request.max_tokens,
-      messagesCount: request.messages.length,
-      systemPrompt: SYSTEM_PROMPT,
-      promptSuffix: input.promptSuffix,
-      textLen: input.text.length,
+      入参: { mode: input.mode, promptSuffixPreview: input.promptSuffix.slice(0, 60), promptSuffixLen: input.promptSuffix.length, textLen: input.text.length },
+      __code: `const request = { model: input.llm.modelA, temperature: 0, max_tokens: 500, messages: [...] };\nconst completion = await input.llm.openai.chat.completions.create(request);`,
+    },
+  );
+
+  const tModelStart = Date.now();
+  logger.info(
+    "││ 调用模型-协议A 对话补全",
+    "调用模型开始：协议A 对话补全",
+    `为什么打：本文件唯一的真出网层；不打就没有 choices[0].message.content / usage。当前：即将发出请求；mode 决定 suffix；temperature=0 排除采样随机性只比「Prompt 文本」。`,
+    {
+      入参: {
+        mode: input.mode,
+        model: request.model,
+        temperature: request.temperature,
+        max_tokens: request.max_tokens,
+        messagesCount: request.messages.length,
+        systemPrompt: SYSTEM_PROMPT,
+        promptSuffix: input.promptSuffix,
+        textLen: input.text.length,
+      },
       __code: `await input.llm.openai.chat.completions.create(${JSON.stringify(request, null, 2)});`,
     },
   );
@@ -91,13 +104,25 @@ export async function runOne(input: {
   try {
     const completion = await input.llm.openai.chat.completions.create(request);
     logger.info(
-      "llm.response",
-      `← [${input.mode}] got response`,
-      `单版（${input.mode}）协议 A 返回；完整打响应便于核对 SDK 自带字段（id / choices / usage / model），也是比对两版输出差异的原始证据`,
-      completion,
+      "││ 调用模型-协议A 对话补全",
+      "调用模型结束：协议A 对话补全",
+      "为什么打：要拿 choices[0].message.content / usage（计费依据），下游还要 detectReasoning + previewLine。当前：await 已返回。",
+      {
+        返回值: {
+          id: completion.id,
+          model: completion.model,
+          finishReason: completion.choices?.[0]?.finish_reason,
+          usage: completion.usage,
+        },
+        耗时ms: Date.now() - tModelStart,
+        字段释义: {
+          "choices[0].finish_reason": "stop=正常 / length=撞 max_tokens / content_filter=策略拦下",
+          usage: "OpenAI 标准 usage 三字段（计费依据）",
+        },
+      },
     );
     const raw = completion.choices[0]?.message?.content ?? "";
-    return {
+    const row: CompareRow = {
       mode: input.mode,
       ok: true,
       raw,
@@ -105,13 +130,46 @@ export async function runOne(input: {
       hasReasoning: detectReasoning(raw),
       preview: previewLine(raw),
     };
+    logger.info(
+      "│ 单版-runOne",
+      "调用函数结束：runOne",
+      "为什么打：compareVersions 要把 CompareRow 收齐后并排对照；打 preview / hasReasoning 一眼看出 v1 vs v2 的差异。当前：detectReasoning + previewLine 已算。",
+      {
+        返回值: {
+          mode: input.mode,
+          ok: true,
+          textLen: row.textLen,
+          hasReasoning: row.hasReasoning,
+          preview: row.preview,
+        },
+        耗时ms: Date.now() - tFuncStart,
+        字段释义: {
+          hasReasoning: "raw 里是否带了 <think>...</think> 标记",
+          preview: "raw 的首行（页面 cards 用）",
+        },
+      },
+    );
+    return row;
   } catch (error: unknown) {
     const mapped = httpErrorMessage(error);
     logger.error(
-      "llm.error",
-      `[${input.mode}] openai.chat.completions.create threw`,
-      `单版（${input.mode}）协议 A 抛异常（网络 / 5xx / 4xx）；记 status + 错误信息便于排错（另一版可能成功，便于看是不是单版本问题）`,
-      { mode: input.mode, status: mapped.status, error: mapped.message },
+      "││ 调用模型-协议A 对话补全",
+      "调用模型结束：协议A 对话补全（失败）",
+      "为什么打：拿到 mappedStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 502。当前：create 抛错，compareVersions 的 Promise.all 会兜住另一版。",
+      {
+        返回值: { mappedStatus: mapped.status, message: mapped.message },
+        耗时ms: Date.now() - tModelStart,
+        错误: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error,
+      },
+    );
+    logger.error(
+      "│ 单版-runOne",
+      "调用函数结束：runOne（失败）",
+      "为什么打：失败也要按 CompareRow 形状回收，便于 compareVersions 并排展示；记 mode 便于看是不是单版本问题。当前：模型抛错，已转 CompareFail。",
+      {
+        返回值: { mode: input.mode, ok: false, status: mapped.status, error: mapped.message },
+        耗时ms: Date.now() - tFuncStart,
+      },
     );
     return { mode: input.mode, ok: false, status: mapped.status, error: mapped.message };
   }

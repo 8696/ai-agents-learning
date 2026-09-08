@@ -14,10 +14,9 @@
  * step-6 vs step-2：
  *   - 路由骨架一致（两轮调用 + execute + 回灌）
  *   - step-6 新增：finalReply 调 detectHallucination → 把 reply 数字 vs tool_result 数字差异自动列出
- *   - 前端 public/index.html 把所有 4 张卡（Round 1 Request/Response + Round 2 Request/Response）
- *     + 编造检测栏摆出来，让学习者看见协议层 + "模型有没有编" 两件事
  *
- * 日志（§5.3.16）：chat.* + llm.* + detect.* 都打。
+ * 日志（§5.3.16）：调用函数 五件套（handlePostChat 封装层）；
+ *   闸门挡掉单独打 warn；子调用 callLlmOnce / executeTool 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -61,6 +60,17 @@ function detectHallucination(reply: string, results: ExecResult[]): {
   replyNumbers: number[];
   fakeNumbers: number[];
 } {
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ 编造检测-detectHallucination",
+    "调用函数开始：detectHallucination",
+    "为什么打：route 要把 isHallucinated / fakeNumbers 写进 ctx.body 交给页面 stats 区；step-6 核心——让 reply 是否引用 tool_result 在页面上自动可见。",
+    {
+      入参: { replyPreview: reply.slice(0, 60), replyLen: reply.length, resultsCount: results.length },
+      __code: `const sourceNumbers = []; for (const r of results) if (r.ok) extractNumbers(r.result, sourceNumbers);\nconst moneyRe = /¥\\s*(-?\\d+)/g;\nconst tempRe = /(-?\\d+)\\s*(?:°\\s*C|℃)/g;`,
+    },
+  );
+
   const sourceNumbers: number[] = [];
   for (const r of results) {
     if (r.ok) extractNumbers(r.result, sourceNumbers);
@@ -86,7 +96,32 @@ function detectHallucination(reply: string, results: ExecResult[]): {
   for (const n of replyNumbers) {
     if (!sourceSet.has(n)) fakeNumbers.push(n);
   }
-  return { isHallucinated: fakeNumbers.length > 0, sourceNumbers, replyNumbers, fakeNumbers };
+
+  const result = {
+    isHallucinated: fakeNumbers.length > 0,
+    sourceNumbers,
+    replyNumbers,
+    fakeNumbers,
+  };
+  logger.info(
+    "│ 编造检测-detectHallucination",
+    "调用函数结束：detectHallucination",
+    "为什么打：route 要把 isHallucinated + fakeNumbers 写进 ctx.body 交给页面 stats 区；记 sourceCount + replyCount + fakeNumbers 便于核对。",
+    {
+      返回值: {
+        isHallucinated: result.isHallucinated,
+        sourceCount: result.sourceNumbers.length,
+        replyCount: result.replyNumbers.length,
+        fakeNumbers: result.fakeNumbers,
+      },
+      耗时ms: Date.now() - tFuncStart,
+      字段释义: {
+        isHallucinated: "true = reply 里出现 tool_result 里没有的数字",
+        fakeNumbers: "reply 引用但 tool_result 没有的数字列表（教学核心——可见编造）",
+      },
+    },
+  );
+  return result;
 }
 
 // ── 一次 LLM 调用 + 兜底 ──
@@ -95,13 +130,23 @@ type CallResult =
   | { ok: false; request: ProtocolARequest; error: string; upstreamStatus?: number };
 
 async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
+  const tFuncStart = Date.now();
   let modelId = cachedModelA;
   if (modelId === "(未配置)") {
     try {
       modelId = getLlm().modelA;
       cachedModelA = modelId;
     } catch (err: unknown) {
-      logger.error("chat.no-key", "未配置 LLM Key", "apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修", { err: err instanceof Error ? err.message : String(err) });
+      logger.error(
+        "│ chat-callLlmOnce",
+        "调用函数结束：callLlmOnce（失败）",
+        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        {
+          返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
+          err: err instanceof Error ? err.message : String(err),
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       return {
         ok: false,
         request: { model: "?", messages, tools: TOOLS_SCHEMA, tool_choice: "auto" },
@@ -117,19 +162,47 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
     tool_choice: "auto",
   };
 
+  logger.info(
+    "│ chat-callLlmOnce",
+    "调用函数开始：callLlmOnce",
+    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，model / messagesCount / toolsCount 都要打。",
+    {
+      入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice },
+      __code: `await callProtocolA(${JSON.stringify(request, null, 2)});`,
+    },
+  );
+
   try {
     const response = await callProtocolA(request);
-    logger.info("llm.response", "← got response", "调模型返；记 choices / finishReason / usage", {
-      finishReason: response.choices[0]?.finish_reason,
-      toolCallCount: response.choices[0]?.message?.tool_calls?.length ?? 0,
-      usage: response.usage,
-    });
+    logger.info(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce",
+      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 finishReason / toolCallCount 便于核对。",
+      {
+        返回值: {
+          ok: true,
+          finishReason: response.choices?.[0]?.finish_reason,
+          toolCallCount: response.choices?.[0]?.message?.tool_calls?.length ?? 0,
+          usage: response.usage,
+        },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, request, response };
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string; error?: { message?: string } };
     const upstreamStatus = e.status;
     const msg = e.error?.message || e.message || String(err);
-    logger.error("llm.error", "callProtocolA threw", "协议 A 抛异常", { upstreamStatus, err: msg });
+    logger.error(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce（失败）",
+      "为什么打：协议 A 抛异常；记 upstreamStatus + 错误信息便于排错。",
+      {
+        返回值: { ok: false, error: msg, upstreamStatus },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, request, error: msg, upstreamStatus };
   }
 }
@@ -137,12 +210,29 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
 // ── 路由 ──
 export function mountChatRoutes(router: Router): void {
   router.post("/api/chat", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const body = (ctx.request.body ?? {}) as { input?: unknown };
     const input = typeof body.input === "string" ? body.input.trim() : "";
-    logger.info("chat.received", "POST /api/chat", "前端发来用户输入；step-6 演示协议层数据形态 + 编造检测", { input, inputLen: input.length });
+    logger.info(
+      "api.chat",
+      "调用函数开始：handlePostChat",
+      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool + detectHallucination 是「真活」。当前：step-6 演示协议层数据形态 + 编造检测；记 input + inputLen 便于核对。",
+      {
+        入参: { inputPreview: input.slice(0, 60), inputLen: input.length, bodyKeys: Object.keys(body) },
+        __code: `// 两轮调用 + execute + 回灌 + detectHallucination`,
+      },
+    );
 
     if (!input) {
-      logger.warn("chat.bad-input", "input empty", "用户输入是空字符串", { body });
+      logger.warn(
+        "api.chat",
+        "调用函数结束：handlePostChat（闸门拒绝）",
+        "为什么打：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
+        {
+          返回值: { httpStatus: 400, error: "input 不能为空" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "input 不能为空" };
       return;
@@ -152,18 +242,35 @@ export function mountChatRoutes(router: Router): void {
     const messages1: ChatMsg[] = [{ role: "user", content: input }];
     const r1 = await callLlmOnce(messages1);
     if (!r1.ok) {
-      logger.error("chat.round-1.fail", "round-1 failed → 502", "Round 1 调模型失败", { error: r1.error, upstreamStatus: r1.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-1 失败）",
+        "为什么打：Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        {
+          返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r1.error),
+        },
+      );
       ctx.status = 502;
       ctx.body = { error: r1.error, upstream_status: r1.upstreamStatus, round_1: r1 };
       return;
     }
     const assistantMsg1 = r1.response.choices[0].message;
     const toolCallsFromLLM = assistantMsg1.tool_calls ?? [];
-    logger.info("chat.round-1.ok", "round-1 decided", "Round 1 模型决定", {
-      finishReason: r1.response.choices[0].finish_reason,
-      toolCallCount: toolCallsFromLLM.length,
-      toolCallNames: toolCallsFromLLM.map((tc) => tc.function.name),
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环进行中：round-1 OK",
+      "为什么打：Round 1 模型决定；记 finishReason + toolCallNames 便于核对。",
+      {
+        中间状态: {
+          finishReason: r1.response.choices[0].finish_reason,
+          toolCallCount: toolCallsFromLLM.length,
+          toolCallNames: toolCallsFromLLM.map((tc) => tc.function.name),
+        },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
 
     // ── Execute：每个 tool_call 过 Registry ──
     const toolResults: ExecResult[] = toolCallsFromLLM.map((tc) => {
@@ -171,9 +278,14 @@ export function mountChatRoutes(router: Router): void {
       try {
         args = JSON.parse(tc.function.arguments);
       } catch {
-        logger.warn("chat.execute.parse-fail", "tool_call.arguments 不是合法 JSON", "模型生成了非 JSON 的 arguments", {
-          id: tc.id, name: tc.function.name, raw: tc.function.arguments,
-        });
+        logger.warn(
+          "││ chat-handlePostChat",
+          `tool_call.arguments 不是合法 JSON（${tc.function.name}）`,
+          "为什么打：模型生成了非 JSON 的 arguments（常见踩坑）；记 raw 让 round-2 能纠正。",
+          {
+            中间状态: { toolCallId: tc.id, name: tc.function.name, raw: tc.function.arguments },
+          },
+        );
         return {
           ok: false,
           tool: tc.function.name,
@@ -182,9 +294,14 @@ export function mountChatRoutes(router: Router): void {
         };
       }
       const r = executeTool(tc.function.name, args, tc.id);
-      logger.info("chat.execute.result", "tool_result", "工具执行完", {
-        id: tc.id, name: tc.function.name, ok: r.ok,
-      });
+      logger.info(
+        "││ chat-handlePostChat",
+        `tool_result（${tc.function.name}）`,
+        "为什么打：工具执行完；result 摘要打，便于核对返回内容（不打全文）。",
+        {
+          中间状态: { toolCallId: tc.id, name: tc.function.name, ok: r.ok, error: r.ok ? undefined : r.error },
+        },
+      );
       return r;
     });
 
@@ -193,10 +310,15 @@ export function mountChatRoutes(router: Router): void {
       const directReply = assistantMsg1.content ?? "";
       // 即使没调工具，也跑编造检测（reply 数字 vs 空源集）
       const hallucination = detectHallucination(directReply, []);
-      logger.info("chat.no-tool-call", "model 直接自然语言答", "模型没调工具；跑编造检测（源集为空 → 任何 reply 数字都是 fake）", {
-        contentPreview: directReply.slice(0, 80),
-        hallucinated: hallucination.isHallucinated,
-      });
+      logger.info(
+        "api.chat",
+        "调用函数结束：handlePostChat（no-tool-call）",
+        "为什么打：模型没调工具、直接自然语言答；跑编造检测（源集为空 → 任何 reply 数字都是 fake）；打 hallucinated 状态便于核对。",
+        {
+          返回值: { httpStatus: 200, finalLen: directReply.length, hallucinated: hallucination.isHallucinated, fakeNumbers: hallucination.fakeNumbers },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.body = {
         user_input: input,
         round_1: r1,
@@ -225,7 +347,16 @@ export function mountChatRoutes(router: Router): void {
     ];
     const r2 = await callLlmOnce(messages2);
     if (!r2.ok) {
-      logger.error("chat.round-2.fail", "round-2 failed → 502", "Round 2 失败", { error: r2.error, upstreamStatus: r2.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-2 失败）",
+        "为什么打：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        {
+          返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r2.error),
+        },
+      );
       ctx.status = 502;
       ctx.body = {
         error: r2.error,
@@ -238,19 +369,26 @@ export function mountChatRoutes(router: Router): void {
       return;
     }
     const finalReply = r2.response.choices[0].message.content ?? "";
-    logger.info("chat.round-2.ok", "round-2 done", "Round 2 成功", {
-      finishReason: r2.response.choices[0].finish_reason,
-      finalLen: finalReply.length,
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环进行中：round-2 OK",
+      "为什么打：Round 2 成功；拿到 final reply 准备 detectHallucination。",
+      {
+        中间状态: { finishReason: r2.response.choices[0].finish_reason, finalLen: finalReply.length },
+      },
+    );
 
     // ── 编造检测（核心新增）：扫 reply 数字 vs tool_result 数字 ──
     const hallucination = detectHallucination(finalReply, toolResults);
-    logger.info("detect.hallucination", "扫 reply 数字 vs tool_result 数字", "step-6 核心：让 reply 是否引用 tool_result 在页面上自动可见", {
-      isHallucinated: hallucination.isHallucinated,
-      sourceCount: hallucination.sourceNumbers.length,
-      replyCount: hallucination.replyNumbers.length,
-      fakeNumbers: hallucination.fakeNumbers,
-    });
+    logger.info(
+      "api.chat",
+      "调用函数结束：handlePostChat",
+      "为什么打：route 要把响应包（4 张数据卡 + 编造检测）写进 ctx.body 交给页面 stats 区；记 isHallucinated + fakeNumbers 便于核对。",
+      {
+        返回值: { status: 200, finalLen: finalReply.length, hallucinated: hallucination.isHallucinated, fakeNumbers: hallucination.fakeNumbers },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
 
     ctx.body = {
       user_input: input,
@@ -261,6 +399,5 @@ export function mountChatRoutes(router: Router): void {
       final_reply: finalReply,
       hallucination,
     };
-    logger.info("chat.reply.sent", "responded to client", "已返回；含 4 张数据卡 + 编造检测", { status: 200 });
   });
 }

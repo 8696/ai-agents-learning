@@ -1,18 +1,17 @@
 /**
- * 职责：POST /api/compare —— 真调两次 LLM（协议 A），对比模型在不同 description 下的选择。
+ * 职责：POST /api/compare-baseline + /api/compare-improved —— 真调 LLM（协议 A），分别用「差描述」「好描述」两套 Tool。
  * 数据流：
- *   POST { query } →
- *     第一次：把「差描述」的两 Tool + user query → callProtocolA → 拿 tool_call
- *     第二次：把「好描述」的两 Tool + user query → callProtocolA → 拿 tool_call
- *     ctx.body = { query, baseline, improved, verdict }
+ *   POST /api/compare-{baseline|improved} { query } →
+ *     runOneSide(label, tools, query) → callLlmOnce → 拿 tool_call
+ *     ctx.body = CompareSide
  *
  * 教学锚点（变体 1「触发条件」）：
  *   - 同一个 user query，两侧只换 description 字段
  *   - 模型的选择差异 = description 写得好不好的真实证据
  *   - 不真正 execute tool_call（执行是 01 那条已讲）；本条只对照「模型决定调哪个 Tool」
  *
- * 日志（§5.3.16）：详细优先；compare.received → 调用函数 compare-callBaseline → 调用模型 baseline
- *   → 调用函数 compare-callImproved → 调用模型 improved → compare.sent ｜ 任一处失败独立 error。
+ * 日志（§5.3.16）：调用函数 五件套（handleCompare{baseline|improved} / runOneSide / callLlmOnce 封装层）；
+ *   闸门挡掉单独打 warn；子调用 callProtocolA 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -41,13 +40,23 @@ type CallOnceResult =
   | { ok: false; request: ProtocolARequest; error: string; upstreamStatus?: number };
 
 async function callLlmOnce(scope: string, tools: ToolSchema[], query: string): Promise<CallOnceResult> {
+  const tFuncStart = Date.now();
   let modelId = cachedModelA;
   if (modelId === "(未配置)") {
     try {
       modelId = getLlm().modelA;
       cachedModelA = modelId;
     } catch (err: unknown) {
-      logger.error(`${scope}.no-key`, "未配置 LLM Key", "apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修", { err: err instanceof Error ? err.message : String(err) });
+      logger.error(
+        `│ ${scope}-callLlmOnce`,
+        "调用函数结束：callLlmOnce（失败）",
+        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        {
+          返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
+          err: err instanceof Error ? err.message : String(err),
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       return {
         ok: false,
         request: { model: "?", messages: [{ role: "user", content: query }], tools, tool_choice: "auto" },
@@ -64,27 +73,48 @@ async function callLlmOnce(scope: string, tools: ToolSchema[], query: string): P
     tool_choice: "auto",
   };
 
-  logger.info(`${scope}.start`, `→ openai.chat.completions.create（${scope}）`, "本 Demo 的核心出网点：拿模型对这一组 tools 的 tool_call 选择", {
-    model: request.model,
-    messagesCount: request.messages.length,
-    toolsCount: request.tools?.length ?? 0,
-    tool_choice: request.tool_choice,
-    __code: `await llm.openai.chat.completions.create(${JSON.stringify(request, null, 2)});`,
-  });
+  logger.info(
+    `│ ${scope}-callLlmOnce`,
+    "调用函数开始：callLlmOnce",
+    `为什么打：route 只认这一层返回的 CallOnceResult；里面那次才是出网（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，scope=${scope} 便于 grep。`,
+    {
+      入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice, queryPreview: query.slice(0, 60) },
+      __code: `await callProtocolA(${JSON.stringify(request, null, 2)});`,
+    },
+  );
 
   try {
     const response = await callProtocolA(request);
     const toolCalls = response.choices[0]?.message?.tool_calls ?? [];
-    logger.info(`${scope}.ok`, `← got response（${scope}）`, "完整打响应便于追 SDK 行为；记下 pickedToolName 用于前端对照", {
-      finishReason: response.choices[0]?.finish_reason,
-      pickedToolName: toolCalls[0]?.function.name ?? null,
-    });
+    logger.info(
+      `│ ${scope}-callLlmOnce`,
+      "调用函数结束：callLlmOnce",
+      "为什么打：route 要把 CallOnceResult 写进 ctx.body 交给页面 stats 区；记 finishReason + pickedToolName 便于核对。",
+      {
+        返回值: {
+          ok: true,
+          finishReason: response.choices[0]?.finish_reason,
+          pickedToolName: toolCalls[0]?.function.name ?? null,
+          usage: response.usage,
+        },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, request, response };
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string; error?: { message?: string } };
     const upstreamStatus = e.status;
     const msg = e.error?.message || e.message || String(err);
-    logger.error(`${scope}.error`, "callProtocolA threw", "协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错", { upstreamStatus, err: msg });
+    logger.error(
+      `│ ${scope}-callLlmOnce`,
+      "调用函数结束：callLlmOnce（失败）",
+      "为什么打：协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错。",
+      {
+        返回值: { ok: false, error: msg, upstreamStatus },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, request, error: msg, upstreamStatus };
   }
 }
@@ -122,30 +152,41 @@ async function runOneSide(
   tools: ToolSchema[],
   query: string,
 ): Promise<CompareSide> {
-  // 外层（封装）开始 —— 内部那次才是「调用模型」
-  logger.info(`compare.call-${label}`, `调用函数开始：runOneSide（${label}）`, `跑这一侧（${label}）的 LLM 调用；里面那次才是真正出网`, {
-    toolsCount: tools.length,
-    __code: `const r = await callLlmOnce("${label}", tools, query);`,
-  });
+  const tFuncStart = Date.now();
+  logger.info(
+    `│ 对照-runOneSide[${label}]`,
+    "调用函数开始：runOneSide",
+    `为什么打：route 只认这一层返回的 CompareSide；里面那次才是出网（看「调用函数开始：callLlmOnce」）。当前：跑这一侧（${label}）的 LLM 调用。`,
+    {
+      入参: { label, toolsCount: tools.length, queryPreview: query.slice(0, 60) },
+      __code: `const r = await callLlmOnce("${label}", tools, query);`,
+    },
+  );
+
   const t0 = Date.now();
   const r = await callLlmOnce(`compare.${label}`, tools, query);
   if (!r.ok) {
-    // 把 failure 也包成 CompareSide 给前端展示错误
     const empty: CompareSide = {
       label,
       tools,
       request: toLogRequest(r.request),
       response: { id: "", model: r.request.model, choices: [] },
-      ok: false, // LLM 调用失败（catch 路径）
+      ok: false,
       pickedToolName: undefined,
       pickedToolArgs: null,
       elapsedMs: Date.now() - t0,
     };
-    logger.error(`compare.call-${label}`, `调用函数结束：runOneSide（${label}）（失败）`, `LLM 调用失败；前端会看到错误信息`, {
-      error: r.error,
-      upstreamStatus: r.upstreamStatus,
-      耗时ms: Date.now() - t0,
-    });
+    logger.error(
+      `│ 对照-runOneSide[${label}]`,
+      "调用函数结束：runOneSide（失败）",
+      "为什么打：LLM 调用失败；前端会看到错误信息。",
+      {
+        返回值: { ok: false, pickedToolName: null },
+        error: r.error,
+        upstreamStatus: r.upstreamStatus,
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return empty;
   }
   const toolCalls = r.response.choices[0]?.message?.tool_calls ?? [];
@@ -155,7 +196,7 @@ async function runOneSide(
     try {
       pickedArgs = JSON.parse(picked.function.arguments);
     } catch {
-      pickedArgs = picked.function.arguments; // 解析失败就把原文放回去
+      pickedArgs = picked.function.arguments;
     }
   }
   const out: CompareSide = {
@@ -163,28 +204,47 @@ async function runOneSide(
     tools,
     request: toLogRequest(r.request),
     response: toLogResponse(r.response),
-    ok: true, // LLM 调用成功
-    pickedToolName: picked?.function.name ?? null, // null = 模型主动没调 tool（合法）
+    ok: true,
+    pickedToolName: picked?.function.name ?? null,
     pickedToolArgs: pickedArgs,
     elapsedMs: Date.now() - t0,
   };
-  logger.info(`compare.call-${label}`, `调用函数结束：runOneSide（${label}）`, `这一侧跑完；记 pickedToolName 给前端对照`, {
-    pickedToolName: out.pickedToolName,
-    耗时ms: Date.now() - t0,
-  });
+  logger.info(
+    `│ 对照-runOneSide[${label}]`,
+    "调用函数结束：runOneSide",
+    `为什么打：这一侧跑完；记 pickedToolName 给前端对照——这是 description 写得好不好的真实证据。`,
+    {
+      返回值: { ok: true, pickedToolName: out.pickedToolName, elapsedMs: out.elapsedMs },
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
   return out;
 }
 
 // ── 路由（单 Tool 独立调用模式：每个端点独立调一次 LLM，前端两次 fetch 拿 baseline + improved） ──
 export function mountCompareRoutes(router: Router): void {
-  // 单端点 helper：调一次 LLM，返回 CompareSide + elapsedMs
   async function handleOneSide(ctx: Context, side: "baseline" | "improved"): Promise<void> {
+    const tHandlerStart = Date.now();
     const parsed = compareInputSchema.safeParse(ctx.request.body ?? {});
-    logger.info(`compare.${side}.received`, `POST /api/compare-${side}`, "前端发来一次独立调用请求；记 inputLen", {
-      bodyKeys: Object.keys((ctx.request.body ?? {}) as object),
-    });
+    logger.info(
+      `api.compare.${side}`,
+      `调用函数开始：handleCompare${side}`,
+      `为什么打：route 只认这一层返回的 CompareSide；里面 runOneSide 是「真活」。当前：前端发来一次独立调用请求；记 query 便于复现。`,
+      {
+        入参: { endpoint: `POST /api/compare-${side}`, bodyKeys: Object.keys((ctx.request.body ?? {}) as object) },
+        __code: `const tools = side === "baseline" ? getBaselineTools() : getImprovedTools();\nconst result = await runOneSide(label, tools, query);`,
+      },
+    );
     if (!parsed.success) {
-      logger.warn(`compare.${side}.bad-input`, "input 校验失败", "入参 schema 不通过；走 400", { issues: parsed.error.issues });
+      logger.warn(
+        `api.compare.${side}`,
+        `调用函数结束：handleCompare${side}（闸门拒绝）`,
+        "为什么打：入参 schema 不通过；走 400 不让 LLM 浪费 token。",
+        {
+          返回值: { httpStatus: 400, error: "请求体不合法" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "请求体不合法", issues: parsed.error.issues };
       return;
@@ -194,15 +254,28 @@ export function mountCompareRoutes(router: Router): void {
     const label = side === "baseline" ? "差描述" : "好描述";
     const result = await runOneSide(label, tools, query);
     if (!result.ok) {
-      logger.error(`compare.${side}.fail`, `${label}侧 LLM 调用失败`, "LLM 调失败（catch 路径）；返回 502", {});
+      logger.error(
+        `api.compare.${side}`,
+        `调用函数结束：handleCompare${side}（失败）`,
+        "为什么打：LLM 调失败（catch 路径）；返回 502。",
+        {
+          返回值: { httpStatus: 502, pickedToolName: result.pickedToolName },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 502;
       ctx.body = { error: `${label}侧 LLM 调用失败，请查看 #env-info`, result };
       return;
     }
-    logger.info(`compare.${side}.sent`, `${label}侧响应`, "已返回给前端；记 pickedToolName + elapsedMs", {
-      pickedToolName: result.pickedToolName,
-      elapsedMs: result.elapsedMs,
-    });
+    logger.info(
+      `api.compare.${side}`,
+      `调用函数结束：handleCompare${side}`,
+      `为什么打：route 要把 CompareSide 写进 ctx.body 交给页面 stats 区；记 pickedToolName + elapsedMs 便于核对。`,
+      {
+        返回值: { status: 200, pickedToolName: result.pickedToolName, elapsedMs: result.elapsedMs },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
     ctx.body = result;
   }
 

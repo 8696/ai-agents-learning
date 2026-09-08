@@ -3,6 +3,9 @@
  * 数据流：{ prompt?, runs?, temperature?, topP? } → 闸门 → flow/run-repeat → RepeatResponse。
  * 为什么单独一个端点：扫描页回答「换参数会怎样」，本端点回答「同一组参数重复会怎样」，
  *   后者才是判断「这档参数能不能拿去做抽取任务」的依据。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（handlePostRepeat 封装层）；
+ *   Key 缺失单独打 info 闸门拒绝；真正出网日志全部在 lib/sampling/call-once.ts。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -15,14 +18,31 @@ import {
   FIXED_TOP_P,
   DEFAULT_SWEEP_TEMPERATURE,
 } from "../lib/sampling/presets.js";
+import { logger } from "../lib/logger.js";
 
 export function mountRepeatRoutes(router: Router): void {
   router.post("/api/repeat", async (ctx: Context) => {
     // ① Key 闸门在前：没 Key 就别让上游 SDK 抛一句读不懂的错。
     const llm = requireLlm(ctx);
-    if (!llm) return;
+    if (!llm) {
+      logger.info(
+        "api.repeat",
+        "POST /api/repeat 被无 Key 闸门挡掉",
+        "为什么打：服务端兜底；没 Key 就别让上游 SDK 抛一句读不懂的错。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
+        { endpoint: "POST /api/repeat" },
+      );
+      return;
+    }
     const body = readSamplingBody(ctx);
-    if (!body) return;
+    if (!body) {
+      logger.info(
+        "api.repeat",
+        "POST /api/repeat 被入参闸门挡掉",
+        "为什么打：闸门挡掉没花模型额度也没走到 runGroup；记下 rawBody 便于复盘哪类失败最常见。当前：body 不合法。",
+        { endpoint: "POST /api/repeat" },
+      );
+      return;
+    }
 
     const prompt = body.prompt ?? DEFAULT_PROMPT;
     const runs = body.runs ?? DEFAULT_REPEAT_RUNS;
@@ -32,11 +52,47 @@ export function mountRepeatRoutes(router: Router): void {
       temperature: body.temperature ?? DEFAULT_SWEEP_TEMPERATURE,
       topP: body.topP ?? FIXED_TOP_P,
     };
-    console.log(`/api/repeat T=${params.temperature} top_p=${params.topP} runs=${runs}`);
+
+    const tHandlerStart = Date.now();
+    logger.info(
+      "api.repeat",
+      "调用函数开始：handlePostRepeat",
+      "为什么打：route 只认这一层返回的 RepeatResponse；里面 runRepeat 是「真活」。当前：即将交给 runRepeat。",
+      {
+        入参: { T: params.temperature, topP: params.topP, runs, promptLen: prompt.length },
+        __code: `ctx.body = await runRepeat({ llm, prompt, params, runs });`,
+      },
+    );
 
     try {
-      ctx.body = await runRepeat({ llm, prompt, params, runs });
+      const result = await runRepeat({ llm, prompt, params, runs });
+      ctx.body = result;
+      logger.info(
+        "api.repeat",
+        "调用函数结束：handlePostRepeat",
+        "为什么打：route 要把 RepeatResponse 写进 ctx.body 交给页面 stats 区。当前：runRepeat 已返回。",
+        {
+          返回值: {
+            T: params.temperature,
+            topP: params.topP,
+            runs,
+            verdict: result.group.verdict,
+            durationMs: result.durationMs,
+          },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
     } catch (error: unknown) {
+      logger.error(
+        "api.repeat",
+        "调用函数结束：handlePostRepeat（失败）",
+        "为什么打：runRepeat 抛错说明整轮都没跑起来（单次失败已在 callOnce 内转成 SingleRun.error）；记 err 便于写 writeUpstreamError。当前：runRepeat 抛错，已交给 writeUpstreamError 写统一错误响应。",
+        {
+          返回值: { mode: "repeat", error: error instanceof Error ? error.message : String(error) },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: error,
+        },
+      );
       console.error("/api/repeat error:", error);
       writeUpstreamError(ctx, error, { mode: "repeat" });
     }

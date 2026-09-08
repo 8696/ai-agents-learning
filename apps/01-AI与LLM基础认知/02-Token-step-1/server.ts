@@ -34,15 +34,28 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "服务起好了，记下端口、端点、词表让 /health 能对照；本地 encode · 不调 LLM", {
-    url: `http://127.0.0.1:${PORT}/`,
-    endpoints: ["GET /", "GET /pages/compare.html", "GET /pages/encode.html", "GET /health", "POST /api/encode", "POST /api/compare"],
-    vocab: "cl100k (gpt-tokenizer)",
-    callsModel: false,
-    provider: llm?.provider ?? null,
-    model: llm?.modelA ?? null,
-    hasKey: Boolean(llm),
-  });
+  logger.info(
+    "server.startup",
+    "模块 01 · 02 Token Demo 已启动（本地 encode · 不调 LLM）",
+    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点、词表）：本条是纯本地词表计算——callsModel=false，Key 缺失也不影响主流程。",
+    {
+      port: PORT,
+      bind: "127.0.0.1",
+      vocab: "cl100k (gpt-tokenizer)",
+      callsModel: false,
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm),
+      endpoints: {
+        "GET  /": "总览",
+        "GET  /pages/compare.html": "中英对照（同一句人话切多少 Token）",
+        "GET  /pages/encode.html": "自定义文本 → Token id",
+        "GET  /health": "{ ok, port, provider, model, hasKey, callsModel:false, vocab, samples }",
+        "POST /api/encode": "Body: { text } → { charCount, tokenCount, previewIds, vocab }",
+        "POST /api/compare": "无 body → { english, chinese, takeaway }",
+      },
+    },
+  );
   console.log("──── 模块 01 · 02 Token Demo（本地 encode · 不调 LLM）· 已启动 ────");
   console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
   console.log(`  总览         /`);

@@ -2,18 +2,49 @@
  * 职责：POST /api/classify —— 薄封装：闸门 → 对照流程 → 写 ctx.body。
  * 数据流：{ text, modes } → classifyModes → 两侧都失败才把 HTTP 状态抬成上游码。
  * 本页只演示：同一句评价、同一 System，Zero（无样例）vs Few（4 对假对话）。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（handlePostClassify 封装层）；
+ *   闸门挡掉单独打 warn / info；子调用 classifyModes 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
 import { readClassifyBody, requireLlm } from "../lib/http/request-guards.js";
 import { classifyModes } from "../lib/flow/classify-modes.js";
+import { logger } from "../lib/logger.js";
 
 export function mountClassifyRoutes(router: Router): void {
   router.post("/api/classify", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const currentLlm = requireLlm(ctx);
-    if (!currentLlm) return;
+    if (!currentLlm) {
+      logger.info(
+        "api.classify",
+        "POST /api/classify 被无 Key 闸门挡掉",
+        "为什么打：服务端兜底；没 Key 就别让上游 SDK 抛一句读不懂的错。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
+        { endpoint: "POST /api/classify" },
+      );
+      return;
+    }
     const body = readClassifyBody(ctx);
-    if (!body) return;
+    if (!body) {
+      logger.warn(
+        "api.classify",
+        "POST /api/classify 被入参闸门挡掉",
+        "为什么打：闸门挡掉没花模型额度也没走到 classifyModes；记 reason 便于复盘。当前：body 不合法。",
+        { endpoint: "POST /api/classify" },
+      );
+      return;
+    }
+
+    logger.info(
+      "api.classify",
+      "调用函数开始：handlePostClassify",
+      "为什么打：route 只认这一层返回的 { results }；里面 classifyModes 是「真活」（并发跑 Zero / Few 两个 classifyOne）。当前：闸门全过，即将交给 classifyModes。",
+      {
+        入参: { textPreview: body.text.slice(0, 50), textLen: body.text.length, modes: body.modes },
+        __code: `const packed = await classifyModes({ llm: currentLlm, text: body.text, modes: body.modes });`,
+      },
+    );
 
     const packed = await classifyModes({
       llm: currentLlm,
@@ -25,6 +56,15 @@ export function mountClassifyRoutes(router: Router): void {
     if (packed.allFailed) {
       ctx.status = packed.allFailed.status;
       ctx.body = { error: packed.allFailed.error, results: packed.results };
+      logger.error(
+        "api.classify",
+        "调用函数结束：handlePostClassify（失败）",
+        "为什么打：两侧都失败时把 HTTP 状态抬成上游码；记 status 便于前端显示「上游挂了」。当前：allFailed 已给出上游码 + error。",
+        {
+          返回值: { httpStatus: packed.allFailed.status, error: packed.allFailed.error, results: packed.results },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       return;
     }
 
@@ -34,5 +74,17 @@ export function mountClassifyRoutes(router: Router): void {
       input: packed.input,
       results: packed.results,
     };
+    logger.info(
+      "api.classify",
+      "调用函数结束：handlePostClassify",
+      "为什么打：route 要把对照结构（product / system / input / results）写进 ctx.body 交给页面 stats 区。当前：classifyModes 已返回，至少一侧 ok。",
+      {
+        返回值: {
+          resultsCount: packed.results.length,
+          resultsSummary: packed.results.map((r) => ({ mode: r.mode, ok: r.ok, formatValid: "formatValid" in r ? r.formatValid : null })),
+        },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 }

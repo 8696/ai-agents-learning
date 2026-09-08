@@ -18,7 +18,8 @@
  * 与 routes/chain.ts 的关系：本路由服务"反例"页面（pages/chain-bad.html）；
  *   chain 页面（pages/chain.html）走 routes/chain.ts。**页与接口 1:1**（§5.3.8）。
  *
- * 日志（§5.3.16）：chain-bad.received / bad.dispatch / bad.step1.done / bad.step2.done / bad.done / bad.sent 都打。
+ * 日志（§5.3.16）：调用函数 五件套（handlePostChainBad 封装层）；
+ *   闸门挡掉单独打 warn；子调用 executeTool 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -46,29 +47,70 @@ type StepTrace = {
 // ── 路由 ──
 export function mountChainBadRoutes(router: Router): void {
   router.get("/api/tools", (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const meta = getToolsMeta();
-    logger.info("tools.list", "GET /api/tools", "前端拉工具列表", { count: meta.length });
+    logger.info(
+      "api.tools",
+      "调用函数开始：handleGetTools",
+      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      {
+        入参: { endpoint: "GET /api/tools" },
+        __code: `ctx.body = { tools: getToolsMeta() };`,
+      },
+    );
     ctx.body = { tools: meta };
+    logger.info(
+      "api.tools",
+      "调用函数结束：handleGetTools",
+      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
+      {
+        返回值: { count: meta.length },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 
   router.post("/api/chain-bad", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const body = (ctx.request.body ?? {}) as { query?: unknown; style?: unknown };
     const query = typeof body.query === "string" ? body.query.trim() : "";
     const style = typeof body.style === "string" ? body.style : "tech";
 
-    logger.info("chain-bad.received", "POST /api/chain-bad", "前端发来反例请求；记 query + style。注意：本路由故意把 summarize.content 写 undefined，演示 Promise.all 拿不到上游输出的踩坑", {
-      query, style,
-    });
+    logger.info(
+      "api.chain-bad",
+      "调用函数开始：handlePostChainBad",
+      "为什么打：route 只认这一层返回的反例响应包；里面两个 executeTool 是「真活」。当前：前端发来反例请求；记 query + style。注意：本路由故意把 summarize.content 写 undefined，演示 Promise.all 拿不到上游输出的踩坑。",
+      {
+        入参: { queryPreview: query.slice(0, 60), queryLen: query.length, style, bodyKeys: Object.keys(body) },
+        __code: `// 反例：summarize.content = undefined（不依赖 search_doc.result）`,
+      },
+    );
 
     // §5.3.12 入参闸门
     if (!query) {
-      logger.warn("chain-bad.bad-input", "query 空", "query 不能为空", { body });
+      logger.warn(
+        "api.chain-bad",
+        "调用函数结束：handlePostChainBad（闸门拒绝）",
+        "为什么打：query 不能为空；走 400 不让 round-1 浪费 token。",
+        {
+          返回值: { httpStatus: 400, error: "query 不能为空" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "query 不能为空" };
       return;
     }
     if (style !== "tech" && style !== "oneliner" && style !== "bullets") {
-      logger.warn("chain-bad.bad-input", "style 非法", "style 必须是 tech | oneliner | bullets", { style });
+      logger.warn(
+        "api.chain-bad",
+        "调用函数结束：handlePostChainBad（闸门拒绝）",
+        "为什么打：style 必须是 tech | oneliner | bullets；其它都按 400 处理。",
+        {
+          返回值: { httpStatus: 400, error: "style 必须是 tech | oneliner | bullets" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "style 必须是 tech | oneliner | bullets" };
       return;
@@ -81,11 +123,16 @@ export function mountChainBadRoutes(router: Router): void {
     // 反例关键：summarize.content 直接传 undefined，不依赖 search_doc 的 result
     const calls1: MockToolCall[] = chainFirstCall(query);
     const calls2: MockToolCall[] = chainSecondCall(undefined, style);
-    logger.warn("chain-bad.dispatch", "Promise.all 并发两个 tool_call", "❌ 反例模式：B 不等 A 完成就启动；summarize.content=undefined；演示「有依赖链用 Promise.all → B 拿 undefined」的踩坑", {
-      callA: calls1[0],
-      callB: calls2[0],
-      callB_content: calls2[0].arguments.content,  // undefined —— 反例证据
-    });
+    logger.warn(
+      "││ dispatch-chain-bad",
+      "调用循环开始：反例 · Promise.all 并发 2 个 tool_call",
+      "为什么打：❌ 反例模式——B 不等 A 完成就启动；summarize.content=undefined；演示「有依赖链用 Promise.all → B 拿 undefined」的踩坑。",
+      {
+        第几轮: 1,
+        总轮数: 1,
+        本轮为什么是这些参数: { callA: calls1[0], callB: calls2[0], callBContent: calls2[0].arguments.content },
+      },
+    );
 
     // ── ❌ 反例：Promise.all 并发（路由层 hard-code A → B 但错误用并发）──
     //   真实场景下这一步会拿 [searchDocResult, summarizeResult]
@@ -103,9 +150,14 @@ export function mountChainBadRoutes(router: Router): void {
           ok: r.ok,
           ...(r.ok ? { result: r.result } : { error: r.error }),
         });
-        logger.info("chain-bad.step1.done", "search_doc 完成", "步骤 1 已返；正常路径会拿此 result 当 summarize.content，但本反例路径已提前把 summarize.content 写成 undefined", {
-          ok: r.ok, hasHits: r.ok ? Boolean((r.result as { hits?: unknown[] })?.hits) : false,
-        });
+        logger.info(
+          "││ dispatch-chain-bad",
+          "调用循环 · 子执行 · search_doc 完成",
+          "为什么打：步骤 1 已返；正常路径会拿此 result 当 summarize.content，但本反例路径已提前把 summarize.content 写成 undefined。",
+          {
+            中间状态: { tool: r.tool, ok: r.ok, hasHits: r.ok ? Boolean((r.result as { hits?: unknown[] })?.hits) : false },
+          },
+        );
         return r;
       });
     });
@@ -124,25 +176,47 @@ export function mountChainBadRoutes(router: Router): void {
           ok: r.ok,
           ...(r.ok ? { result: r.result } : { error: r.error }),
         });
-        logger.info("chain-bad.step2.done", "summarize 完成（反例）", "步骤 2 完成；但 content=undefined → summary 缺数据（hits=0 / query='未知 query'）", {
-          ok: r.ok,
-          summaryQuery: r.ok ? (r.result as { query?: string })?.query : undefined,
-          summaryHits: r.ok ? ((r.result as { hits?: unknown[] })?.hits?.length ?? 0) : 0,
-        });
+        logger.info(
+          "││ dispatch-chain-bad",
+          "调用循环 · 子执行 · summarize 完成（反例）",
+          "为什么打：步骤 2 完成；但 content=undefined → summary 缺数据（hits=0 / query='未知 query'）。",
+          {
+            中间状态: {
+              tool: r.tool,
+              ok: r.ok,
+              summaryQuery: r.ok ? (r.result as { query?: string })?.query : undefined,
+              summaryHits: r.ok ? ((r.result as { hits?: unknown[] })?.hits?.length ?? 0) : 0,
+            },
+          },
+        );
         return r;
       });
     })();
 
     const settled = await Promise.all([...promises, promiseB]);
+    logger.info(
+      "││ dispatch-chain-bad",
+      "调用循环结束：反例 dispatch 收尾",
+      "为什么打：Promise.all 并发 ≈ max(handler sleeps)；与正例串行对比，记 totalMs 便于核对。",
+      {
+        本轮结果: { totalMs: Date.now() - dispatchStart, hasSearchDoc: settled.some((r) => r.tool === "search_doc"), hasSummarize: settled.some((r) => r.tool === "summarize") },
+      },
+    );
 
     // 整理：找到 summarize 这一步的结果来构造 finalSummary；search_doc 的结果故意不读（演示反例：summary 拿不到 search_doc 的 hits）
     const step2 = settled.find((r) => r.tool === "summarize");
     const finalSummary = (step2?.ok ? (step2.result as { summary?: string })?.summary : null) ?? null;
 
     const totalMs = Date.now() - dispatchStart;
-    logger.info("chain-bad.done", "反例链跑完", "Promise.all 并发 ≈ max(handler sleeps) = 80ms；总耗时比正例串行 130ms 短，但 summary 缺数据（❌ 反例代价）", {
-      totalMs, finalQuery: finalSummary ? "(未知 query)" : "(无 summary)", hasHits: false,
-    });
+    logger.info(
+      "api.chain-bad",
+      "调用函数结束：handlePostChainBad",
+      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 antiPattern: true + summaryNote 便于前端渲染 ❌ 警告。",
+      {
+        返回值: { status: 200, totalMs, hasSummary: Boolean(finalSummary) },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
 
     ctx.body = {
       query,
@@ -153,6 +227,5 @@ export function mountChainBadRoutes(router: Router): void {
       antiPattern: true,
       summaryNote: "❌ 反例：Promise.all 让 summarize 拿到 content=undefined → summary 缺数据（hits=0 / query='(未知 query)'）。与正例 routes/chain.ts 对比：正例 await 串行 → summarize 拿到 search_doc 的 hits → summary 有内容。",
     };
-    logger.info("chain-bad.sent", "responded to client", "已返回；含 antiPattern: true + summaryNote 便于前端渲染 ❌ 警告", { status: 200 });
   });
 }

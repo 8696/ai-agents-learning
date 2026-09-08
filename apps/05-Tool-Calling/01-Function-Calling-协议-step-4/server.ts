@@ -45,17 +45,24 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "服务起好了；step-4 是 mock demo，不调 LLM；演示串行依赖链 A → B（页与接口 1:1）+ Promise.all 反例", {
-    url: `http://127.0.0.1:${PORT}/`,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "GET /api/tools",
-      "POST /api/chain       ← pages/chain.html    （正例 · await 串行）",
-      "POST /api/chain-bad   ← pages/chain-bad.html（反例 · Promise.all → B 拿 undefined）",
-    ],
-    protocol: "mock",
-  });
+  logger.info(
+    "server.startup",
+    "模块 05 · 01 Function Calling 协议 step-4 串行依赖链 Demo 已启动",
+    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、可用端点、callsModel 标记）：step-4 是 mock demo，不调 LLM；演示串行依赖链 A → B（页与接口 1:1）+ Promise.all 反例。",
+    {
+      port: PORT,
+      bind: "127.0.0.1",
+      callsModel: false,
+      protocol: "mock（不调 LLM · step-4 是 mock demo）",
+      endpoints: {
+        "GET /": "总览",
+        "GET /health": "{ ok, port, provider, model, hasKey, callsModel:false }",
+        "GET /api/tools": "Registry 元信息",
+        "POST /api/chain": "Body: { query, style } → 跑 A→B 链 → 返 { steps, finalSummary, totalMs }（pages/chain.html · 正例 · await 串行）",
+        "POST /api/chain-bad": "Body: { query, style } → 反例 · Promise.all → B 拿 undefined（pages/chain-bad.html）",
+      },
+    },
+  );
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log(`  Ctrl+C 退出`);
 });

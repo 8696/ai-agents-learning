@@ -1,6 +1,10 @@
 /**
  * 职责：两个 encode 端点 —— 自定义一段 / 固定中英对照。
  * 数据流：闸门 → encodeText → ctx.body。全程本地，不调 LLM。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（handlePostEncode / handlePostCompare 封装层）；
+ *   闸门挡掉（Zod 失败 / 空串）已在 lib/http/request-guards.ts 写 warn；
+ *   本文件只补 entry / exit 的 info 横幅 + 子调用五件套在 lib/tokenize/encode-text.ts。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -11,40 +15,93 @@ import { logger } from "../lib/logger.js";
 
 export function mountEncodeRoutes(router: Router): void {
   router.post("/api/encode", (ctx: Context) => {
-    logger.info("encode.received", "POST /api/encode", "前端自定义页发来一段文本；记 textLen 便于复现 + 防滥用", {
-      textLen: (ctx.request.body as { text?: string } | undefined)?.text?.length ?? 0,
-    });
+    const tHandlerStart = Date.now();
+    logger.info(
+      "api.encode",
+      "调用函数开始：handlePostEncode",
+      "为什么打：route 只认这一层返回的 EncodeResult；里面那次才是「Token 化」的真活（看「调用函数开始：encodeText」）。当前：POST /api/encode 收到请求，即将跑 readEncodeBody → encodeText。",
+      {
+        入参: {
+          textLen: (ctx.request.body as { text?: string } | undefined)?.text?.length ?? 0,
+        },
+        __code: `const body = readEncodeBody(ctx);\nconst result = encodeText(body.text);`,
+      },
+    );
+
     const body = readEncodeBody(ctx);
-    if (!body) return; // 闸门已经写过 warn + 400
+    if (!body) {
+      logger.info(
+        "api.encode",
+        "调用函数结束：handlePostEncode",
+        "为什么打：闸门已回 400，route 不用再算 EncodeResult。当前：readEncodeBody 已返回 null（闸门在内部写过 warn），route 直接 return。",
+        {
+          返回值: { httpStatus: 400, encodeResult: null },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
+      return;
+    }
     const result = encodeText(body.text);
-    logger.info("encode.reply.sent", "responded to client", "encode 完已返回前端；记 charCount/tokenCount 让回查日志能对齐页面 #output", {
-      status: 200,
-      charCount: result.charCount,
-      tokenCount: result.tokenCount,
-    });
     ctx.body = result;
+
+    logger.info(
+      "api.encode",
+      "调用函数结束：handlePostEncode",
+      "为什么打：route 要把 EncodeResult 写进 ctx.body 交给页面 stats 区，和 encodeText 的结束 log 互为对照。当前：EncodeResult 已落 ctx.body。",
+      {
+        返回值: {
+          charCount: result.charCount,
+          tokenCount: result.tokenCount,
+          previewIds: result.previewIds,
+          vocab: result.vocab,
+        },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 
   // 对照端点不收 body：样本来自 presets，避免页面自己写死两句对不上。
   router.post("/api/compare", (ctx: Context) => {
-    logger.info("encode.compare.received", "POST /api/compare", "中英对照页发来请求；样本来自 presets（不在请求体里）", {
-      englishLen: ENGLISH.length,
-      chineseLen: CHINESE.length,
-    });
+    const tHandlerStart = Date.now();
+    logger.info(
+      "api.compare",
+      "调用函数开始：handlePostCompare",
+      "为什么打：route 只认这一层返回的对照结构；里面那两次 encodeText 是「Token 化」的真活（看「调用函数开始：encodeText」）。当前：POST /api/compare 收到请求，样本来自 presets（不在请求体里）。",
+      {
+        入参: {
+          englishLen: ENGLISH.length,
+          chineseLen: CHINESE.length,
+        },
+        __code: `const english = encodeText(ENGLISH);\nconst chinese = encodeText(CHINESE);`,
+      },
+    );
+
     const english = encodeText(ENGLISH);
     const chinese = encodeText(CHINESE);
     // 对照核心数据：tokens 差多少 = 「中文更碎」的物理证据
     const delta = chinese.tokenCount - english.tokenCount;
-    logger.info("encode.compare.reply.sent", "responded to client", "对照结果已返回前端；记中英 token 差 = 这一刀的教学锚点", {
-      status: 200,
-      en_tokens: english.tokenCount,
-      zh_tokens: chinese.tokenCount,
-      delta,
-    });
     ctx.body = {
       english,
       chinese,
       takeaway: "同一句人话，中文往往切得更碎 → 同样内容输入更贵。计费按 Token，不按字、不按词。",
     };
+
+    logger.info(
+      "api.compare",
+      "调用函数结束：handlePostCompare",
+      "为什么打：route 要把对照结果（en/zh/takeaway）写进 ctx.body 交给页面。当前：两次 encodeText 都已返回，delta 已算。",
+      {
+        返回值: {
+          en_tokens: english.tokenCount,
+          zh_tokens: chinese.tokenCount,
+          delta,
+          takeaway: "同一句人话，中文往往切得更碎 → 同样内容输入更贵。计费按 Token，不按字、不按词。",
+        },
+        耗时ms: Date.now() - tHandlerStart,
+        字段释义: {
+          delta: "中英 Token 数差值；非负就是「中文更碎」的物理证据",
+        },
+      },
+    );
   });
 }

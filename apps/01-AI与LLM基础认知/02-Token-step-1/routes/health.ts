@@ -1,6 +1,9 @@
 /**
  * 职责：GET /health —— 只读环境信息 + 对照样本，不调模型、不 encode。
  * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel: false, samples }。
+ *
+ * 日志（§5.3.16）：本端点不调 LLM、不出网——单条 info 入站横幅，不算「调用」，不套五件套；
+ *   记 hasKey 让排错时能区分「真没配 Key」与「故意不调模型」（页面主按钮不因缺 Key 而 disabled，§5.3.9）。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -10,12 +13,17 @@ import { logger } from "../lib/logger.js";
 
 export function mountHealthRoutes(router: Router): void {
   router.get("/health", (ctx: Context) => {
-    logger.info("health.received", "GET /health", "页面加载打一次；记 callsModel + hasKey 让排错时能区分「真没配 Key」与「故意不调模型」", {
-      callsModel: false,
-      hasKey: Boolean(llm),
-      provider: llm?.provider ?? null,
-      model: llm?.modelA ?? null,
-    });
+    logger.info(
+      "api.health",
+      "GET /health 收到",
+      "页面加载打一次；记 callsModel + hasKey 让排错时能区分「真没配 Key」与「故意不调模型」。",
+      {
+        callsModel: false,
+        hasKey: Boolean(llm),
+        provider: llm?.provider ?? null,
+        model: llm?.modelA ?? null,
+      },
+    );
     ctx.body = {
       ok: true,
       port: PORT,

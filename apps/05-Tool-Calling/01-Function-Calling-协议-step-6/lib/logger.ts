@@ -3,6 +3,8 @@
  * 数据流：业务代码 import { logger } from "./logger.js" → logger.info(scope, msg, explain, data?) 写文件 + console。
  * 为什么拷贝：顶层 apps/logger.ts 只是模板；锁定/未锁定一律禁止运行时 import 顶层（§5.3.12 / §5.3.16）。
  * 用法：业务代码 import { logger } from "./logger.js"。
+ *
+ * 每条前空一行；msg / explain / data 三块之间也空一行（§5.3.16）。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -195,7 +197,7 @@ export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger
 
     // console：受 consoleLevel 控制
     if (LEVEL_RANK[level] >= consoleMin) {
-      const tag = `[${level.toUpperCase()}] [${scope}] ${msg} — ${explain}`;
+      const tag = `[${level.toUpperCase()}] [${scope}] ${ msg} — ${explain}`;
       if (data === undefined) {
         // eslint-disable-next-line no-console
         console.log(tag);

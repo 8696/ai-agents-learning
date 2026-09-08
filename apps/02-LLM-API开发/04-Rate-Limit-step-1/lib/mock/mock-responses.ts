@@ -3,7 +3,8 @@
  * 数据流：pathname → { status, headers, body }；retry 层通过 HTTP 再打回来，不直接调这个函数。
  * 为什么单独成文件：mock 状态机（easy 计数器 / chaos 随机）不属于 HTTP 装配，也不属于 retry 算法。
  *
- * 日志（§5.3.16）：mock 不是 LLM 但教学上替代 LLM——记每次返回的 status / headers 便于和 retry.decide 时间线对得上。
+ * 日志（§5.3.16）：mock 不是 LLM 但教学上替代 LLM——记每次返回的 status / headers 便于和 retry.decide 时间线对得上；
+ *   handleDirect 是工具档——五件套（含 __code）仍要。
  */
 import type { Context } from "koa";
 import { logger } from "../logger.js";
@@ -38,7 +39,33 @@ export function handleDirect(path: string): {
   headers: Record<string, string>;
   body: string;
 } {
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ mock-handleDirect",
+    "调用函数开始：handleDirect",
+    "为什么打：mock 替代 LLM 给 retry 吃；不打就丢了 retry.decide 时间线要追的那一刀。当前：即将按 path 选 case。",
+    {
+      入参: { path },
+      __code: `switch (path) { case "/api/easy": ... case "/api/chaos": ... case "/api/auth": ... case "/api/forever": ... case "/api/ok": ... }`,
+    },
+  );
+
   const out = handleDirectInner(path);
+
+  logger.info(
+    "│ mock-handleDirect",
+    "调用函数结束：handleDirect",
+    "为什么打：retry 通过 HTTP 拿到这个响应后要把 status / retry-after 串进 attempts 时间线；打返回值便于事后对照 retry.decide 的判断。当前：case 已匹配。",
+    {
+      返回值: {
+        path,
+        status: out.status,
+        retryAfter: out.headers["retry-after"] ?? null,
+        bodyPreview: out.body.slice(0, 120),
+      },
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
   logger.debug("mock.respond", `${path} 返回 ${out.status}`, "mock 替代 LLM 给 retry 吃；记 status + retry-after 让 retry.decide 时间线能追到这一刀", {
     path,
     status: out.status,

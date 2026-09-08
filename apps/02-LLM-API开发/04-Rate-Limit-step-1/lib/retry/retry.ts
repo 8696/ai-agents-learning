@@ -10,18 +10,7 @@
  * 不调云端 API；只关心 HTTP 行为 → 与同目录 mock server 配套使用
  * （也可以接到真 LLM 客户端外面套一层）。
  *
- * 为什么这样写：
- *   - 错误分两类：可重试（429/408/5xx/网络错）和 不可重试（400/401/403/404/422）。
- *     不可重试直接抛 NonRetryableError，不浪费钱 / 不浪费配额。
- *   - 等待时长 = max(Retry-After, base * 2^attempt) + jitter（0~baseDelayMs 随机偏移）。
- *   - 双上限：maxAttempts（最多试几次）+ maxTotalTimeMs（总耗时上限），超时立刻抛。
- *   - 每次 attempt 记入 attempts[]，包括状态码 / 等待 / 耗时 / 错误摘要，
- *     便于 console 打印时间线和浏览器渲染。
- *
- * 易混点：
- *   - Retry-After 是**秒**或 HTTP-date，不是毫秒；parseRetryAfter 里转一下。
- *   - jitter 必须等**算完 exponential** 之后再加，不能加在 Retry-After 上（服务端给的不能抖）。
- *   - maxAttempts 含首次；maxAttempts=4 表示最多试 4 次（含首次）。
+ * 日志（§5.3.16）：retry 是本条的核心档——函数体逐步打满（start / 每次循环 start / decide / non-retryable / network-error / success / exhausted），每个教学分支都打满便于回讲。
  */
 
 import { performance } from "node:perf_hooks";
@@ -126,16 +115,25 @@ export async function retryWithBackoff(
   opts: RetryOptions = DEFAULT_RETRY_OPTIONS,
 ): Promise<{ result: string; attempts: AttemptRecord[] }> {
   const start = performance.now();
+  const tFuncStart = Date.now();
   const attempts: AttemptRecord[] = [];
   let prevWaitMs = 0; // 上一轮算出来的实际等待；attempt 1 = 0
 
-  logger.info("retry.start", "retryWithBackoff 启动", "外层一次完整重试循环开始；记 maxAttempts / 上限，便于事后核对为什么到 N 次就停", {
-    maxAttempts: opts.maxAttempts,
-    baseDelayMs: opts.baseDelayMs,
-    maxDelayMs: opts.maxDelayMs,
-    maxTotalTimeMs: opts.maxTotalTimeMs,
-    jitter: opts.jitter,
-  });
+  logger.info(
+    "│ retry-retryWithBackoff",
+    "调用函数开始：retryWithBackoff",
+    "为什么打：本 Demo 唯一的 retry 入口；外层一次完整重试循环开始。记 maxAttempts / 上限便于事后核对为什么到 N 次就停。当前：即将进入 for 循环。",
+    {
+      入参: {
+        maxAttempts: opts.maxAttempts,
+        baseDelayMs: opts.baseDelayMs,
+        maxDelayMs: opts.maxDelayMs,
+        maxTotalTimeMs: opts.maxTotalTimeMs,
+        jitter: opts.jitter,
+      },
+      __code: `const attempts: AttemptRecord[] = [];\nfor (let i = 0; i < opts.maxAttempts; i++) { ... }`,
+    },
+  );
 
   for (let i = 0; i < opts.maxAttempts; i++) {
     const attemptNo = i + 1;
@@ -143,12 +141,17 @@ export async function retryWithBackoff(
     // 总耗时上限：开始下一次 attempt 之前先看
     const elapsed = performance.now() - start;
     if (elapsed >= opts.maxTotalTimeMs) {
-      logger.warn("retry.total-budget-exceeded", "总耗时上限已达，不再开始新一轮 attempt", "maxTotalTimeMs 用来防双卡——这里提前抛 Error 让上层立刻收 attempts 不再 sleep", {
-        elapsedMs: Math.round(elapsed),
-        budgetMs: opts.maxTotalTimeMs,
-        wouldBeAttempt: attemptNo,
-        attemptsSoFar: attempts.length,
-      });
+      logger.warn(
+        "││ retry-循环",
+        `总耗时上限已达，不再开始第 ${attemptNo} 轮 attempt`,
+        "为什么打：maxTotalTimeMs 用来防双卡——这里提前抛 Error 让上层立刻收 attempts 不再 sleep。warn 是「业务失败但能走通」的等级。",
+        {
+          第几轮: attemptNo,
+          elapsedMs: Math.round(elapsed),
+          budgetMs: opts.maxTotalTimeMs,
+          attemptsSoFar: attempts.length,
+        },
+      );
       throw new Error(
         `maxTotalTime exceeded before attempt ${attemptNo} (${elapsed.toFixed(0)}ms / ${opts.maxTotalTimeMs}ms)`,
       );
@@ -160,6 +163,19 @@ export async function retryWithBackoff(
     let errorMessage: string | undefined;
     let successBody: string | null = null;
     let succeeded = false;
+
+    logger.info(
+      "││ retry-循环",
+      `调用循环开始：第 ${attemptNo} 轮 / 共 ${opts.maxAttempts} 轮`,
+      "为什么打：retry 是 for 循环，每一轮打满便于核对 attempts 时间线。当前：即将发请求。",
+      {
+        第几轮: attemptNo,
+        本轮为什么是这些参数: {
+          waitBeforeMs: prevWaitMs,
+          reason: "waitBeforeMs 由上一轮 retry.decide 算出；attempt 1 = 0",
+        },
+      },
+    );
 
     try {
       // 给每次 attempt 单独建一个 controller；本轮结束（包括决定 retry）
@@ -185,14 +201,19 @@ export async function retryWithBackoff(
           durationMs: performance.now() - attemptStart,
           errorMessage: resp.body.slice(0, 80),
         });
-        logger.warn("retry.non-retryable", `attempt ${attemptNo} 命中不可重试状态码 → 直接抛`, "NON_RETRYABLE_STATUS（400/401/403/404/422）重试只会得到同样的错，所以立刻停手——记录 status 与 body 摘要便于核对此处为何提前终止", {
-          attempt: attemptNo,
-          status: resp.status,
-          bodyPreview: resp.body.slice(0, 200),
-          retryAfterHeader: retryAfterHeader ?? null,
-          durationMs: Math.round(performance.now() - attemptStart),
-          attemptsSoFar: attempts.length,
-        });
+        logger.warn(
+          "││ retry-循环",
+          `attempt ${attemptNo} 命中不可重试状态码 → 直接抛`,
+          "为什么打：NON_RETRYABLE_STATUS（400/401/403/404/422）重试只会得到同样的错，所以立刻停手——记录 status 与 body 摘要便于核对此处为何提前终止。",
+          {
+            第几轮: attemptNo,
+            status: resp.status,
+            bodyPreview: resp.body.slice(0, 200),
+            retryAfterHeader: retryAfterHeader ?? null,
+            durationMs: Math.round(performance.now() - attemptStart),
+            attemptsSoFar: attempts.length,
+          },
+        );
         throw new NonRetryableError(resp.status, resp.body);
       }
       // 可重试的失败（429 / 5xx）→ fall through 到下面的 retry 逻辑
@@ -203,11 +224,16 @@ export async function retryWithBackoff(
       // 网络错 / 其他异常：当作可重试
       status = "network";
       errorMessage = err instanceof Error ? err.message : String(err);
-      logger.warn("retry.network-error", `attempt ${attemptNo} 网络层抛错 → 视作可重试`, "fetch / SDK 抛 AbortError / ECONNRESET 等没有 status；落 status=network 让前端时间线统一渲染", {
-        attempt: attemptNo,
-        err: errorMessage,
-        durationMs: Math.round(performance.now() - attemptStart),
-      });
+      logger.warn(
+        "││ retry-循环",
+        `attempt ${attemptNo} 网络层抛错 → 视作可重试`,
+        "为什么打：fetch / SDK 抛 AbortError / ECONNRESET 等没有 status；落 status=network 让前端时间线统一渲染。",
+        {
+          第几轮: attemptNo,
+          err: errorMessage,
+          durationMs: Math.round(performance.now() - attemptStart),
+        },
+      );
     }
 
     // 记本次 attempt
@@ -222,24 +248,53 @@ export async function retryWithBackoff(
 
     // 成功 → 返回
     if (succeeded && successBody !== null) {
-      logger.info("retry.success", `attempt ${attemptNo} 成功 → 直接返回`, "本次 attempt 拿到 2xx 响应，把整个 attempts 时间线交还上层；记 status + duration 便于事后算 retry 总耗时", {
-        attempt: attemptNo,
-        status,
-        attemptsTotal: attempts.length,
-        totalElapsedMs: Math.round(performance.now() - start),
-        prevWaitMs: Math.round(prevWaitMs),
-      });
+      logger.info(
+        "││ retry-循环",
+        `调用循环结束：第 ${attemptNo} 轮（成功）`,
+        "为什么打：本轮拿到 2xx 响应，整 attempts 时间线交还上层；记 status + duration 便于事后算 retry 总耗时。",
+        {
+          第几轮: attemptNo,
+          本轮结果: { status, bodyPreview: successBody.slice(0, 80) },
+          耗时ms: Math.round(performance.now() - attemptStart),
+        },
+      );
+      logger.info(
+        "│ retry-retryWithBackoff",
+        "调用函数结束：retryWithBackoff（成功）",
+        "为什么打：把整 attempts 时间线交还上层；打返回便于核对「这次一共跑了 N 轮、最后一次拿到了 2xx」。当前：第 N 轮成功。",
+        {
+          返回值: {
+            attemptsTotal: attempts.length,
+            totalElapsedMs: Math.round(performance.now() - start),
+            lastStatus: attempts.at(-1)?.status,
+          },
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       return { result: successBody, attempts };
     }
 
     // 最后一次不需要 sleep（马上跳出循环）
     if (i === opts.maxAttempts - 1) {
-      logger.warn("retry.exhausted", `attempt ${attemptNo} 失败且已是最后一把 → RetryExhaustedError`, "maxAttempts 含首次——最后一次失败后不再 sleep 直接抛 RetryExhaustedError；attempts 已含全部时间线", {
-        maxAttempts: opts.maxAttempts,
-        lastStatus: status,
-        attemptsTotal: attempts.length,
-        totalElapsedMs: Math.round(performance.now() - start),
-      });
+      logger.warn(
+        "││ retry-循环",
+        `调用循环结束：第 ${attemptNo} 轮（最后一把失败）`,
+        "为什么打：maxAttempts 含首次——最后一次失败后不再 sleep 直接抛 RetryExhaustedError；attempts 已含全部时间线。",
+        {
+          第几轮: attemptNo,
+          lastStatus: status,
+          maxAttempts: opts.maxAttempts,
+        },
+      );
+      logger.warn(
+        "│ retry-retryWithBackoff",
+        "调用函数结束：retryWithBackoff（重试耗尽）",
+        "为什么打：本 Demo 最大的教学点——maxAttempts 把每次都打满仍失败时抛 RetryExhaustedError 让上层收 attempts 时间线。当前：所有 attempt 都失败。",
+        {
+          返回值: { attemptsTotal: attempts.length, lastStatus: status },
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       break;
     }
 
@@ -254,31 +309,42 @@ export async function retryWithBackoff(
     const retryAfterMs = retryAfterUsedMs ?? 0;
     const waitMs = Math.max(exponentialWithJitter, retryAfterMs);
 
-    logger.info("retry.decide", `attempt ${attemptNo} 失败 → 决定 sleep ${Math.round(waitMs)}ms 后重试`, "本节点是 rate limit / 5xx 教学的关键：算下次等待 = max(exponential+jitter, Retry-After)，记下来便于讲清「服务端给的不能抖、自己算的可以抖」", {
-      attempt: attemptNo,
-      thisStatus: status,
-      thisErrorMessage: errorMessage ?? null,
-      retryAfterUsedMs,
-      retryAfterParsedMs: retryAfterMs,
-      exponentialMs: Math.round(exponential),
-      jitterMs: Math.round(jitterMs),
-      exponentialWithJitterMs: Math.round(exponentialWithJitter),
-      waitMs: Math.round(waitMs),
-      nextAttemptNo: attemptNo + 1,
-      attemptsSoFar: attempts.length,
-      __code: `const exponential = Math.min(base * 2 ** i, maxDelay);\nconst jitter = baseRandom;\nconst wait = Math.max(exponential + jitter, retryAfter);`,
-    });
+    logger.info(
+      "││ retry-循环",
+      `attempt ${attemptNo} 失败 → 决定 sleep ${Math.round(waitMs)}ms 后重试（第 ${attemptNo + 1} 轮）`,
+      "为什么打：本节点是 rate limit / 5xx 教学的关键：算下次等待 = max(exponential+jitter, Retry-After)，记下来便于讲清「服务端给的不能抖、自己算的可以抖」。",
+      {
+        第几轮: attemptNo,
+        thisStatus: status,
+        thisErrorMessage: errorMessage ?? null,
+        retryAfterUsedMs,
+        retryAfterParsedMs: retryAfterMs,
+        exponentialMs: Math.round(exponential),
+        jitterMs: Math.round(jitterMs),
+        exponentialWithJitterMs: Math.round(exponentialWithJitter),
+        waitMs: Math.round(waitMs),
+        nextAttemptNo: attemptNo + 1,
+        attemptsSoFar: attempts.length,
+        __code: `const exponential = Math.min(base * 2 ** i, maxDelay);\nconst jitter = baseRandom;\nconst wait = Math.max(exponential + jitter, retryAfter);`,
+      },
+    );
 
     prevWaitMs = waitMs;
 
     // 总耗时上限再次检查（睡眠期间可能已经超）
     if (performance.now() - start + waitMs >= opts.maxTotalTimeMs) {
-      logger.warn("retry.total-budget-would-exceeded", "下一次 sleep 会撞总耗时 → 提前抛 Error", "如果硬 sleep 会让总耗时超 maxTotalTimeMs；这里提前抛避免浪费一次 sleep 周期", {
-        elapsedMs: Math.round(performance.now() - start),
-        nextWaitMs: Math.round(waitMs),
-        budgetMs: opts.maxTotalTimeMs,
-        attemptsSoFar: attempts.length,
-      });
+      logger.warn(
+        "││ retry-循环",
+        "下一次 sleep 会撞总耗时 → 提前抛 Error",
+        "为什么打：如果硬 sleep 会让总耗时超 maxTotalTimeMs；这里提前抛避免浪费一次 sleep 周期。",
+        {
+          第几轮: attemptNo,
+          elapsedMs: Math.round(performance.now() - start),
+          nextWaitMs: Math.round(waitMs),
+          budgetMs: opts.maxTotalTimeMs,
+          attemptsSoFar: attempts.length,
+        },
+      );
       throw new Error(
         `maxTotalTime would be exceeded by next wait (${(performance.now() - start).toFixed(0)}ms + ${waitMs.toFixed(0)}ms / ${opts.maxTotalTimeMs}ms)`,
       );

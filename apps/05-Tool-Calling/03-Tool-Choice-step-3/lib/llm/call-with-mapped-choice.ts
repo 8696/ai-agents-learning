@@ -1,5 +1,8 @@
 /**
  * 职责：协议 A 单次补全；tool_choice 由产品开关映射而来。
+ * 数据流：messages + tools + tool_choice → OpenAI SDK → SwitchRunResult。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（callWithMappedChoice 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
  */
 import type {
   ChatCompletionMessageParam,
@@ -26,9 +29,9 @@ export async function callWithMappedChoice(args: {
   toolChoice: ChatCompletionToolChoiceOption;
   switchId: string;
 }): Promise<SwitchRunResult> {
-  const { llm, query, toolChoice, switchId } = args;
-  const scope = "│ 调用函数-callWithMappedChoice";
+  const tFuncStart = Date.now();
   const t0 = Date.now();
+  const { llm, query, toolChoice, switchId } = args;
 
   const messages: ChatCompletionMessageParam[] = [
     {
@@ -45,21 +48,24 @@ export async function callWithMappedChoice(args: {
   };
 
   logger.info(
-    scope,
+    "│ 开关映射-callWithMappedChoice",
     "调用函数开始：callWithMappedChoice",
-    "为什么打：用户点了产品开关，后端已映射成 tool_choice；里面才出网。当前：组装。",
+    "为什么打：route 只认这一层返回的 SwitchRunResult；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：用户点了产品开关，后端已映射成 tool_choice；组装。",
     {
       入参: { switchId, query, toolChoice, model: llm.modelA },
       __code: "await llm.openai.chat.completions.create({ tools, tool_choice })",
     },
   );
 
-  const modelScope = "││ 调用模型-对话补全";
+  const tModelStart = Date.now();
   logger.info(
-    modelScope,
-    "调用模型开始：对话补全",
-    "为什么打：真正出网；对照开关映射是否在请求字段里生效。当前：create。",
-    { 入参: request, __code: "const resp = await llm.openai.chat.completions.create(request);" },
+    "││ 调用模型-协议A 对话补全",
+    "调用模型开始：协议A 对话补全",
+    "为什么打：本文件唯一的真出网层；不打就没有 finishReason / tool_calls / usage。当前：真正出网；对照开关映射是否在请求字段里生效。",
+    {
+      入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice },
+      __code: "const resp = await llm.openai.chat.completions.create(request);",
+    },
   );
 
   let resp;
@@ -67,16 +73,23 @@ export async function callWithMappedChoice(args: {
     resp = await llm.openai.chat.completions.create(request);
   } catch (error: unknown) {
     logger.error(
-      modelScope,
-      "调用模型结束：对话补全（失败）",
-      "为什么打：出网失败闭环（含 thinking×required）。",
-      { 返回值: error, 耗时ms: Date.now() - t0 },
+      "││ 调用模型-协议A 对话补全",
+      "调用模型结束：协议A 对话补全（失败）",
+      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx、400（thinking×required）。当前：create 抛错。",
+      {
+        返回值: { message: error instanceof Error ? error.message : String(error) },
+        耗时ms: Date.now() - tModelStart,
+        错误: error,
+      },
     );
     logger.error(
-      scope,
+      "│ 开关映射-callWithMappedChoice",
       "调用函数结束：callWithMappedChoice（失败）",
-      "为什么打：外层收口。",
-      { 返回值: error, 耗时ms: Date.now() - t0 },
+      "为什么打：外层收口；记 err 便于 route 的 catch 区分 400/502。",
+      {
+        返回值: { ok: false, error: error instanceof Error ? error.message : String(error) },
+        耗时ms: Date.now() - tFuncStart,
+      },
     );
     throw error;
   }
@@ -99,23 +112,30 @@ export async function callWithMappedChoice(args: {
   };
 
   logger.info(
-    modelScope,
-    "调用模型结束：对话补全",
-    "为什么打：出网结束。",
+    "││ 调用模型-协议A 对话补全",
+    "调用模型结束：协议A 对话补全",
+    "为什么打：要拿 choices[0].finish_reason + tool_calls 决定下一步；usage 是计费依据。",
     {
-      返回值: resp,
+      返回值: {
+        finishReason: result.finishReason,
+        toolCallCount: result.toolCalls.length,
+        usage: result.usage,
+      },
+      耗时ms: Date.now() - tModelStart,
       字段释义: {
         tool_choice: "由产品开关映射，不是模型自己改的",
         hasToolCalls: "对照开关：只聊天应无；强制查库应有；允许工具看语义",
       },
-      耗时ms: result.elapsedMs,
     },
   );
   logger.info(
-    scope,
+    "│ 开关映射-callWithMappedChoice",
     "调用函数结束：callWithMappedChoice",
-    "为什么打：交给 route。",
-    { 返回值: result, 耗时ms: result.elapsedMs },
+    "为什么打：交给 route；记 hasToolCalls + toolChoiceSent 便于 route 协议判定。",
+    {
+      返回值: { toolChoiceSent: result.toolChoiceSent, hasToolCalls: result.hasToolCalls, elapsedMs: result.elapsedMs },
+      耗时ms: Date.now() - tFuncStart,
+    },
   );
   return result;
 }

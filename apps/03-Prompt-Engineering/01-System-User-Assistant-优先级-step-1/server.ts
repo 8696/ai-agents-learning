@@ -43,21 +43,26 @@ app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
   logger.info(
-    "server.start",
-    "listening",
-    "服务起好了，记下端口与端点让 /health 能对照；本条对照 3 个 Case 用同一份 spec 分别送 A / B 看 SDK 行为差",
+    "server.startup",
+    "模块 03 · 01 System / User / Assistant 优先级已启动（§5.3.8 分层 · 对照例外）",
+    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：本条对照 3 个 Case 用同一份 spec 分别送 A / B 看 SDK 行为差（System 字段位置、assistant 历史是否记）。",
     {
-      url: `http://127.0.0.1:${PORT}/`,
       port: PORT,
+      bind: "127.0.0.1",
+      protocol: "A (openai Chat Completions) + B (anthropic Messages) 并排对照",
       provider: llm?.provider ?? null,
-      modelA: llm?.modelA ?? null,
-      modelB: llm?.modelB ?? null,
-      endpoints: [
-        "GET  /health",
-        "POST /api/case1-priority",
-        "POST /api/case2-with-history",
-        "POST /api/case3-no-history",
-      ],
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm?.apiKey),
+      endpoints: {
+        "GET  /": "总览",
+        "GET  /pages/priority.html": "Case 1 · System JSON-only vs User 长文段",
+        "GET  /pages/with-history.html": "Case 2 · 3 轮 user / assistant / user（含历史）",
+        "GET  /pages/no-history.html": "Case 3 · 2 轮 user / user（漏 assistant 历史，失忆对照）",
+        "GET  /health": "{ ok, port, provider, model, hasKey }",
+        "POST /api/case1-priority": "无 body → A / B 并排返回 CaseResponse",
+        "POST /api/case2-with-history": "无 body → A / B 并排返回 CaseResponse",
+        "POST /api/case3-no-history": "无 body → A / B 并排返回 CaseResponse",
+      },
     },
   );
   console.log(

@@ -1,8 +1,10 @@
 /**
- * 职责：本地日志服务 freeze 副本（拷自顶层 apps/logger.ts · 2026-09-08）。
+ * 职责：本地日志服务 freeze 副本（拷自顶层 2026-09-08）。
  * 数据流：业务代码 import { logger } from "./logger.js" → logger.info(scope, msg, explain, data?) 写文件 + console。
  * 为什么拷贝：顶层 apps/logger.ts 只是模板；锁定/未锁定一律禁止运行时 import 顶层（§5.3.12 / §5.3.16）。
  * 用法：业务代码 import { logger } from "./logger.js"。
+ *
+ * 每条前空一行；msg / explain / data 三块之间也空一行（§5.3.16）。
  */
 import fs from "node:fs";
 import path from "node:path";

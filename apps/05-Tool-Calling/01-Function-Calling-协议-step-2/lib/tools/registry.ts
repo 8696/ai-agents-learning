@@ -10,9 +10,9 @@
  *   模型发出 tool_call ≠ 允许执行 —— gatewayCheck 在 execute 前必须跑过；
  *   dangerous 工具 / 未注册工具都被拦下，回灌 tool_result 时返回 { ok:false, error } 让模型能自纠。
  *
- * 日志（§5.3.16）：gateway.rejected / zod.fail / execute.ok / execute.fail 四类都打。
+ * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
+ *   getToolsForLLM / getToolsMeta / getToolNames 是工具档——五件套（含 __code）仍要。
  */
-import { z } from "zod";
 import { getWeatherTool } from "./get-weather.js";
 import { searchTool } from "./search.js";
 import { calcTool } from "./calc.js";
@@ -38,19 +38,14 @@ export type ExecResult =
 function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   const tool = TOOLS[name as ToolName];
   if (!tool) {
-    const reason = `unknown tool: ${name}（未注册）`;
-    logger.warn("registry.gateway.rejected", "未注册工具", "LLM 想调的工具不在白名单；不能让未注册的工具被执行，记录 name + reason 便于排查 prompt 模板错", { name, reason });
-    return { allowed: false, reason };
+    return { allowed: false, reason: `unknown tool: ${name}（未注册）` };
   }
   if (tool.dangerous) {
-    const reason = `dangerous tool ${name} requires manual approval（gateway 拒绝；本 demo 默认拦截）`;
-    logger.warn("registry.gateway.rejected", "危险工具", "工具被标 dangerous（如 shell_exec / write_file）；即使 LLM 提到也直接拦掉，记录 name + reason 便于审计防误调", { name, reason });
     return {
       allowed: false,
-      reason,
+      reason: `dangerous tool ${name} requires manual approval（gateway 拒绝；本 demo 默认拦截）`,
     };
   }
-  logger.debug("registry.gateway.allowed", "gateway 放行", "工具通过 gateway 校验（在白名单 + 非 dangerous）；可以放心进执行阶段", { name, dangerous: tool.dangerous });
   return { allowed: true };
 }
 
@@ -61,9 +56,30 @@ export function executeTool(
   args: unknown,
   toolCallId: string,
 ): ExecResult {
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ 工具执行-executeTool",
+    "调用函数开始：executeTool",
+    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：教学锚点——模型发出 tool_call ≠ 允许执行，Gateway 必须在 execute 前跑过。",
+    {
+      入参: { toolCallId, name, rawArgs: args },
+      __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nreturn { ok: true, ..., result: tool.handler(parsed.data) };`,
+    },
+  );
+
   // ① Gateway 先过
   const gate = gatewayCheck(name);
   if (!gate.allowed) {
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（gateway 拒绝）",
+      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。教学锚点：dangerous 工具 ≠ 自动执行。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
+        reason: gate.reason,
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" };
   }
 
@@ -71,77 +87,104 @@ export function executeTool(
   const tool = TOOLS[name as ToolName];
   const parsed = tool.schema.safeParse(args);
   if (!parsed.success) {
-    const issues = parsed.error.issues;
-    logger.warn("registry.zod.fail", "参数 Zod 校验失败", "工具名合法但参数 schema 不匹配；可能 LLM 生成了错结构，记录 issues 让 round-2 模型能看懂错在哪、怎么改", { name, toolCallId, issues });
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（Zod 校验失败）",
+      "为什么打：模型解析错或恶意注入；回 ok:false + Zod issues，方便模型在第二轮修正 tool_call.arguments。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(parsed.error.issues)}` },
+        issues: JSON.parse(JSON.stringify(parsed.error.issues)),
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return {
       ok: false,
       tool: name,
       tool_call_id: toolCallId,
-      error: `Zod parse failed: ${JSON.stringify(issues)}`,
+      error: `Zod parse failed: ${JSON.stringify(parsed.error.issues)}`,
     };
   }
 
   // ③ 真正执行
-  // @ts-ignore —— 三个 Tool 的 handler 签名不同，TS 看成联合；运行时安全（Zod 已校验）
-  const result = tool.handler(parsed.data);
-  logger.info("registry.execute.ok", "执行成功", "工具实际跑通；只打 result 摘要（不打全文），便于核对返回结构又不撑爆日志", { name, toolCallId, resultPreview: summarize(result) });
-  return { ok: true, tool: name, tool_call_id: toolCallId, result };
+  logger.info(
+    "│ 工具执行-executeTool",
+    "调用函数进行中：executeTool（handler 即将执行）",
+    "为什么打：Gateway + Zod 都过；handler 内部可能调外部 API；这里都是 mock（get-weather / search / calc）。",
+    {
+      中间状态: { toolCallId, name, validatedArgs: parsed.data },
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
+  // @ts-ignore
+  const result: ExecResult = { ok: true, tool: name, tool_call_id: toolCallId, result: tool.handler(parsed.data) };
+  logger.info(
+    "│ 工具执行-executeTool",
+    "调用函数结束：executeTool",
+    "为什么打：完整打 tool_result：模型第二轮拿到后拼人话回复（callProtocolA round-2）。",
+    {
+      返回值: { ok: true, tool: name, tool_call_id: toolCallId, result: result.result },
+      耗时ms: Date.now() - tFuncStart,
+      字段释义: {
+        ok: "true = handler 跑成功；false = gateway 拒 / Zod 失败 / handler 抛错",
+      },
+    },
+  );
+  return result;
 }
 
-// 大对象 / 字符串截断，避免日志太长
-function summarize(v: unknown): unknown {
-  try {
-    const s = JSON.stringify(v);
-    if (s.length <= 200) return v;
-    return JSON.parse(s.slice(0, 200) + "…");
-  } catch {
-    return String(v).slice(0, 200);
-  }
-}
-
-// ── 给前端"Registry 面板"用：列出所有 Tool 的元信息（不含 schema） ──
-// 浏览器只要看 name / description / dangerous；handler 不外传。
+// ── 给前端"Registry 面板"用：列出所有 Tool 的元信息 ──
+// 不返回 handler 实现，只返回声明（name / description / dangerous），避免把内部代码泄给浏览器。
 export function getToolsMeta() {
-  return Object.values(TOOLS).map((t) => ({
+  const t0 = Date.now();
+  const meta = Object.values(TOOLS).map((t) => ({
     name: t.name,
     description: t.description,
     dangerous: t.dangerous,
   }));
-}
-
-// ── step-2 新增：给 LLM 用的工具 schema（OpenAI Chat Completions tools 格式） ──
-// 把每个 Tool 的 Zod schema 转成 JSON Schema，让模型知道参数应该长啥样。
-// 不引 zod-to-json-schema；本 demo 三个 Tool 都是 z.object + z.string，简单手写就够。
-// 生产里换成 zod-to-json-schema（或 SDK 内置函数）即可。
-function buildParametersJsonSchema(schema: z.ZodTypeAny): {
-  type: "object";
-  properties: Record<string, { type: string; description?: string }>;
-  required: string[];
-} {
-  if (schema instanceof z.ZodObject) {
-    const properties: Record<string, { type: string; description?: string }> = {};
-    const required: string[] = [];
-    for (const [key, value] of Object.entries(schema.shape)) {
-      // 本 demo 三个 Tool 字段都是 z.string(.min(1))；optional 通过 !isOptional 判断
-      properties[key] = { type: "string", description: `${key} 参数` };
-      if (!(value instanceof z.ZodOptional)) {
-        required.push(key);
-      }
-    }
-    return { type: "object", properties, required };
-  }
-  return { type: "object", properties: {}, required: [] };
-}
-
-export function getToolsForLLM() {
-  return Object.values(TOOLS).map((t) => ({
-    name: t.name,
-    description: t.description,
-    dangerous: t.dangerous,
-    parameters: buildParametersJsonSchema(t.schema),
-  }));
+  logger.debug(
+    "│ Registry-getToolsMeta",
+    "调用函数结束：getToolsMeta",
+    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。当前：只返回 name/description/dangerous 三个声明字段，不返 handler 实现。",
+    {
+      返回值: { count: meta.length, tools: meta },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return meta;
 }
 
 export function getToolNames(): ToolName[] {
-  return Object.keys(TOOLS) as ToolName[];
+  const t0 = Date.now();
+  const names = Object.keys(TOOLS) as ToolName[];
+  logger.debug(
+    "│ Registry-getToolNames",
+    "调用函数结束：getToolNames",
+    "为什么打：debug 是「细节」等级；本 demo 暂未用到，但保持接口一致便于后续扩展。",
+    {
+      返回值: { count: names.length, names },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return names;
+}
+
+/** 给 LLM 看：name + description + parameters（JSON Schema），不含 dangerous 标记 */
+export function getToolsForLLM() {
+  const t0 = Date.now();
+  const tools = Object.values(TOOLS).map((t) => ({
+    name: t.name,
+    description: t.description,
+    dangerous: t.dangerous,
+    parameters: (t as unknown as { parameters?: unknown }).parameters ?? null,
+  }));
+  logger.debug(
+    "│ Registry-getToolsForLLM",
+    "调用函数结束：getToolsForLLM",
+    "为什么打：debug 是「细节」等级；tools 在 chat.ts 启动时一次性派生，缓存用。当前：派生 LLM 用 tools schema（OpenAI Chat Completions tools 数组里单项的形状）。",
+    {
+      返回值: { count: tools.length, tools },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return tools;
 }

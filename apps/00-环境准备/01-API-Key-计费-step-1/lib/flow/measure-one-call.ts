@@ -3,6 +3,9 @@
  * 数据流：{ llm, prompt, maxTokens } → openai.chat.completions.create（stream:false）
  *   → usage 三字段 → computeCost → BillingMeasurement。
  * 为什么单独成文件：单次计费和对照计费都要走这一圈，唯一区别只是调几次、用什么 prompt。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（measureOneCall 封装层）；调用模型 五件套（出网层，含 __code + 字段释义）。
+ *   logMeasurement 算「工具档」（helper），五件套（含 __code）仍要。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -45,35 +48,84 @@ export async function measureOneCall(input: MeasureInput): Promise<BillingMeasur
   const { llm, label, prompt, maxTokens } = input;
   const startedAt = performance.now();
 
+  const tFuncStart = Date.now();
   logger.info(
-    "llm.request",
-    "→ openai.chat.completions.create",
-    "单次计费；非流式（stream:false）才能稳定拿到 usage 三字段，便于核对 billing",
+    "│ 计量一次-measureOneCall",
+    "调用函数开始：measureOneCall",
+    "为什么打：route 只认这一层返回的 BillingMeasurement；里面那次才是出网（看「调用模型开始：对话补全」）。当前：即将用 stream:false 创请求体。",
     {
-      model: llm.modelA,
-      messagesCount: 1,
-      maxTokens,
-      stream: false,
-      __code: `await llm.openai.chat.completions.create({\n  model: llm.modelA,\n  messages: [{ role: "user", content: prompt }],\n  max_tokens: maxTokens,\n  stream: false,\n});`,
+      入参: {
+        label,
+        llmProvider: llm.provider,
+        llmModelA: llm.modelA,
+        promptPreview: prompt.slice(0, 50),
+        promptLen: prompt.length,
+        maxTokens,
+      },
+      __code: `const m = await measureOneCall({ llm, label, prompt, maxTokens });`,
     },
   );
-  const completion = await llm.openai.chat.completions.create({
+
+  const requestBody = {
     model: llm.modelA,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: "user" as const, content: prompt }],
     max_tokens: maxTokens,
-    stream: false,
-  });
+    stream: false as const,
+  };
+
+  const tModelStart = Date.now();
   logger.info(
-    "llm.response",
-    "← got response",
-    "完整打响应便于核对 SDK 自带字段（id / choices / usage）",
-    completion,
+    "││ 调用模型-对话补全",
+    "调用模型开始：对话补全",
+    "为什么打：真正出网的那一次；不打就没有 usage 三字段、也就没有账单。当前：在 measureOneCall 里即将发出 stream:false 请求；这是本条 Demo 唯一一次模型调用。",
+    {
+      入参: requestBody,
+      __code: `const completion = await llm.openai.chat.completions.create(requestBody);`,
+    },
   );
+
+  let completion;
+  try {
+    completion = await llm.openai.chat.completions.create(requestBody);
+    logger.info(
+      "││ 调用模型-对话补全",
+      "调用模型结束：对话补全",
+      "为什么打：要拿到 usage 三字段算账单。当前：await 已返回，下一步归一化 usage、读 choices[0]、折价。",
+      {
+        返回值: {
+          id: completion.id,
+          model: completion.model,
+          choicesCount: completion.choices.length,
+          usage: completion.usage,
+        },
+        耗时ms: Date.now() - tModelStart,
+        字段释义: {
+          "usage.prompt_tokens": "输入侧 Token 数（账单输入栏）",
+          "usage.completion_tokens": "输出侧 Token 数（账单输出栏，单价更高）",
+          "usage.total_tokens": "二者之和（多数网关页面只显这个）",
+        },
+      },
+    );
+  } catch (error: unknown) {
+    logger.error(
+      "││ 调用模型-对话补全",
+      "调用模型结束：对话补全（失败）",
+      "为什么打：要让 route 区分 401/403（Key）、429（限流）、5xx（对方挂了），把 err 对象原样塞进返回值便于上层 writeMeasurementError 取 status。当前：create 抛错，路由 catch 会写统一错误响应。",
+      {
+        返回值: {
+          message: error instanceof Error ? error.message : String(error),
+          upstreamStatus: (error as { status?: number }).status,
+        },
+        耗时ms: Date.now() - tModelStart,
+        错误: error,
+      },
+    );
+    throw error;
+  }
 
   const usage = normalizeUsage(completion.usage);
   const choice = completion.choices[0];
-
-  return {
+  const measurement: BillingMeasurement = {
     label,
     prompt,
     maxTokens,
@@ -84,23 +136,55 @@ export async function measureOneCall(input: MeasureInput): Promise<BillingMeasur
     cost: computeCost(usage.prompt_tokens, usage.completion_tokens),
     durationMs: Math.round(performance.now() - startedAt),
   };
+
+  logger.info(
+    "│ 计量一次-measureOneCall",
+    "调用函数结束：measureOneCall",
+    "为什么打：route 要把 BillingMeasurement 写进 ctx.body 交给页面 stats 区，和「计量摘要-logMeasurement」互为对照。当前：usage 已归一化、cost 已算完。",
+    {
+      返回值: {
+        label: measurement.label,
+        usage: measurement.usage,
+        cost: measurement.cost,
+        finishReason: measurement.finishReason,
+        durationMs: measurement.durationMs,
+      },
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
+
+  return measurement;
 }
 
 /** 服务端日志：跑完在终端也能核对一遍，页面和终端两处数字必须一致。 */
 export function logMeasurement(scope: string, m: BillingMeasurement): void {
+  // 工具档（§5.3.16）：五件套（含 __code）仍要；函数体一句带过。
+  const t0 = Date.now();
   logger.info(
-    `计量摘要-${scope}`,
-    `本次 ${m.label} 跑完`,
-    "把计费 + 耗时 + finish_reason 摘要打出来，让 route 和页面两边数字一致",
+    `││ 计量摘要-logMeasurement[${scope}]`,
+    "调用函数开始：logMeasurement",
+    "为什么打：measureOneCall 之后立刻打一份摘要，便于页面 stats 区和终端同时核对账单；不查 usage 就不知道本次花了多少钱。当前：第 N 次计量刚返回。",
     {
-      label: m.label,
-      prompt_tokens: m.usage.prompt_tokens,
-      completion_tokens: m.usage.completion_tokens,
-      total_tokens: m.usage.total_tokens,
-      cost_cny: m.cost.totalCny,
-      currency: m.cost.currency,
-      duration_ms: m.durationMs,
-      finish_reason: m.finishReason,
+      入参: { scope, label: m.label, totalTokens: m.usage.total_tokens, costCny: m.cost.totalCny },
+      __code: `logMeasurement("/api/billing-compare", m);`,
+    },
+  );
+  logger.info(
+    `││ 计量摘要-logMeasurement[${scope}]`,
+    "调用函数结束：logMeasurement",
+    "为什么打：路由要在终端打一行让开发者不读日志也能看到摘要；这里把摘要写进日志便于事后查。当前：摘要已落到文件 + console。",
+    {
+      返回值: {
+        label: m.label,
+        prompt_tokens: m.usage.prompt_tokens,
+        completion_tokens: m.usage.completion_tokens,
+        total_tokens: m.usage.total_tokens,
+        cost_cny: m.cost.totalCny,
+        currency: m.cost.currency,
+        duration_ms: m.durationMs,
+        finish_reason: m.finishReason,
+      },
+      耗时ms: Date.now() - t0,
     },
   );
   // 保留终端输出，让开发者不读日志也能看到摘要

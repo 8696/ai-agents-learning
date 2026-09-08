@@ -43,11 +43,30 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "服务起好了，记下端口与端点让 /health 能对照", {
-    url: `http://127.0.0.1:${PORT}/`,
-    endpoints: ["GET /health", "GET /api/proxy", "GET /api/real", "GET /api/real-burst", "GET /api/{easy,chaos,auth,forever,ok,drop}"],
-    pages: ["/", "/pages/mock.html", "/pages/real.html"],
-  });
+  logger.info(
+    "server.startup",
+    "模块 02 · 04 Rate-Limit Demo 已启动（§5.3.8 分层拆分 · 仅协议 A）",
+    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：本条对照 mock 五场景 + 真 API 单次 / 并发撞 429。",
+    {
+      port: PORT,
+      bind: "127.0.0.1",
+      protocol: "A (chat.completions · stream=false)",
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm?.apiKey),
+      endpoints: {
+        "GET  /": "总览（分类重试 ASCII）",
+        "GET  /pages/mock.html": "五个 mock 场景",
+        "GET  /pages/real.html": "真 API 单次 + burst",
+        "GET  /health": "{ ok, port, protocol, provider, model, hasKey }",
+        "GET  /api/proxy?target=…": "本机 mock + retry 套外层",
+        "GET  /api/real": "真 API 单次 + retry",
+        "GET  /api/real-burst?concurrency=…": "真 API 并发撞 429",
+        "GET  /api/{easy,chaos,auth,forever,ok}": "mock 直接路径（不走 retry）",
+        "GET  /api/drop": "mock 掐连接（给 retry 看见 status=network）",
+      },
+    },
+  );
   console.log(
     "──── 模块 02 · 04 Rate-Limit Demo（§5.3.8 分层拆分 · 仅协议 A）· 已启动 ────",
   );

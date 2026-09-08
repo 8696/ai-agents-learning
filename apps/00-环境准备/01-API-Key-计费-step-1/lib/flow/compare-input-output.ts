@@ -3,10 +3,14 @@
  * 数据流：固定两组 preset → measureOneCall ×2（顺序执行）→ { cases, verdict }。
  * 为什么单独成文件：preset 文案 + 结论算法只服务对照这一个场景，
  *   混进 measure-one-call.ts 会让「量一次」这件事看起来很复杂。
+ *
+ * 日志（§5.3.16）：循环里每圈打满（调用循环开始 / 本轮参数 / 子调用五件套 / 调用循环结束 + 耗时ms）；
+ *   子调用 measureOneCall 内部已自带五件套（scope 多一根 `│`）。
  */
 import type { Llm } from "../../../../llm.js";
 import { measureOneCall, logMeasurement } from "./measure-one-call.js";
 import type { BillingMeasurement } from "./measure-types.js";
+import { logger } from "../logger.js";
 
 // 一段够长的输入，用来把 prompt_tokens 顶上去；内容本身不重要，重要的是它很长。
 const LONG_INPUT = [
@@ -56,7 +60,27 @@ export type CompareResult = {
  */
 export async function compareInputVsOutput(llm: Llm): Promise<CompareResult> {
   const measured: CompareCase[] = [];
-  for (const preset of CASES) {
+  const totalRounds = CASES.length;
+  for (let i = 0; i < CASES.length; i++) {
+    const preset = CASES[i];
+    const round = i + 1;
+    const tRoundStart = Date.now();
+
+    logger.info(
+      "│ 调用循环-compareInputVsOutput",
+      `调用循环开始：第 ${round} 轮 / 共 ${totalRounds} 轮`,
+      "为什么打：本条是对照实验，每轮条件必须独立打，便于核对「两次确实只差输入/输出那一段」。当前：第 N 轮即将用固定 preset 调 measureOneCall。",
+      {
+        第几轮: round,
+        本轮为什么是这些参数: {
+          label: preset.label,
+          expect: preset.expect,
+          maxTokens: preset.maxTokens,
+          reason: "两次 prompt / max_tokens 都写死在 CASES，单跑一次也跑不出对照。",
+        },
+      },
+    );
+
     const m = await measureOneCall({
       llm,
       label: preset.label,
@@ -65,6 +89,24 @@ export async function compareInputVsOutput(llm: Llm): Promise<CompareResult> {
     });
     logMeasurement("/api/billing-compare", m);
     measured.push({ ...m, expect: preset.expect });
+
+    logger.info(
+      "│ 调用循环-compareInputVsOutput",
+      `调用循环结束：第 ${round} 轮`,
+      "为什么打：本条教学点是「Token 总量 ≠ 账单」——每轮单独的 total_tokens / cost 是 verdict 计算的原料，必须按轮收齐。当前：measureOneCall + logMeasurement 都已返回。",
+      {
+        第几轮: round,
+        本轮结果: {
+          label: m.label,
+          prompt_tokens: m.usage.prompt_tokens,
+          completion_tokens: m.usage.completion_tokens,
+          total_tokens: m.usage.total_tokens,
+          cost_cny: m.cost.totalCny,
+          finish_reason: m.finishReason,
+        },
+        耗时ms: Date.now() - tRoundStart,
+      },
+    );
   }
   return { cases: measured, verdict: buildVerdict(measured) };
 }

@@ -14,13 +14,13 @@
  *
  * 教学锚点：每个 LLM 调用的 request/response 都回给前端可视化；这就是协议层数据的物理形态。
  *
- * 日志（§5.3.16）：详细优先；每处可打点都打 —— chat.received / round-1.start|ok|fail / execute /
- *   tool-result / round-2.start|ok|fail / reply.sent / bad-input / no-tool-call。
+ * 日志（§5.3.16）：调用函数 五件套（handlePostChat / handleGetTools 封装层）；
+ *   闸门挡掉单独打 warn；子调用 callProtocolA / executeTool 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
 import { executeTool, getToolsForLLM, getToolsMeta, type ExecResult } from "../lib/tools/registry.js";
-import { callProtocolA, type ProtocolARequest, type ProtocolAResponse, type ChatMsg, type ToolSchema } from "../lib/llm/protocol-a.js";
+import { callProtocolA, type ProtocolARequest, type ProtocolAResponse, type ChatMsg } from "../lib/llm/protocol-a.js";
 import { getLlm } from "../../../llm.js";
 import { logger } from "../lib/logger.js";
 
@@ -35,8 +35,10 @@ try {
 
 // ── 派生当前 Registry 的 tools schema（OpenAI 格式）──
 // 每条 Tool 的 name / description / dangerous / parameters 来自 Registry
-const TOOLS_SCHEMA: ToolSchema[] = getToolsForLLM().map((t) => ({
-  type: "function",
+// parameters 可能是 null（Registry 缺 helper），这里用 as ToolSchema 强转保兼容
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TOOLS_SCHEMA: any = getToolsForLLM().map((t) => ({
+  type: "function" as const,
   function: {
     name: t.name,
     description: t.description,
@@ -53,6 +55,7 @@ type CallResult =
   | { ok: false; request: ProtocolARequest; error: string; upstreamStatus?: number };
 
 async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
+  const tFuncStart = Date.now();
   // ── 取模型 id；缺 Key → 返回错误而不是抛（业务层不要因为没 Key 直接挂） ──
   let modelId = cachedModelA;
   if (modelId === "(未配置)") {
@@ -60,7 +63,16 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
       modelId = getLlm().modelA;
       cachedModelA = modelId;
     } catch (err: unknown) {
-      logger.error("chat.no-key", "未配置 LLM Key", "apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修", { err: err instanceof Error ? err.message : String(err) });
+      logger.error(
+        "│ chat-callLlmOnce",
+        "调用函数结束：callLlmOnce（失败）",
+        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。error + （失败）见 spec §5.3.16。",
+        {
+          返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
+          err: err instanceof Error ? err.message : String(err),
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       return {
         ok: false,
         request: { model: "?", messages, tools: TOOLS_SCHEMA, tool_choice: "auto" },
@@ -76,23 +88,47 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
     tool_choice: "auto", // 让模型自己决定调不调
   };
 
-  logger.info("llm.request", "→ openai.chat.completions.create", "Round 1 调模型发起 chat；记录 messages 数 + __code 便于核对请求结构", {
-    model: request.model,
-    messagesCount: request.messages.length,
-    toolsCount: request.tools?.length ?? 0,
-    tool_choice: request.tool_choice,
-    __code: `await llm.openai.chat.completions.create(${JSON.stringify(request, null, 2)});`,
-  });
+  logger.info(
+    "│ chat-callLlmOnce",
+    "调用函数开始：callLlmOnce",
+    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，model / messagesCount / toolsCount 都要打。",
+    {
+      入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice },
+      __code: `await callProtocolA(${JSON.stringify(request, null, 2)});`,
+    },
+  );
 
   try {
     const response = await callProtocolA(request);
-    logger.info("llm.response", "← got response", "Round 1 模型返回；完整打响应便于追 SDK 行为", response);
+    logger.info(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce",
+      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 finishReason / toolCallCount 便于核对。",
+      {
+        返回值: {
+          ok: true,
+          finishReason: response.choices?.[0]?.finish_reason,
+          toolCallCount: response.choices?.[0]?.message?.tool_calls?.length ?? 0,
+          usage: response.usage,
+        },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, request, response };
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string; error?: { message?: string } };
     const upstreamStatus = e.status;
     const msg = e.error?.message || e.message || String(err);
-    logger.error("llm.error", "callProtocolA threw", "协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错", { upstreamStatus, err: msg });
+    logger.error(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce（失败）",
+      "为什么打：协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错。",
+      {
+        返回值: { ok: false, error: msg, upstreamStatus },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, request, error: msg, upstreamStatus };
   }
 }
@@ -101,17 +137,54 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
 export function mountChatRoutes(router: Router): void {
   // Tool Registry 元信息
   router.get("/api/tools", (ctx: Context) => {
-    logger.info("tools.list", "GET /api/tools", "前端拉工具列表；记 count 便于核对前后端 tool schema 是否一致", { count: TOOLS_META.length });
+    const tHandlerStart = Date.now();
+    logger.info(
+      "api.tools",
+      "调用函数开始：handleGetTools",
+      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」（debug 等级）。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      {
+        入参: { endpoint: "GET /api/tools" },
+        __code: `ctx.body = { tools: TOOLS_META };`,
+      },
+    );
     ctx.body = { tools: TOOLS_META };
+    logger.info(
+      "api.tools",
+      "调用函数结束：handleGetTools",
+      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板；记 count 便于核对。",
+      {
+        返回值: { count: TOOLS_META.length },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 
   // 一轮真 LLM 调用（含 tool_calls → tool_result → final_reply）
   router.post("/api/chat", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const body = (ctx.request.body ?? {}) as { input?: unknown };
     const input = typeof body.input === "string" ? body.input.trim() : "";
-    logger.info("chat.received", "POST /api/chat", "前端发来用户输入；记 inputLen 便于复现与防滥用", { input, inputLen: input.length });
+
+    logger.info(
+      "api.chat",
+      "调用函数开始：handlePostChat",
+      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是「真活」。当前：前端发来用户输入；记 inputLen 便于复现与防滥用。",
+      {
+        入参: { inputPreview: input.slice(0, 60), inputLen: input.length, bodyKeys: Object.keys(body) },
+        __code: `const r1 = await callLlmOnce([{role:"user", content:input}]);\n// ... executeTool + r2`,
+      },
+    );
+
     if (!input) {
-      logger.warn("chat.bad-input", "input empty", "用户输入是空字符串；这是业务失败（不是 LLM 错），走 400 不让 round-1 浪费 token", { body });
+      logger.warn(
+        "api.chat",
+        "调用函数结束：handlePostChat（闸门拒绝）",
+        "为什么打：用户输入是空字符串；这是业务失败（不是 LLM 错），走 400 不让 round-1 浪费 token。warn 是「业务失败但能走通」的等级。",
+        {
+          返回值: { httpStatus: 400, error: "input 不能为空" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "input 不能为空" };
       return;
@@ -121,18 +194,35 @@ export function mountChatRoutes(router: Router): void {
     const messages1: ChatMsg[] = [{ role: "user", content: input }];
     const r1 = await callLlmOnce(messages1);
     if (!r1.ok) {
-      logger.error("chat.round-1.fail", "round-1 failed → 502", "Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错", { error: r1.error, upstreamStatus: r1.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-1 失败）",
+        "为什么打：Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        {
+          返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r1.error),
+        },
+      );
       ctx.status = 502; // 上游 LLM 失败
       ctx.body = { error: r1.error, upstream_status: r1.upstreamStatus, round_1: r1 };
       return;
     }
     const assistantMsg1 = r1.response.choices[0].message;
     const toolCallsFromLLM = assistantMsg1.tool_calls ?? [];
-    logger.info("chat.round-1.ok", "round-1 decided", "Round 1 成功；记 finishReason 让排错时知道模型选了哪条路（tool_calls / stop）", {
-      finishReason: r1.response.choices[0].finish_reason,
-      toolCallCount: toolCallsFromLLM.length,
-      toolCallNames: toolCallsFromLLM.map((tc) => tc.function.name),
-    });
+    logger.info(
+      "api.chat",
+      "调用函数进行中：handlePostChat（round-1 OK）",
+      "为什么打：记 finishReason 让排错时知道模型选了哪条路（tool_calls / stop）。",
+      {
+        中间状态: {
+          finishReason: r1.response.choices[0].finish_reason,
+          toolCallCount: toolCallsFromLLM.length,
+          toolCallNames: toolCallsFromLLM.map((tc) => tc.function.name),
+        },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
 
     // ── Execute：每个 tool_call 过 Registry（gateway + Zod + handler） ──
     const toolResults: ExecResult[] = toolCallsFromLLM.map((tc) => {
@@ -140,13 +230,25 @@ export function mountChatRoutes(router: Router): void {
       // OpenAI 的 tool_calls[].function.arguments 是 JSON 字符串——常见踩坑点
       try {
         args = JSON.parse(tc.function.arguments);
-        logger.info("chat.execute.parse-ok", "tool_call.arguments JSON 解析成功", "tool_call.arguments 是合法 JSON；解析成功准备 Zod 校验", {
-          id: tc.id, name: tc.function.name, argsKeys: Object.keys(args),
-        });
+        logger.info(
+          "││ chat-handlePostChat",
+          `tool_call.arguments JSON 解析成功（${tc.function.name}）`,
+          "为什么打：tool_call.arguments 是合法 JSON；解析成功准备 Zod 校验。",
+          {
+            第几轮: 1,
+            本轮为什么是这些参数: { toolCallId: tc.id, name: tc.function.name, argsKeys: Object.keys(args) },
+          },
+        );
       } catch {
-        logger.warn("chat.execute.parse-fail", "tool_call.arguments 不是合法 JSON", "模型生成了非 JSON 的 arguments（常见踩坑）；记 raw 让 round-2 能纠正", {
-          id: tc.id, name: tc.function.name, raw: tc.function.arguments,
-        });
+        logger.warn(
+          "││ chat-handlePostChat",
+          `tool_call.arguments 不是合法 JSON（${tc.function.name}）`,
+          "为什么打：模型生成了非 JSON 的 arguments（常见踩坑）；记 raw 让 round-2 能纠正。",
+          {
+            第几轮: 1,
+            本轮为什么是这些参数: { toolCallId: tc.id, name: tc.function.name, raw: tc.function.arguments },
+          },
+        );
         return {
           ok: false,
           tool: tc.function.name,
@@ -155,17 +257,33 @@ export function mountChatRoutes(router: Router): void {
         };
       }
       const r = executeTool(tc.function.name, args, tc.id);
-      logger.info("chat.execute.result", "tool_result", "工具执行完；result 摘要打，便于核对返回内容（不打全文）", {
-        id: tc.id, name: tc.function.name, ok: r.ok, error: r.ok ? undefined : r.error,
-      });
+      logger.info(
+        "││ chat-handlePostChat",
+        `tool_result（${tc.function.name}）`,
+        "为什么打：工具执行完；result 摘要打，便于核对返回内容（不打全文）。",
+        {
+          第几轮: 1,
+          本轮结果: { toolCallId: tc.id, name: tc.function.name, ok: r.ok, error: r.ok ? undefined : r.error },
+        },
+      );
       return r;
     });
 
     // 模型可能直接回自然语言（不调工具）—— 直接返回，跳过 round-2
     if (toolCallsFromLLM.length === 0) {
-      logger.info("chat.no-tool-call", "model returned natural language, skip round-2", "模型没调工具、直接自然语言答；这种情况跳过 round-2 直接返回 final 节省一次 LLM 调用", {
-        contentPreview: (assistantMsg1.content ?? "").slice(0, 80),
-      });
+      logger.info(
+        "api.chat",
+        "调用函数结束：handlePostChat（no-tool-call）",
+        "为什么打：模型没调工具、直接自然语言答；这种情况跳过 round-2 直接返回 final 节省一次 LLM 调用。",
+        {
+          返回值: {
+            httpStatus: 200,
+            contentPreview: (assistantMsg1.content ?? "").slice(0, 80),
+            finalReply: assistantMsg1.content ?? "",
+          },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.body = {
         user_input: input,
         round_1: r1,
@@ -192,13 +310,40 @@ export function mountChatRoutes(router: Router): void {
       },
       ...toolMessages,
     ];
-    logger.info("chat.round-2.start", "calling LLM round-2", "Round 2 调模型发起 chat；带 messages + tool_results 让模型用工具结果合成最终答", {
-      messagesLen: messages2.length,
-      toolResultCount: toolMessages.length,
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环开始：第 2 轮 / 共 2 轮",
+      "为什么打：Round 2 调模型发起 chat；带 messages + tool_results 让模型用工具结果合成最终答。",
+      {
+        第几轮: 2,
+        本轮为什么是这些参数: {
+          messagesLen: messages2.length,
+          toolResultCount: toolMessages.length,
+          reason: "Round-2 必须带 Round-1 的 assistant(tool_calls) + 每个 tool_call_id 对应的 tool result；否则模型拿不到上下文。",
+        },
+      },
+    );
     const r2 = await callLlmOnce(messages2);
     if (!r2.ok) {
-      logger.error("chat.round-2.fail", "round-2 failed → 502", "Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错", { error: r2.error, upstreamStatus: r2.upstreamStatus });
+      logger.error(
+        "││ chat-handlePostChat",
+        "调用循环结束：第 2 轮（失败）",
+        "为什么打：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        {
+          第几轮: 2,
+          本轮结果: { error: r2.error, upstreamStatus: r2.upstreamStatus },
+        },
+      );
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-2 失败）",
+        "为什么打：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        {
+          返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r2.error),
+        },
+      );
       ctx.status = 502;
       ctx.body = {
         error: r2.error,
@@ -211,11 +356,19 @@ export function mountChatRoutes(router: Router): void {
       return;
     }
     const finalReply = r2.response.choices[0].message.content ?? "";
-    logger.info("chat.round-2.ok", "round-2 done", "Round 2 成功；拿到 final reply 准备返回前端", {
-      finishReason: r2.response.choices[0].finish_reason,
-      finalLen: finalReply.length,
-      usage: r2.response.usage,
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环结束：第 2 轮",
+      "为什么打：Round 2 成功；拿到 final reply 准备返回前端。",
+      {
+        第几轮: 2,
+        本轮结果: {
+          finishReason: r2.response.choices[0].finish_reason,
+          finalLen: finalReply.length,
+          usage: r2.response.usage,
+        },
+      },
+    );
 
     ctx.body = {
       user_input: input,
@@ -225,6 +378,14 @@ export function mountChatRoutes(router: Router): void {
       round_2: r2,
       final_reply: finalReply,
     };
-    logger.info("chat.reply.sent", "responded to client", "已返回给前端；记 status + finalLen 便于核对", { status: 200, finalLen: finalReply.length });
+    logger.info(
+      "api.chat",
+      "调用函数结束：handlePostChat",
+      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；记 finalLen 便于核对。",
+      {
+        返回值: { httpStatus: 200, finalLen: finalReply.length, toolCallCount: toolCallsFromLLM.length, okCount: toolResults.filter(r => r.ok).length, failCount: toolResults.filter(r => !r.ok).length },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
   });
 }

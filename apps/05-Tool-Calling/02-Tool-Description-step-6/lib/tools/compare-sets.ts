@@ -59,7 +59,8 @@ const IMPROVED_TOOLS: ToolSchema[] = [
           },
           priority: {
             type: "string",
-            "enum": ["low", "medium", "high"],
+            // Tool parameters 类型不显式支持 enum；强转保留 enum 便于 LLM 看提示
+            ...({ enum: ["low", "medium", "high"] } as Record<string, unknown>),
             description: "用户的紧急程度：low=不急 / medium=一般 / high=很急（必须填 enum 内值）",
           },
         },

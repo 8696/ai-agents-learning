@@ -11,6 +11,8 @@
  * 为什么单独成文件：
  *   routes/chat.ts 只该做「校验 + 开流 + 交给谁」；把 for await 循环抄进 route，
  *   以后换成多轮对话或加重试，route 就会滚成一大坨。这里也完全不碰 koa 的 ctx。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（流式封装层）；调用模型 五件套（出网层，含 __code + 字段释义）。
  */
 import OpenAI from "openai";
 import type { Llm } from "../../../../llm.js";
@@ -96,45 +98,83 @@ export async function streamChatToSse(params: {
 }): Promise<StreamChatStats> {
   const { llm, message, writer } = params;
 
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ 流式对话-streamChatToSse",
+    "调用函数开始：streamChatToSse",
+    "为什么打：路由只认这一层 stats 形状（frameCount / usage / failed），里面那次才是出网（看「调用模型开始：对话补全」）。当前：即将拼请求体 → 创流 → 推帧 → writer.done()。",
+    {
+      入参: {
+        llmProvider: llm.provider,
+        llmModelA: llm.modelA,
+        messagePreview: message.slice(0, 50),
+        messageLen: message.length,
+      },
+      __code: `const stats = await streamChatToSse({ llm, message, writer });`,
+    },
+  );
+
+  const req = buildChatRequest(llm, message);
+
+  const tModelStart = Date.now();
+  logger.info(
+    "││ 调用模型-对话补全",
+    "调用模型开始：对话补全",
+    "为什么打：真正出网的那一次；不打就没有 frameCount / usage。当前：在 streamChatToSse 里即将发出流式请求；这是 §5.3.16 流式规则的「唯一一次」开始，中间 chunk 不再套五件套。",
+    {
+      入参: req,
+      __code: `const stream = await llm.openai.chat.completions.create(req);`,
+    },
+  );
+
+  let stats: StreamChatStats;
   try {
-    const req = buildChatRequest(llm, message);
+    const stream = await llm.openai.chat.completions.create(req);
+    const { frameCount, usage } = await pumpChunksToSse(stream, writer);
+
     logger.info(
-      "llm.request",
-      "→ openai.chat.completions.create（协议 A · 流式）",
-      "记录发往上游的完整请求体：模块 00 最小闭环只有 model + 一条 user + stream 开关，打全便于后续核对字段、排查网关层多塞的参数",
+      "││ 调用模型-对话补全",
+      "调用模型结束：对话补全",
+      "为什么打：流式场景只在收尾打一次完整返回值（§5.3.16 流式规则），便于核对 final usage / frameCount。当前：pumpChunksToSse 已返回，下一步 writer.done()。",
       {
-        model: req.model,
-        messagesCount: req.messages.length,
-        stream: req.stream,
-        stream_options: req.stream_options,
-        __code: `const stream = await llm.openai.chat.completions.create(${JSON.stringify(req, null, 2)})`,
+        返回值: { frameCount, usage },
+        耗时ms: Date.now() - tModelStart,
+        字段释义: {
+          frameCount: "本次流式共推给浏览器多少个 SSE 帧",
+          usage: "OpenAI 流式最后一帧带回来的 usage（prompt_tokens / completion_tokens / total_tokens）",
+        },
       },
     );
-    const stream = await llm.openai.chat.completions.create(req);
-    logger.info(
-      "llm.response",
-      "← 拿到流对象（AsyncIterable<ChatCompletionChunk>）",
-      "完整打响应便于核对 SDK 自带字段（id / object / created / model / choices 首批 / system_fingerprint 等），流模式下 usage 要在最后一帧里取",
-      stream,
-    );
-    const { frameCount, usage } = await pumpChunksToSse(stream, writer);
+
     writer.done();
-    return { frameCount, usage };
+    stats = { frameCount, usage };
   } catch (error: unknown) {
     const failed = describeUpstreamError(error);
     logger.error(
-      "llm.error",
-      "× openai.chat.completions.create 抛错",
-      "上游异常落到这里时 SSE 头已经发出去没法回 HTTP 状态码了，只能以错误帧回页面；upstreamStatus 区分 401/403（Key）、429（限流）、5xx（对方挂了）",
+      "││ 调用模型-对话补全",
+      "调用模型结束：对话补全（失败）",
+      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create / pump 抛错，SSE 头已发完只能以错误帧回页面。",
       {
-        message: failed.message,
-        upstreamStatus: failed.upstreamStatus,
-        __code: `// 已在 catch 中调用 writer.frame({ error, upstreamStatus }) + writer.done()`,
+        返回值: failed,
+        耗时ms: Date.now() - tModelStart,
+        错误: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error,
       },
     );
     // 错误帧和正常帧走同一条流：页面统一在 onFrame 里判断 obj.error
     writer.frame({ error: failed.message, upstreamStatus: failed.upstreamStatus });
     writer.done();
-    return { frameCount: 0, usage: undefined, failed };
+    stats = { frameCount: 0, usage: undefined, failed };
   }
+
+  logger.info(
+    "│ 流式对话-streamChatToSse",
+    "调用函数结束：streamChatToSse",
+    "为什么打：路由要把 stats 交给页面 stats 区，和 route 的「调用函数结束：handlePostChat」互为对照。当前：返回 stats（含 frameCount / usage 或 failed）。",
+    {
+      返回值: stats,
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
+
+  return stats;
 }

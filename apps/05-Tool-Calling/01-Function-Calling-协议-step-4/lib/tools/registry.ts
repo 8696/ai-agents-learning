@@ -15,7 +15,8 @@
  *   - summarize 是链 B（下游）→ 它的 content 参数**必须**是 search_doc 的结果，不是用户输入
  *   - 路由层 hard-code：await search_doc → await summarize(search_doc.result)；**不**用 Promise.all
  *
- * 日志（§5.3.16）：gateway.rejected / zod.fail / execute.ok / execute.fail 四类都打。
+ * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / chainFirstCall / chainSecondCall 是工具档——五件套（含 __code）仍要。
  */
 import { searchDocTool } from "./chain-search-doc.js";
 import { summarizeTool } from "./chain-summarize.js";
@@ -38,15 +39,42 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   const tool = TOOLS[name as ToolName];
   if (!tool) {
     const reason = `unknown tool: ${name}（未注册）`;
-    logger.warn("registry.gateway.rejected", "未注册工具", "LLM 想调的工具不在白名单", { name, reason });
+    logger.warn(
+      "│ 网关-gatewayCheck",
+      "调用函数结束：gatewayCheck",
+      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      {
+        返回值: { allowed: false, reason },
+        name,
+        耗时ms: Date.now(),
+      },
+    );
     return { allowed: false, reason };
   }
   if (tool.dangerous) {
     const reason = `dangerous tool ${name} requires manual approval`;
-    logger.warn("registry.gateway.rejected", "危险工具", "工具被标 dangerous", { name, reason });
+    logger.warn(
+      "│ 网关-gatewayCheck",
+      "调用函数结束：gatewayCheck（dangerous）",
+      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      {
+        返回值: { allowed: false, reason },
+        name,
+        耗时ms: Date.now(),
+      },
+    );
     return { allowed: false, reason };
   }
-  logger.debug("registry.gateway.allowed", "gateway 放行", "工具通过 gateway 校验", { name });
+  logger.debug(
+    "│ 网关-gatewayCheck",
+    "调用函数结束：gatewayCheck",
+    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    {
+      返回值: { allowed: true },
+      name,
+      耗时ms: Date.now(),
+    },
+  );
   return { allowed: true };
 }
 
@@ -56,9 +84,30 @@ export async function executeTool(
   args: unknown,
   toolCallId: string,
 ): Promise<ExecResult> {
+  const tFuncStart = Date.now();
+  logger.info(
+    "│ 工具执行-executeTool",
+    "调用函数开始：executeTool",
+    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：handler 是 async → 路由层自己决定 await 还是 Promise.all。",
+    {
+      入参: { toolCallId, name, rawArgs: args },
+      __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nconst result = await tool.handler(parsed.data);`,
+    },
+  );
+
   // ① Gateway 先过
   const gate = gatewayCheck(name);
   if (!gate.allowed) {
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（gateway 拒绝）",
+      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
+        reason: gate.reason,
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" };
   }
 
@@ -67,7 +116,16 @@ export async function executeTool(
   const parsed = tool.schema.safeParse(args);
   if (!parsed.success) {
     const issues = parsed.error.issues;
-    logger.warn("registry.zod.fail", "参数 Zod 校验失败", "工具名合法但参数 schema 不匹配", { name, toolCallId, issues });
+    logger.warn(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（Zod 校验失败）",
+      "为什么打：工具名合法但参数 schema 不匹配。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
+        issues: JSON.parse(JSON.stringify(issues)),
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return {
       ok: false,
       tool: name,
@@ -80,10 +138,27 @@ export async function executeTool(
   try {
     // @ts-ignore
     const result = await tool.handler(parsed.data);
-    logger.info("registry.execute.ok", "执行成功", "工具实际跑通", { name, toolCallId, resultPreview: summarize(result) });
+    logger.info(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool",
+      "为什么打：工具实际跑通；只打 result 摘要。",
+      {
+        返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, tool: name, tool_call_id: toolCallId, result };
   } catch (err: unknown) {
-    logger.error("registry.execute.fail", "执行抛错", "handler 内部抛异常", { name, toolCallId, err: err instanceof Error ? err.message : String(err) });
+    logger.error(
+      "│ 工具执行-executeTool",
+      "调用函数结束：executeTool（失败）",
+      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      {
+        返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -100,11 +175,22 @@ function summarize(v: unknown): unknown {
 
 // ── 给前端"Registry 面板"用 ──
 export function getToolsMeta() {
-  return Object.values(TOOLS).map((t) => ({
+  const t0 = Date.now();
+  const meta = Object.values(TOOLS).map((t) => ({
     name: t.name,
     description: t.description,
     dangerous: t.dangerous,
   }));
+  logger.debug(
+    "│ Registry-getToolsMeta",
+    "调用函数结束：getToolsMeta",
+    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    {
+      返回值: { count: meta.length, tools: meta },
+      耗时ms: Date.now() - t0,
+    },
+  );
+  return meta;
 }
 
 // ── step-4 chain 固定 2 个 tool_call（路由层 hard-code 串行）──
@@ -116,6 +202,16 @@ export type MockToolCall = { id: string; name: string; arguments: Record<string,
  * 路由层先 await executeTool 这一步，再决定下一步（summarize）参数。
  */
 export function chainFirstCall(query: string): MockToolCall[] {
+  const t0 = Date.now();
+  logger.info(
+    "│ mock chain-chainFirstCall",
+    "调用函数结束：chainFirstCall",
+    "为什么打：route 只认这一层返回的 MockToolCall[]；step-4 chain 第一步是 search_doc(query)。",
+    {
+      返回值: { count: 1, calls: [{ id: "call_1", name: "search_doc", arguments: { query } }] },
+      耗时ms: Date.now() - t0,
+    },
+  );
   return [{ id: "call_1", name: "search_doc", arguments: { query } }];
 }
 
@@ -124,5 +220,16 @@ export function chainFirstCall(query: string): MockToolCall[] {
  * **content = 上一步 search_doc 的 result**——这是依赖链的关键。
  */
 export function chainSecondCall(firstResult: unknown, style: string): MockToolCall[] {
+  const t0 = Date.now();
+  logger.info(
+    "│ mock chain-chainSecondCall",
+    "调用函数结束：chainSecondCall",
+    "为什么打：route 只认这一层返回的 MockToolCall[]；step-4 chain 第二步 summarize.content = 上一步 search_doc 的 result。",
+    {
+      返回值: { count: 1, calls: [{ id: "call_2", name: "summarize", arguments: { content: firstResult, style } }] },
+      contentIsFirstResult: firstResult === undefined ? "undefined（反例路径）" : "已传值（正例路径）",
+      耗时ms: Date.now() - t0,
+    },
+  );
   return [{ id: "call_2", name: "summarize", arguments: { content: firstResult, style } }];
 }

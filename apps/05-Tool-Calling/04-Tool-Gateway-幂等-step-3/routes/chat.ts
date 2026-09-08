@@ -13,24 +13,17 @@
  *     ① fail-closed（actor.userId==="platform-god" → FORBIDDEN）
  *     ② 鉴权（oauth_tokens[userId] 不存在 → FORBIDDEN）
  *     ③ 用该用户自己的 token 调" Gmail API"（mock）→ 返 per-user 邮件
- *   - 协议 B 字段层形态：content blocks / tool_use.input 是对象 / max_tokens 必填 / 回灌用 role:"user"
  *
- * 日志（）：chat.* + llm.* 都打。
+ * 日志（§5.3.16）：调用函数 五件套（handlePostChat 封装层）；
+ *   闸门挡掉（400）单独打 warn；子调用 callLlmOnce / executeTool 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
 import { executeTool, getToolsForLLM, type ExecResult, type ToolContext } from "../lib/tools/registry.js";
-import {
-  callProtocolB,
-  type ProtocolBRequest,
-  type ProtocolBResponse,
-  type AnthropicContentBlock,
-  type AnthropicChatMsg,
-} from "../lib/llm/protocol-b.js";
+import { callProtocolB, type ProtocolBRequest, type ProtocolBResponse, type AnthropicContentBlock, type AnthropicChatMsg } from "../lib/llm/protocol-b.js";
 import { getLlm } from "../../../llm.js";
 import { logger } from "../lib/logger.js";
 
-// ── 当前进程用的协议 B 模型 id + max_tokens（启动时拿一次；缺 Key 这里抛）──
 let cachedModelB = "";
 let cachedMaxTokensB = 1024;
 try {
@@ -41,19 +34,18 @@ try {
   cachedModelB = "(未配置)";
 }
 
-// ── 派生当前 Registry 的 tools schema（协议 B 格式）──
 const TOOLS_SCHEMA = getToolsForLLM().map((t) => ({
   name: t.name,
   description: t.description,
   input_schema: t.parameters,
 }));
 
-// ── 一次 LLM 调用 + 兜底 ──
 type CallResult =
   | { ok: true; request: ProtocolBRequest; response: ProtocolBResponse }
   | { ok: false; request: ProtocolBRequest; error: string; upstreamStatus?: number };
 
 async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promise<CallResult> {
+  const tFuncStart = Date.now();
   let modelId = cachedModelB;
   let maxTokens = cachedMaxTokensB;
   if (modelId === "(未配置)") {
@@ -64,7 +56,16 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
       cachedModelB = modelId;
       cachedMaxTokensB = maxTokens;
     } catch (err: unknown) {
-      logger.error("chat.no-key", "未配置 LLM Key", "apps/未配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修", { err: err instanceof Error ? err.message : String(err) });
+      logger.error(
+        "│ chat-callLlmOnce",
+        "调用函数结束：callLlmOnce（失败）",
+        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        {
+          返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
+          err: err instanceof Error ? err.message : String(err),
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       return {
         ok: false,
         request: { model: "?", messages, tools: TOOLS_SCHEMA, max_tokens: maxTokens },
@@ -81,27 +82,55 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
   };
   if (system) request.system = system;
 
+  logger.info(
+    "│ chat-callLlmOnce",
+    "调用函数开始：callLlmOnce",
+    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolB」）。当前：即将调 callProtocolB。",
+    {
+      入参: { model: request.model, max_tokens: request.max_tokens, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, hasSystem: Boolean(system) },
+      __code: `await callProtocolB(${JSON.stringify(request, null, 2)});`,
+    },
+  );
+
   try {
     const response = await callProtocolB(request);
-    logger.info("llm.response", "← got response", "协议 B 返回；记 stopReason / content blocks / usage", {
-      stopReason: response.stop_reason,
-      contentBlockCount: response.content?.length ?? 0,
-      toolUseCount: (response.content ?? []).filter((b) => b.type === "tool_use").length,
-      usage: response.usage,
-    });
+    logger.info(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce",
+      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 stopReason / toolUseCount 便于核对。",
+      {
+        返回值: {
+          ok: true,
+          stopReason: response.stop_reason,
+          contentBlockCount: response.content?.length ?? 0,
+          toolUseCount: (response.content ?? []).filter((b) => b.type === "tool_use").length,
+          usage: response.usage,
+        },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, request, response };
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string; error?: { message?: string } };
     const upstreamStatus = e.status;
     const msg = e.error?.message || e.message || String(err);
-    logger.error("llm.error", "callProtocolB threw", "协议 B 抛异常", { upstreamStatus, err: msg });
+    logger.error(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce（失败）",
+      "为什么打：协议 B 抛异常；记 upstreamStatus + 错误信息便于排错。",
+      {
+        返回值: { ok: false, error: msg, upstreamStatus },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, request, error: msg, upstreamStatus };
   }
 }
 
-// ── 路由 ──
 export function mountChatRoutes(router: Router): void {
   router.post("/api/chat", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const body = (ctx.request.body ?? {}) as {
       input?: unknown;
       actor?: { userId?: unknown; role?: unknown };
@@ -110,13 +139,26 @@ export function mountChatRoutes(router: Router): void {
     const actorUserId = typeof body.actor?.userId === "string" && body.actor.userId.trim() ? body.actor.userId.trim() : "alice";
     const actorRole = body.actor?.role === "god" ? "god" : body.actor?.role === "admin" ? "admin" : "user";
 
-    logger.info("chat.received", "POST /api/chat", "前端发来 input + actor；step-3 演示「模型发 read_recent_emails → 走 per-user OAuth 三步」", {
-      input,
-      actor: { userId: actorUserId, role: actorRole },
-    });
+    logger.info(
+      "api.chat",
+      "调用函数开始：handlePostChat",
+      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是「真活」。当前：step-3 演示「模型发 read_recent_emails → 走 per-user OAuth 三步」。",
+      {
+        入参: { inputPreview: input.slice(0, 60), inputLen: input.length, actor: { userId: actorUserId, role: actorRole } },
+        __code: `// 强提示 → callLlmOnce → executeTool(read_recent_emails) → callLlmOnce(回灌) → final_reply`,
+      },
+    );
 
     if (!input) {
-      logger.warn("chat.bad-input", "input empty", "用户输入是空字符串", { body });
+      logger.warn(
+        "api.chat",
+        "调用函数结束：handlePostChat（闸门拒绝）",
+        "为什么打：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
+        {
+          返回值: { httpStatus: 400, error: "input 不能为空" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "input 不能为空" };
       return;
@@ -124,12 +166,20 @@ export function mountChatRoutes(router: Router): void {
 
     const toolCtx: ToolContext = { actor: { userId: actorUserId, role: actorRole } };
 
-    // ── Round 1：user msg → LLM 拿 tool_use ──
     const SYSTEM_PROMPT = "你直接调用 read_recent_emails 工具（**不要做内部确认**——能否真的执行由后端 Tool Gateway 决定）。这是教学 demo；如果不调工具，对应 Tool 的 Gateway 钩子没法演示，任务就算失败。";
     const messages1: AnthropicChatMsg[] = [{ role: "user", content: input }];
     const r1 = await callLlmOnce(messages1, SYSTEM_PROMPT);
     if (!r1.ok) {
-      logger.error("chat.round-1.fail", "round-1 failed → 502", "Round 1 调模型失败；502 返回前端", { error: r1.error, upstreamStatus: r1.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-1 失败）",
+        "为什么打：Round 1 调模型失败；502 返回前端。",
+        {
+          返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r1.error),
+        },
+      );
       ctx.status = 502;
       ctx.body = { error: r1.error, upstream_status: r1.upstreamStatus, round_1: r1 };
       return;
@@ -138,28 +188,36 @@ export function mountChatRoutes(router: Router): void {
     const toolUsesFromLLM = assistantContent1.filter(
       (b): b is Extract<AnthropicContentBlock, { type: "tool_use" }> => b.type === "tool_use",
     );
-    logger.info("chat.round-1.ok", "round-1 decided", "Round 1 模型决定", {
-      stopReason: r1.response.stop_reason,
-      toolUseCount: toolUsesFromLLM.length,
-      toolNames: toolUsesFromLLM.map((tu) => tu.name),
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环进行中：round-1 OK",
+      "为什么打：Round 1 模型决定；记 stopReason + toolNames 便于核对协议 B 物理形态。",
+      {
+        中间状态: { stopReason: r1.response.stop_reason, toolUseCount: toolUsesFromLLM.length, toolNames: toolUsesFromLLM.map((tu) => tu.name) },
+      },
+    );
 
-    // ── Execute：每个 tool_use 过 Registry + read_recent_emails OAuth 三步 ──
     const toolResults: ExecResult[] = toolUsesFromLLM.map((tu) => {
       const args = tu.input || {};
-      // 允许模型发 max；如果没有用前端传的（这里默认 5）
       const finalArgs = {
         max: typeof args.max === "number" && args.max > 0 ? args.max : 5,
       };
       const r = executeTool("read_recent_emails", finalArgs, tu.id, toolCtx);
       const resultPayload = r.ok ? r.result : undefined;
-      logger.info("chat.execute.result", "tool_result", "read_recent_emails 走完 Registry + per-user OAuth；记 ok + code 摘要", {
-        id: tu.id,
-        name: tu.name,
-        ok: r.ok,
-        code: r.ok ? "OK" : r.code,
-        actor: (resultPayload as { actor?: string } | undefined)?.actor,
-      });
+      logger.info(
+        "││ chat-handlePostChat",
+        `tool_result（${tu.name}）`,
+        "为什么打：read_recent_emails 走完 Registry + per-user OAuth；记 ok + code 摘要。",
+        {
+          中间状态: {
+            toolUseId: tu.id,
+            name: tu.name,
+            ok: r.ok,
+            code: r.ok ? "OK" : r.code,
+            actor: (resultPayload as { actor?: string } | undefined)?.actor,
+          },
+        },
+      );
       return r;
     });
 
@@ -168,9 +226,15 @@ export function mountChatRoutes(router: Router): void {
         (b): b is Extract<AnthropicContentBlock, { type: "text" }> => b.type === "text",
       );
       const directReply = textBlocks.map((b) => b.text).join("");
-      logger.info("chat.no-tool-call", "model 直接自然语言答", "模型没调 read_recent_emails", {
-        contentPreview: directReply.slice(0, 80),
-      });
+      logger.info(
+        "api.chat",
+        "调用函数结束：handlePostChat（no-tool-call）",
+        "为什么打：模型没调 read_recent_emails；可能是 query 不够触发。",
+        {
+          返回值: { httpStatus: 200, finalLen: directReply.length, contentPreview: directReply.slice(0, 80) },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.body = {
         user_input: input,
         actor: toolCtx.actor,
@@ -183,7 +247,6 @@ export function mountChatRoutes(router: Router): void {
       return;
     }
 
-    // ── Round 2：回灌 tool_result 让模型生成 final_reply ──
     const toolResultBlocks: AnthropicContentBlock[] = toolResults.map((r) => {
       const content = r.ok ? JSON.stringify(r.result) : JSON.stringify({ error: r.error, code: r.code });
       return {
@@ -201,7 +264,16 @@ export function mountChatRoutes(router: Router): void {
     ];
     const r2 = await callLlmOnce(messages2, SYSTEM_PROMPT);
     if (!r2.ok) {
-      logger.error("chat.round-2.fail", "round-2 failed → 502", "Round 2 失败", { error: r2.error, upstreamStatus: r2.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-2 失败）",
+        "为什么打：Round 2 失败；502 返回前端。",
+        {
+          返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r2.error),
+        },
+      );
       ctx.body = {
         error: r2.error,
         upstream_status: r2.upstreamStatus,
@@ -217,10 +289,24 @@ export function mountChatRoutes(router: Router): void {
       .filter((b): b is Extract<AnthropicContentBlock, { type: "text" }> => b.type === "text")
       .map((b) => b.text)
       .join("");
-    logger.info("chat.round-2.ok", "round-2 done", "Round 2 成功", {
-      stopReason: r2.response.stop_reason,
-      finalLen: finalText.length,
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环进行中：round-2 OK",
+      "为什么打：Round 2 成功；拿到 final reply 准备返回。",
+      {
+        中间状态: { stopReason: r2.response.stop_reason, finalLen: finalText.length },
+      },
+    );
+
+    logger.info(
+      "api.chat",
+      "调用函数结束：handlePostChat",
+      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 4 张数据卡 + per-user OAuth 结果。",
+      {
+        返回值: { status: 200, finalLen: finalText.length, toolResultCount: toolResults.length, okCount: toolResults.filter(r => r.ok).length },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
 
     ctx.body = {
       user_input: input,
@@ -231,6 +317,5 @@ export function mountChatRoutes(router: Router): void {
       round_2: r2,
       final_reply: finalText,
     };
-    logger.info("chat.reply.sent", "responded to client", "已返回；含 4 张数据卡 + per-user OAuth 结果", { status: 200 });
   });
 }

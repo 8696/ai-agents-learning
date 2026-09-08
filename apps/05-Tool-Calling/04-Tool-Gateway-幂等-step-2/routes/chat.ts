@@ -11,9 +11,9 @@
  * 教学锚点（变体 2）：
  *   - 模型发 create_order tool_use → executeTool → 走幂等 cache + 内存 DB
  *   - 协议 B 字段层形态：content blocks、tool_use.input 是 对象、必填 max_tokens、回灌用 role:"user"
- *   - 「同 key 调 3 次 → DB 只插 1 行」通过前端「同 key 调 3 次」按钮触发 3 次 /api/chat 实现
  *
- * 日志（：chat.* + llm.* 都打；executeTool 内部 + audit 都会写文件。
+ * 日志（§5.3.16）：调用函数 五件套（handlePostChat 封装层）；
+ *   闸门挡掉（400/429）单独打 warn；子调用 callLlmOnce / executeTool 内部已自带五件套。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -22,7 +22,6 @@ import { callProtocolB, type ProtocolBRequest, type ProtocolBResponse, type Anth
 import { getLlm } from "../../../llm.js";
 import { logger } from "../lib/logger.js";
 
-// ── 当前进程用的协议 B 模型 id + max_tokens（启动时拿一次；缺 Key 这里抛）──
 let cachedModelB = "";
 let cachedMaxTokensB = 1024;
 try {
@@ -33,19 +32,18 @@ try {
   cachedModelB = "(未配置)";
 }
 
-// ── 派生当前 Registry 的 tools schema（协议 B 格式）──
 const TOOLS_SCHEMA = getToolsForLLM().map((t) => ({
   name: t.name,
   description: t.description,
   input_schema: t.parameters,
 }));
 
-// ── 一次 LLM 调用 + 兜底 ──
 type CallResult =
   | { ok: true; request: ProtocolBRequest; response: ProtocolBResponse }
   | { ok: false; request: ProtocolBRequest; error: string; upstreamStatus?: number };
 
 async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promise<CallResult> {
+  const tFuncStart = Date.now();
   let modelId = cachedModelB;
   let maxTokens = cachedMaxTokensB;
   if (modelId === "(未配置)") {
@@ -56,7 +54,16 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
       cachedModelB = modelId;
       cachedMaxTokensB = maxTokens;
     } catch (err: unknown) {
-      logger.error("chat.no-key", "未配置 LLM Key", "apps/未配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修", { err: err instanceof Error ? err.message : String(err) });
+      logger.error(
+        "│ chat-callLlmOnce",
+        "调用函数结束：callLlmOnce（失败）",
+        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        {
+          返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
+          err: err instanceof Error ? err.message : String(err),
+          耗时ms: Date.now() - tFuncStart,
+        },
+      );
       return {
         ok: false,
         request: { model: "?", messages, tools: TOOLS_SCHEMA, max_tokens: maxTokens },
@@ -73,26 +80,52 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
   };
   if (system) request.system = system;
 
+  logger.info(
+    "│ chat-callLlmOnce",
+    "调用函数开始：callLlmOnce",
+    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolB」）。当前：即将调 callProtocolB，model / max_tokens / messagesCount / toolsCount 都要打。",
+    {
+      入参: { model: request.model, max_tokens: request.max_tokens, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, hasSystem: Boolean(system) },
+      __code: `await callProtocolB(${JSON.stringify(request, null, 2)});`,
+    },
+  );
+
   try {
     const response = await callProtocolB(request);
-    logger.info("llm.response", "← got response", "协议 B 返回；记 stopReason / content blocks / usage", {
-      stopReason: response.stop_reason,
-      contentBlockCount: response.content?.length ?? 0,
-      toolUseCount: (response.content ?? []).filter((b) => b.type === "tool_use").length,
-      usage: response.usage,
-    });
+    logger.info(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce",
+      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 stopReason / toolUseCount 便于核对。",
+      {
+        返回值: {
+          ok: true,
+          stopReason: response.stop_reason,
+          contentBlockCount: response.content?.length ?? 0,
+          toolUseCount: (response.content ?? []).filter((b) => b.type === "tool_use").length,
+          usage: response.usage,
+        },
+        耗时ms: Date.now() - tFuncStart,
+      },
+    );
     return { ok: true, request, response };
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string; error?: { message?: string } };
     const upstreamStatus = e.status;
     const msg = e.error?.message || e.message || String(err);
-    logger.error("llm.error", "callProtocolB threw", "协议 B 抛异常（网络 / 5xx / 4xx）", { upstreamStatus, err: msg });
+    logger.error(
+      "│ chat-callLlmOnce",
+      "调用函数结束：callLlmOnce（失败）",
+      "为什么打：协议 B 抛异常；记 upstreamStatus + 错误信息便于排错。",
+      {
+        返回值: { ok: false, error: msg, upstreamStatus },
+        耗时ms: Date.now() - tFuncStart,
+        错误: err,
+      },
+    );
     return { ok: false, request, error: msg, upstreamStatus };
   }
 }
 
-// ── #24：频率限流（每 actor 每分钟 ≤ 60 次 → FREQ_LIMITED）──
-// 进程内滑动窗口 Map<actorUserId, timestamps[]>；演示用，生产用 Redis INCR
 const freqWindowMs = 60_000;
 const freqMax = 60;
 const freqBuckets = new Map<string, number[]>();
@@ -110,14 +143,14 @@ function checkFreqLimit(actorUserId: string): { allowed: boolean; retryAfterMs?:
   return { allowed: true };
 }
 
-// ── 路由 ──
 export function mountChatRoutes(router: Router): void {
   router.post("/api/chat", async (ctx: Context) => {
+    const tHandlerStart = Date.now();
     const body = (ctx.request.body ?? {}) as {
       input?: unknown;
       items?: Array<{ sku?: unknown; qty?: unknown }>;
       idempotency_key?: unknown;
-      actor_userId?: unknown; // #24：限流按 actor 区分
+      actor_userId?: unknown;
     };
     const input = typeof body.input === "string" ? body.input.trim() : "";
     const actorUserId = typeof body.actor_userId === "string" && body.actor_userId.trim() ? body.actor_userId.trim() : "alice";
@@ -126,13 +159,17 @@ export function mountChatRoutes(router: Router): void {
       : [];
     const idempotencyKey = typeof body.idempotency_key === "string" ? body.idempotency_key.trim() : "";
 
-    // ── #24 频率限流：每 actor 每分钟 ≤ 60 次 ──
     const freq = checkFreqLimit(actorUserId);
     if (!freq.allowed) {
-      logger.warn("chat.freq-limit", "频率限流触发", "★ #24 教学点：限流 ≠ 幂等；这是频率维度，retryAfterMs 让前端/模型知道等多久", {
-        actor: actorUserId,
-        retryAfterMs: freq.retryAfterMs,
-      });
+      logger.warn(
+        "api.chat",
+        "调用函数结束：handlePostChat（频率限流）",
+        "为什么打：★ #24 教学点——限流 ≠ 幂等；这是频率维度，retryAfterMs 让前端/模型知道等多久。",
+        {
+          返回值: { httpStatus: 429, code: "FREQ_LIMITED", retryAfterMs: freq.retryAfterMs },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 429;
       ctx.body = {
         ok: false,
@@ -144,27 +181,45 @@ export function mountChatRoutes(router: Router): void {
       return;
     }
 
-    logger.info("chat.received", "POST /api/chat", "前端发来用户 input + items + idempotency_key；step-2 演示「模型发 create_order → 走幂等」", {
-      input,
-      items,
-      idempotency_key: idempotencyKey,
-      actor: actorUserId,
-    });
+    logger.info(
+      "api.chat",
+      "调用函数开始：handlePostChat",
+      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是「真活」。当前：step-2 演示「模型发 create_order → 走幂等」。",
+      {
+        入参: { inputPreview: input.slice(0, 60), inputLen: input.length, itemCount: items.length, hasIdempotencyKey: Boolean(idempotencyKey), actor: actorUserId },
+        __code: `// 强提示 → callLlmOnce → executeTool(create_order) → callLlmOnce(回灌) → final_reply`,
+      },
+    );
 
     if (!input) {
-      logger.warn("chat.bad-input", "input empty", "用户输入是空字符串", { body });
+      logger.warn(
+        "api.chat",
+        "调用函数结束：handlePostChat（闸门拒绝）",
+        "为什么打：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
+        {
+          返回值: { httpStatus: 400, error: "input 不能为空" },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.status = 400;
       ctx.body = { error: "input 不能为空" };
       return;
     }
 
-    // ── Round 1：user msg → LLM 拿 tool_use ──
-    // 强提示：模型必须调 create_order，并把 items + idempotency_key 传过去
     const SYSTEM_PROMPT = "你直接调用 create_order 工具（**不要做内部确认**——是否真的执行由后端 Tool Gateway 决定；失败会返结构化错误）。**create_order 必须填 idempotency_key**（由前端在 query 里告诉你）。这是教学 demo；如果不调工具，对应 Tool 的 Gateway 钩子没法演示，任务就算失败。";
     const messages1: AnthropicChatMsg[] = [{ role: "user", content: input }];
     const r1 = await callLlmOnce(messages1, SYSTEM_PROMPT);
     if (!r1.ok) {
-      logger.error("chat.round-1.fail", "round-1 failed → 502", "Round 1 调模型失败；502 返回前端", { error: r1.error, upstreamStatus: r1.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-1 失败）",
+        "为什么打：Round 1 调模型失败；502 返回前端。",
+        {
+          返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r1.error),
+        },
+      );
       ctx.status = 502;
       ctx.body = { error: r1.error, upstream_status: r1.upstreamStatus, round_1: r1 };
       return;
@@ -173,15 +228,16 @@ export function mountChatRoutes(router: Router): void {
     const toolUsesFromLLM = assistantContent1.filter(
       (b): b is Extract<AnthropicContentBlock, { type: "tool_use" }> => b.type === "tool_use",
     );
-    logger.info("chat.round-1.ok", "round-1 decided", "Round 1 模型决定", {
-      stopReason: r1.response.stop_reason,
-      toolUseCount: toolUsesFromLLM.length,
-      toolNames: toolUsesFromLLM.map((tu) => tu.name),
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环进行中：round-1 OK",
+      "为什么打：Round 1 模型决定；记 stopReason + toolNames 便于核对协议 B 物理形态。",
+      {
+        中间状态: { stopReason: r1.response.stop_reason, toolUseCount: toolUsesFromLLM.length, toolNames: toolUsesFromLLM.map((tu) => tu.name) },
+      },
+    );
 
-    // ── Execute：每个 tool_use 过 Registry + create_order 幂等 ──
     const toolResults: ExecResult[] = toolUsesFromLLM.map((tu) => {
-      // 优先用模型发的 args（含 idempotency_key）；如果模型没填用前端传的
       const args = tu.input || {};
       const finalArgs = {
         items: Array.isArray(args.items) && args.items.length > 0 ? args.items : items,
@@ -189,13 +245,20 @@ export function mountChatRoutes(router: Router): void {
       };
       const r = executeTool("create_order", finalArgs, tu.id, {});
       const resultPayload = r.ok ? r.result : undefined;
-      logger.info("chat.execute.result", "tool_result", "create_order 走完 Registry + 幂等；记 ok + cacheHit + dbInserted 摘要", {
-        id: tu.id,
-        ok: r.ok,
-        cacheHit: (resultPayload as { cacheHit?: boolean } | undefined)?.cacheHit,
-        dbInserted: (resultPayload as { dbInserted?: boolean } | undefined)?.dbInserted,
-        order_id: (resultPayload as { order?: { order_id?: string } } | undefined)?.order?.order_id,
-      });
+      logger.info(
+        "││ chat-handlePostChat",
+        `tool_result（${tu.name}）`,
+        "为什么打：create_order 走完 Registry + 幂等；记 ok + cacheHit + dbInserted 摘要。",
+        {
+          中间状态: {
+            toolUseId: tu.id,
+            ok: r.ok,
+            cacheHit: (resultPayload as { cacheHit?: boolean } | undefined)?.cacheHit,
+            dbInserted: (resultPayload as { dbInserted?: boolean } | undefined)?.dbInserted,
+            order_id: (resultPayload as { order?: { order_id?: string } } | undefined)?.order?.order_id,
+          },
+        },
+      );
       return r;
     });
 
@@ -204,9 +267,15 @@ export function mountChatRoutes(router: Router): void {
         (b): b is Extract<AnthropicContentBlock, { type: "text" }> => b.type === "text",
       );
       const directReply = textBlocks.map((b) => b.text).join("");
-      logger.info("chat.no-tool-call", "model 直接自然语言答", "模型没调 create_order", {
-        contentPreview: directReply.slice(0, 80),
-      });
+      logger.info(
+        "api.chat",
+        "调用函数结束：handlePostChat（no-tool-call）",
+        "为什么打：模型没调 create_order；可能是 query 不够触发。",
+        {
+          返回值: { httpStatus: 200, finalLen: directReply.length, contentPreview: directReply.slice(0, 80) },
+          耗时ms: Date.now() - tHandlerStart,
+        },
+      );
       ctx.body = {
         user_input: input,
         items,
@@ -220,7 +289,6 @@ export function mountChatRoutes(router: Router): void {
       return;
     }
 
-    // ── Round 2：回灌 tool_result 让模型生成 final_reply ──
     const toolResultBlocks: AnthropicContentBlock[] = toolResults.map((r) => {
       const content = r.ok ? JSON.stringify(r.result) : JSON.stringify({ error: r.error, code: r.code });
       return {
@@ -238,7 +306,16 @@ export function mountChatRoutes(router: Router): void {
     ];
     const r2 = await callLlmOnce(messages2, SYSTEM_PROMPT);
     if (!r2.ok) {
-      logger.error("chat.round-2.fail", "round-2 failed → 502", "Round 2 失败；502 返回前端", { error: r2.error, upstreamStatus: r2.upstreamStatus });
+      logger.error(
+        "api.chat",
+        "调用函数结束：handlePostChat（round-2 失败）",
+        "为什么打：Round 2 失败；502 返回前端。",
+        {
+          返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
+          耗时ms: Date.now() - tHandlerStart,
+          错误: new Error(r2.error),
+        },
+      );
       ctx.body = {
         error: r2.error,
         upstream_status: r2.upstreamStatus,
@@ -254,10 +331,24 @@ export function mountChatRoutes(router: Router): void {
       .filter((b): b is Extract<AnthropicContentBlock, { type: "text" }> => b.type === "text")
       .map((b) => b.text)
       .join("");
-    logger.info("chat.round-2.ok", "round-2 done", "Round 2 成功", {
-      stopReason: r2.response.stop_reason,
-      finalLen: finalText.length,
-    });
+    logger.info(
+      "││ chat-handlePostChat",
+      "调用循环进行中：round-2 OK",
+      "为什么打：Round 2 成功；拿到 final reply 准备返回。",
+      {
+        中间状态: { stopReason: r2.response.stop_reason, finalLen: finalText.length },
+      },
+    );
+
+    logger.info(
+      "api.chat",
+      "调用函数结束：handlePostChat",
+      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 4 张数据卡 + 钩子判定链。",
+      {
+        返回值: { status: 200, finalLen: finalText.length, toolResultCount: toolResults.length, okCount: toolResults.filter(r => r.ok).length },
+        耗时ms: Date.now() - tHandlerStart,
+      },
+    );
 
     ctx.body = {
       user_input: input,
@@ -269,6 +360,5 @@ export function mountChatRoutes(router: Router): void {
       round_2: r2,
       final_reply: finalText,
     };
-    logger.info("chat.reply.sent", "responded to client", "已返回；含 4 张数据卡 + 钩子判定链", { status: 200 });
   });
 }

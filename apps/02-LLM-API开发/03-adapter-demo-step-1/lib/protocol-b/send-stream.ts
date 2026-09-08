@@ -1,7 +1,10 @@
 /**
- * 职责：协议 B 流式调用 —— Anthropic 事件回调桥成 AsyncGenerator&lt;UnifiedDelta&gt;。
+ * 职责：协议 B 流式调用 —— Anthropic 事件回调桥成 AsyncGenerator<UnifiedDelta>。
  * 数据流：messages.stream → streamEvent 队列 → thinking_delta / text_delta / usage / done。
  * 本文件禁止 import openai。
+ *
+ * 日志（§5.3.16）：调用函数 五件套（sendViaBStream 封装层），调用模型 五件套（出网层）；
+ *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 event 不套五件套。
  */
 import type { Llm } from "../../../../llm.js";
 import type { SendMessageOptions, UnifiedDelta } from "../adapter/types.js";
@@ -26,35 +29,35 @@ export async function* sendViaBStream(
     messages: [{ role: "user" as const, content: opts.message }],
   };
 
+  const tFuncStart = Date.now();
   logger.info(
-    "llm.request.protocolB.stream",
-    "→ 调用 anthropic.messages.stream",
-    "adapter 已分叉到协议 B 流式分支；拿到的是 EventStream 不是 AsyncIterable，需要用 on('streamEvent') 桥接；完整打请求体便于对照 SDK 文档",
+    "│ 协议B 流式-sendViaBStream",
+    "调用函数开始：sendViaBStream",
+    "为什么打：sendMessageStream 只认这一层 yield 出的 UnifiedDelta；里面那次才是出网（看「调用模型开始：协议B-消息流」）。当前：即将发协议 B 流式；adapter 已分叉到协议 B 流式。",
     {
-      protocol: "B",
-      mode: "stream",
-      sdk: "anthropic",
-      model: llm.modelB,
-      hasSystem: Boolean(opts.system),
-      maxTokens,
-      thinkingEnabled: thinkingOn,
-      messagesCount: 1,
-      __code: JSON.stringify(requestBody, null, 2),
+      入参: { protocol: "B", mode: "stream", sdk: "anthropic", hasSystem: Boolean(opts.system), messageLen: opts.message.length, thinkingEnabled: thinkingOn, maxTokens },
+      __code: `const stream = llm.anthropic.messages.stream(${JSON.stringify(requestBody, null, 2)});\n... streamEvent 队列 ... yield unified delta ...`,
+    },
+  );
+
+  const tModelStart = Date.now();
+  logger.info(
+    "││ 调用模型-协议B 消息流",
+    "调用模型开始：协议B 消息流",
+    "为什么打：本文件唯一的真出网层；不打就没有 event 序列 / final usage。当前：即将发出 messages.stream，EventStream 句柄需要 on('streamEvent') 桥接。",
+    {
+      入参: {
+        model: requestBody.model,
+        systemAtTopLevel: Boolean(opts.system),
+        maxTokens,
+        thinking: thinkingOn ? thinkingCfg : null,
+        messagesCount: 1,
+      },
+      __code: `llm.anthropic.messages.stream(${JSON.stringify(requestBody, null, 2)});`,
     },
   );
 
   const stream = llm.anthropic.messages.stream(requestBody);
-
-  logger.info(
-    "llm.response.protocolB.stream",
-    "← got stream handle",
-    "拿到 EventStream 句柄（不是最终响应）；后续用 streamEvent 队列桥接 unified delta，message_stop 后再 finalMessage() 兜底拿 usage",
-    {
-      protocol: "B",
-      mode: "stream",
-      streamType: "MessageStream (EventStream)",
-    },
-  );
 
   const queue: unknown[] = [];
   let waiter: (() => void) | null = null;
@@ -126,13 +129,25 @@ export async function* sendViaBStream(
 
   await stream.finalMessage().catch(() => undefined);
 
+  // 流式规则（§5.3.16）：只在收尾打一次完整返回值。
+  logger.info(
+    "││ 调用模型-协议B 消息流",
+    "调用模型结束：协议B 消息流",
+    "为什么打：流式场景只在收尾打一次完整返回值（汇总自 message_start / message_delta 的最终 usage）。当前：finalMessage 已返回，下一步 yield usage + done。",
+    {
+      返回值: { usage, stopReason },
+      耗时ms: Date.now() - tModelStart,
+      字段释义: {
+        "usage.input_tokens": "输入侧 Token 数（与 A 的 prompt_tokens 对照）",
+        "usage.output_tokens": "输出侧 Token 数（与 A 的 completion_tokens 对照）",
+        "usage.cache_read_input_tokens": "命中 cache 的 Token 数",
+        "usage.output_tokens_details.thinking_tokens": "thinking 单独计费的 Token 数",
+        stopReason: "end_turn=自然结束 / max_tokens=撞 max_tokens / tool_use=模型想调工具",
+      },
+    },
+  );
+
   if (usage) {
-    logger.info(
-      "llm.response.protocolB.stream.usage",
-      "← got usage",
-      "汇总自 message_start / message_delta 块的最终 usage；完整打便于核对 input_tokens / output_tokens / cache_read",
-      usage,
-    );
     yield {
       type: "usage",
       usage: {
@@ -148,4 +163,14 @@ export async function* sendViaBStream(
     };
   }
   yield { type: "done" };
+
+  logger.info(
+    "│ 协议B 流式-sendViaBStream",
+    "调用函数结束：sendViaBStream",
+    "为什么打：sendMessageStream 已经把 UnifiedDelta 都 yield 出去；打耗时便于和协议 A 流式对照。当前：done 已 yield。",
+    {
+      返回值: { protocol: "B", mode: "stream", hasUsage: Boolean(usage) },
+      耗时ms: Date.now() - tFuncStart,
+    },
+  );
 }
