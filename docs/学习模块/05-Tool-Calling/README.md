@@ -17,7 +17,7 @@
 | ✅ | [**Tool Description**：description / schema 影响模型**何时**调用](./02-Tool-Description.md) | 知道写不好就会乱调或不调 | `writing good tool descriptions LLM` `tool schema best practices` · Anthropic Tool Use 最佳实践章节 | [沉淀](./02-Tool-Description.md) |
 | ✅ | [**Tool Choice**：auto / none / required 各适合什么](./03-Tool-Choice.md) | 能举三种模式的使用场景 | `tool_choice openai` `force tool call` · 官方 API 参考 | [沉淀](./03-Tool-Choice.md) |
 | ✅ | [**Tool Gateway / 幂等**：请求 ≠ 执行；有副作用的 Tool 必须可重试](./04-Tool-Gateway-幂等.md) | 知道执行前要鉴权 / 校验 | `idempotent API tool calling` `LLM tool permission gateway` · 模块 20 安全卡片 | [沉淀](./04-Tool-Gateway-幂等.md) |
-| ⬜ | [**模块复盘**](./05-模块复盘.md) | 本页验收 + 学习沉淀（落 `apps/05-Tool-Calling/{小节文件夹}/`） | — | [沉淀](./05-模块复盘.md) |
+| ✅ | [**模块复盘**](./05-模块复盘.md) | 本页验收 + 学习沉淀（落 `apps/05-Tool-Calling/{小节文件夹}/`） | — | [沉淀](./05-模块复盘.md) |
 
 ## 验收
 
