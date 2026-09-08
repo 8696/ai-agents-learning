@@ -51,6 +51,9 @@
 | `yarn app:05-02-description-step-4` | `50028` | 模块 05 · 02 · Tool Description step-4：单 Tool · 唯一差异 = query_logistics.description 含不含 1 个 few-shot 示例；user 问模糊订单号，看模型是否按示例规范填（变体 4「少样示例」实证） |
 | `yarn app:05-02-description-step-5` | `50029` | 模块 05 · 02 · Tool Description step-5：单 Tool · 唯一差异 = priority 字段是否用 enum 限定 ['low','medium','high']；user 问"急"类 query，看模型幻觉 enum 外值 vs 稳填 enum 内（变体 5「Enum 约束」实证） |
 | `yarn app:05-02-description-step-6` | `50030` | 模块 05 · 02 · Tool Description step-6：同 Tool schema · 唯一差异 = 协议 A `openai.chat.completions` vs 协议 B `anthropic.messages`；验证「step-1~5 综合最优 Tool schema」跨 Provider 是否通用（变体 6「跨 Provider 兼容」实证） |
+| `yarn app:05-03-tool-choice-step-1` | `50031` | 模块 05 · 03 · Tool Choice step-1：同 tools + 同 query，前端切换 auto/none/required；三档结果常驻对照 hasToolCalls（变体 1–3 起手） |
+| `yarn app:05-03-tool-choice-step-2` | `50032` | 模块 05 · 03 · Tool Choice step-2：双 Tool（物流+天气）；required 任选 vs 钉死 name；对照 firstToolName（变体 4） |
+| `yarn app:05-03-tool-choice-step-3` | `50033` | 模块 05 · 03 · Tool Choice step-3：产品开关「只聊天/允许工具/强制查库」→ none/auto/required 映射（变体 5） |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

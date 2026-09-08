@@ -1,8 +1,9 @@
 # **Tool Description**：description / schema 影响模型**何时**调用
 
 > 对应模块：[模块 05 · Tool Calling / Function Calling ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 2 条
-> **来源**：本对话（coach start 详解 · 2026-09-08）+ step-1 真 LLM 对照实验 + step-2 字段 description 对照 + step-3 反例对照 + step-4 少样示例对照 + step-5 Enum 约束对照（含 bug 12 修复）+ bug 修复轮（expected 写死 / query C 不该有 / 正则误伤 / verdict 文案错 / pickedToolName=null 当 502 / MISSING_KEYWORDS 单字误伤 / DiffTable 识破类型行没看 picked===null / 核心对照 4 档→5 档判定修复 / B 组 content 英文漏判 / verdict 文案拼接 / 少样示例 query 设计不准 · same-good 没拉开差距 / **OneCallCard 顶部 tag 简单粗暴判"❌瞎调"** / **classifyQuery 关键词未覆盖物流类 user 表述**）+ **教学模式升级（2026-09-08 学习者主动要求）**：「单 Tool 独立调用 + 完整差异点表」（双端点独立 + 9 字段对照）+ step-1 锁定撤销 + 变体 2/3 联动实证 + 少样示例边界意外发现 + **变体 5 Enum 约束首次拉开 A/B 差异**
-> **状态**：已沉淀（首次沉淀 · 2026-09-08 · 多次覆盖重写 + 多次增量更新：bug 修复后 + 教学模式升级后 + step-3 意外发现后 + 5 档核心对照修复后 + step-4 少样示例边界后 + **step-5 Enum 约束 + bug 12 修复后**）
+> **来源**：本对话（coach start 详解 · 2026-09-08）+ step-1 真 LLM 对照实验 + step-2 字段 description 对照 + step-3 反例对照 + step-4 少样示例对照 + step-5 Enum 约束对照（含 bug 12 修复）+ bug 修复轮（expected 写死 / query C 不该有 / 正则误伤 / verdict 文案错 / pickedToolName=null 当 502 / MISSING_KEYWORDS 单字误伤 / DiffTable 识破类型行没看 picked===null / 核心对照 4 档→5 档判定修复 / B 组 content 英文漏判 / verdict 文案拼接 / 少样示例 query 设计不准 · same-good 没拉开差距 / **OneCallCard 顶部 tag 简单粗暴判"❌瞎调"** / **classifyQuery 关键词未覆盖物流类 user 表述**）+ **教学模式升级（2026-09-08 学习者主动要求）**：「单 Tool 独立调用 + 完整差异点表」（双端点独立 + 9 字段对照）+ step-1 锁定撤销 + 变体 2/3 联动实证 + 少样示例边界意外发现 + **变体 5 Enum 约束首次拉开 A/B 差异** + **coach complete 闸门 1 缺口补刀 · step-6 跨 Provider 实证锁定（2026-09-08）**
+> **状态**：已沉淀（首次沉淀 · 2026-09-08 · 多次覆盖重写 + 多次增量更新：bug 修复后 + 教学模式升级后 + step-3 意外发现后 + 5 档核心对照修复后 + step-4 少样示例边界后 + step-5 Enum 约束 + bug 12 修复后 + **step-6 跨 Provider 实证锁定后**）
+> **Demo**：已落 `apps/05-Tool-Calling/02-Tool-Description-step-1/`（✅ 双 Tool 触发条件）+ `…-step-2/`（✅ 字段 description 有无）+ `…-step-3/`（✅）+ `…-step-4/`（✅）+ `…-step-5/`（✅）+ `…-step-6/`（✅ 跨 Provider · 协议 A OpenAI vs 协议 B Anthropic）—— 详见 [Demo 子节进度](#demo-子节进度)
 
 Tool Description = 模型在决定「要不要调 / 调哪个 / 怎么填参数」时**唯一能看**的说明书。它由两块组成：**description**（自然语言：何时调 / 何时别调 / 字段语义）和 **parameters schema**（结构化：哪些字段、什么类型、哪些必填）。模型**不执行你的代码**，它只看这两块田，然后做三个决定。
 
@@ -219,6 +220,37 @@ description
 
 **核心教学点**：核心对照不能是单维度 pickedToolName 是否 null，必须按 query 类型决定「对」是哪一档。
 
+##### step-6 真实验 · 变体 6「跨 Provider 兼容」（2026-09-08 锁定）
+
+**业务场景**：智能客服，单 Tool：`query_logistics`（含反例 + 别名映射 + priority enum —— step-1~5 综合最优 schema）。
+**对照变量**：**协议 / Provider**（协议 A · OpenAI Chat Completions vs 协议 B · Anthropic Messages API）；**两侧同一份 Tool schema**。
+**provider**：MiniMax（`LLM_PROVIDER=minimax` · model MiniMax-M3）；同一把 Key 两套协议。
+
+**query 物流类**「我的快递 12345 到了吗」→ 期望两侧都调 `query_logistics` + `order_id="12345"`：
+
+| 字段 | 协议 A · OpenAI | 协议 B · Anthropic | 差异 |
+| --- | --------------- | ------------------ | ---- |
+| pickedToolName | `query_logistics` | `query_logistics` | 相同 |
+| order_id | `"12345"` | `"12345"` | 相同 |
+| finish_reason | `tool_calls` | `tool_calls`（stop_reason=`tool_use` 映射后） | 相同（语义） |
+| prompt_tokens | 538 | 386 | Δ -152（协议 B schema 更短 / 计费口径不同） |
+| completion_tokens | 39 | 44 | Δ +5 |
+| 耗时 ms | 3294 | 1197 | Δ -2097 |
+
+**核心对照**：**🟢 两家 Provider 调用一致**（pickedToolName + order_id 都对）
+
+**query 订单详情类**「我的订单 12345 寄到哪个地址」→ 期望两侧都识破、不调物流 Tool：
+
+| 字段 | 协议 A · OpenAI | 协议 B · Anthropic | 差异 |
+| --- | --------------- | ------------------ | ---- |
+| pickedToolName | `(没调)` | `(没调)` | 相同 |
+| finish_reason | `stop` | `end_turn` | **不同**（协议字段名：Anthropic 用 `end_turn`，OpenAI 用 `stop`——语义都是「结束、没调 tool」） |
+| content | 英文思考：工具是物流、用户问地址 → 不调 | 中文：明确引用「不属于物流轨迹」→ 建议去订单详情看 | 不同（语言 / 表述），**决策一致** |
+
+**核心对照**：**🟢 两家都识破不调**（反例跨 Provider 仍生效）
+
+**教学点**：同一份 Tool Description / schema 可迁移；跨 Provider 时要预期 **协议字段名差异**（`stop` vs `end_turn`、`tool_calls` vs `tool_use`、`parameters` vs `input_schema`），但**调用决策应一致**。
+
 ---
 
 ### 变体扫描（核心概念全分支 ·子）
@@ -232,7 +264,7 @@ Tool Description 的核心概念是「**怎么写才让模型正确决定调用*
 | 3 | **反例（Negative examples）** | 模型把语义语义近的 Tool 调错 | 选选 | step-3 已证（query X 差→query_logistics ❌ / 好→(没调) ✅ + content 引用反例 + **反例双向价值**「拦+加速」） |
 | 4 | **Few-shot 示例** | 模型不知道怎么填「语义模糊」的字段 | 自由发挥 | step-4 已证：query X「我那个订单到哪了」（无数字）两侧都识破缺字段（🟢 same-good）；query Y「我那单 67890 到了吗」两侧都抽对 "67890"（🟢 same-good）；query Z「我的快递 12345 到哪了」两侧都稳填 "12345"（🟢 same-good）。**意外发现**：少样示例在本 step 场景下**没拉开 A/B 差距**（字段描述已够强 + 模型基础能力抽数字 + schema required 联合识破缺字段），few-shot 实际收益是「稳定格式 + 不瞎填」而不是「抽数字」。少样示例真正生效场景待进一步验证 |
 | 5 | **Enum / Format 约束** | 模型瞎填超出范围的取值 | Zod 拒绝 / 模型幻觉值 | step-5 已证：query X「我的快递 12345 到了吗，比较急」A 组 priority="急"（enum 外 ❌）/ B 组 priority="high"（enum 内 ✅）—— **第一次真正拉开 A/B 差异**。意外：content 思考语言 = enum 描述语言（A 英文 / B 中文） |
-| 6 | **跨 Provider 兼容** | 同一份 schema 跨 OpenAI / Anthropic / 通义都跑通 | 切换 Provider 时崩 | step-6 🔄（同一份 Tool schema 分别走协议 A · OpenAI 和协议 B · Anthropic，验证跨 Provider 可迁移；半成品已修正，待实证） |
+| 6 | **跨 Provider 兼容** | 同一份 schema 跨 OpenAI / Anthropic / 通义都跑通 | 切换 Provider 时崩 | step-6 已证（MiniMax · 协议 A vs 协议 B）：物流类 query「我的快递 12345 到了吗」两侧都 `query_logistics` + `order_id="12345"`；订单详情类「寄到哪个地址」两侧都 `picked=null`（识破不调）。**finish_reason 字段名不同**（A=`stop` / B=`end_turn`）是协议差异，不影响调用一致性 |
 
 每个变体 = 「需求清单」一条（详下节）；每个变体都要有 ≥ 1 个 step-N 演示（如果可观察）。
 
@@ -404,9 +436,9 @@ classifyPick(picked, qType, content):
 | 3 | **反例减误调 + 加速** | | | | | | | 区分语义近的 Tool | 模型选 Tool 不出错 + 思考更短 | 变体 3 + 反例双向价值 | `apply_refund` description 含「Do not use for delivery issues — use query_logistics instead」→ user 问"快递慢"时模型**不**调退款；**反例双向价值**：① 拦不该调（query X：A 瞎调 / B 识破，completion_tokens +180 B 组多走推理）② 加速该调（query Z：A 41 字 / B 4 字，B 组 thinking 短 67%）**已由 step-3 实证** |
 | 4 | **Few-shot 提准确率** | 模糊字段（自由文本）模型填得对 | 字段格式统一 | 变体 4 | `query_order` description 含 1 个示例「user says 查 12345 → call with order_id=12345」→ 模型填对的格式稳定性提升；**实测 caveat**：本 step 3 query（X/Y/Z）都没拉开 A/B 差距（字段描述已够强）—— 少样示例真正生效场景待更挑的 query 验证 |
 | 5 | **Enum / Format 收紧** | 状态码、类型码 | 模型不幻觉值 | 变体 5 | `apply_refund.type` 用 enum 限定 `['[' refund_only', 'refund_return']` → 模型 0 次生成 enum 外的值；不加约束时幻觉率 > 0 |
-| 6 | **跨 Provider 兼容** | 切换 / 多供应商 | schema 一份两边跑跑 | | schema 一份两边跑通 | 变体 6 | 同一份 Tool 定义，分别走 OpenAI Function Calling 和 Anthropic Tool Use 两个调用 → 必填字段都被识别、tool_call 字段名一致 |
+| 6 | **跨 Provider 兼容** | 切换 / 多供应商 | schema 一份两边跑通 | 变体 6 | 同一份 Tool 定义，分别走 OpenAI Function Calling 和 Anthropic Tool Use → 必填字段都被识别、tool_call 字段名一致；**已由 step-6 实证**（物流类两侧调对且一致；订单详情类两侧识破且一致；`finish_reason` 字段名 A=`stop` / B=`end_turn` 属协议差异） |
 
-需求 1 已由 step-1 实证；需求 2 + 需求 3 已由 step-3 实证（含意外发现）；需求 5 已由 step-5 实证。需求 4 实测 same-good（few-shot 边界认知已建立）。需求 6 step-6 🔄（半成品已修正，待实证）。
+需求 1 已由 step-1 实证；需求 2 + 需求 3 已由 step-3 实证（含意外发现）；需求 5 已由 step-5 实证。需求 4 实测 same-good（few-shot 边界认知已建立）。需求 6 已由 step-6 实证并锁定。
 
 ---
 
@@ -457,26 +489,26 @@ classifyPick(picked, qType, content):
 
 | 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
 |------|------|------|------|--------------|
-| 🔄 | step-1 | `yarn app:05-02-description-step-1` | `50025` | 真 LLM **单次对照**（bug 修复后 + 教学模式升级）：query A 物流类（A 组选 query_order ❌ / B 组选 query_logistics ✅ + token Δ+172 / completion -64 / 耗时 +2589）+ query B 地址类（两侧都→query_order ✅ 验证好描述不调错）。**期望工具按 pickExpectedTool(query) 动态判定**，不是写死。下方的「完整差异点」表把两次调用的 pickedToolName / 是否调对 / finish_reason / arguments / response.content / prompt_tokens / completion_tokens / 耗时全列出。**2026-09-08 撤销之前锁定**：按学习者要求改为「单 Tool 独立调用」模式（一个对比按钮 →两个独立按钮 + 完整差异点表），原锁定状态作废。重新锁定时机 = 学习者主动说「锁定 step-1」+ §5.3.2 6 项齐 + check-demo 过。|
-| 🔄 | step-2 | `yarn app:05-02-description-step-2` | `50026` | 字段 description **单次对照**（单 Tool · 唯一差异 = order_id 字段有无 description · user 用城市名当订单号看模型是否瞎填 / 范化 / 不调 · 变体 2「参数语义」实证）。同样改为单端点独立调用 + 完整差异点表（pickedToolName / finish_reason / order_id / 是否瞎填城市名 / response.content / token / 耗时）。当前 query X 默认对比出「两侧都没调 Tool」—— 模型识别为 user 没明确给订单号 → 不瞎填（合法结果；本身是变体 2 的另一种表现，但当前 query 看不出 A/B 差异，需换「user 给不规范订单号」的 query 复测）。**踩坑 bug 5**：CompareSide 加 `ok` 字段区分「调用失败」vs「模型主动不调」—— routes/compare.ts 用 `if (baseline.ok === false) return 502` 而非「pickedToolName=null 即失败」。|
+| ✅ | step-1 | `yarn app:05-02-description-step-1` | `50025` | 真 LLM **单次对照**（bug 修复后 + 教学模式升级）：query A 物流类（A 组选 query_order ❌ / B 组选 query_logistics ✅ + token Δ+172 / completion -64 / 耗时 +2589）+ query B 地址类（两侧都→query_order ✅ 验证好描述不调错）。**期望工具按 pickExpectedTool(query) 动态判定**，不是写死。双端点独立调用 + 完整差异点表（变体 1「触发条件」· 双 Tool `query_order` vs `query_logistics`）。**已锁定 2026-09-08**（coach complete 闸门 3/4 缺口补刀 · 学习者选「补这一刀」；`check-demo` 过 + §5.3.2 六项齐）。|
+| ✅ | step-2 | `yarn app:05-02-description-step-2` | `50026` | 字段 description **单次对照**（单 Tool · 唯一差异 = order_id 字段有无 description · user 用城市名当订单号看模型是否瞎填 / 范化 / 不调 · 变体 2「参数语义」实证）。双端点独立调用 + 完整差异点表。query X 实证：两侧都没调 Tool（不瞎填城市名 = 合法结果）。**踩坑 bug 5**：`ok` 字段区分调用失败 vs 模型主动不调。**已锁定 2026-09-08**（coach complete 闸门 3/4 缺口补刀 · 学习者选「补这一刀」；`check-demo` 过 + §5.3.2 六项齐）。|
 | ✅ | step-3 | `yarn app:05-02-description-step-3` | `50027` | 反例 **单次对照**（单 Tool · 唯一差异 = query_logistics.description 含不含「不要用于 X」反例 · user 问订单地址类问题看模型是否瞎调 · 变体 3「反例」实证）。同样单端点独立调用 + 完整差异点表（5 档核心对照 `classifyPick(picked, qType, content)` 三维交叉 = query 类型 + pickedToolName + content 识破原因；4 档 content 识破类型 `neg/missing/both/none`；按 picked===null 保护）。order_id.description 写明「即快递单号/tracking number」别名映射。**已实证**：query X 下 A 组瞎调 ❌ / B 组识破 ✅（反例双向价值 ① 拦截）+ query Z' 下两侧都对调（🟢 反例不误伤）+ B 组 thinking 短 67%（反例双向价值 ② 加速）。**已锁定 2026-09-08**。**踩坑 bug 6/7/8/9/10**。 |
 | ✅ | step-4 | `yarn app:05-02-description-step-4` | `50028` | 少样示例 **单次对照**（单 Tool · 唯一差异 = query_logistics.description 含不含 1 个 few-shot 示例 · user 问模糊订单号场景看模型是否按示例规范填 · 变体 4「少样示例」实证）。同样单端点独立调用 + 完整差异点表。**已实证**：3 query 全部 same-good —— **意外发现：少样示例的边界**（字段描述已够强时 few-shot 无明显附加价值，实际收益是「稳定格式 + 不瞎填」）。**已锁定 2026-09-08**。|
 | ✅ | step-5 | `yarn app:05-02-description-step-5` | `50029` | Enum 约束 **单次对照**（单 Tool · 唯一差异 = 字段是否用 `enum` 限定取值范围 · user 给模糊输入看模型是否幻觉 enum 外的值 · 变体 5「Enum / Format 约束」实证）。同样单端点独立调用 + 完整差异点表。**已实证**：query X「比较急」A 组 priority="急"（enum 外 ❌）/ B 组 priority="high"（enum 内 ✅）—— **第一次真正拉开 A/B 差异**。**已锁定 2026-09-08**。|
-| 🔄 | step-6 | `yarn app:05-02-description-step-6` | `50030` | 跨 Provider 兼容（同一份 Tool schema 分别走协议 A · OpenAI 和协议 B · Anthropic · 变体 6「跨 Provider 兼容」实证）。双端点独立调用 + 完整差异点表（核心对照 = 两家 Provider 调用是否一致）。**2026-09-08 step-5→6 半成品修正**：server.ts / compare.ts / compare-sets.ts 注释从 step-5 残留改为 step-6；index.html 标题/卡头/DiffTable/按钮/端口/日志路径/教学点全部改为 step-6 跨 Provider 主题。待实证 + 锁定。 |
+| ✅ | step-6 | `yarn app:05-02-description-step-6` | `50030` | 跨 Provider 兼容（同一份 Tool schema 分别走协议 A · OpenAI 和协议 B · Anthropic · 变体 6「跨 Provider 兼容」实证）。双端点独立调用 + 完整差异点表（核心对照 = 两家 Provider 调用是否一致）。**已实证 2026-09-08**：物流类两侧 `query_logistics` + `order_id="12345"` 一致；订单详情类两侧 `picked=null` 识破一致；`finish_reason` A=`stop` / B=`end_turn` 为协议字段名差异。`check-demo` 过。**已锁定 2026-09-08**（coach complete 闸门 1 缺口补刀 · 学习者选「补这一刀」）。 |
 
-> **step-1 状态**：🔄 工作区（之前 ✅ 已撤销；学习者要求改交互模式后重新当工作区打磨）
-> **step-2 状态**：🔄 工作区（跑通 + check-demo 过 + query X 真实验跑出「两侧都没调」合法结果）
+> **step-1 状态**：✅ 已锁定（2026-09-08 · 双 Tool 触发条件；闸门 3/4 需求 1 证据落点）
+> **step-2 状态**：✅ 已锁定（2026-09-08 · 字段 description 有无对照；闸门 3/4 需求 2 / 前端例子证据落点）
 > **step-3 状态**：✅ 已锁定（2026-09-08）
 > **step-4 状态**：✅ 已锁定（2026-09-08）
 > **step-5 状态**：✅ 已锁定（2026-09-08）
-> **step-6 状态**：🔄 工作区（2026-09-08 step-5→6 半成品修正完成；待实证 + 学习者主动说锁定）
+> **step-6 状态**：✅ 已锁定（2026-09-08 · 跨 Provider 实证完成）
 
 ---
 
 ### 写入说明
 
 - **本节是模块 05 · 02 这条的首条沉淀**（[07-notes §0 已沉淀硬判定](agents/07-notes.md#0-沉淀--已沉淀--未沉淀唯一口径2026-09-05) 全满足：文件在 + `状态：已沉淀` + 五块齐）。
-- **多次覆盖重写 + 多次增量更新**：① bug 修复后（5 bug 进踩坑）② 教学模式升级后（单 Tool 独立调用 + 完整差异点表）③ step-3 意外发现后（pickedToolName=null 两种合法原因 + 反例双向价值「拦截+加速」+ 变体 2/3 联动）④ 5 档核心对照修复后（query 类型 + pickedToolName + content 三维交叉）⑤ step-4 少样示例边界后（3 query 全部 same-good + 少样示例实际收益是「稳定格式 + 不瞎填」）⑥ step-5 Enum 约束（query X 第一次拉开 A/B 差异）⑦ **step-6 跨 Provider 半成品修正**（server.ts / compare.ts / compare-sets.ts 注释 + index.html 标题/卡头/DiffTable/按钮/端口/日志路径/教学点全部从 step-5 残留改为 step-6 跨 Provider 主题；变体扫描表去重 + Demo 子节进度表补 step-6 行 + step-5 状态修正）。
-- 「需求清单」6 条对应 §6.3 扫出的 6 个变体（变体 1/2/3/4/5 已实证；变体 6 step-6 🔄 待实证）。
-- 「Demo 子节进度」表 §2.7 写：6 行（step-1 🔄 / step-2 🔄 / step-3 ✅ / step-4 ✅ / step-5 ✅ / step-6 🔄），等学习者主动锁定 step-6。
+- **多次覆盖重写 + 多次增量更新**：① bug 修复后（5 bug 进踩坑）② 教学模式升级后（单 Tool 独立调用 + 完整差异点表）③ step-3 意外发现后（pickedToolName=null 两种合法原因 + 反例双向价值「拦截+加速」+ 变体 2/3 联动）④ 5 档核心对照修复后（query 类型 + pickedToolName + content 三维交叉）⑤ step-4 少样示例边界后（3 query 全部 same-good + 少样示例实际收益是「稳定格式 + 不瞎填」）⑥ step-5 Enum 约束（query X 第一次拉开 A/B 差异）⑦ step-6 跨 Provider 半成品修正 ⑧ **step-6 跨 Provider 实证锁定（2026-09-08）**：物流类两侧调对一致 + 订单详情类两侧识破一致；协议字段名差异（`stop` vs `end_turn`）写入例子节。
+- 「需求清单」6 条对应 §6.3 扫出的 6 个变体（变体 1–6 均已实证；step-1～6 全部 ✅ 锁定，闸门 3/4 需求 1/2 证据齐）。
+- 「Demo 子节进度」表：6 行（step-1 ✅ / step-2 ✅ / step-3 ✅ / step-4 ✅ / step-5 ✅ / step-6 ✅）。
 - 「踩坑」节记录本会话 12 个 bug + 修复，作为下一轮学习的案例。

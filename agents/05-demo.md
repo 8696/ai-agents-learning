@@ -704,7 +704,8 @@ router.get("/health", (ctx: Context) => {
 
 **独立性（不因为拆分而互相引用）**
 
-- 允许 import 的**只有** `apps/llm.ts`（`getLlm` / `getLlmOptional` / `logLlmConfig`）、`apps/load-root-env.ts`（环境变量）、`apps/logger.ts`（日志服务，[§5.3.16](#5316-详细日志强制)）——顶层基础设施。
+- 允许 import 的**只有** `apps/llm.ts`（`getLlm` / `getLlmOptional` / `logLlmConfig`）、`apps/load-root-env.ts`（环境变量）——顶层基础设施。
+- **禁止**运行时 `import apps/logger.ts` / `createLogger` 委托顶层（[§5.3.16](#5316-详细日志强制)：顶层只是拷贝模板；每条 Demo 必须自带完整 `lib/logger.ts`）。
 - **禁止**：小节 A 的 `lib/` / `routes/` / `components/` / `utils/` 被小节 B import；把某条 Demo 的 UI 抽成跨 Demo 公共包；import 模块 00 mini-app。
 - 每条 Demo 内部的 `components/` / `utils/` **只服务本条**。要在新 Demo 用同样的组件：**照本节规则重写一份**（可以照抄自己写过的思路，但文件归本条所有），不要跨目录引用。
 - 重复几十行 UI 是可接受成本；跨条耦合不是——改一条会连坐别条，教学 Demo 必须能单独删掉。
@@ -996,22 +997,25 @@ cd apps && yarn check-demo
 
 **目的**：日志是**给人事后读的讲稿**，不是给程序解析的事件流。控制台看不清大量日志 / 没时间戳 / 电脑卡顿 → 服务端写文件。几个月后只翻 `logs/` 也要把这次运行讲完：**每一步发生了什么、带什么进去、出来什么、字段是什么意思**。
 
-**生效范围（2026-09-07）**：本条闭环 / 人话规则对**此后新落或新改的 Demo / 新 step** 强制。**已锁定旧 Demo 不回头补**（除非学习者点名）。`lock-time freeze` 仍生效：旧副本不随顶层改动。
+**生效范围（2026-09-07）**：本条闭环 / 人话规则对**此后新落或新改的 Demo / 新 step** 强制。**已锁定旧 Demo 不回头补**（除非学习者点名）。本地 freeze 副本不随顶层改动。
 
 **路径**
 - 服务端日志文件：`apps/{demo}/logs/{YYYY-MM-DD}.log`（**按 BJT 日切**，demo 自管，删 demo 一起带走；同一天多进程共享同一文件，`appendFileSync` 原子追加即可）
 - 前端：**不写日志**——页面已展示请求参数 / 调用流程 / 响应结果（§5.3.10 / §5.3.11 / §5.3.2 #4），不再重复打 #log 区
 
-**顶层实现（一个文件）**
-- `apps/logger.ts` 导出 `createLogger(logDir)`（也可传 `{ logDir, consoleLevel? }`）—— **内置**安全序列化（私有，不导出；处理 Error / Map / Set / Date / Buffer / 循环引用 / 大对象截断）；**每条写入前自动空一行**
-- 每个 demo 在 `lib/logger.ts` 一行建本地 logger，业务代码 `import { logger } from "./logger"` 直接用；**调用方不感知写文件 / 写 console 两件事的细节**
+**顶层只是模板（禁止 Demo 运行时引用）**
+- `apps/logger.ts` 导出 `createLogger(logDir)`——**仅作拷贝源**（内置安全序列化；处理 Error / Map / Set / Date / Buffer / 循环引用 / 大对象截断）
+- **硬规则（锁定 / 未锁定一视同仁）**：每一个 Demo、每一个 step，**落代码当下就必须完整拷贝**本地 `lib/logger.ts`。**不论**该 step 是否已锁定、是否还在打磨——**一律禁止**运行时 `import apps/logger.ts` / `createLogger` 委托顶层
+- **每一条 Demo / 每一个新 step 落代码当下**：把当时顶层 `apps/logger.ts` **完整拷**到 `apps/{demo}/lib/logger.ts`，底部再 `export const logger = createLogger(.../logs)`；业务只 `import { logger } from "./logger"`
+- **禁止**：`import { createLogger } from "../../../logger.js"`（或任何路径）委托顶层；禁止「未锁定先薄包一层、锁定再 freeze」——从第一行业务代码起就不能依赖共享实现
+- 理由：顶层会改；共享引用会让旧 Demo 被未来改动连坐；条与条要能单独删
 
-**lock-time freeze（已锁定 demo 必读）**
-- 顶层 `apps/logger.ts` 是**模板**——未来会改；已锁定 step 不能被未来顶层改动影响
-- **每条 demo 锁定 step 的那一刻**：把当时顶层 `apps/logger.ts` 完整拷一份到 `apps/{demo}/lib/logger.ts`（顶部 doc comment 可改为「本地 freeze 副本 · 锁定于 YYYY-MM-DD」），demo 业务代码 import 路径不变（仍是 `./logger`）
-- 顶层 `apps/logger.ts` 未来改动：只影响新 demo / 新 step；已 freeze 的副本不动
-- 已锁定 step 业务代码（registry / chat / server 等）使用 demo 本地 logger，**不感知顶层**
-- freeze 操作是 `node scripts/check-demo.cjs` 前的最后一步；§5.4 闸门要求 logger 在 demo 本地独立可用
+**本地 freeze（落 Demo 当下；与「锁定 step」无关）**
+- 「锁定 step」= 教学点冻结；「拷贝 logger」= **落代码就做**，两者无关。未锁定工作区也必须是完整本地副本
+- 顶部 doc comment 写「本地 freeze 副本 · 拷自顶层 YYYY-MM-DD」
+- 顶层 `apps/logger.ts` 未来改动：只影响**之后新拷**的 demo / step；已有本地副本**一律不动**（旧锁定不回头补，除非点名）
+- 业务代码（registry / chat / server 等）只认本 demo 的 `lib/logger.ts`，**不感知顶层**
+- `node scripts/check-demo.cjs` **会拦**：缺 `lib/logger.ts` / 薄包装委托顶层 / 缺 `formatDataJson`（compact 一行）/ emit 未加空行 → FAIL；跨文件 `import apps/logger` 也 FAIL（已从 §5.3.12 共享白名单剔除）
 
 **API（业务代码视角，四参调用极简）**
 

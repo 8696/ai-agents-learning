@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tool Choice · step-1 · auto / none / required</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // 本页教学点：三档 tool_choice 前端切换；每档跑完写入独立槽位，三档对照常驻 #output。
+    const { useState, useEffect } = React;
+    const { StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+
+    const CHOICES = ["auto", "none", "required"];
+    const DEFAULT_QUERY = "我的快递单号 67890 到哪了？";
+
+    /** 协议判定：required 必须有 call；none 必须无 call；auto 无硬失败 */
+    function judgeProtocol(mode, hasToolCalls, teaching) {
+      if (teaching && typeof teaching.protocolOk === "boolean") {
+        return {
+          ok: teaching.protocolOk,
+          label: teaching.protocolLabel || (teaching.protocolOk ? "✅ 符合" : "❌ Provider 违约"),
+          detail: teaching.protocolDetail || teaching.expectHint || "",
+        };
+      }
+      if (mode === "required") {
+        return hasToolCalls
+          ? {
+              ok: true,
+              label: "✅ 符合 required",
+              detail: "至少 1 个 tool_call，硬规则生效。",
+            }
+          : {
+              ok: false,
+              label: "❌ Provider 违约",
+              detail:
+                "请求 tool_choice=required，但响应无 tool_calls。按协议本轮必须至少调 1 个已声明 Tool（哪怕与 query 不匹配也应硬调列表里某个）。",
+            };
+      }
+      if (mode === "none") {
+        return !hasToolCalls
+          ? { ok: true, label: "✅ 符合 none", detail: "无 tool_calls，禁调生效。" }
+          : {
+              ok: false,
+              label: "❌ Provider 违约",
+              detail: "请求 tool_choice=none，但响应仍有 tool_calls。",
+            };
+      }
+      return {
+        ok: true,
+        label: "auto · 无硬约束",
+        detail: "可调可不调；问天气却只有物流 Tool 时不调是正常的。",
+      };
+    }
+
+    function SlotCard({ mode, data, error }) {
+      if (!data && !error) {
+        return (
+          <div className="border border-dashed border-gray-300 rounded p-3 bg-gray-50 min-h-[180px]">
+            <div className="text-xs font-semibold text-gray-500 mb-2">tool_choice = {mode}</div>
+            <p className="text-xs text-gray-400">尚未跑过这一档。选中后点「跑这一档」写入这里。</p>
+          </div>
+        );
+      }
+      if (error || (data && data.ok === false)) {
+        const teaching = data && data.teaching;
+        const isThinking = teaching && teaching.code === "thinking_x_forced_choice";
+        const errText = error || (data && (data.error + (data.detail ? " · " + data.detail : ""))) || "未知错误";
+        return (
+          <div className="border border-amber-400 bg-amber-50 rounded p-3 min-h-[180px] space-y-2">
+            <div className="text-xs font-semibold text-amber-900">
+              tool_choice = {mode} · {isThinking ? "边界冲突（可学）" : "失败"}
+            </div>
+            {teaching && (
+              <div className="border border-amber-500 bg-amber-100 rounded p-2 text-xs text-amber-950 space-y-1">
+                <div className="font-semibold">协议判定 · {teaching.protocolLabel || "教学错误"}</div>
+                <p className="leading-relaxed">{teaching.protocolDetail || ""}</p>
+              </div>
+            )}
+            <pre className="text-xs whitespace-pre-wrap max-h-40 overflow-auto text-amber-900">{errText}</pre>
+            {data && data.request && (
+              <div className="bg-white/70 text-gray-700 rounded p-2 text-xs space-y-1">
+                <div>
+                  请求曾带 tool_choice: <code>{String(data.request.tool_choice)}</code>
+                </div>
+                <div>model: {data.request.model || "(未知)"}</div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      const resp = data.response || {};
+      const req = data.request || {};
+      const verdict = judgeProtocol(mode, Boolean(resp.hasToolCalls), data.teaching);
+      const cardBorder = verdict.ok ? "border-gray-300 bg-white" : "border-red-400 bg-red-50";
+      return (
+        <div className={"border rounded p-3 min-h-[180px] space-y-2 " + cardBorder}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-gray-800">tool_choice = {mode}</div>
+            <span className="text-xs text-gray-500">{data.elapsedMs}ms</span>
+          </div>
+          <div
+            className={
+              "rounded p-2 text-xs " +
+              (verdict.ok ? "border border-green-300 bg-green-50 text-green-900" : "border border-red-400 bg-red-100 text-red-900")
+            }
+          >
+            <div className="font-semibold">协议判定 · {verdict.label}</div>
+            <p className="mt-1 leading-relaxed">{verdict.detail}</p>
+          </div>
+          <div className="bg-gray-50 text-gray-700 rounded p-2 text-xs space-y-1">
+            <div>请求参数 · tool_choice: <code>{String(req.tool_choice)}</code></div>
+            <div>tools: {(req.tools || []).join(", ") || "(无)"}</div>
+            <div className="truncate" title={req.query}>query: {req.query}</div>
+          </div>
+          <div className="border border-gray-200 rounded p-2 text-xs space-y-1 bg-white">
+            <div>
+              流程 · hasToolCalls:{" "}
+              <span className={"px-1.5 py-0.5 rounded " + (resp.hasToolCalls ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700")}>
+                {String(resp.hasToolCalls)}
+              </span>
+            </div>
+            <div>finish_reason: <code>{resp.finish_reason || "(null)"}</code></div>
+            <div>
+              tool_calls:{" "}
+              {resp.tool_calls && resp.tool_calls.length
+                ? resp.tool_calls.map((t) => t.name).join(", ")
+                : "（无）"}
+            </div>
+          </div>
+          <div className="border border-green-300 bg-green-50 rounded p-2 text-xs">
+            <div className="font-medium text-green-900 mb-1">响应 · content</div>
+            <pre className="whitespace-pre-wrap max-h-24 overflow-auto text-green-900">
+              {resp.content || "（无 content）"}
+            </pre>
+          </div>
+          {resp.tool_calls && resp.tool_calls.length > 0 && (
+            <pre className="text-xs bg-white border border-gray-200 rounded p-2 max-h-28 overflow-auto whitespace-pre-wrap">
+              {JSON.stringify(resp.tool_calls, null, 2)}
+            </pre>
+          )}
+          {data.teaching && data.teaching.expectHint && (
+            <p className="text-xs text-gray-500">{data.teaching.expectHint}</p>
+          )}
+        </div>
+      );
+    }
+
+    function DiffSummary({ slots }) {
+      const filled = CHOICES.filter((m) => slots[m] && slots[m].ok);
+      if (filled.length < 2) {
+        return (
+          <p className="text-xs text-gray-500">
+            至少跑完两档后，这里会汇总 hasToolCalls + 协议判定（required/none 违约会标红）。
+          </p>
+        );
+      }
+      return (
+        <div className="border border-gray-300 rounded p-3 bg-white space-y-2">
+          <div className="text-sm font-medium text-gray-800">三档差异摘要（已跑过的）</div>
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="text-gray-500 border-b">
+                <th className="py-1 pr-2">档位</th>
+                <th className="py-1 pr-2">hasToolCalls</th>
+                <th className="py-1 pr-2">finish_reason</th>
+                <th className="py-1 pr-2">tool names</th>
+                <th className="py-1">协议判定</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CHOICES.map((m) => {
+                const s = slots[m];
+                if (!s || !s.ok) {
+                  return (
+                    <tr key={m} className="border-b border-gray-100 text-gray-400">
+                      <td className="py-1 pr-2">{m}</td>
+                      <td colSpan={4}>未跑</td>
+                    </tr>
+                  );
+                }
+                const r = s.response || {};
+                const v = judgeProtocol(m, Boolean(r.hasToolCalls), s.teaching);
+                return (
+                  <tr key={m} className={"border-b border-gray-100 " + (v.ok ? "" : "bg-red-50")}>
+                    <td className="py-1 pr-2 font-medium">{m}</td>
+                    <td className="py-1 pr-2">{String(r.hasToolCalls)}</td>
+                    <td className="py-1 pr-2">{r.finish_reason || "(null)"}</td>
+                    <td className="py-1 pr-2">
+                      {(r.tool_calls || []).map((t) => t.name).join(", ") || "（无）"}
+                    </td>
+                    <td className={"py-1 " + (v.ok ? "text-green-800" : "text-red-800 font-semibold")}>
+                      {v.label}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="text-xs text-gray-600">
+            读法：none 应无 tool_calls；required 应有；auto 对查物流通常有、对天气可不调。
+            若 required 无 call / none 有 call → 协议判定红字 = Provider 违约（请求字段写对了，响应没守）。
+          </p>
+        </div>
+      );
+    }
+
+    function App() {
+      // status: idle | loading | ok | error —— 驱动 #status-pill
+      const [status, setStatus] = useState("idle");
+      // hasKey: /health 是否有 Key；缺 Key 时禁用主按钮
+      const [hasKey, setHasKey] = useState(null);
+      // query: 三档共用同一句 user 话，保证唯一变量是 tool_choice
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      // selected: 当前要跑的档
+      const [selected, setSelected] = useState("auto");
+      // slots: { auto|none|required: { ok, ... } | { ok:false, error } } —— 跑过的档位常驻，不互相覆盖
+      const [slots, setSlots] = useState({ auto: null, none: null, required: null });
+      // pageError: 全局红字（与单档槽位错误并存）
+      const [pageError, setPageError] = useState(null);
+
+      useEffect(() => {
+        fetch("/health")
+          .then((r) => r.json())
+          .then((j) => {
+            setHasKey(Boolean(j.hasKey));
+            if (j.hasKey) setStatus((s) => (s === "idle" ? "idle" : s));
+          })
+          .catch(() => setHasKey(false));
+      }, []);
+
+      async function runOne() {
+        setPageError(null);
+        setStatus("loading");
+        const mode = selected;
+        try {
+          const res = await fetch("/api/choice", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, toolChoice: mode }),
+          });
+          const json = await res.json();
+          if (!res.ok || !json.ok) {
+            const detailStr =
+              typeof json.detail === "string"
+                ? json.detail
+                : json.detail
+                  ? JSON.stringify(json.detail)
+                  : "";
+            const msg =
+              (json && json.error ? json.error + (detailStr ? " · " + detailStr : "") : null) ||
+              "HTTP " + res.status;
+            setSlots((prev) => ({
+              ...prev,
+              [mode]: {
+                ok: false,
+                error: json.error || msg,
+                detail: detailStr || json.detail,
+                status: res.status,
+                teaching: json.teaching || null,
+                request: json.request || { tool_choice: mode, query },
+              },
+            }));
+            setPageError(msg);
+            setStatus("error");
+            return;
+          }
+          setSlots((prev) => ({ ...prev, [mode]: json }));
+          setStatus("ok");
+        } catch (e) {
+          const msg = String(e);
+          setSlots((prev) => ({ ...prev, [mode]: { ok: false, error: msg } }));
+          setPageError(msg);
+          setStatus("error");
+        }
+      }
+
+      function clearSlots() {
+        setSlots({ auto: null, none: null, required: null });
+        setPageError(null);
+        setStatus("idle");
+      }
+
+      const busy = status === "loading";
+      const canRun = hasKey !== false && !busy && query.trim().length > 0;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Tool Choice · step-1 · auto / none / required
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4 flex-1">
+            <PageIntro />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm text-gray-700 block">
+                  user query（三档共用 · 保证唯一变量是 tool_choice）
+                </label>
+                <input
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  value={query}
+                  disabled={busy}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="例如：我的快递单号 67890 到哪了？"
+                />
+                <p className="text-xs text-gray-500">
+                  改 query 不会清掉已跑档位；若要对同一新 query 对照，可先「清空三档」再逐档重跑。
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-sm text-gray-700">选择 tool_choice</div>
+                <div className="flex flex-wrap gap-2">
+                  {CHOICES.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setSelected(m)}
+                      className={
+                        "px-3 py-1.5 rounded text-sm border disabled:opacity-50 " +
+                        (selected === m
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-800 border-gray-300")
+                      }
+                    >
+                      {m}
+                      {slots[m] ? " · 已有结果" : ""}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">
+                  点档位只切换「下一跑用哪档」；不会清掉其它档已保留的结果。
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  disabled={!canRun}
+                  onClick={runOne}
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  跑这一档（{selected}）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={clearSlots}
+                  className="border border-gray-300 px-4 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  清空三档对照
+                </button>
+                {hasKey === false && (
+                  <span className="text-xs text-red-600">Key ❌ · 主按钮已禁用，先配 apps/.env</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                点「跑这一档」：只更新当前选中档的卡片；其它档保留。建议顺序：auto → none → required，再看下方差异摘要。
+              </p>
+              {pageError && (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                  {pageError}
+                </div>
+              )}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <div className="text-sm font-medium text-gray-800">输出区 · 三档常驻对照</div>
+              {!slots.auto && !slots.none && !slots.required && (
+                <p className="text-sm text-gray-400">空态：还没跑过任何档。选 auto / none / required 后点「跑这一档」。</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {CHOICES.map((m) => (
+                  <SlotCard
+                    key={m}
+                    mode={m}
+                    data={slots[m]}
+                    error={null}
+                  />
+                ))}
+              </div>
+              <DiffSummary slots={slots} />
+            </section>
+          </main>
+
+          <EnvFooter />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

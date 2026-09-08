@@ -1,28 +1,12 @@
 /**
- * 职责：本地日志服务 freeze 副本（lock-time freeze 于 2026-09-04）。
- *
- * 为什么拷贝：顶层 apps/logger.ts 是模板，未来会改；已锁定 step 不被未来顶层改动影响。
- * 与顶层差异：本文件是单文件副本，无外部 import；底部额外 export logger 实例。
- *
- * 用法：业务代码 import { logger } from "./logger.js"，直接 logger.info(scope, msg, explain, data?)。
- * 文件：apps/02-LLM-API开发/05-思考-step-1/logs/{YYYY-MM-DD}.log（按 BJT 日切，无 serviceName 前缀）
- * 详见 agents/05-demo.md §5.3.16 + AGENTS.md §5.6。
- *
- * 实现来自顶层 apps/logger.ts 同期版本；不要回头改这份，要改改顶层 + 新 step 用。
- *
- * API（四参）：
- *   logger.debug(scope, msg, explain, data?)
- *   logger.info (scope, msg, explain, data?)
- *   logger.warn (scope, msg, explain, data?)
- *   logger.error(scope, msg, explain, data?)
- * 约定：
- *   - scope：中文节点名（在哪）
- *   - msg：一句话中文动作（做什么）
- *   - explain：人话释义（为什么）—— 必填
- *   - data：任意对象；含 __code 自动 ── code ── 分隔块输出
+ * 职责：本地日志服务 freeze 副本（拷自顶层 2026-09-08）。
+ * 数据流：业务代码 import { logger } from "./logger.js" → logger.info(scope, msg, explain, data?) 写文件 + console。
+ * 为什么拷贝：顶层 apps/logger.ts 只是模板；锁定/未锁定一律禁止运行时 import 顶层（§5.3.12 / §5.3.16）。
+ * 用法：业务代码 import { logger } from "./logger.js"。
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -146,6 +130,18 @@ function indentLines(text: string, prefix: string): string {
   return text.split("\n").map(line => line ? prefix + line : line).join("\n");
 }
 
+/** data 一律下一行起 indent-2 多行；有 __code 时其余字段同样，禁止 compact 一行 */
+function formatDataJson(value: unknown): string {
+  const compact = serialize(value);
+  let pretty: string;
+  try {
+    pretty = JSON.stringify(JSON.parse(compact), null, 2);
+  } catch {
+    pretty = compact;
+  }
+  return `  data=\n${indentLines(pretty, "  ")}\n`;
+}
+
 function renderData(data: unknown): string | null {
   if (data === undefined) return null;
   if (data === null) return "  data=null\n";
@@ -158,7 +154,7 @@ function renderData(data: unknown): string | null {
     delete rest.__code;
     let out = "";
     if (Object.keys(rest).length > 0) {
-      out += `  data=${serialize(rest)}\n`;
+      out += formatDataJson(rest);
     }
     out += `  ── code ──\n`;
     out += indentLines(String(codeVal ?? ""), "  ") + "\n";
@@ -166,15 +162,7 @@ function renderData(data: unknown): string | null {
     return out;
   }
 
-  // data 多行 JSON（缩进 2）：可读、grep head 干净、不用 jq
-  const compact = serialize(data);
-  let pretty: string;
-  try {
-    pretty = JSON.stringify(JSON.parse(compact), null, 2);
-  } catch {
-    pretty = compact;
-  }
-  return `  data=\n${indentLines(pretty, "  ")}\n`;
+  return formatDataJson(data);
 }
 
 export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger {
@@ -188,11 +176,14 @@ export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger
 
   function emit(level: LogLevel, scope: string, msg: string, explain: string, data?: unknown): void {
     const ts = nowBjt(new Date());
-    const head = `${ts} ${level.toUpperCase()} ${scope}\n`;
-    const msgLine = `  msg=${msg}\n`;
-    const explainLine = `  explain=${explain}\n`;
+    // 每条前空一行；msg / explain / data 三块之间也空一行（§5.3.16）
+    const head = `${ts} ${level.toUpperCase()} ${scope}`;
     const dataBlock = renderData(data) ?? "";
-    const fileLine = head + msgLine + explainLine + dataBlock;
+    const fileLine =
+      `\n${head}\n` +
+      `\n  msg=${msg}\n` +
+      `\n  explain=${explain}\n` +
+      `\n${dataBlock}`;
 
     // 文件：全量；写失败静默（日志失败不应让业务崩）
     try {
@@ -223,7 +214,6 @@ export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger
   };
 }
 
-// ── 本地 logger 实例（freeze 副本专用；顶层 logger.ts 只有 createLogger，副本 demo 要直接用 logger 对象）──
-import { fileURLToPath } from "node:url";
+// ── 本地 logger 实例（freeze 副本专用）──
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const logger = createLogger(path.join(here, "..", "logs"));
