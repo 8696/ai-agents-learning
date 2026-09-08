@@ -3266,6 +3266,1026 @@
                 "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-2/server.ts"
               }
             ]
+          },
+          {
+            "label": "01-Function-Calling-协议-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "get-packing-list.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/tools/get-packing-list.ts"
+                      },
+                      {
+                        "label": "get-weather.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/tools/get-weather.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/tools/registry.ts"
+                      },
+                      {
+                        "label": "search-flight.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/lib/tools/search-flight.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "gantt.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/components/gantt.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "compare.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/pages/compare.html"
+                      },
+                      {
+                        "label": "single.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/pages/single.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "plan.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/routes/plan.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Function-Calling-协议-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "chain-search-doc.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/lib/tools/chain-search-doc.ts"
+                      },
+                      {
+                        "label": "chain-summarize.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/lib/tools/chain-summarize.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "gantt.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/components/gantt.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "chain-bad.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/pages/chain-bad.html"
+                      },
+                      {
+                        "label": "chain.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/pages/chain.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chain-bad.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/routes/chain-bad.ts"
+                  },
+                  {
+                    "label": "chain.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/routes/chain.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Function-Calling-协议-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "chain-search-doc.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/lib/tools/chain-search-doc.ts"
+                      },
+                      {
+                        "label": "chain-summarize.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/lib/tools/chain-summarize.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "gantt.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/components/gantt.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "self-correct.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/pages/self-correct.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/routes/health.ts"
+                  },
+                  {
+                    "label": "self-correct.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/routes/self-correct.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Function-Calling-协议-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/llm/protocol-a.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "calc.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/tools/calc.ts"
+                      },
+                      {
+                        "label": "get-weather.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/tools/get-weather.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/tools/registry.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/lib/tools/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Function-Calling-协议-step-7",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "hybrid-get-weather.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/lib/tools/hybrid-get-weather.ts"
+                      },
+                      {
+                        "label": "hybrid-suggest-items.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/lib/tools/hybrid-suggest-items.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/lib/tools/registry.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "gantt.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/components/gantt.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "hybrid.html",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/pages/hybrid.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "wait-demo-ui.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/utils/wait-demo-ui.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/routes/health.ts"
+                  },
+                  {
+                    "label": "hybrid.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/routes/hybrid.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Function-Calling-协议-step-8",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-b.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/llm/protocol-b.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "calc.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/tools/calc.ts"
+                      },
+                      {
+                        "label": "get-weather.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/tools/get-weather.ts"
+                      },
+                      {
+                        "label": "registry.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/tools/registry.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/lib/tools/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/routes/chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Tool-Description-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/lib/llm/protocol-a.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "compare-sets.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/lib/tools/compare-sets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Tool-Description-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/lib/llm/protocol-a.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "compare-sets.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/lib/tools/compare-sets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Tool-Description-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/lib/llm/protocol-a.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "compare-sets.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/lib/tools/compare-sets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Tool-Description-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/lib/llm/protocol-a.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "compare-sets.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/lib/tools/compare-sets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Tool-Description-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/lib/llm/protocol-a.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "compare-sets.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/lib/tools/compare-sets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Tool-Description-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "llm",
+                    "children": [
+                      {
+                        "label": "protocol-a.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/lib/llm/protocol-a.ts"
+                      },
+                      {
+                        "label": "protocol-b.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/lib/llm/protocol-b.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "compare-sets.ts",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/lib/tools/compare-sets.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/routes/compare.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/server.ts"
+              }
+            ]
           }
         ]
       },
