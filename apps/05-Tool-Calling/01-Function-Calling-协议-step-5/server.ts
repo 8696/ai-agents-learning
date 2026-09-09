@@ -43,24 +43,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 05 · 01 Function Calling 协议 step-5 模型自编排链 Demo 已启动",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、可用端点、callsModel 标记）：step-5 是 mock demo，不调 LLM；while 循环 + decideNextAction（页与接口 1:1）。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      callsModel: false,
-      protocol: "mock（不调 LLM · step-5 是 mock demo）",
-      maxRounds: 4,
-      endpoints: {
-        "GET /": "总览",
-        "GET /health": "{ ok, port, provider, model, hasKey, callsModel:false }",
-        "GET /api/tools": "Registry 元信息",
-        "POST /api/self-correct": "Body: { query } → while 循环 → 返 { trace, totalMs, finalReply, rounds, maxRoundsTriggered }（pages/self-correct.html）",
-      },
-    },
-  );
+  logger.info("server.start", "listening", "服务起好了；step-5 是 mock demo，while 循环 + decideNextAction（页与接口 1:1）", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "mock",
+  });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log(`  Ctrl+C 退出`);
 });

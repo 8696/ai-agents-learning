@@ -47,24 +47,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 05 · 01 Function Calling 协议 step-3 并行调用 Demo 已启动",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、可用端点、callsModel 标记）：step-3 是 mock demo，handler 改 async 让 Promise.all 才有物理意义；每个场景页 = 单独 route（§5.3.8 页与接口 1:1）。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      callsModel: false,
-      protocol: "mock（不调 LLM · step-3 是 mock demo）",
-      endpoints: {
-        "GET /": "总览",
-        "GET /health": "{ ok, port, provider, model, hasKey, callsModel:false }",
-        "GET /api/tools": "Registry 元信息",
-        "POST /api/plan": "Body: { scenario, mode } → 跑串/并行 → 返 totalMs + timeline（pages/single.html）",
-        "POST /api/compare": "Body: { scenario } → 一次拿 parallel + serial 两份（pages/compare.html）",
-      },
-    },
-  );
+  logger.info("server.start", "listening", "服务起好了；step-3 是 mock demo，handler 改 async 让 Promise.all 才有物理意义（页与接口 1:1）", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "mock",
+  });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log(`  Ctrl+C 退出`);
 });

@@ -47,12 +47,6 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info("server.start", "listening", "服务起好了；step-7 是 mock demo，不调 LLM；混合编排：路由层 hard-code 约束 + 模型自决要不要进（页与接口 1:1）", {
     url: `http://127.0.0.1:${PORT}/`,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "GET /api/tools",
-      "POST /api/hybrid          ← pages/hybrid.html",
-    ],
     protocol: "mock",
   });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);

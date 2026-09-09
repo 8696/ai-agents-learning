@@ -45,11 +45,6 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info("server.start", "listening", "服务起好了；step-2 变体 2 幂等（调 LLM 协议 B · /api/chat 同 key 调 3 次 → DB 只插 1 行）", {
     url: `http://127.0.0.1:${PORT}/`,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "POST /api/chat            ← public/index.html（变体 2 · 模型发 create_order 幂等）",
-    ],
     protocol: "anthropic-messages",
     tools: ["create_order"],
   });

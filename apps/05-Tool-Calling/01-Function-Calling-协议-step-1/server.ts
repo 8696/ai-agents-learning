@@ -43,28 +43,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 05 · 01 Function Calling 协议 Demo 已启动（step-1 sketch · 不调 LLM）",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、可用端点、callsModel 标记）：step-1 sketch——mock 一圈 tool_call 流程（model → tool_call → execute → tool_result → model_final）；callsModel=false，锁定时才补齐 §5.3.2 6 项。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      callsModel: false,
-      endpoints: {
-        "GET  /": "总览",
-        "GET  /health": "{ ok, port, provider, model, hasKey, callsModel:false }",
-        "POST /api/chat-mock": "Body: { input, mode } → mock 一圈 tool_call 流程",
-        "GET  /api/tools": "Registry 元信息（name / description / dangerous）",
-      },
-    },
-  );
-  console.log(
-    "──── 模块 05 · 01 Function Calling 协议 Demo · step-1 sketch（不调 LLM）────",
-  );
+  logger.info("server.start", "listening", "服务起好了；step-1 sketch——mock 一圈 tool_call 流程（model → tool_call → execute → tool_result → model_final），不调 LLM", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "mock",
+  });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
-  console.log(`  GET  /health        → 环境元信息`);
-  console.log(`  POST /api/chat-mock → mock 一圈 tool_call 流程（{ input, parallel }）`);
-  console.log(`  端口 ${PORT} · callsModel: false · 锁定时才补齐 §5.3.2 6 项`);
   console.log(`  Ctrl+C 退出`);
 });

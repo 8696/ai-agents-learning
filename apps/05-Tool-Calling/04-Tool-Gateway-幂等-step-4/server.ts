@@ -47,11 +47,6 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info("server.start", "listening", "服务起好了；step-4 变体 4 Tool 抛错结构化（调 LLM 协议 B · divide）", {
     url: `http://127.0.0.1:${PORT}/`,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "POST /api/chat            ← public/index.html（变体 4 · 模型发 divide → throw → 中间件捕获 → Round 2 改输入）",
-    ],
     protocol: "anthropic-messages",
     tools: ["divide"],
   });

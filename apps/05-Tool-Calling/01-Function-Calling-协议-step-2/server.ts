@@ -44,23 +44,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 05 · 01 Function Calling 协议 step-2 真 LLM 已启动",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：step-2 是 step-1 的真 LLM 升级版——mock decideToolCalls / buildFinalReply 换成真 LLM（协议 A openai.chat.completions），两轮调用 round-1 拿 tool_calls + round-2 拿 final_reply。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      protocol: "A (chat.completions · tools + tool_choice)",
-      callsModel: true,
-      endpoints: {
-        "GET  /": "总览",
-        "GET  /health": "{ ok, port, provider, model, hasKey, callsModel:true }",
-        "GET  /api/tools": "Registry 元信息（name / description / dangerous）",
-        "POST /api/chat": "Body: { input } → 真调 LLM 两轮（round-1 / round-2）",
-      },
-    },
-  );
+  logger.info("server.start", "listening", "服务起好了；step-2 真 LLM 升级——mock 换真模型（协议 A），两轮调用 round-1 拿 tool_calls + round-2 拿 final_reply", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A",
+  });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log(`  Ctrl+C 退出`);
 });

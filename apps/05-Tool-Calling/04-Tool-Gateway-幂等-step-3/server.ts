@@ -49,11 +49,6 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info("server.start", "listening", "服务起好了；step-3 变体 3 OAuth（调 LLM 协议 B + read_recent_emails）", {
     url: `http://127.0.0.1:${PORT}/`,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "POST /api/chat            ← public/index.html（变体 3 · 模型发 read_recent_emails 走 per-user OAuth）",
-    ],
     protocol: "anthropic-messages",
     tools: ["read_recent_emails"],
   });

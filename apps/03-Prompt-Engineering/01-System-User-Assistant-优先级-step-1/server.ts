@@ -17,8 +17,7 @@ import Router from "@koa/router";
 import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
-import { logLlmConfig } from "../../llm.js";
-import { llm, PORT } from "./lib/http/runtime-ctx.js";
+import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountCase1Routes } from "./routes/case1-priority.js";
 import { mountCase2Routes } from "./routes/case2-with-history.js";
@@ -42,39 +41,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 03 · 01 System / User / Assistant 优先级已启动（§5.3.8 分层 · 对照例外）",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：本条对照 3 个 Case 用同一份 spec 分别送 A / B 看 SDK 行为差（System 字段位置、assistant 历史是否记）。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      protocol: "A (openai Chat Completions) + B (anthropic Messages) 并排对照",
-      provider: llm?.provider ?? null,
-      model: llm?.modelA ?? null,
-      hasKey: Boolean(llm?.apiKey),
-      endpoints: {
-        "GET  /": "总览",
-        "GET  /pages/priority.html": "Case 1 · System JSON-only vs User 长文段",
-        "GET  /pages/with-history.html": "Case 2 · 3 轮 user / assistant / user（含历史）",
-        "GET  /pages/no-history.html": "Case 3 · 2 轮 user / user（漏 assistant 历史，失忆对照）",
-        "GET  /health": "{ ok, port, provider, model, hasKey }",
-        "POST /api/case1-priority": "无 body → A / B 并排返回 CaseResponse",
-        "POST /api/case2-with-history": "无 body → A / B 并排返回 CaseResponse",
-        "POST /api/case3-no-history": "无 body → A / B 并排返回 CaseResponse",
-      },
-    },
-  );
-  console.log(
-    "──── 模块 03 · 01 System / User / Assistant 优先级（§5.3.8 分层 · 对照例外）· 已启动 ────",
-  );
-  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
-  console.log("  总览          /");
-  console.log("  Case 1        /pages/priority.html");
-  console.log("  Case 2        /pages/with-history.html");
-  console.log("  Case 3        /pages/no-history.html");
-  console.log("  GET  /health");
-  console.log("  POST /api/case1-priority · /api/case2-with-history · /api/case3-no-history");
-  logLlmConfig(llm);
-  console.log("  Ctrl+C 退出");
+  logger.info("server.start", "listening", "服务起好了；3 个 Case 用同一份 spec 分别送 A / B，看 SDK 行为差（System 字段位置、assistant 历史是否记）", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A+B",
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
+  console.log(`  Ctrl+C 退出`);
 });

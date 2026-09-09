@@ -48,7 +48,6 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info("server.start", "listening", "服务起好了，记下端口与端点让 /health 能对照", {
     url: `http://127.0.0.1:${PORT}/`,
-    endpoints: ["GET /", "GET /health", "POST /api/compare-baseline", "POST /api/compare-improved"],
     protocol: "A+B",
   });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);

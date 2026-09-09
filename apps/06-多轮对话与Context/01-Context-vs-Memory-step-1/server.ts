@@ -49,12 +49,6 @@ app.use(serve(publicDir));
 app.listen(PORT, "127.0.0.1", () => {
   logger.info("server.start", "listening", "服务起好了；step-1 最小可观察：发一条消息就能看见 Context 的形状", {
     url: `http://127.0.0.1:${PORT}/`,
-    endpoints: [
-      "GET /",
-      "GET /health",
-      "POST /api/chat            ← public/index.html（输入框 + 发送 + 清空；messages 即 Context）",
-      "POST /api/chat-force-error ← §5.3.2 #2 类 B 教学演示 · 上游 5xx（不调 LLM）",
-    ],
     protocol: "A",
   });
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);

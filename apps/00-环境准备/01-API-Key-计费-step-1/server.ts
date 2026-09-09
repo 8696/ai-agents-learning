@@ -16,8 +16,7 @@ import Router from "@koa/router";
 import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
-import { logLlmConfig } from "../../llm.js";
-import { llm, PORT } from "./lib/http/runtime-ctx.js";
+import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountBillingRoutes } from "./routes/billing.js";
 import { mountBillingCompareRoutes } from "./routes/billing-compare.js";
@@ -45,34 +44,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 00 · 01 API Key / 计费 Demo 已启动",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点 + 单价表）：后续接 production 也按这份扫一眼服务是否就绪。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      provider: llm?.provider ?? null,
-      model: llm?.modelA ?? null,
-      hasKey: Boolean(llm?.apiKey),
-      endpoints: {
-        "GET  /": "总览（数据流 + 示例单价表）",
-        "GET  /pages/usage.html": "单次计费 · usage 三字段分项",
-        "GET  /pages/compare.html": "输入/输出对照 · 两张账单并排",
-        "GET  /health": "{ ok, port, provider, model, hasKey, pricing }",
-        "POST /api/billing": "Body: { prompt, maxTokens } → 调 1 次模型，回 usage + 分项费用",
-        "POST /api/billing-compare": "无 body → 调 2 次模型，回并排对照 + verdict",
-      },
-    },
-  );
-  console.log("──── 模块 00 · 01 API Key / 计费 Demo（§5.3.8 分层拆分 · 仅协议 A）· 已启动 ────");
-  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
-  console.log("  总览          /");
-  console.log("  单次计费      /pages/usage.html");
-  console.log("  输入/输出对照 /pages/compare.html");
-  console.log("  GET  /health              → { ok, port, provider, model, hasKey, pricing }");
-  console.log("  POST /api/billing         → 调 1 次模型，回 usage + 分项费用");
-  console.log("  POST /api/billing-compare → 调 2 次模型，回并排对照 + 结论");
-  logLlmConfig(llm);
-  console.log("  Ctrl+C 退出");
+  logger.info("server.start", "listening", "服务起好了；单次计费（usage 三字段分项）+ 输入/输出对照（两张账单并排）", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A",
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
+  console.log(`  Ctrl+C 退出`);
 });

@@ -23,10 +23,8 @@ import Router from "@koa/router";
 import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
-import { logLlmConfig } from "../../llm.js";
 import { logger } from "./lib/logger.js";
-import { BLOCKING_TOTAL_MS } from "./lib/flow/simulate.js";
-import { llm, PORT } from "./lib/http/runtime-ctx.js";
+import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountStreamRoutes } from "./routes/stream.js";
 import { mountBlockingRoutes } from "./routes/blocking.js";
@@ -54,43 +52,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    `模块 02 · 01 Streaming / SSE Demo 监听 127.0.0.1:${PORT}`,
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、三条业务路）：之后所有路由 / 流 / LLM 调用都会落到 logs/{YYYY-MM-DD}.log。",
-    {
-      host: "127.0.0.1",
-      port: PORT,
-      bind: "127.0.0.1",
-      protocol: "A (chat.completions · stream=true)",
-      provider: llm?.provider ?? null,
-      model: llm?.modelA ?? null,
-      hasKey: Boolean(llm?.apiKey),
-      blockingTotalMs: BLOCKING_TOTAL_MS,
-      endpoints: {
-        "GET  /": "总览（数据流 ASCII · 不调模型）",
-        "GET  /pages/simulated.html": "模拟 SSE 逐帧",
-        "GET  /pages/blocking.html": "一次性对照 TTFT",
-        "GET  /pages/real.html": "真实模型原始帧 + 拼起来的正文",
-        "GET  /health": "{ ok, port, provider, model, hasKey }",
-        "GET  /api/stream": "模拟 SSE（每 200ms 一帧，结束 [DONE]）",
-        "GET  /api/blocking": "攒齐 BLOCKING_TOTAL_MS 再一次性返回",
-        "GET  /api/real": "真实 LLM 流式（需 Key，默认 prompt）",
-        "POST /api/real": "真实 LLM 流式（需 Key，body.prompt）",
-      },
-    },
-  );
-  console.log("──── 模块 02 · 01 Streaming / SSE Demo（§5.3.8 分层 · 仅协议 A）· 已启动 ────");
-  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
-  console.log(`  总览         /`);
-  console.log(`  模拟 SSE     /pages/simulated.html`);
-  console.log(`  一次性对照   /pages/blocking.html`);
-  console.log(`  真实模型     /pages/real.html`);
-  console.log(`  GET  /health`);
-  console.log(`  GET  /api/stream    → 模拟 SSE（每 200ms 一帧）`);
-  console.log(`  GET  /api/blocking  → 一次性（攒齐 ${BLOCKING_TOTAL_MS}ms）`);
-  console.log(`  GET  /api/real      → 真实 LLM 流式（需 Key，默认 prompt）`);
-  console.log(`  POST /api/real      → 真实 LLM 流式（需 Key，body.prompt）`);
-  logLlmConfig(llm);
+  logger.info("server.start", "listening", "服务起好了；模拟 SSE 逐帧 / 一次性对照 TTFT / 真实模型原始帧", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A",
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log(`  Ctrl+C 退出`);
 });

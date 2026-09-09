@@ -17,8 +17,7 @@ import Router from "@koa/router";
 import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
-import { logLlmConfig } from "../../llm.js";
-import { llm, PORT } from "./lib/http/runtime-ctx.js";
+import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountARoutes } from "./routes/a.js";
 import { mountBRoutes } from "./routes/b.js";
@@ -47,42 +46,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 02 · 协议 A vs B 对照 Demo 已启动（§5.3.8 分层 · 对照例外）",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：本条对照例外是模块 02 · 协议 A vs B——同一份 body 喂两个 SDK，比字段差异。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      protocol: "A (openai Chat Completions) + B (anthropic Messages) 并排对照",
-      provider: llm?.provider ?? null,
-      model: llm?.modelA ?? null,
-      hasKey: Boolean(llm?.apiKey),
-      endpoints: {
-        "GET  /": "总览（字段映射 + 导航）",
-        "GET  /pages/once.html": "一次性对照",
-        "GET  /pages/stream-a.html": "协议 A 流式",
-        "GET  /pages/stream-b.html": "协议 B 有/无 thinking",
-        "GET  /health": "{ ok, port, provider, model, hasKey, callsModel:true }",
-        "POST /api/a": "Body: DemoCallBody → 协议 A 一次性",
-        "POST /api/b": "Body: DemoCallBody → 协议 B 一次性",
-        "POST /api/compare": "Body: DemoCallBody → 一次跑两边，对照字段",
-        "POST /api/think-compare": "Body: DemoCallBody → 一组 4 个对照场景（A/B × thinking on/off）",
-        "POST /api/a-stream-raw": "Body: DemoCallBody → 协议 A 流式 + kind 分类",
-        "POST /api/b-stream-raw": "Body: DemoCallBody → 协议 B 流式 + 原样事件",
-        "POST /api/b-thinking-stream": "Body: DemoCallBody → 协议 B 流式 + 启用 thinking",
-      },
-    },
-  );
-  console.log("──── 模块 02 · 协议 A vs B 对照 Demo（§5.3.8 分层 · 对照例外）· 已启动 ────");
-  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
-  console.log("  总览          /");
-  console.log("  一次性对照    /pages/once.html");
-  console.log("  流式 A        /pages/stream-a.html");
-  console.log("  流式 B        /pages/stream-b.html");
-  console.log("  GET  /health");
-  console.log("  POST /api/a · /api/b · /api/compare · /api/think-compare");
-  console.log("  POST /api/a-stream-raw · /api/b-thinking-stream · /api/b-stream-raw");
-  logLlmConfig(llm);
-  console.log("  Ctrl+C 退出");
+  logger.info("server.start", "listening", "服务起好了；同一份 body 喂两个 SDK，比字段差异（A / B 并排）", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A+B",
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
+  console.log(`  Ctrl+C 退出`);
 });

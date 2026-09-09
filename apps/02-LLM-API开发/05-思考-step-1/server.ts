@@ -17,7 +17,6 @@ import Router from "@koa/router";
 import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
-import { getCatalogLabel, listProductionLlms } from "../../llm.js";
 import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountStreamRoutes } from "./routes/stream.js";
@@ -41,34 +40,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "02 · 05 思考 · 四家官方方言 × 协议 A/B 已启动（§5.3 React + koa）",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、四家就绪状态、可用端点）：本条对照例外是模块 02 · 思考——同一份 StreamBody 喂不同 provider × thinkingOn × protocol，看 SDK 走哪条路径返回思考。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      readyProviders: listProductionLlms().map((l) => ({ provider: l.provider, modelA: l.modelA, modelB: l.modelB })),
-      endpoints: {
-        "GET  /": "总览（官方方言表，不调模型）",
-        "GET  /pages/stream.html": "勾选提供商 + 协议 A/B + 开/关思考",
-        "GET  /health": "四家就绪表 + 官方方言卡片",
-        "POST /api/stream": "Body: StreamBody → SSE（按 protocol 分到 A 或 B）",
-      },
-    },
-  );
-  console.log("──── 02 · 05 思考 · 四家官方方言 × 协议 A/B（§5.3 React + koa）────");
-  console.log(`  浏览器打开: http://127.0.0.1:${PORT}/`);
-  console.log(`  总览         /`);
-  console.log(`  流式对照     /pages/stream.html`);
-  console.log("  POST /api/stream  GET /health");
-  const ready = listProductionLlms();
-  if (ready.length === 0) {
-    console.log("  未检测到 MiniMax / 智谱 / DeepSeek / 千问 的 Key");
-  } else {
-    for (const llm of ready) {
-      console.log(`  ${getCatalogLabel(llm.provider)}  A ${llm.modelA}  B ${llm.modelB}`);
-    }
-  }
-  console.log("  Ctrl+C 退出");
+  logger.info("server.start", "listening", "服务起好了；同一份 StreamBody 喂不同 provider × thinkingOn × protocol，看 SDK 走哪条路径返回思考", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A+B",
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
+  console.log(`  Ctrl+C 退出`);
 });

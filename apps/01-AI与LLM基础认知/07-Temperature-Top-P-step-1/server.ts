@@ -19,8 +19,7 @@ import Router from "@koa/router";
 import serve from "koa-static";
 import { bodyParser } from "@koa/bodyparser";
 import { fileURLToPath } from "node:url";
-import { logLlmConfig } from "../../llm.js";
-import { llm, PORT } from "./lib/http/runtime-ctx.js";
+import { PORT } from "./lib/http/runtime-ctx.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountSweepRoutes } from "./routes/sweep.js";
 import { mountRepeatRoutes } from "./routes/repeat.js";
@@ -48,37 +47,10 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.startup",
-    "模块 01 · 07 Temperature / Top-P Demo 已启动（§5.3.8 分层拆分 · 仅协议 A）",
-    "启动横幅（不属于「调用」按 §5.3.16 不套五件套；记录端口、Provider、Model、Key 状态、可用端点）：三档并发跑 N 次 = N × 3 次 LLM 调用，Key 缺失时端点一律 503。",
-    {
-      port: PORT,
-      bind: "127.0.0.1",
-      protocol: "A (chat.completions · stream=false)",
-      provider: llm?.provider ?? null,
-      model: llm?.modelA ?? null,
-      hasKey: Boolean(llm?.apiKey),
-      endpoints: {
-        "GET  /": "总览 + 全局数据流",
-        "GET  /pages/temperature.html": "温度三档对照",
-        "GET  /pages/top-p.html": "Top-P 三档对照",
-        "GET  /pages/repeat.html": "同一档参数重复 N 次看稳定性",
-        "GET  /health": "{ ok, port, provider, model, hasKey, callsModel:true }",
-        "POST /api/sweep/temperature": "Body: { prompt?, runs? } → 扫温度",
-        "POST /api/sweep/top-p": "Body: { prompt?, runs?, temperature? } → 扫 Top-P",
-        "POST /api/repeat": "Body: { prompt?, runs?, temperature?, topP? } → 重复稳定性",
-      },
-    },
-  );
-  console.log("──── 模块 01 · 07 Temperature / Top-P Demo（§5.3.8 分层拆分 · 仅协议 A）· 已启动 ────");
-  console.log(`  浏览器打开:  http://127.0.0.1:${PORT}/`);
-  console.log(`  总览         /`);
-  console.log(`  温度对照     /pages/temperature.html`);
-  console.log(`  Top-P 对照   /pages/top-p.html`);
-  console.log(`  重复稳定性   /pages/repeat.html`);
-  console.log(`  GET  /health`);
-  console.log(`  POST /api/sweep/temperature · /api/sweep/top-p · /api/repeat`);
-  logLlmConfig(llm);
+  logger.info("server.start", "listening", "服务起好了；三档并发跑 N 次 = N × 3 次 LLM 调用，Key 缺失时端点一律 503", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A",
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log(`  Ctrl+C 退出`);
 });

@@ -1021,6 +1021,45 @@ cd apps && yarn check-demo
 - 服务端日志文件：`apps/{demo}/logs/{YYYY-MM-DD}.log`（**按 BJT 日切**，demo 自管，删 demo 一起带走；同一天多进程共享同一文件，`appendFileSync` 原子追加即可）
 - 前端：**不写日志**——页面已展示请求参数 / 调用流程 / 响应结果（§5.3.10 / §5.3.11 / §5.3.2 #4），不再重复打 #log 区
 
+**`server.start` 标准（强制 · 2026-09-09 加）**
+
+`app.listen(PORT, "127.0.0.1", () => { ... })` 回调里的**第一件事**必须是 `logger.info("server.start", ...)`，把这一版 Demo 的启动信息写进日志文件。控制台 / `yarn app:` 那一行横幅不能替代 —— **事后回看日志只能靠文件**，终端早关了。
+
+```ts
+app.listen(PORT, "127.0.0.1", () => {
+  logger.info("server.start", "listening", "服务起好了；step-N 教学要点一句话", {
+    url: `http://127.0.0.1:${PORT}/`,
+    protocol: "A",   // "B" | "A+B" | "mock" | "local"
+  });
+  console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
+  console.log(`  Ctrl+C 退出`);
+});
+```
+
+**约定（缺一不可）**：
+- `scope="server.start"` —— **锁死**；禁止 `server.startup` / `server.boot` / `server.init` 等变体（grep 必须只命中一种）
+- `msg="listening"` —— **锁死**；禁止写完整 banner 文本当 msg（那是 console 的活）
+- `explain` —— 一句话说清这版 Demo 教什么（事后回看日志一眼知道当时跑的是哪一版）
+- `data.url` —— `http://127.0.0.1:${PORT}/`
+- `data.protocol` —— `"A"` / `"B"` / `"A+B"`（真调 LLM）/ `"mock"`（不调 LLM 但走协议形状，如 step-1~5 mock 跑 tool_call 流程）/ `"local"`（纯本地计算，如 Token / Embedding / JSON Schema 校验）
+- **不写 `data.endpoints`** —— 端点清单由 `routes/*.ts` 自己说话（`grep router.get` 一眼拿到），日志里塞一份会和 routes 漂移（route 改了忘改日志）
+- `console.log` 留**一行** `浏览器: http://...` —— 给当前终端肉眼对端口，不写文件
+
+**禁止**：
+- 只写 `console.log(`http://...`);`，**没有** `logger.info` —— 终端看得到但日志文件里没有这版服务的任何痕迹
+- `logger.info` 之后再 `console.log` 同一行 URL 两遍
+- 用 `server.startup` / `server.boot` / `server.init` / `模块 ... 已启动` 当 scope —— 不锁死 = 日志 grep "server.start" 命中不全
+- data 里塞 `port` / `bind` / `provider` / `model` / `hasKey` / `callsModel` 等冗余键 —— `url` 已含端口；`/health` 端点已暴露 provider / model / hasKey；不调 LLM 时 `protocol: "local"` 已说明
+- data 里塞 `endpoints` —— 路由清单归 `routes/*.ts`，日志塞一份 = 双源真理、必漂移
+
+**为什么必写文件**：`listen` 回调里的 `logger.info` 触发那一刻 = `appendFileSync` 写一行进 `logs/{YYYY-MM-DD}.log`。控制台窗口可能已关、进程可能已退出，**日志文件是事后唯一能回看「那一次启动暴露了哪些端点、走哪个协议」的来源**。如果只 `console.log` 不写文件，调试「线上为啥没看到这条端点」时根本无从查起。
+
+**为什么 data 不塞 endpoints**：路由清单的真实源是 `routes/*.ts` 里 `router.get(...)` / `router.post(...)`；日志里再写一份就是双源真理 —— 加 endpoint 时改 routes 忘了改日志，或反过来，都让"看日志查端点"这件事不可靠。`grep -rE 'router\.(get|post)' apps/{demo}/routes/` 一眼拿到当前清单，何必复制到日志里。
+
+**烟雾测试串联**（落完 / 改完 demo 当下必走）：起服务 → 立刻 `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` → 文件存在 + size > 0 = 这一行 `server.start` 写进去了。详下方「烟雾测试」段。
+
+---
+
 **写法模板（强制 · 2026-09-09 加）**
 
 `createLogger(logDir)` 接收路径字符串。从 `lib/logger.ts` 写到 `apps/{demo}/logs/`，**必须**显式相对 `lib/logger.ts` 自己位置 → 再跳到 demo 根目录：
