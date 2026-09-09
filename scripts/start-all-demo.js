@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 /**
- * 一键启动 apps/ 下所有 demo，并在浏览器里打开 49 个 tab。
+ * 一键启动 apps/ 下所有 demo，并在浏览器里打开 N 个 tab。
  *
  * 用法（在仓库根目录）：
- *     node scripts/start-all-demos.js              # 启动全部 + 浏览器开 49 个 tab
- *     node scripts/start-all-demos.js --no-open    # 只启动，不开浏览器
- *     node scripts/start-all-demos.js --no-start   # 只打印端口表，不启动（用于核对）
- *     node scripts/start-all-demos.js --help       # 帮助
+ *     node scripts/start-all.js              # 启动全部 + 就绪后询问是否开浏览器
+ *     node scripts/start-all.js --no-open    # 只启动，不开浏览器（也不询问）
+ *     node scripts/start-all.js --no-start   # 只打印端口表，不启动（用于核对）
+ *     node scripts/start-all.js --help       # 帮助
  *
  * 行为：
  *     - 端口表从 apps/package.json 的 app:* scripts 动态解析（改 package.json 后自动同步）
  *       格式约定：PORT=<N> tsx <path>；path 相对 apps/；不符合的 app:* 自动跳过
  *     - 用本地 apps/node_modules/.bin/tsx（找不到再退回 npx tsx），子进程 cwd = apps/
  *     - 每个 demo 单独注入 PORT；并发启动，错峰轮询 http://127.0.0.1:PORT/，200 才算就绪
- *     - 就绪后逐个 `open http://127.0.0.1:PORT/`，每开一个 tab sleep 80ms（避免一次性闪屏）
+ *     - 所有 demo 就绪后交互式询问「是否在浏览器打开 N 个 tab？」，回车默认 yes；
+ *       非 TTY 环境（管道/CI）默认 yes、不阻塞
+ *     - 确认后逐个 `open http://127.0.0.1:PORT/`，每开一个 tab sleep 80ms（避免一次性闪屏）
  *     - Ctrl+C 一键 SIGTERM 关掉所有子进程
  */
 
@@ -21,6 +23,7 @@ const { spawn } = require("node:child_process");
 const http = require("node:http");
 const path = require("node:path");
 const fs = require("node:fs");
+const readline = require("node:readline");
 
 const ROOT = path.resolve(__dirname, "..");
 const APPS = path.join(ROOT, "apps");
@@ -94,12 +97,15 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`用法: node scripts/start-all-demos.js [选项]
+  console.log(`用法: node scripts/start-all.js [选项]
 
 选项:
-  --no-open    只启动服务，不在浏览器开 tab
+  --no-open    只启动服务，不开浏览器（也不询问）
   --no-start   只打印端口表，不启动任何服务（dry-run）
-  -h, --help   显示本帮助`);
+  -h, --help   显示本帮助
+
+无参数启动时，会在所有 demo 就绪后交互式询问是否在浏览器开 tab；
+回车默认 yes；非交互环境（管道/CI）默认开、不阻塞。`);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -157,6 +163,28 @@ function resolveTsxBin() {
   const local = path.join(APPS, "node_modules", ".bin", isWin ? "tsx.cmd" : "tsx");
   if (fs.existsSync(local)) return { bin: local, useShell: isWin };
   return { bin: "npx", argsPrefix: ["tsx"], useShell: false };
+}
+
+/** 交互式询问是否在浏览器开 tab；非 TTY 默认 yes；回车默认 yes */
+function askOpenBrowser(okCount) {
+  if (!process.stdin.isTTY) {
+    console.log(`→ 非交互环境（管道/CI），默认开 ${okCount} 个 tab。`);
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question(
+      `\n→ ${okCount} 个 demo 就绪。是否在浏览器打开 ${okCount} 个 tab？(Y/n) `,
+      (answer) => {
+        rl.close();
+        const a = String(answer || "").trim().toLowerCase();
+        resolve(a === "" || a === "y" || a === "yes");
+      },
+    );
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -239,8 +267,8 @@ async function main() {
   // 1. 并发启动所有 demo
   const procs = PORT_TABLE.map((d) => ({ ...d, child: spawnDemo(d) }));
 
-  // 2. 错峰健康检查 + 逐个开 tab
-  console.log(`→ 等待 demo 就绪${opts.noOpen ? "" : "并开浏览器 tab"}…`);
+  // 2. 错峰健康检查（不打开 tab，等全部就绪再统一询问）
+  console.log(`→ 等待 demo 就绪…`);
   let okN = 0;
   for (const p of procs) {
     const ms = await waitReady(p.port);
@@ -250,14 +278,23 @@ async function main() {
     }
     console.log(`✓ [${p.port}] ${p.key.padEnd(50)} ${ms}ms`);
     okN += 1;
-    if (!opts.noOpen) {
-      openBrowserTab(p.port);
-      await new Promise((r) => setTimeout(r, 80));
+  }
+
+  // 3. 询问是否开 tab（--no-open 直接跳过；非交互环境默认 yes）
+  let openedN = 0;
+  if (okN > 0 && !opts.noOpen) {
+    const shouldOpen = await askOpenBrowser(okN);
+    if (shouldOpen) {
+      for (const p of procs) {
+        openBrowserTab(p.port);
+        openedN += 1;
+        await new Promise((r) => setTimeout(r, 80));
+      }
     }
   }
 
   console.log("");
-  console.log(`→ ${okN}/${PORT_TABLE.length} 个 demo 就绪${opts.noOpen ? "" : `，已开 ${okN} 个浏览器 tab`}。`);
+  console.log(`→ ${okN}/${PORT_TABLE.length} 个 demo 就绪${openedN > 0 ? `，已开 ${openedN} 个浏览器 tab` : ""}。`);
   console.log("→ Ctrl+C 关闭所有服务。");
 
   // 3. 优雅退出：SIGINT/SIGTERM 一键关掉所有子进程

@@ -27,6 +27,10 @@
         "path": "agents/03-progress.md"
       },
       {
+        "label": "04-pitfalls.md",
+        "path": "agents/04-pitfalls.md"
+      },
+      {
         "label": "05-demo.md",
         "path": "agents/05-demo.md"
       },
@@ -4893,6 +4897,671 @@
         ]
       },
       {
+        "label": "06-多轮对话与Context",
+        "children": [
+          {
+            "label": "01-Context-vs-Memory-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/routes/chat.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Context-vs-Memory-step-2",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": ".gitkeep",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/data/.gitkeep"
+                  },
+                  {
+                    "label": "preferences.db",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/data/preferences.db"
+                  },
+                  {
+                    "label": "preferences.db-shm",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/data/preferences.db-shm"
+                  },
+                  {
+                    "label": "preferences.db-wal",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/data/preferences.db-wal"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/lib/db.ts"
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/routes/chat.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "memory.ts",
+                    "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/routes/memory.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-压缩-摘要-vs-滑动窗口-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/routes/compare.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-压缩-摘要-vs-滑动窗口-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "summarize.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/routes/summarize.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-压缩-摘要-vs-滑动窗口-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "three-way.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/routes/three-way.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-压缩-摘要-vs-滑动窗口-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "three-way-with-fallback.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/routes/three-way-with-fallback.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-压缩-摘要-vs-滑动窗口-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/routes/health.ts"
+                  },
+                  {
+                    "label": "token-budget.ts",
+                    "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/routes/token-budget.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Token-Budget-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "budget.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/routes/budget.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Token-Budget-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "budget.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/routes/budget.ts"
+                  },
+                  {
+                    "label": "compare.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/routes/compare.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Token-Budget-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "emergency.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/routes/emergency.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Token-Budget-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "selective.ts",
+                    "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/routes/selective.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "label": "llm.ts",
         "path": "apps/llm.ts"
       },
@@ -4936,6 +5605,10 @@
       {
         "label": "gen-manifest.js",
         "path": "scripts/gen-manifest.js"
+      },
+      {
+        "label": "start-all-demo.js",
+        "path": "scripts/start-all-demo.js"
       },
       {
         "label": "static-server.js",

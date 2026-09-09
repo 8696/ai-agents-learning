@@ -95,6 +95,15 @@
 - **反模式**：`PORT` 进共享 `.env`（学习者会撞）/ 端口 ≤ 10000（撞系统）
 - **关联**：AGENTS.md §5.5
 
+### P-005  ·  Node 升级后 better-sqlite3 旧 prebuild ABI 不兼容
+
+- **症状**：跑含 better-sqlite3 的 Demo 时 `Error: The module '.../better-sqlite3/build/Release/better_sqlite3.node' ... NODE_MODULE_VERSION X. This version of Node.js requires...`（NODE_MODULE_VERSION 数字 < 当前 Node 期望值）
+- **触发**：`cd apps && yarn app:06-01-...` 或 `PORT=xxxx npx tsx 06-.../server.ts` 第一次跑 better-sqlite3 模块；常见于 `nvm use v22/v24` 切换或重装 Node 后
+- **根因**：`apps/node_modules/better-sqlite3/build/Release/better_sqlite3.node` 是装包时缓存的旧 Node ABI prebuild（二进制 `mtime` 远早于当前 Node 安装日）；Node 升版后 ABI 编号变了，旧 `.node` 加载直接失败
+- **修复**：`cd apps && npm rebuild better-sqlite3`（让 node-gyp 按当前 Node ABI 重编 `.node`，原地覆盖旧 prebuild；其它原生模块 prebuild 不动）
+- **反模式**：`rm -rf apps/node_modules && yarn install` 全量重装（清掉所有原生模块 prebuild，全得重编，慢且容易再翻车）；只删 `apps/node_modules/better-sqlite3/build` 单目录（可能漏掉 `.deps` / `obj.target`）；不切回旧 Node 逃避
+- **关联**：任何 better-sqlite3 / 原生模块依赖的 Demo；模块 06 `01-Context-vs-Memory-step-2`（首次引入 better-sqlite3）；`yarn` 装包时 Node 跨大版本升级后必踩
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）
