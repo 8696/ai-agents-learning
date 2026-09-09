@@ -1151,7 +1151,7 @@ PORT=31001 npx --prefix /Users/i2025/Desktop/ai-agents-learning/apps \
 之前写的「curl /health + 触发业务端点 + mtime + grep + 端口释放校验」全删 ——。那些是给"服务起不写日志"准备的，但**服务起那一刻已经在写日志**，curl/mtime/grep 是多余步骤还引入新坑（grep 拿到旧 entry）。**学习者原话**：「你使用 3 开头的端口启动完之后，在 demo 的根目录就会有个 logs 文件夹，因为在写服务的时候它自己也会把日志打进去。不用像现在这样搞这么复杂。」
 
 **顶层只是模板（禁止 Demo 运行时引用）**
-- `apps/logger.ts` 导出 `createLogger(logDir)`——**仅作拷贝源**（内置安全序列化；处理 Error / Map / Set / Date / Buffer / 循环引用 / 大对象截断）
+- `apps/logger.ts` 导出 `createLogger(logDir)`——**仅作拷贝源**（内置安全序列化；处理 Error / Map / Set / Date / Buffer / 循环引用；**禁止**字节/深度截断）
 - **硬规则（锁定 / 未锁定一视同仁）**：每一个 Demo、每一个 step，**落代码当下就必须完整拷贝**本地 `lib/logger.ts`。**不论**该 step 是否已锁定、是否还在打磨——**一律禁止**运行时 `import apps/logger.ts` / `createLogger` 委托顶层
 - **每一条 Demo / 每一个新 step 落代码当下**：把当时顶层 `apps/logger.ts` **完整拷**到 `apps/{demo}/lib/logger.ts`，底部再 `export const logger = createLogger(.../logs)`；业务只 `import { logger } from "./logger"`
 - **禁止**：`import { createLogger } from "../../../logger.js"`（或任何路径）委托顶层；禁止「未锁定先薄包一层、锁定再 freeze」——从第一行业务代码起就不能依赖共享实现
@@ -1193,18 +1193,37 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 - **LLM / HTTP 响应打整个对象**；`字段释义` **只写本条教学用到的字段**（如 `finish_reason` / `tool_calls` / `usage`），不要给 SDK 每个键做词典
 - `data` 建议键：`入参` / `返回值` / `字段释义` / `耗时ms` / `第几轮` / `本轮为什么是这些参数`
 
-**内置序列化（data 不能崩）**
+**入参 / 返回值必须原样完整 · 文件日志禁止截断（强制 · 2026-09-09 加 · 实测踩坑）**
+
+五件套里的 **`data.入参` 和 `data.返回值`**，对**每一次**调用（调用函数 / 调用模型 / 调用HTTP / 工具）都 = **实际传入的参数原文** + **实际返回的对象原文**，不论多长都要写进 `logs/`。事后只翻日志必须能复盘「当时带了什么进去、出来了什么」。
+
+| 可以 | 禁止（任何调用的 `入参` / `返回值`） |
+| ---- | ---------------------------------- |
+| `{ 入参: request }` / `{ 入参: { messages, tools, … } }` —— `messages` 等是完整数组/对象全文 | 只打 `messagesLen` / `messagesCount` / `tokensEstimate` / `*Preview` / `*Len` / `content.slice(0, N)` 当「入参」或「返回值」 |
+| `{ 返回值: response }` —— 完整对象（模型/HTTP 打整包） | 用长度 / 预览 / 摘要冒充；「太长了先省略，页面上能看」也不行 |
+| 额外键（`tokensEstimate` / `stage` / `字段释义`）可**并存**，但不能**代替**正文 | 封装层用摘要、指望内层才打全文——**外层也要全文** |
+| 密钥仍打码（`sk-***`） | 以「怕日志大」为由砍正文 |
+
+**反例（实测 · 2026-09-09 模块 06 · 02 step-1）**：`调用模型开始：对比补全` 的 `入参` 只写了 `{ stage, messagesLen: 102, tokensEstimate, modelA }` —— 翻日志讲不清滑动窗口前后模型到底吃了哪些轮。**正例**：`入参` 里带完整 `messages: [{role, content}, …]`（before / after 各打一份原文）。
+
+**文件 logger 硬规则（顶层 `apps/logger.ts` 模板 · 2026-09-09 起）**：
+- **禁止** `MAX_BYTES` / `…truncated` 按字节砍文件内容
+- **禁止** `MAX_DEPTH` 把深层对象收成 `[…]` / `{…}`
+- 仅循环引用写成 `"[Circular]"`（否则序列化会炸）；其余原样
+- 新落 / 新改 Demo：从顶层**完整重拷** `lib/logger.ts`（旧锁定副本不回头改，除非点名）
+
+**内置序列化（data 不能崩 · 不截断）**
 
 | 类型 | 怎么显示 |
 | ---- | -------- |
 | `Error` | `{ name, message, stack, ...自定义字段 }` |
 | `Map` | 转对象；`Set` 转数组 |
 | `Date` | ISO string |
-| `Buffer` | `{ type: "Buffer", length, hex-preview }` |
+| `Buffer` | `{ type: "Buffer", length, hex }`（**完整** hex，不 preview） |
 | `undefined` / `null` | 字面量字符串 |
 | 循环引用 | `"[Circular]"` |
 | 函数 | `"[Function: name]"` |
-| 大对象 (>50KB) | 截到 50KB + 标 `"...truncated"` |
+| 大对象 | **不截断**，原样写进文件 |
 
 **业务代码打日志原则（详细优先）**
 - **不怕多**：函数里每一段能单独说清的步骤都打；不要「跑完才打一条汇总」
@@ -1219,9 +1238,9 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 | 顺序 | 所有调用都要？ | 打什么 |
 | ---- | -------------- | ------ |
 | 1 开始 | 要 | `msg` 见四种前缀的「开始」。`explain`：为什么打 + 走到哪 |
-| 2 入参 | 要 | 完整参数。可和「开始」写在同一条 |
+| 2 入参 | 要 | **原样完整参数**（见上节）。可和「开始」写在同一条。禁止 Len/Count/Preview 冒充 |
 | 3 源代码 | 要（**工具也要**） | `__code` |
-| 4 返回值 | 要 | 写在「结束」条。模型/HTTP 打整个对象 |
+| 4 返回值 | 要 | 写在「结束」条。**原样完整对象**（模型/HTTP/函数一律打整包，禁止摘要） |
 | 5 结束 | 要 | 「结束」句式；`data.耗时ms`（从本调用开始到现在）；失败用 `error` + `（失败）` + 错误对象当返回值 |
 
 **禁止**「发出 / 已交给提供商 / 接到」中间态。
@@ -1240,12 +1259,14 @@ logger.error(scope: string, msg: string, explain: string, data?: unknown)
 **核心档示例（真正出网；封装在外层用「调用函数」）**
 
 ```ts
+// ✅ 入参 / 返回值都是完整对象；禁止 messagesCount / messagesLen / Preview
 logger.info(
   "││ 调用模型-对话补全",
   "调用模型开始：对话补全",
   "为什么打：这是真正出网的那一次，不用它就没有 tool_calls。当前：在 callLlmOnce 里面，第 1 轮，messages 还没有 tool 结果。",
   { 入参: request, __code: "const response = await llm.openai.chat.completions.create(request);" },
 );
+// ❌ 禁止：{ 入参: { messagesLen: 102, tokensEstimate: 3038, modelA: "…" } }
 const t0 = Date.now();
 const response = await llm.openai.chat.completions.create(request);
 logger.info(
@@ -1256,14 +1277,14 @@ logger.info(
 );
 ```
 
-封装不要写成「调用模型」：
+封装不要写成「调用模型」（类型前缀仍区分；**入参/返回值照样全文，不许摘要**）：
 
 ```ts
 logger.info(
   "│ 调用函数-callLlmOnce",
   "调用函数开始：callLlmOnce",
   "为什么打：路由只认这一层返回值。里面那次才是出网（看「调用模型开始：对话补全」）。当前：Round-1 即将问模型。",
-  { 入参: { messagesCount: 2 }, __code: "const out = await callLlmOnce(messages, tools);" },
+  { 入参: { messages, tools }, __code: "const out = await callLlmOnce(messages, tools);" },
 );
 ```
 
@@ -1304,6 +1325,7 @@ logger.info(
 - `msg` 是否是四种前缀之一 + 开始/结束？失败是否带 `（失败）`？结束是否有 `耗时ms`？
 - `explain` 是否有「为什么打」和「当前到哪」？
 - 五件套是否齐？工具是否有 `__code`？有没有「发出/接到」？
+- **每一次调用的 `入参` / `返回值` 是否原样完整**？有没有偷换成 Len/Count/Preview？`lib/logger.ts` 有没有 `MAX_BYTES` / `…truncated` / `MAX_DEPTH`？
 - 循环是否「调用循环」+ 每一圈打满？流式是否只在结束打完整拼好结果？
 - `字段释义` 是否只覆盖本条教学字段（完整对象仍在 `返回值`）？
 

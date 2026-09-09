@@ -1,22 +1,13 @@
 /**
- * 顶层日志模板（服务端 · Node）—— 仅作拷贝源。
+ * 职责：本地 freeze 副本 · 拷自顶层 apps/logger.ts（2026-09-09）。
  *
- * **禁止**任何 Demo 运行时 import 本文件（含 createLogger 委托）。
- * 落 Demo / 新 step 当下：把本文件完整拷到 apps/{demo}/lib/logger.ts，
- * 底部加 export const logger = createLogger(.../logs)；业务只 import { logger } from "./logger"。
- * 细则：agents/05-demo.md §5.3.12 / §5.3.16。
- *
- * 数据流：
- *   createLogger(logDir)
- *     → mkdir -p logDir
- *     → logger.info(scope, msg, explain, data?)
- *         → 文件：appendFileSync(logDir/{YYYY-MM-DD}.log, …)
- *         → console：[LEVEL] [scope] msg — explain (+ data)
- *
- * data：下一行起 indent-2 多行 JSON；有 __code 时其余字段同样多行，禁止 compact 一行。
+ * §5.3.16 硬规则：每个 Demo 必须自带完整 lib/logger.ts，禁止运行时 import 顶层。
+ * 业务代码只 import { logger } from "./logger"。
+ * 顶层未来若改不影响本 demo；本 demo 若改也不影响其他 demo。
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -110,6 +101,7 @@ function serialize(value: unknown): string {
   return json;
 }
 
+
 function todayBjt(d: Date): string {
   const bjt = new Date(d.getTime() + 8 * 3600 * 1000);
   const y = bjt.getUTCFullYear();
@@ -134,7 +126,6 @@ function indentLines(text: string, prefix: string): string {
   return text.split("\n").map(line => line ? prefix + line : line).join("\n");
 }
 
-/** data 一律下一行起 indent-2 多行；有 __code 时其余字段同样，禁止 compact 一行 */
 function formatDataJson(value: unknown): string {
   const compact = serialize(value);
   let pretty: string;
@@ -150,7 +141,6 @@ function renderData(data: unknown): string | null {
   if (data === undefined) return null;
   if (data === null) return "  data=null\n";
 
-  // __code 字段：自动以 ── code ── 分隔块输出源代码
   if (typeof data === "object" && !Array.isArray(data) && "__code" in (data as Record<string, unknown>)) {
     const obj = data as Record<string, unknown>;
     const codeVal = obj.__code;
@@ -189,7 +179,6 @@ export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger
       `\n  explain=${explain}\n` +
       `\n${dataBlock}`;
 
-    // 文件：全量；写失败静默（日志失败不应让业务崩）
     try {
       const fname = `${todayBjt(new Date())}.log`;
       fs.appendFileSync(path.join(logDir, fname), fileLine, "utf8");
@@ -197,7 +186,6 @@ export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger
       // ignore
     }
 
-    // console：受 consoleLevel 控制
     if (LEVEL_RANK[level] >= consoleMin) {
       const tag = `[${level.toUpperCase()}] [${scope}] ${msg} — ${explain}`;
       if (data === undefined) {
@@ -217,3 +205,8 @@ export function createLogger(logDirOrOpts: string | CreateLoggerOptions): Logger
     error: (s, m, e, d) => emit("error", s, m, e, d),
   };
 }
+
+// ── 本 demo 的日志实例 · 服务端文件按 BJT 日切到本文件夹 logs/ ──
+// logger.ts 在 step-1/lib/，日志要落到 step-1/logs/（demo 根目录），用 dirname + "../logs" 显式定位。
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export const logger = createLogger(path.resolve(__dirname, "..", "logs"));

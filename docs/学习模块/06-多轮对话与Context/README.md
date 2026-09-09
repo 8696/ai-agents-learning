@@ -14,7 +14,7 @@
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**Context vs Memory**：本次请求塞进 messages 的，vs 跨会话存起来的](./01-Context-vs-Memory.md) | 能区分「这轮发给模型什么」和「长期记得什么」 | `LLM context vs memory agent` `conversation history management` · [模块 06 常见坑](#验收) · [模块 10 Memory](../10-Memory/README.md) | [沉淀](./01-Context-vs-Memory.md) |
-| ⬜ | [**压缩 / 摘要 vs 滑动窗口**：两种裁剪各丢哪类信息](./02-压缩-摘要-vs-滑动窗口.md) | 能对比丢了什么、什么场景用哪个 | `conversation summarization LLM` `sliding window vs summary context` · OpenAI Cookbook 上下文管理示例 | — |
+| ✅ | [**压缩 / 摘要 vs 滑动窗口**：两种裁剪各丢哪类信息](./02-压缩-摘要-vs-滑动窗口.md) | 能对比丢了什么、什么场景用哪个 | `conversation summarization LLM` `sliding window vs summary context` · OpenAI Cookbook 上下文管理示例 | [暂无链接](./02-压缩-摘要-vs-滑动窗口.md) |
 | ⬜ | [**Token Budget**：给历史、给系统、给本轮各留多少](./03-Token-Budget.md) | 能设阈值，知道何时触发裁剪 | `token budget chatbot` `context window management` · tiktoken + 自己打印 full context | — |
 | ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 

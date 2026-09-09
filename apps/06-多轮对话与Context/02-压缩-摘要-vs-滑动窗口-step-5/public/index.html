@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>压缩 / 摘要 vs 滑动窗口 · step-5</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <!-- §5.3.4 强制：React 18.3.1 UMD -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function approxTokens(text) {
+      let chinese = 0, other = 0;
+      for (const ch of text) {
+        if (/[一-鿿]/.test(ch)) chinese += 1;
+        else other += 1;
+      }
+      return Math.ceil(chinese / 1.5 + other / 4);
+    }
+
+    function App() {
+      const [health, setHealth] = useState(null);
+      const [turnCount, setTurnCount] = useState(50);
+      const [slidingTokenBudget, setSlidingTokenBudget] = useState(500);
+      const [summarizeTokenBudget, setSummarizeTokenBudget] = useState(200);
+      const [keepRecent, setKeepRecent] = useState(5);
+      const [keyFactAtTurn, setKeyFactAtTurn] = useState(1);
+      const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
+      const [errorMsg, setErrorMsg] = useState("");
+      const [errorKind, setErrorKind] = useState(null);
+      const [result, setResult] = useState(null);
+      const inFlightRef = useRef(false);
+
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+      }, []);
+
+      const paramValid = keepRecent <= turnCount;
+
+      async function runTokenBudget() {
+        if (inFlightRef.current) return;
+        if (!paramValid) {
+          setErrorMsg(`参数非法：keepRecent(${keepRecent}) 不能超过 turnCount(${turnCount})`);
+          setErrorKind("4xx");
+          return;
+        }
+        if (health && !health.hasKey) {
+          setErrorMsg("apps/.env 没配当前 LLM_PROVIDER 的 Key");
+          setErrorKind("5xx");
+          return;
+        }
+        setErrorMsg("");
+        setErrorKind(null);
+        setResult(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中（4 次真调模型）" });
+
+        try {
+          const resp = await fetch("/api/token-budget", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ turnCount, slidingTokenBudget, summarizeTokenBudget, keepRecent, keyFactAtTurn }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            const kind = resp.status >= 500 ? "5xx" : "4xx";
+            setErrorKind(kind);
+            const detail = data.issues
+              ? ` · ${data.issues.map(i => i.message || JSON.stringify(i)).join("；")}`
+              : "";
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}${detail}`.trim());
+            setStatus({ key: "error", text: "❌ 错误" });
+            return;
+          }
+          setResult(data);
+          setStatus({ key: "done", text: "✅ 完成" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      async function simulateUpstreamError() {
+        if (inFlightRef.current) return;
+        setErrorMsg("");
+        setErrorKind(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+        try {
+          const resp = await fetch("/api/token-budget-force-error", { method: "POST" });
+          const data = await resp.json();
+          setErrorKind("5xx");
+          setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+          setStatus({ key: "error", text: "❌ 错误" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      const runDisabled = inFlightRef.current || (health && !health.hasKey) || !paramValid;
+
+      function MsgItem({ m }) {
+        const cls = m.role === "user"
+          ? "bg-gray-50 border-gray-300"
+          : m.role === "assistant"
+          ? "bg-green-50 border-green-300"
+          : "bg-yellow-50 border-yellow-300";
+        return (
+          <li className={"border rounded p-2 text-xs " + cls}>
+            <div className="flex items-center justify-between text-gray-500 mb-1">
+              <span><b>{m.role}</b></span>
+              <span>≈ {approxTokens(m.content)} tokens</span>
+            </div>
+            <div className="whitespace-pre-wrap text-gray-800">{m.content}</div>
+          </li>
+        );
+      }
+
+      function BadgeYesNo({ value }) {
+        return (
+          <span className={
+            "ml-1 px-2 py-0.5 rounded text-xs " +
+            (value ? "bg-green-200 text-green-900" : "bg-red-200 text-red-900")
+          }>
+            {value ? "✅ 是" : "❌ 否"}
+          </span>
+        );
+      }
+
+      function StageCard({ id, title, msgs, reply, hasKeyFact, accentColor, totalTokens, budgetLabel }) {
+        return (
+          <article id={id} className={`border ${accentColor} rounded p-3 space-y-2`}>
+            <header className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-gray-800">{title}</div>
+              <div className="text-xs text-gray-500">
+                messages 长度 = <span className="font-mono">{msgs.length}</span>
+                {" · "}
+                token ≈ <span className="font-mono">{totalTokens}</span>
+                {budgetLabel ? <> · {budgetLabel}</> : null}
+              </div>
+            </header>
+            <div className="text-xs text-gray-500">模型回答：</div>
+            <div className="bg-green-50 border border-green-300 rounded p-2 text-sm whitespace-pre-wrap text-gray-800 max-h-32 overflow-auto">
+              {reply}
+            </div>
+            <div className="text-xs">
+              含 key fact <BadgeYesNo value={hasKeyFact} />
+            </div>
+            <details className="text-xs">
+              <summary className="cursor-pointer text-gray-600">看 messages（{msgs.length} 条）</summary>
+              <ol className="mt-2 space-y-1 max-h-48 overflow-auto">
+                {msgs.map((m, i) => <MsgItem key={i} m={m} />)}
+              </ol>
+            </details>
+          </article>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">压缩 / 摘要 vs 滑动窗口 · step-5</h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status.key === "loading" ? "bg-yellow-200" :
+               status.key === "done"    ? "bg-green-200" :
+               status.key === "error"   ? "bg-red-200" :
+                                          "bg-gray-200")
+            }>{status.text}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>按 token 算窗口</b>（变体 2）—— 滑动窗口 K 从「条数」换成「token 数」（gpt-tokenizer 估算）。同份假历史 + 同一问句 + 同一模型，唯一的变量是「窗口控制单位」。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>调五个旋钮：假对话轮数 / 滑动窗口 token budget / 摘要触发 token 阈值 / 保留近期 / key fact 放第几轮</li>
+                <li>点「跑按 token 对照」→ 服务端算每条 token + 从最新往旧累加 + 调真模型 4 次</li>
+                <li>看四张策略卡 + token 估算 + 一张「按 token vs 按条数」对照小结</li>
+                <li><b>核心可观察</b>：相同 token budget 下，按 token 比按条数更稳定（不受单条超长消息影响）</li>
+                <li><b>对照 step-1~4</b>：step-1~4 用「条数」控制窗口；step-5 用「token」控制窗口</li>
+              </ol>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <label className="text-xs text-gray-600">
+                  假对话轮数 (turnCount)：<span className="font-mono">{turnCount}</span>
+                  <input id="ctrl-turn-count" type="range" min="2" max="80" step="1"
+                    value={turnCount} onChange={e => setTurnCount(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  滑动窗口 token (B)：<span className="font-mono">{slidingTokenBudget}</span>
+                  <input id="ctrl-token-budget" type="range" min="50" max="10000" step="50"
+                    value={slidingTokenBudget} onChange={e => setSlidingTokenBudget(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  摘要触发阈值：<span className="font-mono">{summarizeTokenBudget}</span>
+                  <input id="ctrl-summarize-threshold" type="range" min="50" max="10000" step="50"
+                    value={summarizeTokenBudget} onChange={e => setSummarizeTokenBudget(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  保留近期 (keepRecent)：<span className="font-mono">{keepRecent}</span>
+                  <input id="ctrl-keep-recent" type="range" min="0" max={turnCount - 1} step="1"
+                    value={keepRecent} onChange={e => setKeepRecent(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  key fact 放第几轮：<span className="font-mono">{keyFactAtTurn}</span>
+                  <input id="ctrl-key-fact-turn" type="range" min="1" max={turnCount} step="1"
+                    value={keyFactAtTurn} onChange={e => setKeyFactAtTurn(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+              </div>
+              {!paramValid ? (
+                <div className="text-xs text-orange-700">
+                  ⚠️ keepRecent ({keepRecent}) 不能超过 turnCount ({turnCount})
+                </div>
+              ) : null}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  id="btn-run"
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                  onClick={runTokenBudget}
+                  disabled={runDisabled}
+                >跑按 token 对照（按 token 触发摘要：触发时 4 次 · 不触发时 3 次）</button>
+                <button
+                  id="btn-simulate-error"
+                  className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
+                  onClick={simulateUpstreamError}
+                >演示上游失败（5xx · 类 B）</button>
+              </div>
+              {errorMsg ? (
+                <div
+                  id="error-box"
+                  className={
+                    "text-xs px-3 py-2 rounded border " +
+                    (errorKind === "5xx"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-yellow-300 bg-yellow-50 text-yellow-800")
+                  }
+                >
+                  <div className="font-semibold">
+                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                  </div>
+                  <div className="mt-1">{errorMsg}</div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-xs text-gray-400">（空 · 还没跑对照。先调五个旋钮，再点「跑按 token 对照」。）</div>
+              ) : (
+                <>
+                  <StageCard
+                    id="card-full"
+                    title="① 完整（基线）"
+                    msgs={result.full.messages}
+                    reply={result.full.reply}
+                    hasKeyFact={result.full.hasKeyFact}
+                    accentColor="border-gray-300"
+                    totalTokens={result.full.totalTokens}
+                  />
+                  <StageCard
+                    id="card-sliding"
+                    title={`② 滑动窗口（按 token B=${slidingTokenBudget} · 从最新往旧累加 ≤ B）`}
+                    msgs={result.sliding.messages}
+                    reply={result.sliding.reply}
+                    hasKeyFact={result.sliding.hasKeyFact}
+                    accentColor="border-orange-300"
+                    totalTokens={result.sliding.totalTokens}
+                    budgetLabel={`用 ${result.tokenReport.slidingTokensUsed} / ${slidingTokenBudget} tokens`}
+                  />
+                  <StageCard
+                    id="card-summarize"
+                    title={`③ 摘要压缩（远期 → summary + 近期 ${keepRecent} 条原文）`}
+                    msgs={result.summarize.messages}
+                    reply={result.summarize.reply}
+                    hasKeyFact={result.summarize.hasKeyFact}
+                    accentColor="border-purple-300"
+                    totalTokens={result.summarize.totalTokens}
+                  />
+
+                  <article id="card-summary-content" className="border border-purple-200 bg-purple-50 rounded p-3 space-y-2">
+                    <header className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">④ summary 内容（看 LLM 写了啥）</div>
+                      <div className="text-xs text-gray-500">
+                        {result.summary
+                          ? <>字数 ≈ <span className="font-mono">{result.summary.length}</span></>
+                          : <span className="text-orange-700">（远期 token ≤ summarizeTokenBudget → 未触发摘要；messagesSummarize 直接复用 messagesSliding）</span>}
+                      </div>
+                    </header>
+                    {result.summary ? (
+                      <div className="bg-white border border-purple-300 rounded p-2 text-sm whitespace-pre-wrap text-gray-800 max-h-48 overflow-auto">
+                        {result.summary}
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-gray-300 rounded p-2 text-xs text-gray-500">
+                        本次未调摘要 LLM。messagesSummarize 与「② 滑动窗口（按 token）」同源 → 答题结果应一致。
+                      </div>
+                    )}
+                  </article>
+
+                  <article id="card-token-vs-count" className="border border-blue-300 bg-blue-50 rounded p-3 space-y-2">
+                    <header className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">⑤ 按 token vs 按条数（变体对照）</div>
+                    </header>
+                    <div className="text-xs text-gray-700 space-y-1">
+                      <div>
+                        <b>按条数（step-1~4）</b>：保留最近 K 条消息（如 K=6）。<b>问题</b>：单条超长消息（5000 token）按条数算只占 1 条 → 占满整个窗口 → 其他消息被挤出。
+                      </div>
+                      <div>
+                        <b>按 token（step-5）</b>：从最新往旧累加 token，累加到 ≤ budget 为止。<b>优点</b>：不受单条长度影响；token 硬上限稳定可控。
+                      </div>
+                      <div className="pt-1 text-gray-600">
+                        <b>本次对照</b>：
+                        sliding 用了 <span className="font-mono">{result.tokenReport.slidingTokensUsed}</span> tokens（预算 {slidingTokenBudget}），
+                        保留 <span className="font-mono">{result.tokenReport.slidingMessagesLen}</span> 条消息；
+                        key fact 在第 {keyFactAtTurn} 轮（token ≈ {approxTokens('你好，我先自我介绍一下：我叫 Tina，住在上海，最喜欢的菜是日料，尤其是寿司和拉面。')}）。
+                      </div>
+                      <div className="pt-1 text-gray-600">
+                        {result.full.hasKeyFact && !result.sliding.hasKeyFact && result.summarize.hasKeyFact
+                          ? "→ 标准结果：按 token 滑动窗口丢 key fact（远期超预算）；摘要压缩留语义。"
+                          : result.full.hasKeyFact && result.sliding.hasKeyFact && result.summarize.hasKeyFact
+                          ? "→ 三方都记得：把 slidingTokenBudget 调大（如 10000）再看「丢」。"
+                          : !result.full.hasKeyFact
+                          ? "→ 基线忘：换家模型。"
+                          : "→ 检查 token budget 是否过小。"}
+                      </div>
+                      <div className="pt-2 text-gray-500 text-xs">
+                        <b>生产建议</b>：用「按 token」做硬上限，「按条数」做辅助（防止极端情况）。两者结合 = 「token 预算 + 最小条数」双闸门。
+                      </div>
+                    </div>
+                  </article>
+                </>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 50044 · 协议 A · provider {health?.provider ?? "(待连接)"} · model {health?.model ?? "(待连接)"} · Key {health?.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
