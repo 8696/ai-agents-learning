@@ -1307,6 +1307,138 @@ logger.info(
 - 循环是否「调用循环」+ 每一圈打满？流式是否只在结束打完整拼好结果？
 - `字段释义` 是否只覆盖本条教学字段（完整对象仍在 `返回值`）？
 
+### 5.3.17 持久化存储（`lib/db.ts` + `data/`，DB 抽象 + 数据目录分离）·新
+
+2026-09-09 起生效。**任何有持久化需求的 demo 必须按本节约定**——禁止业务代码直接读写 `data/`；`lib/db.ts` 是唯一对外触点；**默认实现 = SQLite**（`better-sqlite3`，同步 API + 包 async）。**理由**：① 接口是**通用 KV 抽象**（`kvGet / kvSet / kvDel / kvList`），跟业务语义（Memory / Fact / State / Cache）正交——同一份 `lib/db.ts` 可被任意业务复用；② 接口签名不变 → 未来换驱动（同步 → 异步如 `node:sqlite` / `libsql`）、加表 / 加字段 / 加缓存层 / 加向量索引，业务代码全部零改动，只动 `lib/db.ts` 一个文件；③ 文件名 / 表名 / 内部 key 命名按 demo 业务起，不在本节钉死——后续 demo 自己改。
+
+#### 1. 强制结构
+
+```
+apps/{demo}/
+├── lib/db.ts          ← 唯一对外接口；通用 KV 抽象（不绑业务）；签名不变
+├── data/              ← 持久化数据目录
+│   ├── .gitkeep       ← 空目录占位（demo 一行数据都没有时仓库也能保留目录）
+│   └── *.db           ← SQLite 数据库文件；文件名按 demo 业务起（见 §3 #3）
+└── routes/*.ts        ← 业务；只能调 lib/db.ts；禁止直接读 data/
+```
+
+**核心约定**：`lib/db.ts` 是**唯一触点**——业务不直接读 `data/`，不直接 `new Database`。换驱动、加新表 / 字段、加缓存层 = 改这一个文件，routes / chat.ts 不动。**接口层是通用 KV 抽象，不绑业务语义**——`kvGet / kvSet / kvDel / kvList` 跟 "Memory / Fact / State / Cache" 是正交的两件事；业务名归业务层（routes/*.ts）起。
+
+#### 2. 强制接口（通用 KV 抽象；签名不变）
+
+```ts
+// apps/{demo}/lib/db.ts —— 任何实现都必须 export 这 4 个函数
+// 函数名 = KV 操作语义（不绑业务；不叫 getMemory / setMemory）
+export async function kvGet(userId: string, key: string): Promise<unknown>
+export async function kvSet(userId: string, key: string, value: unknown): Promise<void>
+export async function kvDel(userId: string, key: string): Promise<void>
+export async function kvList(userId: string): Promise<Record<string, unknown>>
+```
+
+**接口语义（缺一不可，业务代码据此判断）**：
+
+| 函数 | 不存在 | 重复 | 失败 |
+| --- | --- | --- | --- |
+| `kvGet` | 返回 `undefined` | — | `throw Error` |
+| `kvSet` | 自动创建 user | 整体覆盖（同 key） | `throw Error` |
+| `kvDel` | `no-op`（不抛错） | — | `throw Error` |
+| `kvList` | 返回 `{}` | — | `throw Error` |
+
+**`userId` 是接口第一个参数**——多用户 demo 强制传；单用户 demo 也写 `userId = "default"`，未来扩展不动签名。**禁止**接口层做全局共享 KV（多租户灾难，对照模块 06 · 01 易混点 / 踩坑 3）。
+
+**接口名 = KV 抽象层，不绑业务**：业务层（routes/memory.ts / routes/state.ts / routes/cache.ts）按业务起名；接口层永远 `kvGet / kvSet / kvDel / kvList`。换 demo = 换 routes 文件名 + 换 data 文件名 + 换内部 key 命名；接口不变。
+
+#### 3. 强制约定清单
+
+| # | 约定 | 防什么 |
+| --- | --- | --- |
+| 1 | `lib/db.ts` 是唯一触点；业务不直接读 `data/` | 未来换驱动时全文件搜 `fs.readFileSync("data/` 或 `new Database("data/`) 绕过 |
+| 2 | 路径写法：`const DB_FILE = path.resolve(__dirname, "..", "data", "{demo-业务}.db")`（跟 §5.3.16 logger 同款） | `import.meta.url` 的相对 trick 把 data/ 落到错位置 |
+| 3 | 文件名按 **demo 业务** 起（不统一；模块 06 偏好 → `preferences.db`，模块 07 事实 → `facts.db`，业务名归业务层定）—— 接口层 KV 抽象，**不绑**文件语义 | 文件名钉死到具体业务（如统一叫 `memory.db`）→ 后续非 Memory 类 demo 改名反而别扭 |
+| 4 | `data/` 默认进 git（沿用本仓库 logs/ 惯例）；同时放 `.gitkeep` 保空目录 | 学习者 clone 后看到空状态困惑；首跑前目录不存在 |
+| 5 | data 目录**禁止写日志**（log 走 `logs/`，跟 data 分开） | 调试时 grep 命中数据当日志 |
+| 6 | SQLite 写用 **transaction 包裹** + 启动时 `PRAGMA synchronous = FULL`（better-sqlite3 默认 = FULL，**禁止**改成 NORMAL/OFF 提速） | 多请求并发半截写坏文件；`synchronous=OFF` 在断电 / 崩溃时丢数据 |
+| 7 | SQLite 启动时跑 **`PRAGMA integrity_check`**；不通过时复制 `{demo-业务}.db.bak` + 重建空表 + `throw Error` | 静默吞错导致下游崩在不懂的位置 |
+| 8 | 接口统一 `async`（better-sqlite3 同步 API 也用 `Promise.resolve(...).then(...)` 包 async；或 `await new Promise(...)` 转换） | 未来换异步驱动（node:sqlite / libsql）签名一致 |
+| 9 | `updated_at` 字段保留（schema 演进时方便回溯）；具体写在哪一级（user / key）由 demo 业务决定，不在本节钉死 | 接口被业务自由改 = 接口不稳 |
+| 10 | tsdoc 模板：与 §5.3.16 logger.ts 同款——**职责 / 数据流 / 为什么单独成文件** | 文件头不留「为什么」= 未来改不动 |
+| 11 | `lib/db.ts` 文件头注「DB 实现：默认 better-sqlite3；签名不变 → 未来换驱动零改动」 | 提示未来维护者这是抽象层，不是 SQLite 专属 |
+
+#### 4. SQLite schema + 实现骨架（参考；具体字段 / 业务命名由 demo 业务定）
+
+**schema（最小集；demo 业务需要的字段加在 `value` JSON 里即可，不必动表）**
+
+```sql
+CREATE TABLE IF NOT EXISTS kv (
+  user_id    TEXT    NOT NULL,
+  key        TEXT    NOT NULL,
+  value      TEXT    NOT NULL,    -- JSON.stringify；业务传啥存啥
+  updated_at TEXT    NOT NULL,    -- ISO 8601
+  PRIMARY KEY (user_id, key)
+);
+CREATE INDEX IF NOT EXISTS idx_kv_user ON kv(user_id);
+```
+
+**业务级 schema / 命名约定由 demo 自己起**——比如 "`language` / `no_marketing` / `last_complaint`" 这种业务键、`value` 内部 JSON 结构、表名要不要分多张（多业务共存时），**都不在本节钉死**；落 demo 时按业务写。
+
+**实现骨架（最小；demo 可按需扩展）**
+
+```ts
+// apps/{demo}/lib/db.ts
+// 职责：通用 KV 抽象层；DB 默认实现 = better-sqlite3；签名不变 → 换驱动业务零改动
+// 数据流：routes/*.ts → kvGet/kvSet/kvDel/kvList → data/{demo-业务}.db
+
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+import Database from "better-sqlite3";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = path.resolve(__dirname, "..", "data");
+// 文件名按 demo 业务起（模块 06 偏好 = preferences.db；模块 07 事实 = facts.db …）
+const DB_FILE = path.resolve(DATA_DIR, "{demo-业务}.db");
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const db = new Database(DB_FILE);
+db.pragma("journal_mode = WAL");
+db.pragma("synchronous = FULL");   // §3 #6：禁止改 NORMAL/OFF
+db.exec(`CREATE TABLE IF NOT EXISTS kv (...)`);  // schema 见上
+
+// §3 #7：启动 integrity_check
+const integrity = db.pragma("integrity_check");
+if (integrity[0]?.integrity_check !== "ok") { /* 备份 .bak + throw */ }
+
+const stmtGet    = db.prepare("SELECT value FROM kv WHERE user_id = ? AND key = ?");
+const stmtUpsert = db.prepare("INSERT INTO kv ... ON CONFLICT ... DO UPDATE SET ...");
+const stmtDelete = db.prepare("DELETE FROM kv WHERE user_id = ? AND key = ?");
+const stmtList   = db.prepare("SELECT key, value FROM kv WHERE user_id = ?");
+
+export async function kvGet(userId: string, key: string): Promise<unknown> { /* ... */ }
+export async function kvSet(userId: string, key: string, value: unknown): Promise<void> { /* ... */ }
+export async function kvDel(userId: string, key: string): Promise<void> { /* ... */ }
+export async function kvList(userId: string): Promise<Record<string, unknown>> { /* ... */ }
+```
+
+**依赖**：`apps/package.json` 加 `"better-sqlite3": "^11"`；`yarn install` 一次，所有 demo 复用。
+
+#### 5. check-demo 加规则
+
+```text
+- 持久化类 demo（有 lib/db.ts 的）：缺 lib/db.ts → FAIL
+- 持久化类 demo：缺 data/.gitkeep → FAIL（空目录进 git）
+- 持久化类 demo：data/*.db 默认进 git（跟 logs/ 同款；不在 .gitignore）
+- 业务代码 import "\.+/data/..." → FAIL（绕过 db.ts 直接 import）
+- 业务代码（lib/db.ts 之外）出现 new Database\(".*data/ → FAIL（绕过 db.ts 直接开 DB）
+- 业务代码（lib/db.ts 之外）出现 fs\.(read|write)FileSync.*data/ → FAIL（JSON 回退；SQLite 实现不允许）
+- data/ 下出现 .json 文件 → FAIL（防有人回退到 JSON 实现）
+```
+
+#### 6. 不在本节范围（避免越界）
+
+- 不规定**业务层** schema：业务 key 命名（`language` / `no_marketing` / `last_complaint` …）、`value` 内部 JSON 结构、多业务共存时分几张表 → 落 demo 时按业务定
+- 不强制每个 demo 都有 `lib/db.ts`（无持久化 demo 不需要）
+- 不规定 data/ 用 `.gitignore`（本仓库惯例进 git；学习者 clone 后看到种子数据是预期）
+
 ### 5.4 目标 ↔ 代码整合闸门（两段式）·新
 
 2026-09-04 维护模式起生效。

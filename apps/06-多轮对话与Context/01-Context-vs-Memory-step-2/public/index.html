@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Context vs Memory · step-2</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ── 粗估每条消息的 token 数（与服务端 encode 一致；学习用，不是计费）──
+    function approxTokens(text) {
+      let chinese = 0, other = 0;
+      for (const ch of text) {
+        if (/[一-鿿]/.test(ch)) chinese += 1;
+        else other += 1;
+      }
+      return Math.ceil(chinese / 1.5 + other / 4);
+    }
+
+    function App() {
+      const [messages, setMessages] = useState([]); // 当前 Context（前端 React state）
+      const [input, setInput] = useState("");
+      const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
+      const [health, setHealth] = useState(null);
+      const [errorMsg, setErrorMsg] = useState("");
+      const [errorKind, setErrorKind] = useState(null); // null | "4xx" | "5xx"
+      const inFlightRef = useRef(false);
+
+      // ── step-2 新增：Memory 区域 ──
+      const [preferences, setPreferences] = useState({}); // 当前 Memory（=后端 kvList("default")）
+      const [prefKey, setPrefKey] = useState("");
+      const [prefValue, setPrefValue] = useState("");
+      const [memoryFlash, setMemoryFlash] = useState(""); // 操作后的小提示
+
+      // ── 页脚 /health 加载 + Memory 初始填充 ──
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+        refreshMemory();
+      }, []);
+
+      async function refreshMemory() {
+        try {
+          const resp = await fetch("/api/memory");
+          if (resp.ok) {
+            const data = await resp.json();
+            setPreferences(data.preferences || {});
+          }
+        } catch {}
+      }
+
+      async function rememberPreference() {
+        if (!prefKey) {
+          setErrorMsg("偏好 key 不能为空");
+          setErrorKind("4xx");
+          return;
+        }
+        // prefValue 尝试 JSON.parse；解析失败当字符串存（让用户能直接写中文偏好）
+        let parsedValue;
+        try { parsedValue = JSON.parse(prefValue); }
+        catch { parsedValue = prefValue; }
+
+        try {
+          const resp = await fetch("/api/memory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: prefKey, value: parsedValue }),
+          });
+          if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            setErrorKind("4xx");
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+            return;
+          }
+          await refreshMemory();
+          setPrefKey("");
+          setPrefValue("");
+          setErrorMsg("");
+          setErrorKind(null);
+          setMemoryFlash(`已记住「${prefKey}」`);
+          setTimeout(() => setMemoryFlash(""), 2000);
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+        }
+      }
+
+      async function deletePreference(key) {
+        try {
+          const resp = await fetch("/api/memory", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key }),
+          });
+          if (resp.ok) {
+            await refreshMemory();
+            setMemoryFlash(`已忘掉「${key}」`);
+            setTimeout(() => setMemoryFlash(""), 2000);
+          }
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+        }
+      }
+
+      async function send() {
+        if (inFlightRef.current) return;
+        if (health && !health.hasKey) {
+          setErrorMsg("apps/.env 没配当前 LLM_PROVIDER 的 Key（看页脚 Key ❌）");
+          setErrorKind("5xx");
+          return;
+        }
+        setErrorMsg("");
+        setErrorKind(null);
+
+        const nextMessages = [...messages, { role: "user", content: input }];
+        setMessages(nextMessages);
+        setInput("");
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+
+        try {
+          const resp = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: nextMessages }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            setMessages(messages);
+            const kind = resp.status >= 500 ? "5xx" : "4xx";
+            setErrorKind(kind);
+            const detail = data.issues
+              ? ` · ${data.issues.map(i => i.message || JSON.stringify(i)).join("；")}`
+              : "";
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}${detail}`.trim());
+            setStatus({ key: "error", text: "❌ 错误" });
+            return;
+          }
+          setMessages(data.messages);
+          setStatus({ key: "done", text: "✅ 完成" });
+        } catch (err) {
+          setMessages(messages);
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      async function simulateUpstreamError() {
+        if (inFlightRef.current) return;
+        setErrorMsg("");
+        setErrorKind(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+        try {
+          const resp = await fetch("/api/chat-force-error", { method: "POST" });
+          const data = await resp.json();
+          setErrorKind("5xx");
+          setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+          setStatus({ key: "error", text: "❌ 错误" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      function clearContext() {
+        setMessages([]);
+        setErrorMsg("");
+        setErrorKind(null);
+        setStatus({ key: "idle", text: "⏸ 待连接" });
+      }
+
+      const sendDisabled = inFlightRef.current || (health && !health.hasKey);
+      const hasMemory = Object.keys(preferences).length > 0;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">Context vs Memory · step-2</h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status.key === "loading" ? "bg-yellow-200" :
+               status.key === "done"    ? "bg-green-200" :
+               status.key === "error"   ? "bg-red-200" :
+                                          "bg-gray-200")
+            }>{status.text}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>Memory 跨会话还记</b>。在下方「记住偏好」写入一条 key/value → 落 SQLite（<code>data/preferences.db</code>）→ 之后每次发送消息，服务端都从 db 读出 → 拼到 system 末尾 → 模型看得到。「清空对话」只清前端 messages，Memory 不动。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li><b>写偏好</b>：填 key（如 <code>language</code>）+ value（如 <code>zh</code>），点「记住偏好」→ POST /api/memory → SQLite 落盘</li>
+                <li><b>看 Memory 注入</b>：下面「已记住的偏好」列表实时刷新；服务端日志 <code>data.fromMemory</code> 能看到本轮从 db 读出的偏好</li>
+                <li><b>验证跨会话</b>：关掉浏览器标签页 → 重新打开 → 再发消息 → 模型仍按偏好回答（如果偏好是「中文」就会用中文）→ 证明 Memory 真生效，不是 Context 在累积</li>
+                <li><b>清掉某条</b>：点偏好列表右边的「删」→ DELETE /api/memory → 下次发送偏好不再注入</li>
+                <li><b>关键对照</b>：「清空对话」清的是 Context（前端 messages 数组），Memory 不动（preferences.db 还在）；「删」清的是 Memory（db 里少一条），Context 不动</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参闸门） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+              </ol>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              {/* ── 块 1：跟 step-1 一样 · 发送 / 清空 / 演示错误 ── */}
+              <div>
+                <div className="text-sm text-gray-500 mb-2">输入一句话发给模型：</div>
+                <textarea
+                  id="user-input"
+                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                  rows="3"
+                  placeholder="比如：今天天气怎么样？"
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    id="btn-send"
+                    className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                    onClick={send}
+                    disabled={sendDisabled}
+                  >发送（点这个把整个 messages + 注入 Memory 发给模型）</button>
+                  <button
+                    id="btn-clear"
+                    className="border border-gray-300 px-4 py-2 rounded text-sm"
+                    onClick={clearContext}
+                  >清空对话（只清 Context，Memory 不动）</button>
+                  <button
+                    id="btn-simulate-error"
+                    className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
+                    onClick={simulateUpstreamError}
+                  >演示上游失败（5xx · 类 B）</button>
+                </div>
+              </div>
+
+              {/* ── 块 2：step-2 新增 · Memory 写入 / 列表 / 删除 ── */}
+              <div className="border-t pt-4">
+                <div className="text-sm text-gray-500 mb-2">
+                  <b>Memory · 偏好持久化</b>（写入 → SQLite preferences.db → 跨会话还在）
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <input
+                    id="pref-key"
+                    className="border border-gray-300 rounded p-2 text-sm"
+                    placeholder="key · 如 language / no_marketing"
+                    value={prefKey}
+                    onChange={e => setPrefKey(e.target.value)}
+                  />
+                  <input
+                    id="pref-value"
+                    className="border border-gray-300 rounded p-2 text-sm"
+                    placeholder="value · 字符串 / 数字 / 数组 / 对象都可（自动 JSON 解析）"
+                    value={prefValue}
+                    onChange={e => setPrefValue(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-2 items-center">
+                  <button
+                    id="btn-remember"
+                    className="bg-green-600 text-white px-4 py-2 rounded text-sm"
+                    onClick={rememberPreference}
+                  >记住偏好（POST /api/memory）</button>
+                  <span className="text-xs text-gray-500">{memoryFlash}</span>
+                </div>
+
+                <div className="mt-3">
+                  <div className="text-xs text-gray-500 mb-1">已记住的偏好（从 preferences.db 实时读）：</div>
+                  {!hasMemory ? (
+                    <div className="text-xs text-gray-400" id="memory-empty">（空 · 还没记任何偏好）</div>
+                  ) : (
+                    <ol id="memory-list" className="space-y-1">
+                      {Object.entries(preferences).map(([k, v]) => (
+                        <li key={k} className="border border-green-300 bg-green-50 rounded p-2 text-sm flex items-center justify-between">
+                          <div>
+                            <span className="font-mono text-xs text-green-800">{k}</span>
+                            <span className="text-gray-500 mx-2">→</span>
+                            <span className="font-mono text-xs">{JSON.stringify(v)}</span>
+                          </div>
+                          <button
+                            className="text-xs text-red-600 border border-red-300 px-2 py-1 rounded"
+                            onClick={() => deletePreference(k)}
+                          >删</button>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </div>
+
+              {errorMsg ? (
+                <div
+                  id="error-box"
+                  className={
+                    "text-xs px-3 py-2 rounded border " +
+                    (errorKind === "5xx"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-yellow-300 bg-yellow-50 text-yellow-800")
+                  }
+                >
+                  <div className="font-semibold">
+                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                  </div>
+                  <div className="mt-1">{errorMsg}</div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500">当前 Context（前端 messages 数组 · 请求时发给模型的内容；Memory 段是服务端后加的，不在这里）：</div>
+                <div className="text-xs text-gray-500">粗估 token ≈ <span id="total-tokens" className="font-mono">{messages.reduce((s, m) => s + approxTokens(m.content), 0)}</span></div>
+              </div>
+              {messages.length === 0 ? (
+                <div className="text-xs text-gray-400">（空 · 还没发过消息。Memory 注入段不在这里 —— 看服务端日志的 request.messages[0]）</div>
+              ) : (
+                <ol id="messages-list" className="space-y-2">
+                  {messages.map((m, i) => (
+                    <li
+                      key={i}
+                      className={
+                        "border rounded p-2 text-sm " +
+                        (m.role === "user"
+                          ? "bg-gray-50 border-gray-300"
+                          : m.role === "assistant"
+                          ? "bg-green-50 border-green-300"
+                          : "bg-white border-gray-300")
+                      }
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span><b>{m.role}</b></span>
+                        <span>≈ {approxTokens(m.content)} tokens</span>
+                      </div>
+                      <div className="whitespace-pre-wrap mt-1">{m.content}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {hasMemory ? (
+                <div className="border-t pt-3">
+                  <div className="text-xs text-gray-500">
+                    ⓘ 本轮已注入的 Memory 段（服务端拼到 system 末尾 · 不在 messages 数组里 · 真实副本看服务端日志 <code>data.fromMemory</code>）：
+                  </div>
+                  <pre className="mt-1 text-xs bg-purple-50 border border-purple-300 rounded p-2 whitespace-pre-wrap max-h-32 overflow-auto">
+                    {JSON.stringify(preferences, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 50039 · 协议 A · provider {health?.provider ?? "(待连接)"} · model {health?.model ?? "(待连接)"} · Key {health?.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

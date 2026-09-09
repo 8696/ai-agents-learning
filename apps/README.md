@@ -59,6 +59,7 @@
 | `yarn app:05-04-tool-gateway-step-3` | `50036` | 模块 05 · 04 · Tool Gateway step-3：变体 3 read_recent_emails 委托授权（调 LLM 协议 B · per-user OAuth + fail-closed + 未 OAuth 拒绝） |
 | `yarn app:05-04-tool-gateway-step-4` | `50037` | 模块 05 · 04 · Tool Gateway step-4：变体 4 Tool 抛错结构化（调 LLM 协议 B · 3 按钮演示成功 / 业务错 / 参数错 → handler throw → 结构化错误 → Round 2 模型改输入） |
 | `yarn app:06-01-context-vs-memory-step-1` | `50038` | 模块 06 · 01 · Context vs Memory step-1：最小可观察；输入框 + 发送 / 清空 + 真 LLM（协议 A）；messages 数组即 Context，服务端日志打完整 messages + token 估算；演示 Context 累积与「清空 = Context 消失」（step-1 sketch） |
+| `yarn app:06-01-context-vs-memory-step-2` | `50039` | 模块 06 · 01 · Context vs Memory step-2：Memory 持久化（SQLite · `data/preferences.db` · §5.3.17 KV 抽象 `kvGet/kvSet/kvDel/kvList`）；POST /api/memory 写入偏好 + GET /api/memory 列出 + DELETE /api/memory 删除；每次发送从 db 读偏好注入 system 末尾；服务端日志 `data.fromMemory` + `request.messages[0]` 完整可见；前端 React state 看不到 Memory 段；跨会话还记：关浏览器再发仍按偏好回答 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

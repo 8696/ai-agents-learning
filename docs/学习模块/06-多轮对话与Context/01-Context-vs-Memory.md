@@ -87,6 +87,24 @@
 - **模块 01 Context Window**：是 Context 的「长度上限」，不是 Context 本身。Context 超了才有模块 06 第 2 条「压缩 / 滑动窗口」的事。
 - **模块 03 System Prompt**：是 Context 的一部分（`role: 'system'`），但通常**不是** Memory。System 是"这条产品线的规则"；想改规则改 system；想记某个用户改 Memory。
 
+#### Memory 注入的 N 种位置（变体表 · 6 个）
+
+| # | 注入位置 | 怎么进 messages | 优 | 劣 | 何时用 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **system 末尾**（step-2 演示） | `[{system: baseSystem + 偏好段}, ...]` | 最常见；模型"始终遵守" | 跟产品规则混一块；体量大时撑大 system | 中小体量偏好 / 单一用户跨会话；**新手先这条** |
+| 2 | **system 顶部** | system 第一行就写偏好 | 模型"最先看到" | 跟规则分开要靠语义标记 | 优先级高于规则的"硬约束" |
+| 3 | **消息中间插入**（按需） | 多轮对话中间插一条 `role:"system"` 或伪装 user 的提示 | 只在触发 step 加，不必每次注入 | 位置感比 system 末尾弱；模型可能忽略 | 条件性 Memory（"用户问 X 时再注入 Y"） |
+| 4 | **多模态**（图 / 附件） | `user.content` 里塞 `{type:"image_url", image_url:{url}}` | 视觉记忆；适合"上次截图"类查询 | 要多模态模型支持；体积大 | 设计 / UI / 视觉类协作场景 |
+| 5 | **Tool 调用结果** | Memory 作为某个 Tool 的"查询结果"返回 → 模型用工具上下文读 | 大体量 Memory 不必每次塞全 system | 架构复杂；要先有 Tool Calling | Memory 体量 > 1KB 或有结构化检索需求 |
+| 6 | **不注入 · 按需读**（Tool Calling 路线） | 模型收到请求后自己决定要不要查 Memory（`function call → Memory Tool`） | 最灵活；模型自主决定；动态裁剪 | 要求模型有 Tool Calling 能力；latency 多一跳 | 模块 07 / 10 大规模 Agent 的标配 |
+
+**判错会怎样**：
+- 把 Memory 写死进 system prompt → 用户改偏好后改不动（取舍节）
+- 永远用变体 1 → Memory 体量一大 system 直接爆 → 触发模块 06 第 2 条「压缩 / 滑动窗口」
+- 用变体 6 但模型没 Tool Calling 能力 → 模型瞎编 Memory（幻觉，模块 05 已讲）
+
+**当前 demo（step-2）演示的是哪一条** = **变体 1 · system 末尾**。模块 07 / 10 会演示变体 6（Tool Calling 路线）。
+
 ---
 
 ### 例子
@@ -140,11 +158,11 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 | 把"对话历史"当成 Memory，每次会话开始全量注入 | 上次会话的废话全部灌进新会话，context window 直接炸 |
 | 把"用户跨会话的事实"塞 Context 当 system | 用户信息泄露给同一 system 下的其他用户（多租户场景灾难） |
 
-#### 例子 5 · 验证 step-1 没 Memory 的方法（实验）
+#### 例子 5 · step-1 没 Memory / step-2 真 Memory 的双实验
+
+**step-1 验证：Context 在累积 ≠ Memory**
 
 `apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/` 是当前 demo：输入框 + 发送 + 清空 + 演示上游失败。
-
-**亲手验证 step-1 没 Memory**：
 
 1. 起服务：`cd apps && yarn app:06-01-context-vs-memory-step-1`
 2. 浏览器发："请你先记住我叫 Tina"
@@ -157,7 +175,26 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 第 5 步看着像记忆，其实只是**前一次会话的 messages 还活在 React state 里**，下一次发送时把整包发回给模型，模型看到第 2 轮才知道。**这是 Context 在累积，不是 Memory 在生效。**
 
-第 8 步模型不记得 = **没跨会话持久化 = 没 Memory**。step-2 才加 SQLite 持久化；届时重做这个实验，第 7 步会得到 "Tina" → **证明 Memory 生效**。
+第 8 步模型不记得 = **没跨会话持久化 = 没 Memory**。
+
+**step-2 验证：真 Memory = SQLite 持久化**
+
+`apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/` 是当前 demo：step-1 全功能 + Memory 偏好写入 / 列出 / 删除。
+
+1. 起服务：`cd apps && yarn app:06-01-context-vs-memory-step-2`
+2. 浏览器偏好区填 key=`language` + value=`zh`，点「记住偏好（POST /api/memory）」→ 服务端 `routes/memory.ts: kvSet("default", "language", "zh")` → 落 SQLite `data/preferences.db`
+3. 「已记住的偏好」列表出现 `language → "zh"`
+4. 发任意消息（比如"今天天气怎么样？"）→ 服务端 `routes/chat.ts: kvList("default")` → 拼到 system 末尾 → 模型看到「用户偏好：language=zh」→ 用中文回答
+5. **关掉浏览器标签页，重新打开**（messages 数组 = []，但 SQLite 还在）
+6. 再发任意消息 → 模型仍用中文回答 → **证明跨会话还记**
+7. 看服务端 `logs/YYYY-MM-DD.log`：每次请求的 `data.入参.fromMemory` + `data.入参.request.messages[0].content` 末尾有 `[用户偏好 · 从 Memory 持久化层注入]` 段 → 证明偏好真的进了 system，前端 React state 看不到那段
+8. 点偏好列表右边的「删」→ DELETE /api/memory → 下次发送偏好不再注入
+
+**关键对照**：第 6 步模型仍按偏好回答 ≠ 第 5 步（step-1）模型忘了 —— 这就是 Context vs Memory 的分水岭。
+
+**判错会怎样**：
+- 把"前端 React state 累积"当成 Memory → 跟 step-1 第 5 步一样被骗；刷新页面就暴露
+- "我以为是模型记性好" → 错；模型权重不因为你调它而改（易混点 · Memory vs Fine-tuning）
 
 ---
 
@@ -177,7 +214,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 - **业务场景**：用户第一次对话说"以后回答用中文"；关掉窗口第二天再来。
 - **目标**：第二次会话模型主动用中文回答，且不弹"请告诉我你的偏好"。
 - **涉及知识点**：Memory（M2 偏好）+ 操作（O1 写入 + O2 注入）。
-- **验收标准**：第一次对话显式确认偏好已写入；第二次会话打开页面（无 messages），首条消息发出去，模型用中文回答；服务端日志能看到 system 里有 "用户偏好：中文" 这一句是从 Memory 注入的（不是写死）。
+- **验收标准**：第一次对话手动点「记住偏好」→ 第二条消息起模型按偏好回答；**关掉浏览器再打开**（无 messages），首条消息发出去，模型仍按偏好回答；服务端日志能看到 `data.入参.fromMemory` 字段 + `data.入参.request.messages[0].content` 末尾的 `[用户偏好 · 从 Memory 持久化层注入]` 段（前端 React state 看不到这段）；SQLite `data/preferences.db` 表 `kv` 真有一行 `user_id=default, key=language, value="zh"`。
 
 #### 需求 3 · 用户中途改偏好触发覆盖（M2 + O3）
 
@@ -210,6 +247,8 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 | **Memory 存什么** | 全部 KV 进 SQLite vs 加向量召回（模糊匹配"上次聊过类似话题"）。**新手先 KV** —— 模块 10 再学存储选型。 |
 | **System Prompt vs Memory 注入** | 静态产品规则写死在 system prompt；用户相关动态信息从 Memory 拼到 system 末尾。**绝不要**把所有 Memory 都写死进 system —— 用户改主意后改不动。 |
 | **Memory 跨用户边界** | 单用户 demo = 全局 SQLite 一张表；多用户产品 = 按 user_id 分表 + 注入时严格按 user_id 过滤。**多用户场景必须 user_id 隔离**，否则隐私事故。 |
+| **持久化抽象层（§5.3.17 KV 抽象）** | 业务层（routes/memory.ts）按业务起名（memory / preferences / state / cache ...）；接口层（`lib/db.ts`）永远是 `kvGet / kvSet / kvDel / kvList` 4 个 KV 函数；文件名按 demo 业务（`preferences.db` / `facts.db` / `state.db`），**不要**统一叫 `memory.db`（未来非 Memory 业务 demo 改名反而别扭）。SQLite 表名固定 = `kv`（接口层抽象，跟业务无关）；schema 最小集 4 字段（user_id / key / value / updated_at），业务字段加在 `value` JSON 里即可。**理由**：接口签名不变 → 未来换驱动（同步 → 异步如 `node:sqlite` / `libsql`）、加表 / 加字段 / 加缓存层 / 加向量索引，业务代码全部零改动，只动 `lib/db.ts` 一个文件。**禁止**：业务代码直接 `import "../../data/..."` / `new Database("data/...")` / `fs.readFileSync("data/...")`——`node scripts/check-demo.cjs` 会拦。 |
+| **先 JSON / 直接 SQLite**（存储选型） | JSON 文件 = 0 依赖、改起来便宜（5 分钟跑通）；SQLite = 标准生产、并发安全、`yarn add better-sqlite3` 约 5MB 含 native binding。**新手先 JSON 验证链路**，**一次到位直接 SQLite**（生产更近、模块 07/10 也用 SQLite 复用接口）——本仓库选 SQLite，理由见上条 §5.3.17 抽象层（接口不变 → 现在选什么实现都不影响未来切换）。 |
 
 ---
 
@@ -265,6 +304,8 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 | 「这是不是拷贝的顶层日志代码？下次怎么避免这个发生？」 | 顶层 logger.ts 跟 demo logger.ts 的边界 + 路径写错怎么发现 | **是拷的**（§5.3.16 硬规则：每个 demo 必须自带完整 `lib/logger.ts`，禁止运行时 import 顶层）。**bug 出在我自己加的 `export const logger = createLogger(...)` 这一行**（顶层只 export 工厂函数 `createLogger`，路径 demo 自己定）。**写法模板**：`path.resolve(__dirname, "..", "logs")` 配合 `import { fileURLToPath } from "node:url"`。**唯一验证方法**：起服务那一刻 `server.start` 已在写日志，看 logs/ 在不在 + 文件大小 > 0 = 路径 100% 正确。详细：[agents/05-demo.md §5.3.16 写法模板](../../agents/05-demo.md#5316-详细日志强制)。 |
 | 「刚刚 step-1 的日志不完整啊。调用模型参数没全部打印出来」 | 日志要打**完整入参**才能体现教学核心可观察点 | **是缺口**：原来 `data.入参 = { messagesCount, totalTokensEstimate }` 是摘要，不是完整 messages。**修法**：chat.ts 把 `request` 拼成独立变量 `{ model, messages }`，日志 `data.入参 = { request, totalTokensEstimate }` —— 完整 messages 数组落地。日志从此可复习：每条都打完整入参 + 完整返回值 + 字段释义 + 本轮为什么是这些参数（§5.3.16 「data 建议键」）。 |
 | 「看日志有没有落库直接看 logs/ 就行。不用像现在这样搞这么复杂」 | 服务起那一刻已经在写日志 = 路径 OK 唯一检查 | **核心认知**：server.ts 的 `app.listen` 回调里 `logger.info("server.start", ...)` —— 服务起那一刻（不是 curl 触发那一刻）就在写日志。**因此最简单的烟雾测试 = `cd apps && PORT=31001 npx tsx .../server.ts &` + sleep 4 + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` + kill**。**不需要** curl / mtime / grep / 端口释放校验 —— 全是过度设计。详细：[agents/05-demo.md §5.3.16 烟雾测试](../../agents/05-demo.md#5316-详细日志强制)。 |
+| 「memory 一般就是在提示词里面注入的吗？」 | 区分 Memory 注入的 N 种位置（变体） | **不是唯一**。Memory 注入位置有 6 变体：① system 末尾（step-2 演示）；② system 顶部；③ 消息中间插入；④ 多模态（图像 / 附件）；⑤ Tool 调用结果（作为 Tool 返回值，模型用工具上下文读）；⑥ **不注入** —— 模型按需 Tool Calling 读 Memory。最常见是 ①；最灵活是 ⑥；体量大了上 ⑤ 或 ⑥。**判错会怎样**：永远用变体 ① + 偏好体量一大 → system 直接爆 → 触发模块 06 第 2 条「压缩 / 滑动窗口」。详见「易混点 · Memory 注入的 N 种位置」。 |
+| 「一定要使用 SQLite 吗？」+「以后其他业务也叫 Memory 吗？（接口名 / 文件名绑死）」 | §5.3.17 KV 抽象层 + 业务层 / 持久化层解耦 | **不是必须 SQLite，KV 抽象层更值得约定**。① 接口层 = `lib/db.ts` 永远 `kvGet / kvSet / kvDel / kvList`（**不绑业务**；不是 `getMemory / setMemory / ...`）；② 文件名按 demo 业务起（`preferences.db` / `facts.db` / `state.db`），**不要统一叫** `memory.db`（未来非 Memory 业务 demo 改名反而别扭）；③ SQLite 表名固定 = `kv`（接口层抽象，跟业务无关）；④ schema 最小集 4 字段（user_id / key / value / updated_at），业务字段加在 `value` JSON 里即可。**理由**：接口签名不变 → 换驱动（同步 → 异步如 `node:sqlite` / `libsql`）、加表 / 加字段 / 加缓存层 / 加向量索引，业务代码全部零改动，只动 `lib/db.ts` 一个文件。详见「取舍 · §5.3.17 KV 抽象」+ [agents/05-demo.md §5.3.17](../../agents/05-demo.md#5317-持久化存储libdbts--data-db-抽象--数据目录分离新)。 |
 
 ---
 
@@ -272,11 +313,12 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 | 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
 |------|------|------|------|--------------|
-| 🔄 | step-1 | `yarn app:06-01-context-vs-memory-step-1` | `50038` | 「看见 Context 累积」最小可观察：输入框 + 发送 / 清空 + 真 LLM（协议 A）；前端 messages 数组即 Context；服务端日志 `data.入参 = { request: {model, messages: [...]}, totalTokensEstimate }` + 字段释义 + 本轮为什么是这些参数；「清空对话」演示 Context 消失；演示上游失败按钮（§5.3.2 #2 类 B 5xx 教学端点） |
+| ✅ | step-1 | `yarn app:06-01-context-vs-memory-step-1` | `50038` | 「看见 Context 累积」最小可观察：输入框 + 发送 / 清空 + 真 LLM（协议 A）；前端 messages 数组即 Context；服务端日志 `data.入参 = { request: {model, messages: [...]}, totalTokensEstimate }` + 字段释义 + 本轮为什么是这些参数；「清空对话」演示 Context 消失；演示上游失败按钮（§5.3.2 #2 类 B 5xx 教学端点） |
+| ✅ | step-2 | `yarn app:06-01-context-vs-memory-step-2` | `50039` | 「Memory 跨会话还记」最小闭环：SQLite 持久化（`data/preferences.db`）+ §5.3.17 KV 抽象（`kvGet/kvSet/kvDel/kvList`）；POST /api/memory 写入偏好 + GET /api/memory 列出 + DELETE /api/memory 删除；每次发送 routes/chat.ts 从 db 读偏好 → 拼到 system 末尾 → 服务端日志 `data.入参.fromMemory` 字段 + `request.messages[0]` 注入段；前端 React state 看不到 Memory 段；「清空对话」只清 Context，Memory 不动（与 step-1 最大区别 = 跨会话还记） |
 
 > step-N 是工作区（自由打磨），学习者主动说「锁定」才算这步完成（§5.3.14）；锁定那一刻才校验 §5.3.2 6 项 + `node scripts/check-demo.cjs` 过。
 > **N 动态**：禁止预判；每步加什么由「学习者确认懂了吗 + 双方决定下一步」驱动。
-> **当前闸门**：§5.3.2 6 项已齐（Happy / 4xx + 5xx 两类错误 / Loading / #output / #env-info / #page-intro）；check-demo 过；真 LLM 调通。**等你主动说「锁定」** + 后续双方决定 step-2 加什么（按需求清单第 2/3/4/5 条逐条落）。
+> **当前闸门**：step-1 ✅ + step-2 ✅（2026-09-09）；本条后续需求 3-4-5（O3 覆盖 / O4 批量清 / C2 触发）留 step-3+ 落 demo。**下一条**：模块 06 进度表第 2 条「压缩 / 摘要 vs 滑动窗口」。
 
 ---
 

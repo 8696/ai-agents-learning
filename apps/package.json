@@ -47,12 +47,15 @@
     "app:05-04-tool-gateway-step-2": "PORT=50035 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-2/server.ts",
     "app:05-04-tool-gateway-step-3": "PORT=50036 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-3/server.ts",
     "app:05-04-tool-gateway-step-4": "PORT=50037 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-4/server.ts",
-    "app:06-01-context-vs-memory-step-1": "PORT=50038 tsx 06-多轮对话与Context/01-Context-vs-Memory-step-1/server.ts"
+    "app:06-01-context-vs-memory-step-1": "PORT=50038 tsx 06-多轮对话与Context/01-Context-vs-Memory-step-1/server.ts",
+    "app:06-01-context-vs-memory-step-2": "PORT=50039 tsx 06-多轮对话与Context/01-Context-vs-Memory-step-2/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@koa/bodyparser": "^6.1.0",
     "@koa/router": "^13.1.0",
+    "@types/better-sqlite3": "^9.6.0",
+    "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.7",
     "gpt-tokenizer": "^2.9.0",
     "koa": "^2.15.3",
