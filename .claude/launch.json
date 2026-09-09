@@ -152,6 +152,14 @@
       "port": 50037,
       "url": "http://127.0.0.1:50037/",
       "autoPort": false
+    },
+    {
+      "name": "06-01-context-vs-memory-step-1",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:06-01-context-vs-memory-step-1"],
+      "port": 50038,
+      "url": "http://127.0.0.1:50038/",
+      "autoPort": false
     }
   ]
 }

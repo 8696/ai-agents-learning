@@ -46,7 +46,8 @@
     "app:05-04-tool-gateway-step-1": "PORT=50034 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-1/server.ts",
     "app:05-04-tool-gateway-step-2": "PORT=50035 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-2/server.ts",
     "app:05-04-tool-gateway-step-3": "PORT=50036 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-3/server.ts",
-    "app:05-04-tool-gateway-step-4": "PORT=50037 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-4/server.ts"
+    "app:05-04-tool-gateway-step-4": "PORT=50037 tsx 05-Tool-Calling/04-Tool-Gateway-幂等-step-4/server.ts",
+    "app:06-01-context-vs-memory-step-1": "PORT=50038 tsx 06-多轮对话与Context/01-Context-vs-Memory-step-1/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Context vs Memory · step-1</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ── 粗估每条消息的 token 数（与服务端 encode 一致；学习用，不是计费）──
+    function approxTokens(text) {
+      // 用一个最便宜的规则：中文按 1.5 字符 ≈ 1 token，英文按 4 字符 ≈ 1 token
+      let chinese = 0, other = 0;
+      for (const ch of text) {
+        if (/[一-鿿]/.test(ch)) chinese += 1;
+        else other += 1;
+      }
+      return Math.ceil(chinese / 1.5 + other / 4);
+    }
+
+    function App() {
+      const [messages, setMessages] = useState([]); // 当前 Context
+      const [input, setInput] = useState("");
+      const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
+      const [health, setHealth] = useState(null);
+      // 错误态分两类（§5.3.2 #2）：4xx 黄底 / 5xx 红底 —— 让学习者一眼分开两种失败
+      const [errorMsg, setErrorMsg] = useState("");
+      const [errorKind, setErrorKind] = useState(null); // null | "4xx" | "5xx"
+      const inFlightRef = useRef(false);
+      const lastRequestMessagesRef = useRef([]);
+
+      // ── 页脚 /health 加载 ──
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+      }, []);
+
+      // ── 总 token 估算（粗）；含服务端打回的真实 promptTokens（若有）──
+      const totalEstimate = messages.reduce(
+        (sum, m) => sum + approxTokens(m.content),
+        0,
+      );
+
+      async function send() {
+        // 不再前端拦截空字符串 —— 让它真走到后端 Zod 闸门 → 400，让学习者看到「入参闸门」是后端做的事
+        if (inFlightRef.current) return;
+        if (health && !health.hasKey) {
+          setErrorMsg("apps/.env 没配当前 LLM_PROVIDER 的 Key（看页脚 Key ❌）");
+          setErrorKind("5xx");
+          return;
+        }
+        setErrorMsg("");
+        setErrorKind(null);
+
+        // ① 把 user 加进 Context
+        const nextMessages = [...messages, { role: "user", content: input }];
+        lastRequestMessagesRef.current = nextMessages;
+        setMessages(nextMessages);
+        setInput("");
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+
+        try {
+          const resp = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: nextMessages }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            // 失败时回滚：把刚加的 user 删掉
+            setMessages(messages);
+            const kind = resp.status >= 500 ? "5xx" : "4xx";
+            setErrorKind(kind);
+            // 把 Zod issues 也展示出来，让学习者看见「后端拦了什么」
+            const detail = data.issues
+              ? ` · ${data.issues.map(i => i.message || JSON.stringify(i)).join("；")}`
+              : "";
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}${detail}`.trim());
+            setStatus({ key: "error", text: "❌ 错误" });
+            return;
+          }
+          // ② 成功：把 assistant 合进 Context
+          setMessages(data.messages);
+          setStatus({ key: "done", text: "✅ 完成" });
+        } catch (err) {
+          setMessages(messages);
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      // §5.3.2 #2 · 类 B 演示：调用教学用的 /api/chat-force-error → 502
+      async function simulateUpstreamError() {
+        if (inFlightRef.current) return;
+        setErrorMsg("");
+        setErrorKind(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+        try {
+          const resp = await fetch("/api/chat-force-error", { method: "POST" });
+          const data = await resp.json();
+          setErrorKind("5xx");
+          setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+          setStatus({ key: "error", text: "❌ 错误" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      function clearContext() {
+        // 演示：清空后 Context 没了，下次发送 messages 从空开始（只含新的 user）
+        setMessages([]);
+        setErrorMsg("");
+        setErrorKind(null);
+        setStatus({ key: "idle", text: "⏸ 待连接" });
+      }
+
+      // 不再前置 disable；空输入让服务端 400 演示「入参闸门」
+      const sendDisabled = inFlightRef.current || (health && !health.hasKey);
+
+      // ── id 命名（§5.3.4 强制）──
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">Context vs Memory · step-1</h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status.key === "loading" ? "bg-yellow-200" :
+               status.key === "done"    ? "bg-green-200" :
+               status.key === "error"   ? "bg-red-200" :
+                                          "bg-gray-200")
+            }>{status.text}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>Context = 当前 messages 数组</b>。每次发消息，messages 都加一条；下一次发送时整个 messages 都发给模型。「清空对话」让 messages 归零。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>在输入框写一句用户消息，点「发送」</li>
+                <li>客户端把当前 messages 数组（即 Context）发给 /api/chat</li>
+                <li>服务端原样发给模型，并把完整 messages + token 估算打到日志（看 console / logs/）</li>
+                <li>助手回复合回 messages；下一次发送时把它一并带走 —— 这就是「Context 在累积」</li>
+                <li>点「清空对话」→ messages 归零 → 下次发送时模型就看不到任何历史（Context 没了）</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参闸门） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+              </ol>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">输入一句话发给模型：</div>
+              <textarea
+                id="user-input"
+                className="w-full border border-gray-300 rounded p-2 text-sm"
+                rows="3"
+                placeholder="比如：你好，请你先记住我叫 Tina。"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  id="btn-send"
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                  onClick={send}
+                  disabled={sendDisabled}
+                >发送（点这个把整个 messages 数组发给模型）</button>
+                <button
+                  id="btn-clear"
+                  className="border border-gray-300 px-4 py-2 rounded text-sm"
+                  onClick={clearContext}
+                >清空对话（Context 没了）</button>
+                <button
+                  id="btn-simulate-error"
+                  className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
+                  onClick={simulateUpstreamError}
+                >演示上游失败（5xx · 类 B）</button>
+              </div>
+              {errorMsg ? (
+                <div
+                  id="error-box"
+                  className={
+                    "text-xs px-3 py-2 rounded border " +
+                    (errorKind === "5xx"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-yellow-300 bg-yellow-50 text-yellow-800")
+                  }
+                >
+                  <div className="font-semibold">
+                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                  </div>
+                  <div className="mt-1">{errorMsg}</div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500">当前 Context（messages 数组 · 这就是要发给模型的全部内容）：</div>
+                <div className="text-xs text-gray-500">粗估 token ≈ <span id="total-tokens" className="font-mono">{totalEstimate}</span></div>
+              </div>
+              {messages.length === 0 ? (
+                <div className="text-xs text-gray-400">（空 · 还没发过消息。点上方发送会先有一条 user；点清空也会回到这里。）</div>
+              ) : (
+                <ol id="messages-list" className="space-y-2">
+                  {messages.map((m, i) => (
+                    <li
+                      key={i}
+                      className={
+                        "border rounded p-2 text-sm " +
+                        (m.role === "user"
+                          ? "bg-gray-50 border-gray-300"
+                          : m.role === "assistant"
+                          ? "bg-green-50 border-green-300"
+                          : "bg-white border-gray-300")
+                      }
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span><b>{m.role}</b></span>
+                        <span>≈ {approxTokens(m.content)} tokens</span>
+                      </div>
+                      <div className="whitespace-pre-wrap mt-1">{m.content}</div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 50038 · 协议 A · provider {health?.provider ?? "(待连接)"} · model {health?.model ?? "(待连接)"} · Key {health?.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

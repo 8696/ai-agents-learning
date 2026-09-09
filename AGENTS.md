@@ -189,6 +189,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 - **循环 / 流式 / 失败**：循环每圈打满；流式只在结束打完整拼好结果；失败 `结束：名字（失败）`
 - **核心档**逐步 + 教学字段释义；**工具档**一句带过函数体，五件套含 `__code`
 - 四参 API / 路径；**禁止** Demo `import apps/logger.ts`（**锁定/未锁定一律**完整拷到 `lib/logger.ts`）；前端不写日志；密钥打码
+- **路径写法 + 烟雾测试（2026-09-09 加）**：logger.ts 必写 `path.resolve(__dirname, "..", "logs")`（**禁止** `new URL("./logs/", import.meta.url)` 落 lib/logs/）；烟雾测试 = `cd /.../apps && PORT=31001 npx tsx .../server.ts` + sleep 4 + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log`（**服务起那一刻已在写日志**，不要 curl / mtime / grep 多余步骤；**禁止**用 `yarn app:` / `preview_start` 跑烟雾测试——会撞学习者默认 50038 端口；Bash 第一条必须 cd apps）
 
 ---
 

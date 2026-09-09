@@ -1021,6 +1021,96 @@ cd apps && yarn check-demo
 - 服务端日志文件：`apps/{demo}/logs/{YYYY-MM-DD}.log`（**按 BJT 日切**，demo 自管，删 demo 一起带走；同一天多进程共享同一文件，`appendFileSync` 原子追加即可）
 - 前端：**不写日志**——页面已展示请求参数 / 调用流程 / 响应结果（§5.3.10 / §5.3.11 / §5.3.2 #4），不再重复打 #log 区
 
+**写法模板（强制 · 2026-09-09 加）**
+
+`createLogger(logDir)` 接收路径字符串。从 `lib/logger.ts` 写到 `apps/{demo}/logs/`，**必须**显式相对 `lib/logger.ts` 自己位置 → 再跳到 demo 根目录：
+
+```ts
+// logger.ts 顶部（拷 createLogger 函数体时一起加这两行）
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// logger.ts 底部（替换原来 demo 自己写的 `export const logger = ...`）
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export const logger = createLogger(path.resolve(__dirname, "..", "logs"));
+```
+
+**约定**：写到 `lib/logger.ts` → 永远 `".."`；写到 `lib/tools/logger.ts` → 永远 `"../.."`；以此类推。**唯一合法写法**：`path.resolve(__dirname, "<n 层 ..>", "logs")` 配合上面两行 import。
+
+**禁止**的写法（实测踩坑 · 2026-09-09 模块 06 · 01）：
+
+```ts
+// ❌ 错：import.meta.url 在 lib/logger.ts 里 → 解出来是 lib/logs/（不在 demo 根目录下）
+export const logger = createLogger(new URL("./logs/", import.meta.url).pathname);
+
+// ❌ 错：path.resolve 不能把 ".." 拼到字符串里（"..logs" 是合法路径名，不是父目录）
+export const logger = createLogger(path.resolve(__dirname, "..logs"));
+```
+
+`mkdirSync({recursive:true})` 在这两种错法下都"成功"建出错的目录；`appendFileSync` 在 try/catch 里静默吞失败 → console 输出一切正常但 `apps/{demo}/logs/` 下没文件 / 文件在错位置。**单元测试跑不出来，必须起服务实测**。
+
+**烟雾测试（强制 · 落 demo 当下必走）**
+
+落完 / 改完 demo 当下：**起服务 → 看 logs/ → 关服务**。`console.log` 不能代替文件写入 —— `appendFileSync` 在 `try/catch` 里静默吞失败，console 一切正常但 `logs/` 下没文件。
+
+**最简三步（实测 · 2026-09-09 模块 06 · 01 · 学习者修正）**：
+
+服务起的**那一刻**（listen 回调里的 `logger.info("server.start", ...)`）就已经写日志了——`server.ts` import logger 时 mkdir，listen 回调 emit 时 write。**不需要 curl 触发、不需要 mtime 验证**。看到 logs/ 文件夹在 + 当天 .log 文件在 + 文件大小 > 0 = 路径 100% 正确。
+
+```bash
+cd /Users/i2025/Desktop/ai-agents-learning/apps && \
+  PORT=31001 npx tsx {demo-path}/server.ts > /tmp/srv-{demo}.log 2>&1 &
+SERVER_PID=$!
+sleep 4
+
+# 唯一检查：文件 + 大小
+ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log          # 文件存在 + size > 0 = 路径 OK
+
+kill $SERVER_PID
+```
+
+**全过** = 路径 OK。`apps/{demo}/logs/{YYYY-MM-DD}.log` 在 + 大小 > 0 字节。**不过** → 立刻回去修 `lib/logger.ts` 路径，**不要**推到 `coach complete`。
+
+---
+
+**为什么不用 `yarn app:xx` / 不用 `preview_start`**：
+
+| | `yarn app:xx` | `preview_start` | `PORT=31001 npx tsx` |
+|---|---|---|---|
+| 默认端口 | inline `PORT=50038`（占学习者默认口） | 强制 50038 | 用 31001 临时覆盖 |
+| cwd | 假设 apps/ | launch.json 自动 | 必须显式 cd |
+| 跟学习者冲突 | **会** | **会** | **不会**（3 开头约定） |
+
+烟雾测试专用端口约定：**31000~31999**。学习者跑 demo 用 50000+；agent 烟雾测试用 31001+。两条线**永不撞**。
+
+**Bash 命令第一条必须是 `cd /.../apps`**（实测 8 次漏掉 · 2026-09-09 模块 06 · 01）：
+
+```bash
+# ❌ 错（仓库根 cwd，npx tsx 找不到 .ts，ERR_MODULE_NOT_FOUND）
+date "+before=%H:%M:%S" && pkill ... && PORT=31001 npx tsx 06-.../server.ts
+
+# ✅ 对（第一条就是 cd apps；cd 之后所有 && 都跑在 apps/ 下）
+cd /Users/i2025/Desktop/ai-agents-learning/apps && date "+before=%H:%M:%S" && pkill ... && PORT=31001 npx tsx 06-.../server.ts
+```
+
+每条 Bash 命令 cwd 都从仓库根重置，**不写 cd = 必失败**。
+
+**Agent 自检硬约束**（写 Bash 烟雾测试时）：每条命令第一个 token **必须是 `cd`**（cd 到 apps），否则后续 npx tsx / yarn 必失败。**或**用绝对路径兜底：
+
+```bash
+# 兜底方案 1：绝对路径 + --prefix（绕开 cd；agent 写命令时若跳过 cd 用这条保命）
+PORT=31001 npx --prefix /Users/i2025/Desktop/ai-agents-learning/apps \
+  tsx /Users/i2025/Desktop/ai-agents-learning/apps/06-.../server.ts > /tmp/srv.log 2>&1 &
+```
+
+**首选 `cd apps &&`**（约定优于兜底）；**只在 agent 写命令时漏 cd 才用绝对路径兜底**。
+
+---
+
+**之前 4 步全错的过度设计（已删 · 2026-09-09 学习者修正）**：
+
+之前写的「curl /health + 触发业务端点 + mtime + grep + 端口释放校验」全删 ——。那些是给"服务起不写日志"准备的，但**服务起那一刻已经在写日志**，curl/mtime/grep 是多余步骤还引入新坑（grep 拿到旧 entry）。**学习者原话**：「你使用 3 开头的端口启动完之后，在 demo 的根目录就会有个 logs 文件夹，因为在写服务的时候它自己也会把日志打进去。不用像现在这样搞这么复杂。」
+
 **顶层只是模板（禁止 Demo 运行时引用）**
 - `apps/logger.ts` 导出 `createLogger(logDir)`——**仅作拷贝源**（内置安全序列化；处理 Error / Map / Set / Date / Buffer / 循环引用 / 大对象截断）
 - **硬规则（锁定 / 未锁定一视同仁）**：每一个 Demo、每一个 step，**落代码当下就必须完整拷贝**本地 `lib/logger.ts`。**不论**该 step 是否已锁定、是否还在打磨——**一律禁止**运行时 `import apps/logger.ts` / `createLogger` 委托顶层
