@@ -76,6 +76,10 @@
                 <PageIntro
                   summary="协议 B 没有 response_format。无 tools ≈ 语法闸弱对应；tool_choice 强制调工具 ≈ 语义闸软对应。两边都要 Zod 兜底。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "协议 B（Anthropic Messages）没有 `response_format` 字段——结构化闸分散在 `tools[].input_schema` + `tool_choice` 两层软约束；`tool_choice` 强制 ≠ token-mask，模型可以拒绝调工具返回说明文字（与协议 A strict 最关键的失败行为差异）。tool_use 路径下 `input` 已是对象，不需要 JSON.parse。",
+                    observe: "总览页本身不调模型；3 个子页对比：① text 页（无 tools）= 协议 B 的最弱档,跟 prompt-only 一样要剥壳 + parse;② tool-use 页强制 tool_choice 实测 5/5 全 Zod ✓;③ tool-rejected 页故意让 prompt 撞 enum 边界,测模型守约不是 API 400。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`全局数据流

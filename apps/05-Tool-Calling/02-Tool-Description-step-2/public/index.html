@@ -280,6 +280,12 @@
                 <li>点「调一次 B 组（字段有 description）」 → 又一次 LLM 调用，结果存到右卡片</li>
                 <li>两份结果都出来后，下方「完整差异点」表自动列出两边的所有可观察差异（变体 2「参数语义」实证）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">字段级 description 是模型「怎么填参数」的唯一提示(不是给程序员的注释)——字段无 description 的 A 组会瞎填(beijing/Beijing 拼写、ISO 日期错 2 天);有 description 含别名映射(如 order_id = 快递单号 = tracking number)的 B 组能稳定填对。schema 不只是类型校验,也是给模型的字段语义指令。</div>
+                <div className="text-xs text-gray-600">怎么观察：默认 query "订单北京下的查物流"(故意没给订单号引诱瞎填),A/B 两组跑完看「完整差异点」表里 arguments 列——A 组 order_id 字段值大概率被瞎填(如 order_001 / "unknown"),B 组因为字段 description 写了「= 快递单号 = tracking number」+「用户没给则 unknown」能稳定识别"用户没给"而不是瞎编。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

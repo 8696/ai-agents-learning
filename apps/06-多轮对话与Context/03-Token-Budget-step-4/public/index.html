@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token 预算管理 · 第四步</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function approxTokens(text) {
+      let chinese = 0, other = 0;
+      for (const ch of text) {
+        if (/[一-鿿]/.test(ch)) chinese += 1;
+        else other += 1;
+      }
+      return Math.ceil(chinese / 1.5 + other / 4);
+    }
+
+    function App() {
+      const [health, setHealth] = useState(null);
+      const [query, setQuery] = useState("上次那个寿司店叫什么?");
+      const [keywords, setKeywords] = useState("寿司,拉面,日料,餐厅,美食,上海");
+      const [selectN, setSelectN] = useState(3);
+      const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
+      const [errorMsg, setErrorMsg] = useState("");
+      const [errorKind, setErrorKind] = useState(null);
+      const [result, setResult] = useState(null);
+      const inFlightRef = useRef(false);
+
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+      }, []);
+
+      async function runSelective() {
+        if (inFlightRef.current) return;
+        if (health && !health.hasKey) {
+          setErrorMsg("apps/.env 没配当前模型提供商的密钥（看页脚 密钥 ❌）");
+          setErrorKind("5xx");
+          return;
+        }
+        setErrorMsg("");
+        setErrorKind(null);
+        setResult(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中（2 次出网：1 全塞基线 + 1 选择性）" });
+
+        try {
+          const resp = await fetch("/api/selective", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, keywords, selectN }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            const kind = resp.status >= 500 ? "5xx" : "4xx";
+            setErrorKind(kind);
+            const detail = data.issues ? ` · ${data.issues.map(i => i.message || JSON.stringify(i)).join("；")}` : "";
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.stage ? "【" + data.stage + "】 " : ""}${data.message || ""}${detail}`.trim());
+            setStatus({ key: "error", text: "❌ 错误" });
+            return;
+          }
+          setResult(data);
+          setStatus({ key: "done", text: "✅ 完成" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      async function simulateUpstreamError() {
+        if (inFlightRef.current) return;
+        setErrorMsg("");
+        setErrorKind(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+        try {
+          const resp = await fetch("/api/selective-force-error", { method: "POST" });
+          const data = await resp.json();
+          setErrorKind("5xx");
+          setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+          setStatus({ key: "error", text: "❌ 错误" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      const runDisabled = inFlightRef.current || (health && !health.hasKey);
+
+      function MsgItem({ m }) {
+        const cls = m.role === "user"
+          ? "bg-gray-50 border-gray-300"
+          : m.role === "assistant"
+          ? "bg-green-50 border-green-300"
+          : "bg-yellow-50 border-yellow-300";
+        return (
+          <li className={"border rounded p-2 text-xs " + cls}>
+            <div className="flex items-center justify-between text-gray-500 mb-1">
+              <span><b>角色：{m.role === "user" ? "用户" : m.role === "assistant" ? "助手" : "系统"}</b></span>
+              <span>≈ {approxTokens(m.content)} 个 token</span>
+            </div>
+            <div className="whitespace-pre-wrap text-gray-800">{m.content}</div>
+          </li>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">Token 预算管理（Token Budget） · 第四步（step-4） · 选择性注入</h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status.key === "loading" ? "bg-yellow-200" :
+               status.key === "done"    ? "bg-green-200" :
+               status.key === "error"   ? "bg-red-200" :
+                                          "bg-gray-200")
+            }>{status.text}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>选择性注入</b>——50 段多话题 history(美食 / 天气 / 工作 / 电影 / 健身 各 10 轮) + 1 个 query → 关键词匹配 → 只把 top-N 命中段塞进 messages,其他段全部不进 messages。对照"全塞基线"看 token 省了多少 + 回答质量差在哪。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>调旋钮：query / 关键词列表 / selectN（取 top-N 命中段）</li>
+                <li>点「跑选择性」→ 服务端先算每段命中分数 → 取 top-N → 拼两条路径的 messages</li>
+                <li>路径 A 全塞基线：50 段 history 全塞 → 调真模型 #1 → fullReply</li>
+                <li>路径 B 选择性注入：只 top-N 段 + 标注"话题" → 调真模型 #2 → selectiveReply</li>
+                <li>看页面 5 张卡：触发说明 / 全塞基线 / 选择性 / 对比小结 / 命中明细</li>
+                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
+              </ol>
+
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">「选择性注入」= 按 query <b>内容相关</b>选段(不是按"时间最近"选)。同一份 50 段多话题 history + 同一问句,选择性路径只塞命中的几段,其他段全部不进 messages——这才是真省 token。</div>
+                <div className="text-xs text-gray-800 mt-1">
+                  <b>与 step-1~3 的差别</b>:
+                  <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                    <li>step-1~3 处理"history 装不下"(整段 history 一起裁);step-4 处理"history 不长但只 1 段相关"(逐段判定)</li>
+                    <li>step-1~3 触发条件是 <code className="bg-white px-1 rounded">total &gt; totalBudget</code>;step-4 触发条件是 query 关键词命中段</li>
+                    <li>极端场景:query 相关的话题在很早以前 → step-1~3 全丢光,step-4 反而能找回来</li>
+                  </ul>
+                </div>
+                <div className="text-xs text-gray-600">怎么观察:看「④ 对比小结」两张表(全塞 vs 选择性)的 inputTokens 差(看省了多少);改 keywords 让它只命中 1 段 → 选最窄;看「⑤ 命中明细」5 段 × 10 轮 = 50 段的 score 分布。</div>
+                <div className="text-xs text-gray-600">局限:本步用关键词匹配(最简单);生产里用 embedding 余弦相似度(模块 08 RAG 会展开)。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="text-xs text-gray-600">
+                  query（当前问题 · 决定"相关"判定）：<br />
+                  <input id="ctrl-query" type="text" value={query} onChange={e => setQuery(e.target.value)}
+                    className="w-full border rounded px-2 py-1 text-xs" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  keywords（关键词列表 · 逗号分隔 · 决定哪些段被命中）：<br />
+                  <input id="ctrl-keywords" type="text" value={keywords} onChange={e => setKeywords(e.target.value)}
+                    className="w-full border rounded px-2 py-1 text-xs" />
+                </label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="text-xs text-gray-600">
+                  selectN（取 top-N 命中段 · range 1~20）：<span className="font-mono">{selectN}</span>
+                  <input id="ctrl-select-n" type="range" min="1" max="20" step="1"
+                    value={selectN} onChange={e => setSelectN(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  id="btn-run-selective"
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                  onClick={runSelective}
+                  disabled={runDisabled}
+                >跑选择性（runSelective）</button>
+                <button
+                  id="btn-simulate-error"
+                  className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
+                  onClick={simulateUpstreamError}
+                >演示上游失败（5xx · 第二类错误 · /api/selective-force-error）</button>
+              </div>
+              {errorMsg ? (
+                <div
+                  id="error-box"
+                  className={
+                    "text-xs px-3 py-2 rounded border " +
+                    (errorKind === "5xx"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-yellow-300 bg-yellow-50 text-yellow-800")
+                  }
+                >
+                  <div className="font-semibold">
+                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                  </div>
+                  <div className="mt-1">{errorMsg}</div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-xs text-gray-400">（还没结果。先调 query / keywords / selectN，再点「跑选择性」。）</div>
+              ) : (
+                <>
+                  {/* 卡 ① 触发说明 */}
+                  <article id="card-trigger" className="border border-blue-300 bg-blue-50 rounded p-3 space-y-1">
+                    <div className="text-sm font-semibold text-gray-800">① 触发说明</div>
+                    <div className="text-xs text-gray-700">{result.触发说明}</div>
+                    <div className="text-xs text-gray-500">
+                      query = <span className="font-mono">{result.config.query}</span> ·
+                      keywords = <span className="font-mono">{result.config.kwList.join(" / ")}</span> ·
+                      selectN = <span className="font-mono">{result.config.selectN}</span>
+                    </div>
+                  </article>
+
+                  {/* 卡 ② 全塞基线 */}
+                  <article id="card-full" className="border border-orange-300 rounded p-3 space-y-2">
+                    <header className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">② 路径 A · 全塞基线（messages = 50 段全留）</div>
+                      <div className="text-xs text-gray-500">
+                        输入 token ≈ <span className="font-mono">{result.full.inputTokens}</span> ·
+                        输出 token ≈ <span className="font-mono">{result.full.replyTokens}</span>
+                      </div>
+                    </header>
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-gray-600">展开查看全塞基线的 messages（{result.full.messages.length} 条）</summary>
+                      <ol className="mt-2 space-y-1 max-h-64 overflow-auto">
+                        {result.full.messages.map((m, i) => <MsgItem key={i} m={m} />)}
+                      </ol>
+                    </details>
+                    <div className="border rounded p-2 space-y-1">
+                      <div className="text-xs text-gray-500">模型回答（full reply）</div>
+                      <div className="bg-green-50 border border-green-300 rounded p-2 text-sm whitespace-pre-wrap text-gray-800">
+                        {result.full.reply}
+                      </div>
+                    </div>
+                  </article>
+
+                  {/* 卡 ③ 选择性注入 */}
+                  <article id="card-selective" className="border-2 border-green-500 bg-green-50 rounded p-3 space-y-2">
+                    <header className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">③ 路径 B · 选择性注入（messages = 只 {result.selective.segmentCount} 段）</div>
+                      <div className="text-xs text-gray-500">
+                        输入 token ≈ <span className="font-mono">{result.selective.inputTokens}</span> ·
+                        输出 token ≈ <span className="font-mono">{result.selective.replyTokens}</span>
+                      </div>
+                    </header>
+                    <details open={true} className="text-xs">
+                      <summary className="cursor-pointer text-gray-600">展开查看选择性路径的 messages（{result.selective.messages.length} 条 · 只 top-{result.config.selectN} 命中段）</summary>
+                      <ol className="mt-2 space-y-1 max-h-64 overflow-auto">
+                        {result.selective.messages.map((m, i) => <MsgItem key={i} m={m} />)}
+                      </ol>
+                    </details>
+                    <div className="border rounded p-2 space-y-1">
+                      <div className="text-xs text-gray-500">模型回答（selective reply）</div>
+                      <div className="bg-white border border-green-300 rounded p-2 text-sm whitespace-pre-wrap text-gray-800">
+                        {result.selective.reply}
+                      </div>
+                    </div>
+                  </article>
+
+                  {/* 卡 ④ 对比小结 */}
+                  <article id="card-compare" className="border border-blue-400 bg-blue-50 rounded p-3 space-y-2">
+                    <header>
+                      <div className="text-sm font-semibold text-gray-800">④ 对比小结（全塞 vs 选择性）</div>
+                    </header>
+                    <table className="text-xs w-full">
+                      <thead>
+                        <tr className="border-b"><th className="text-left">维度</th><th className="text-right">全塞基线</th><th className="text-right">选择性注入</th><th className="text-right">差</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr><td className="text-gray-600">messages 段数</td><td className="text-right font-mono">{result.full.segmentCount}</td><td className="text-right font-mono">{result.selective.segmentCount}</td><td className="text-right font-mono">−{result.full.segmentCount - result.selective.segmentCount}</td></tr>
+                        <tr><td className="text-gray-600">输入 token</td><td className="text-right font-mono">{result.full.inputTokens}</td><td className="text-right font-mono">{result.selective.inputTokens}</td><td className="text-right font-mono">−{result.full.inputTokens - result.selective.inputTokens}</td></tr>
+                        <tr><td className="text-gray-600">输出 token</td><td className="text-right font-mono">{result.full.replyTokens}</td><td className="text-right font-mono">{result.selective.replyTokens}</td><td className="text-right font-mono">−{result.full.replyTokens - result.selective.replyTokens}</td></tr>
+                      </tbody>
+                    </table>
+                    <div className="text-xs text-gray-700">
+                      {result.full.inputTokens - result.selective.inputTokens > 0
+                        ? `✅ 选择性省了 ${result.full.inputTokens - result.selective.inputTokens} 个输入 token(${(100 * (result.full.inputTokens - result.selective.inputTokens) / result.full.inputTokens).toFixed(1)}%)。回答质量差在哪？看下面 ⑤ 命中明细 + 两个 reply 对比。`
+                        : "⚠️ 选择性没省 token(可能 selectN 大于总段数 / query 没命中)。"}
+                    </div>
+                  </article>
+
+                  {/* 卡 ⑤ 命中明细 */}
+                  <article id="card-scores" className="border border-gray-300 rounded p-3 space-y-2">
+                    <header>
+                      <div className="text-sm font-semibold text-gray-800">⑤ 命中明细（5 段话题 × 10 轮 = 50 段 score 分布）</div>
+                      <div className="text-xs text-gray-500">话题总分越高 → 跟 query 越相关。带 ✅ = 被选中(picked)。</div>
+                    </header>
+                    <div className="space-y-2">
+                      {result.topicGroups.map((g, gi) => (
+                        <div key={gi} className="border rounded p-2 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-semibold">{g.topic}</div>
+                            <div className="text-xs text-gray-600">话题总分 = <span className="font-mono">{g.totalScore}</span></div>
+                          </div>
+                          <div className="grid grid-cols-10 gap-1">
+                            {g.turns.map((t, ti) => {
+                              const isPicked = result.selective.pickedSegments.some(p => p.topic === t.topic && p.turnIndex === t.turnIndex);
+                              return (
+                                <div key={ti} className={
+                                  "text-center text-xs px-1 py-1 rounded border " +
+                                  (isPicked ? "border-green-500 bg-green-200 font-semibold" :
+                                   t.score > 0 ? "border-orange-300 bg-orange-50" :
+                                                   "border-gray-200 bg-gray-50 text-gray-400")
+                                } title={`轮 ${t.turnIndex}: 命中 ${t.score} 次\nuser 命中: ${t.userHits.join("、") || "无"}\nassistant 命中: ${t.assistantHits.join("、") || "无"}`}>
+                                  {isPicked ? "✅" : t.score > 0 ? t.score : "·"}<br />
+                                  <span className="text-[10px]">{t.turnIndex}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 50048 · 协议 A（openai Chat Completions） · 模型服务商 {health?.provider ?? "(待连接)"} · 模型 {health?.model ?? "(待连接)"} · 密钥 {health?.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

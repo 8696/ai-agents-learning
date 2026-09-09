@@ -149,6 +149,10 @@
                 <PageIntro
                   summary={'response_format: { type: "json_object" } 只保证吐出来的是合法 JSON，不保证符合 Intent schema。'}
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "JSON Mode（`response_format: { type: json_object }`）只保证语法合法 JSON，不保证符合业务 schema；守约率实测 ~30%——模型可以把字段名拼错、缺字段、加额外字段，只是不再输出 markdown 壳。生产里必须配合服务端 Zod 兜底。",
+                    observe: "改 prompt 跑同一份 Intent 任务：① Zod 校验失败的红色徽标（路径 + message 看具体错在哪）；② extraKeys 区显示模型多塞的字段（json_object 不限制 schema，模型可自由发挥）；③ 和 structured 页同 prompt 对比守约率差异。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

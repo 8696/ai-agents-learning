@@ -87,6 +87,10 @@
                 <PageIntro
                   summary="strict 模式对 schema 写法本身严格：缺 additionalProperties:false 或含 anyOf，API 入口就该拒。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "strict 模式对 schema 写法本身也严格：缺 `additionalProperties: false` / 含 `anyOf` / 缺 `required`，OpenAI API 入口就该 4xx 拒掉——这是「闸在协议层、不是事后补」的体现；schema 写得不对，模型根本调不到，不需要等服务端 Zod 兜底。",
+                    observe: "故意提交一份「坏 schema」（缺 additionalProperties:false / 含 anyOf）跑：① 状态码是 4xx 不是 5xx——协议层闸在前;② error 字段说明 schema 哪里不合规;③ 改回标准 strict schema 后再跑，看从「拒」切到「过」的拐点。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

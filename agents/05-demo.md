@@ -706,6 +706,101 @@ router.get("/health", (ctx: Context) => {
 - 分寸：解释「这一步在协议里是什么」，**不要**把小节 MD 的完整教学搬进页面。页面是「看得见的机制」，MD 是「讲透的知识」。
 - 禁止：只有按钮没有任何说明；用 `TODO` / `待补充` 占位；说明与实际行为不符（改了行为必须改说明）。
 
+##### §5.3.11.a 用户可见文案格式 · 中文为主 + 英文括注（2026-09-09 立 · 强制）
+
+**目的**：页面对中文学习者是默认入口，但代码 / API 字段名 / 协议 / 关键术语是英文的，**完全去掉英文**会断掉与代码的对应关系；**只写英文**又对中文学习者不友好。统一规则：**中文为主，关键术语用括号附英文**，让学习者看一眼既懂意思又能对得上代码。
+
+**适用范围**：所有用户**能看到**的字符串（HTML `<title>` / `<h1>` / 按钮文案 / 旋钮标签 / 卡片标题 / `#page-intro` 文案 / 状态栏文案 / 错误提示 / 页脚 `#env-info`）。
+
+**格式范本**（每类都有约定，照抄即可，不要自由发挥）：
+
+| 位置 | 格式 | 例 |
+| -- | -- | -- |
+| 页面 `<title>` | `中文名 · 第N步` | `Token 预算管理 · 第一步` |
+| 主标题 `<h1>` | `中文名（English Name） · 第N步（step-N） · 一句话教学点` | `Token 预算管理（Token Budget） · 第一步（step-1） · 三块分账 + 拼装前打印 + 超预算裁最旧` |
+| 旋钮标签 | `中文描述（字段名 · 单位）` | `历史对话轮数（historyCount · 每轮 = 1 条 user + 1 条 assistant）` |
+| 预算表行 | `中文段名（英文）` | `系统提示段（system）` / `历史对话段（history）` / `给模型输出的预留（output budget）` / `三块合计（total）` / `总预算上限（totalBudget）` |
+| 状态/按钮 | `中文（English · 类别）` | `跑预算（算账 → 裁剪 → 调真模型 · runBudget）` / `演示上游失败（5xx · 第二类错误 · /api/budget-force-error）` |
+| 判定标签 | `中文判定（字段名）` | `是否提到关键事实（hasKeyFact）` / `model = MiniMax-M3 · dropped = 50 条` |
+| 页脚 | `端口 XXXXX · 协议 A（openai Chat Completions） · 模型服务商 / 模型 / 密钥` | `端口 50045 · 协议 A（openai Chat Completions） · 模型服务商 minimax · 模型 MiniMax-M3 · 密钥 ✅` |
+| 角色 | `中文（English）` | `角色：用户（user）` / `角色：助手（assistant）` / `角色：系统（system）` |
+| 单条消息 token 估 | `≈ N 个 token` | — |
+| 端点路径 | `/api/...` 保留 | — |
+| 协议 / 状态 | `4xx` / `5xx` / `协议 A` / `协议 B` 保留 | — |
+
+**禁止**：
+
+- 完全用英文写用户可见文案（中文学习者看不懂）
+- 完全去掉英文（代码 / 字段名 / 端点都对不上）
+- 括号里塞长句子（括注是「一眼能扫到的术语」，不是完整翻译）
+- 关键英文术语不带括注直接消失：`triggered` / `dropped` / `messages` 数组 / `summary` / `history` / `budget` / `output` 这类**概念词必须留英文括注**
+- 「可以保留」清单里的东西被强行翻译：`Key ❌` → `密钥 ❌` ✅；`protocol A` → `协议 A（openai Chat Completions）` ✅；`hasKey` → `密钥`（用户的语义）✅
+
+**JS 变量名 / API 字段名 / CSS className / HTML id**：**不**改。代码层的 `result.trim.hasKeyFact` / `data.replyTokens` / `id="page-title"` 必须和 API 字段一致才能对得上 — 只在**显示给用户的字符串**里加括注。
+
+**check-demo 怎么查**：scan `<h1>` / 按钮 / 旋钮 / 卡片标题 / 页脚 — 出现 `Key` 单字（应改成「密钥」）/ 出现 `provider` 单词直接展示（应改成「模型服务商」）/ 出现 `model` 单字（应改成「模型」）/ 出现 `summarizeFrom` 单独展示（应改成「远期喂摘要的条数（summarizeFrom）」）这类**没中文化的纯英文术语** → FAIL。**协议 A / B / 4xx / 5xx / token / ID / API 路径** 保留不查。
+
+##### §5.3.11.b 写完 Demo 后必须输出「改了 + 为什么」+ 页面要看得见核心（2026-09-09 立 · 强制）
+
+**目的**：避免「写完就完事」— 学习者想知道**这一刀动了什么、为什么这么动、这个 Demo 核心教学点是什么**。前两件给 Coach 输出（让学习者知道方向对不对），最后一件给前端页面（让几个月后回来复习的自己也能一眼看见）。
+
+**必做（三件不可省）**：
+
+| # | 做什么 | 在哪 |
+| -- | -- | -- |
+| **1** | **改动总结** — 这一版 Demo 比上一版**改了什么**（点列） | Coach 在本对话里直接打（不是写文件） |
+| **2** | **为什么这么改** — 每条改动背后的理由（核心点 / 教学点 / 修复 bug / 满足新需求） | Coach 在本对话里直接打（不是写文件） |
+| **3** | **核心教学点输出到页面** — 这个 Demo 到底在演示什么、怎么观察、关键判定怎么读 → 在 `#page-intro` 用一段独立的「核心教学点」卡片显式写出来 | `public/index.html` 的 `#page-intro` 段内 |
+
+**第 3 件的具体形态**（落 `index.html` 时按此模板写）：
+
+```jsx
+<section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+  <p className="text-sm text-gray-700">本页只演示：<b>{一句话教学点}</b></p>
+  <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+    <li>{步骤 1}</li>...
+  </ol>
+
+  {/* 核心教学点卡片（强制 · 2026-09-09 立） */}
+  <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+    <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+    <div className="text-xs text-gray-800">{这一页要让人带走的 1~3 句核心结论}</div>
+    <div className="text-xs text-gray-600">{怎么在结果里观察到这个核心点}</div>
+  </div>
+</section>
+```
+
+**核心教学点**的写法（避免变成空话）：
+
+- ✅ 「Token Budget 的三块分账 = system + history + output；唯一可裁的是 history；output 是预留不是事后裁」
+- ✅ 「丢最旧 vs 摘要压缩的可观察对照：同一份 history、同一问句，trim 路径忘 key fact（丢了字面）但 summarize 路径记住（summary 留语义）」
+- ❌ 「本 Demo 演示 Token Budget 的基本功能」— 没信息
+- ❌ 「本页很重要」— 不是教学点
+
+**Coach 的输出**（改完 Demo 之后，按下模板打）：
+
+```text
+## 这一版 Demo 改了什么 + 为什么
+
+### 改动（按重要性倒排）
+1. 改了 X 文件第 Y 行 ...（核心）
+2. 加了 Z 字段 ...（教学点）
+3. ...
+
+### 为什么这么改
+1. 第 1 条改动：满足需求 N / 修复 bug M / 加深变体 K
+2. ...
+
+### 没改的（避免误改）
+- A / B / C（明确不动的 + 原因）
+```
+
+**禁止**：
+
+- 写完 Demo 只说「完成了」/「跑通了」— 必须有「改了 + 为什么」明细
+- 核心教学点只放代码注释 / README，**不**进页面（违反 §5.3.11「合上笔记只看页面也要能讲清」的本意）
+- 核心教学点写成「本 Demo 演示 XX」空话
+
 #### 5.3.12 生产级底线 + 独立性
 
 **「Demo」只是规模小，不是可以糙。** 每条按能上线的小应用要求：

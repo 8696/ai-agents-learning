@@ -57,6 +57,10 @@
                 <PageIntro
                   summary="同一 System、同一句评价，对比 Zero-shot（无样例）和 Few-shot（四个教案：三出口+灰区）。稳 = 下游 Zod 能否吃进去。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Zero-shot 与 Few-shot 差的是 messages 里有没有若干对「输入 → 期望输出」样例（k 条）；ICL（In-Context Learning）是 Few-shot 生效的机制名——不改权重，散场就忘，下次不带样例 = 回到 Zero-shot。",
+                    observe: "总览页本身不调模型，看 k=4 Few-shot 教案从 GET /health 带回（页面不写死 k）；点「并排对照」跑对照，看 Zero / Few 两边的 formatValid 标签和 hadThinking 标志——标签都是「中评」，但嘴边纯度不同。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`Zero  k=0   system + 当前 user

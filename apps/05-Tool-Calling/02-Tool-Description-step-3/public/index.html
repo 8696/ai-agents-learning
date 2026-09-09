@@ -369,6 +369,12 @@
                 <li>点「调一次 B 组（描述含反例）」 → 又一次 LLM 调用，结果存到右卡片</li>
                 <li>两份结果都出来后，下方「完整差异点」表自动列出两边的所有可观察差异（变体 3「反例」实证）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">「反例」description 有双向价值——① 拦不该调(query X「寄到哪个地址」:A 组瞎调 query_logistics 返回订单详情;B 组识破"问地址不是查物流"不调);② 加速该调(query Z「快递到哪了 + 快递单号」:B 组 thinking 比 A 组短 67%,因为反例提前排除了别的解释路径)。</div>
+                <div className="text-xs text-gray-600">怎么观察：默认 query "我的订单 12345 寄到哪个地址"(订单详情类,期望不该调),看 pickedToolName:A 组大概率 picked query_logistics 瞎调(反例没写);B 组 picked=null 识破。反例不仅是「不该调时的安全网」,也是「该调时减少思考步骤」的加速器。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

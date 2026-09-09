@@ -337,6 +337,12 @@
                 <li>点「调一次协议 B（Anthropic）」 → 一次 Anthropic 调用（同一份 Tool schema 经翻译后发给 Anthropic SDK），结果存到右卡片</li>
                 <li>两份结果都出来后，下方「完整差异点」表自动列出两边的所有可观察差异（变体 6「跨 Provider 兼容」实证）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">同一份 Tool description 在协议 A(OpenAI) vs 协议 B(Anthropic) 下结果可能不同——字段命名差异、schema 翻译层、模型对相同 description 的语义理解差异都让调用结果不稳定。切 Provider 必须重测全部现有 Tool,description 兼容性是跨 Provider 迁移的隐藏成本。</div>
+                <div className="text-xs text-gray-600">怎么观察：默认 query "快递 12345 到了吗",看「完整差异点」表里 pickedToolName / arguments / token 使用 / 耗时跨协议对照——可能两边 picked 同一个工具但 arguments 字段值不同(英文 vs 中文 / ISO 日期格式 vs 自然语言);这就是为什么跨 Provider 切换要重测,description 不是协议无关的。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -159,6 +159,12 @@
                 <li>对照两张回答 + 一张小结：key fact 在 before 还是 after？</li>
                 <li><b>错误两类 · 一眼分开</b>：Zod 入参不合法 → 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">滑动窗口(Sliding Window)= **扔字**——保留 system(永远 pin)+ 最近 K 条非 system,更早的全部扔掉;0 额外 LLM 调用(纯本地 slice / filter),实现极简。**丢的是字面细节**(专有名词、数字、事实原文),key fact 在窗口外就忘。生产里是「摘要失败兜底」的降级目标——成本低、不依赖模型可用。</div>
+                <div className="text-xs text-gray-600">怎么观察:跑 50 轮假对话 + key fact 放在第 30 轮 + 滑动窗口 K=10。真调两次模型:① 完整 50 轮(基线)→ 模型答得出来;② 滑动窗口(只留 system + 最近 10 条)→ key fact 在窗口外 → afterReply 答错或不知道。对照卡证明滑动窗口丢字面。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

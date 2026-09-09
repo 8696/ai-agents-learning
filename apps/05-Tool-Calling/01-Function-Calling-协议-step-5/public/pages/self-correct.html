@@ -127,6 +127,10 @@
                 "观察：query='Function Calling'(长)→ Round1 拿到 hits → Round2 summarize → final（2 轮收敛，无自纠）",
                 "边界：query='ab'（极端短）→ MAX_ROUNDS 触发 → 业务降级",
               ]}
+              takeaway={{
+                point: "三种 query 跑出三种轮数:① 长 query 2 轮收敛;② 短 query(<3 字符)触发自纠扩 query 后 3 轮收敛;③ 极端 query(ab)触发 MAX_ROUNDS=4 边界,业务降级——证明自纠不是「无限重试」而是「有限次重试 + 兜底」,MAX_ROUNDS 是物理保护。",
+                observe: "分别跑三种 query:① query='AI':看 trace 里 Round1 空 hits → Round2 自纠扩 query → Round3 summarize → final,3 轮成功;② query='Function Calling':2 轮收敛,没自纠;③ query='ab':看 trace 里 4 轮全是空 hits,final 标红 maxRoundsTriggered=true + 业务降级。",
+              }}
             />
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

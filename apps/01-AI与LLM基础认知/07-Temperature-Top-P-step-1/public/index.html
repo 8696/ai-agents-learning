@@ -77,6 +77,10 @@
                 <PageIntro
                   summary="temperature 管「概率分布有多平」，top_p 管「候选集切多大」。一次只动一个，才能归因。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Temperature 改 logits 缩放(T=1 不动 / T>1 拉平低分冒头 / T<1 拉大差距 / T=0 退化成贪心解码)——**改的是分布形状(谁更可能冒头)**;Top-P(Nucleus Sampling)按概率和动态切候选集(P=1 不切 / P 越小候选越少)——**改的是候选数量(让不让冒头)**。两件事各管各的,**能各调各的**。多数官方建议**默认只动 Temperature、Top-P 留 1**——同时调到极端会出现「既不稳也不准」。",
+                    observe: "怎么观察:同 prompt 跑四组对照 ① T=0 贪心解码 → 重复跑两次输出**逐字相同**(证明「确定性」);② T=0.7 两次输出略有差异(常用折中);③ T=1.2 更飘(适合创意,不适合抽取);④ T=0 时扫 top_p=0.5 / 0.9 → 三档应一字不差(因为贪心只看概率最大,候选集大小无关)→ 证明 Top-P 在 T>0 才起作用。**客服/抽取 JSON 场景必须用低 T 或 T=0**,否则下游 parse 挂。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`T=0 贪心解码：永远挑概率最高的 token，重复应逐字相同

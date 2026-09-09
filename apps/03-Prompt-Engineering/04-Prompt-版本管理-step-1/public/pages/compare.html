@@ -117,6 +117,10 @@
                 <PageIntro
                   summary="System 两版共用；区别只在 User 末尾。两栏可编辑，改完立刻能回归。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "可编辑 Prompt 是探索期做法（让产品/运营直接试 prompt），生产默认 hardcode + 版本 + 审计——两条路径并存；Prompt 版本和模型版本是两条独立横轴，必须分开记 metadata，否则模型升级「莫名失败」根本分不清是 Prompt 的锅还是模型的锅。",
+                    observe: "两个编辑框改完直接点「并排对比」：① 字符数差 = 一眼看出行为差；② 是否含推理标记 = 看出 prompt 是否触发了思考；③ 同一份 v1.1.0 prompt 在模型升级后行为可能漂——这就是为什么 metadata 必须同时记 Prompt 版本 + 模型版本。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

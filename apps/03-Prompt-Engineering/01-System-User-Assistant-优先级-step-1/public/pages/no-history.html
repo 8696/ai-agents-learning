@@ -95,7 +95,14 @@
                 <StatusPill status={status} />
               </header>
               <main id="page-main" className="container mx-auto p-4 space-y-4">
-                <PageIntro summary="两轮 user/user。期望 FORGOT 或 PARTIAL，不要当成「它记得北京」。" steps={INTRO_STEPS} />
+                <PageIntro
+                  summary="两轮 user/user。期望 FORGOT 或 PARTIAL，不要当成「它记得北京」。"
+                  steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "漏塞 assistant 历史 ≠ 模型失忆，但 = 失去「我不知道」的诚实——模型会从 messages 数组里直接看到 user 的早期消息（我住北京），然后自信地编一整套天气数据。这是「幻觉是怎么来的」在多轮场景的具体表现。",
+                    observe: "点「跑对照」对比 Case 2 和 Case 3 的协议 B 列：协议 B 在 Case 3 经常输出长篇「编的天气」（晴转多云、28℃/18℃…），判定 pill 是 FORGOT(红)或 PARTIAL；这正是幻觉样本，对照模块 01 「幻觉」一节。",
+                  }}
+                />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
                   <PageNav />
                   {!env.hasKey && (

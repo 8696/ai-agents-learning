@@ -123,6 +123,10 @@
                 "路由层 hard-code 约束 2（路径 B 硬接）：用户问带伞 → weather → 模型 final → 路由层自动跑 suggest_items → final",
                 "前端：每轮决策 + 路由层拒绝 / 硬接徽标 + final reply 全展开",
               ]}
+              takeaway={{
+                point: "两条路由层 hard-code 约束的物理形态:① 拒绝越权——executeTool 前判「suggest_items 是否在 weather 之后」,不满足直接 return {ok:false, error:'order violation'} → 工具消息回灌 → 模型下轮决定重排;② 路径 B 硬接——模型 final 后路由层再判「path=umbrella && weatherCalled && !suggestItemsCalled」,自动跑 suggest_items 并把 result 也塞进 final。这是「路由是法官,模型是演员」的物理实现。",
+                observe: "用三个预设 query 分别跑:① 「北京天气」(路径 A)→ 1 轮 final,无拒绝/硬接徽标;② 「北京带伞」(路径 B)→ trace 里看到模型 final 之后路由层「硬接」徽标 + 自动跑 suggest_items;③ 「打包」(路径 C)→ trace 里看到「拒绝」徽标 + 模型退回 weather——三条路径对照看混合编排怎么 work。",
+              }}
             />
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

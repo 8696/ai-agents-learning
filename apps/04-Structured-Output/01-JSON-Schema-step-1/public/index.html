@@ -74,6 +74,10 @@
                 <PageIntro
                   summary="Zod 这一端的返回值长什么样。真正把 schema 喂给模型看 02 那条。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "JSON Schema（喂给模型）和 Zod（服务端校验）是同一份契约的两种写法——JSON Schema 是数据格式（跨语言），Zod 是 TS 库（一份事实来源，`z.infer` 自动推 TS 类型）；「以 Zod 为主、`zodToJsonSchema` 派生」避免两份 schema 漂移。",
+                    observe: "总览页本身不调模型；看「Intent (Zod) → JSON Schema literal」两栏对照——qry 不在 required[] 里就是默认可选（JSON Schema 默认极性）。点进 3 个子页（parse / transform / repair）分别看 Zod 校验的成功值 / 失败形状 / 结构变换 / 错误回流。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`Intent (Zod)

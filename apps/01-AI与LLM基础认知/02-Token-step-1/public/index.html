@@ -69,6 +69,10 @@
                 <PageIntro
                   summary="Token 是词表里的一个 id，计费按 Token 数，不按字、不按词。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Token = 词表里的整数 ID(代号);Tokenizer(BPE / WordPiece / SentencePiece)把文本切成词表允许的小块;**模型看见的是整数序列,不是汉字**。同一句人话,中文往往切得更碎 → 输入件数更多 → **单价没给中文加价,是件数多**。输入一次性卸货,输出每吐一个 token 再跑一轮前向,所以 completion 单价通常是 prompt 的 3~5 倍——Agent 循环十步就是十趟「边想边吐」账。",
+                    observe: "怎么观察:① POST /api/encode → gpt-tokenizer(cl100k)encode → 看 `{charCount, tokenCount, previewIds}`——同一句「今天天气不错」中英文对照 Token 数,中文件数明显更多;② POST /api/compare 中英文对照同一意思,数字证明中文更碎;③ 用本地粗估(cjk/1.5 + other/4)对照 API usage 估算成本——但**对账只信 API 真实 usage,本地估只用来判断「塞得进窗口吗」。**",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`浏览器 → POST /api/encode 或 /api/compare

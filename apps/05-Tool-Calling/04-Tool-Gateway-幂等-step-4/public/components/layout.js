@@ -37,6 +37,12 @@
         <p className="text-xs text-gray-600 mt-2">
           <strong>核心教学点</strong>：handler throw 或 Zod 失败 → registry 中间件捕获 → 返 <code className="text-gray-700 bg-gray-100 px-1 rounded">{"{status:\"error\",code,message,retryable}"}</code> → <strong>不抛 HTTP 500</strong>，整轮 agent 不挂。Round 2 模型看到错误 → <strong>改输入重试</strong> → final_reply。
         </p>
+        {/* 核心教学点卡片（§5.3.11.b 强制） */}
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+          <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+          <div className="text-xs text-gray-800">Tool 抛错的物理形态:handler throw / Zod 失败 → Registry 中间件捕获 → 返结构化错误对象(包含 status / code / message / retryable 四字段)作为 tool_result 回灌(不抛 HTTP 500,整轮 agent 不挂)。Round 2 模型看到错误 → 改输入重试 → final_reply。`retryable` 字段让模型知道「该不该再试」(divide_by_zero retryable=true 改输入就行,invalid_param retryable=false 别重试)。</div>
+          <div className="text-xs text-gray-600">怎么观察:三个按钮三端路径:① 10÷2 → 成功 result=5;② 10÷0 → 业务错 code=DIVIDE_BY_ZERO retryable=true → Round 2 模型改输入(改成有效输入)重试;③ 10÷"abc" → 参数错 code=INVALID_PARAM retryable=true → 模型改输入。看 tool_result 区 code/retryable 字段 + Round 2 final_reply 是否反映「我尝试修正后成功/失败」。</div>
+        </div>
       </section>
     );
   }

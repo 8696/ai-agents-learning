@@ -76,6 +76,10 @@
             <PageIntro
               summary="step-4 演示「串行依赖链 A → B」：search_doc → summarize（B 用 A 的输出当参数）。路由层 hard-code await 顺序 —— B 必须等 A 完成才能拿到 content。"
               steps={pageIntroSteps}
+              takeaway={{
+                point: "「依赖关系」是选型准则——B 需要 A 的输出(compose(上一步 result))时必须 await 串行,不能 Promise.all;反例 chain-bad 把依赖链误用并发,B 拿 undefined → Zod 通过(z.unknown)但 final summary 缺数据——耗时少 50ms,数据全没,这是更糟的「快」。",
+                observe: "总览页本身不跑业务;点进 chain.html 正例看链式 gantt(2 bar 顺序堆叠,totalMs ≈ 130ms)对照 chain-bad 反例(2 bar 同时起步,totalMs ≈ 80ms,但 final summary 标红 ❌ 因为 query='(未知)' / hits=0)。",
+              }}
               extra={
                 <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
 {`POST /api/chain { query, style }

@@ -96,7 +96,14 @@
                 <StatusPill status={status} />
               </header>
               <main id="page-main" className="container mx-auto p-4 space-y-4">
-                <PageIntro summary="三轮 user / assistant / user。期望提到「北京」→ REMEMBERED。" steps={INTRO_STEPS} />
+                <PageIntro
+                  summary="三轮 user / assistant / user。期望提到「北京」→ REMEMBERED。"
+                  steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "多轮必须把 assistant 历史原样塞回 messages——SDK 的 messages 参数是 stateless 的（OpenAI Chat Completion 不会替你存），前端要自己管理（比喻：useState 保存聊天记录）。",
+                    observe: "点「跑对照」看协议 A / B 两列的判定 pill：REMEMBERED(绿) = 模型提到「北京」；FORGOT(红) = 没提到（这时候去看「请求参数」区，确认 messages 里那一条 assistant 真的发出去没）。",
+                  }}
+                />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
                   <PageNav />
                   {!env.hasKey && (

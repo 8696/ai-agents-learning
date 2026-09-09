@@ -74,6 +74,10 @@
               <PageIntro
                 summary="同一模型、两套 API 壳：字段怎么映射。本页只放速查表和导航。"
                 steps={INTRO_STEPS}
+                takeaway={{
+                  point: "协议 A(OpenAI Chat Completions)和协议 B(Anthropic Messages)是**同一模型可被两种协议调用**——同 Key 换 baseURL 就行,底层是同一套模型,只是 API 信封不同。**核心字段差**:system A 在 `messages[0]`、B 在顶层;max_tokens A 可选、B 必填;流式触发 A 是 `stream:true` 布尔、B 要换 `messages.stream()` 方法;正文返回 A 是 `choices[0].message.content` 字符串、B 是 `content[].text` 块数组(且区分 thinking/text)。",
+                  observe: "怎么观察:看页顶速查表对照两协议的字段映射;5 个端点(/api/a /api/b /api/compare /api/think-compare /api/b-thinking-stream)用同一把 Key 跑双协议——同一 prompt 跑两次,Response JSON 字段结构对照看 system / max_tokens / 流式触发 / 正文 / usage 各自位置。这是写适配层时「贴墙」的表。",
+                }}
                 extra={
                   <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`请求

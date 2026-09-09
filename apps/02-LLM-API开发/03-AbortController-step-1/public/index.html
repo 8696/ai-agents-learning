@@ -35,6 +35,10 @@
             <main id="page-main" className="container mx-auto p-4 space-y-4">
               <PageIntro summary="客户端停 ≠ 服务端停。abort 是关 socket，已生成的 token 仍计费。本页不调模型。"
                 steps={["流到底：不传 signal，看完整 usage", "收 N 帧停：SDK 必须带 signal，否则 abort 是空操作", "忘传 signal：页面掐了，服务端仍跑完"]}
+                takeaway={{
+                  point: "AbortController = 取消信号发射器:`abort()` 同时干三件事——signal.aborted=true、触发 onabort、**对 fetch 立刻 reject AbortError + 关底层 socket**;**但关 socket ≠ 取消上游模型**——已经发给上游的请求,模型仍会继续生成 token 直到跑完,钱照算(已生成 token 也算进 usage)。SDK 自己是「把 signal 转给底层 fetch」——不实现取消逻辑,所以 fetch 必须带 signal。",
+                  observe: "怎么观察:三个端点对照 ① /api/full 不传 signal → 跑完整,看后端日志 + 完整 usage;② /api/cancel-after-frames 传 signal + abortAfterFrames → 客户端关掉但服务端日志显示「模型仍在跑」+ 后端仍出 usage(已生成部分);③ /api/no-signal-abort 故意忘传 signal → abort 是空操作,服务端日志 + 客户端表现证明「掐页面 ≠ 停模型」。",
+                }}
                 extra={<pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">{`POST /api/full
 POST /api/cancel-after-frames  { message, abortAfterFrames }
 POST /api/no-signal-abort`}</pre>} />

@@ -42,6 +42,10 @@
               <PageIntro
                 summary="用一层 adapter 把协议 A/B 的字段差异挡在业务外面。本页不调模型。"
                 steps={INTRO_STEPS}
+                takeaway={{
+                  point: "Adapter 层 = 业务与协议的解耦边界——业务只调 `sendMessage({ protocol, message })`,不 import openai / Anthropic SDK;adapter 按 protocol 走进 protocol-a / protocol-b,两边都翻成同一份 UnifiedResponse(`{content, thinking, inputTokens, outputTokens}`);流式版 yield UnifiedDelta,业务 for-await switch type 仍然不知道是哪家 SDK。**好处**:换协议/换厂商不影响业务代码,统一 reasoning_content / thinking 字段名,统一 usage 字段。",
+                  observe: "怎么观察:本 Demo 不调模型,看代码层:① lib/adapter/index.ts 只暴露 sendMessage(opts);② lib/protocol-a / lib/protocol-b 分别调 openai / Anthropic SDK;③ 两边都返回 UnifiedResponse;④ 业务侧不出现 openai.chat.completions 也不出现 anthropic.messages——证明「协议差异挡在 adapter」。",
+                }}
                 extra={
                   <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`业务 → sendMessage(opts)

@@ -168,6 +168,12 @@
                 <li>点「清空对话」→ messages 归零 → 下次发送时模型就看不到任何历史（Context 没了）</li>
                 <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参闸门） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">Context = 本次请求塞进 `messages` 数组的全部内容,跟「这一次问→答」绑定、结束就消失;**SDK 不会替你存历史**——每次发送都要把整个 messages 数组发出去;「清空对话」= messages 归零 = 下次发送模型看不到任何历史。这跟「跨会话还找得回来」的 Memory 是两件事,本条**只点 Context 不展开 Memory**。</div>
+                <div className="text-xs text-gray-600">怎么观察:连续发 3 条消息看 #messages-list 累积(用户 + 助手回复都进数组);看页脚粗估 token 数线性增长证明「整段都发」;点「清空对话」→ messages 归零 → 下次发送时模型对前面的历史「失忆」(可以问「我刚才说啥了」看模型答错)。Memory(跨会话存)在 step-2。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -106,6 +106,10 @@
                 "gantt 时序图：2 bar 同时起步（与 chain.html 正例的『顺序堆叠』形成对比）",
                 "final summary 标红 ❌（query='(未知 query)' / hits=0）—— 反例代价：耗时短了 ≈ 50ms，但 summary 缺数据",
               ]}
+              takeaway={{
+                point: "反例的核心代价:「快 50ms 但 final summary 是空壳」—— query='(未知 query)' / hits=0;Zod 用 z.unknown 不报错,因为 undefined 类型合法;真正的检查在「B 拿到数据了吗」,不在类型层。这是为什么 MD 反复强调依赖关系是选型主轴——不是「快 vs 慢」。",
+                observe: "跑一次跟 chain.html 正例对照:① gantt 时序图 2 bar 同时起步(节省 50ms);② final summary 标红 ❌——query='(未知 query)' / hits=0;③ Zod 没报错(z.unknown 合法),但「数据缺」只有 UI 层暴露。这就是为什么反例必须跟正例放在同一目录下。",
+              }}
             />
 
             <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm space-y-1">

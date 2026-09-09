@@ -12,6 +12,7 @@
 | -------- | --------- | ------ |
 | 冷启动 / 已在学路由 / 不好处理给选项 | [agents/00-mode.md](agents/00-mode.md) | — |
 | `status` / `start` / `next` / 继续 / 产出预告 | [agents/03-progress.md](agents/03-progress.md) | — |
+| 踩坑 / 自检「以前踩过这个吗」/ 落新坑 | [agents/04-pitfalls.md](agents/04-pitfalls.md) | — |
 | 讲课 / 追问 / `coach start` 详解 / 复习 | [agents/06-teach.md](agents/06-teach.md) | `05-demo.md`（除非同时落代码） |
 | 判断要不要 Demo、打判断块 | [agents/05-demo.md](agents/05-demo.md) §5.2 | 可运行再读全文 |
 | 落 / 改可运行 Demo、HTML/koa、CATALOG、协议 A/B 分夹 | [agents/05-demo.md](agents/05-demo.md) 全文 | — |
@@ -24,6 +25,8 @@
 禁止未读 `05-demo.md` 就写可运行 Demo。禁止「参照 apps/ 某条现有实现」。禁止为讲概念去读 Demo 模板。
 
 **记忆策略**：Agent 偏好 / 行为约定只写 [AGENTS.md](AGENTS.md) 本文件 + [agents/](agents/)；**不要写 Claude 记忆（`memory/`）**。理由：偏好要进仓库跟版本走、Agent 间一致；Claude 记忆只对本机单会话、且本仓库硬规定它不参与契约。
+
+**自检 → 自更新（踩坑必走）**：任意 Agent 每次执行动作前必须自检「当前动作是否正在踩坑」（参照但不限于：报错、行为不符预期、命令失败、输出异常、违反本文件任意条款）。**判定为踩坑** → 不论身处学习模式还是维护模式，**立即走 [agents/04-pitfalls.md](agents/04-pitfalls.md) §2 自更新协议**：先扫 §3 索引有没有同坑（**有 → 按修复走，不重写**），没有则当场追加到 §3（编号顺延），证据不足写 §4 草稿。**禁止**「等会儿补」/「回头再说」/「写到 Claude 记忆」。
 
 **日志标准（业务代码必读，2026-09-07 起对新 Demo 强制；旧锁定 Demo 不回头补）**：落 / 改 demo 时严格按 [§5.6](AGENTS.md#56-详细日志高频错误表层摘要) + [agents/05-demo.md §5.3.16](agents/05-demo.md#5316-详细日志强制)：
 
@@ -168,6 +171,10 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 全文：[agents/05-demo.md](agents/05-demo.md)（搜 `### 5.3`）。禁止无页面 CLI Demo。落完跑 `node scripts/check-demo.cjs`。
 
 页面要展示什么（高频遗忘）：**请求参数 / 调用流程 / 响应结果**三件都得上页——对照 [§5.3.10](agents/05-demo.md#5310-颜色色块-高对比可读)、[§5.3.11](agents/05-demo.md#5311-页面必须自解释教学注解强制)、[§5.3.2 #4](agents/05-demo.md#532-完整版--必做的-6-项替代-52-最低标准)；不要只露成功按钮。
+
+**用户可见文案格式 · 中文为主 + 英文括注（2026-09-09 立 · 强制）**：照 [§5.3.11.a](agents/05-demo.md#5311a-用户可见文案格式--中文为主--英文括注2026-09-09-立--强制) 写 — 中文为主，关键术语用括号附英文。**禁止**：完全用英文写（中文学习者看不懂）；完全去掉英文（代码 / 字段名 / 端点对不上）；括注里塞长句子（括注是术语，不是翻译）；关键概念词（`messages` / `dropped` / `summary` / `history` / `budget` / `output` / `triggered`）不带括注直接消失；check-demo 关键字（`Key` / `provider` / `model` / `summarizeFrom`）单独裸展示（应译成「密钥 / 模型服务商 / 模型 / 远期喂摘要的条数（summarizeFrom）」）。例：`Token 预算管理（Token Budget） · 第一步` / `历史对话轮数（historyCount）` / `给模型输出的预留（output budget）`。
+
+**写完 Demo 后必须输出（2026-09-09 立 · 强制）**：（1）改了 + 为什么 的明细（Coach 在对话里直接打，不写文件）；（2）核心教学点**输出到 `#page-intro` 段内的 `#core-takeaway` 卡片**（让几个月后回来复习的自己看一眼就懂）。详 [§5.3.11.b](agents/05-demo.md#5311b-写完-demo-后必须输出改了--为什么--页面要看得见核心2026-09-09-立--强制)。
 
 #### 5.3.3 目录与脚本
 

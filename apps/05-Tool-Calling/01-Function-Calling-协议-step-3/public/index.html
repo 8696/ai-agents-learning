@@ -75,6 +75,10 @@
             <PageIntro
               summary="step-3 修 §5.4.A2「含并行调用」阻塞：3 个 async Tool（search_flight 80ms / get_weather 50ms / get_packing_list 30ms），handler async + Promise.all 真并发，gantt 时序图把 3 个 bar 同时起步画出来；串/并行对比按钮把加速比算出来。"
               steps={pageIntroSteps}
+              takeaway={{
+                point: "并行 vs 串行的判据不是「快 vs 慢」是「它们之间有没有依赖」——3 个独立 IO(机票/天气/打包清单)互相不依赖,可以 Promise.all;parallel 总耗时 ≈ max 单 tool sleep(80ms),serial 总耗时 ≈ sum(165ms),加速比 ≈ 2×(不是 3×,因为并行天花板 = 最慢那个 handler)。",
+                observe: "总览页本身不跑业务,点进 single / compare 页:① single 页选 mode 跑一次看 gantt——parallel 三色条 left≈0 同步起步,serial 顺序堆叠;② compare 页两个 gantt 并排 + 加速比 ~2× 的数字直接算出来。",
+              }}
               extra={
                 <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
 {`POST /api/plan { scenario:"tokyo-may-7days", mode:"parallel" | "serial" }

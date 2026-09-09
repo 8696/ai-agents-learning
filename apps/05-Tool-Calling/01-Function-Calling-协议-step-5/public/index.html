@@ -79,6 +79,10 @@
             <PageIntro
               summary="step-5 演示「模型自己编排 + 自纠」：while + finish_reason 循环骨架，每轮由 decideNextAction (mock LLM) 决定下一步；query 太短触发自纠（扩 query 重试）；MAX_ROUNDS 边界。"
               steps={pageIntroSteps}
+              takeaway={{
+                point: "ReAct / Agent 循环的物理骨架 = `while (rounds < MAX_ROUNDS) { decide → execute → observe }`——每轮「decide」由模型读 lastResult 决定,「execute」是你的代码,「observe」是 tool_result 喂回去。MAX_ROUNDS 是必备边界(防止无限循环/费用失控),自纠是「decide 不出 final 就改 query 重试」的常见策略。",
+                observe: "总览页本身不跑业务;点 self-correct 页:① 跑 query='AI'(2 字符)看 3 轮(空 hits → 扩 query 重试 → summarize → final);② 跑 query='Function Calling'(长)看 2 轮收敛无自纠;③ 跑 query='ab'(极端短)看 MAX_ROUNDS 边界触发 + 业务降级。",
+              }}
               extra={
                 <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
 {`POST /api/self-correct { query }

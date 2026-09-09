@@ -34,6 +34,12 @@
           <li>点「调模型发请求」 → POST /api/chat（<strong>真调 LLM 协议 B</strong>）</li>
           <li>输出区看：Round 1/2 数据卡 + read_recent_emails 结果（per-user 邮件 / fail-closed / 未 OAuth）</li>
         </ol>
+        {/* 核心教学点卡片（§5.3.11.b 强制） */}
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+          <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+          <div className="text-xs text-gray-800">委托授权(Delegated Authorization)的三步防御:① fail-closed(`actor.userId === "platform-god"` 一律拒,防止超管账号被模型滥用);② 鉴权(`oauth_tokens[userId]` 不存在拒);③ 用**该用户自己的** token 调 Gmail API(mock)→ per-user 邮件。绝对不能用平台超级账号代用户操作——这是「权限混淆」漏洞的根源。</div>
+          <div className="text-xs text-gray-600">怎么观察:四种 userId 跑出来四态:① alice(有 OAuth)→ per-user 邮件;② bob(有 OAuth)→ per-user 邮件(另一组);③ platform-god → 第一钩子 fail-closed 直接拒;④ carol(无 OAuth)→ 第二钩子拒。看 read_recent_emails.tool_result 的邮件是否 per-user 隔离。</div>
+        </div>
       </section>
     );
   }

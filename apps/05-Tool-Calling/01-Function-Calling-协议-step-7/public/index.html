@@ -80,6 +80,10 @@
             <PageIntro
               summary="step-7 演示「混合编排」：路由层 hard-code 两条约束（拒绝越权 + 路径 B 硬接），同时模型决定要不要进两步链。三条路径（A 仅 weather / B weather+硬接 suggest / C 直接打包被拒→退回）对应 MD 易混点「三种编排方式对比」里的「混合」行。"
               steps={pageIntroSteps}
+              takeaway={{
+                point: "「混合编排」= 路由层 hard-code 约束(确定性) + 模型自编排(灵活性)的组合——约束 1 拒绝越权(suggest_items 必须在 weather 之后调,违反 → ok:false 回灌 → 模型退回),约束 2 路径 B 硬接(用户问带伞 → weather → 模型 final → 路由层自动跑 suggest_items)。MAX_ROUNDS=8 是兜底。",
+                observe: "总览页本身不跑业务;点 hybrid 页用 3 个预设 query 跑:① 路径 A 「北京天气」→ 1 轮 final;② 路径 B 「北京带伞」→ weather → final → 路由层硬接 suggest_items;③ 路径 C 「直接打包」→ suggest_items 越权被路由层拒 → 模型退回 weather。看 trace 里「拒绝 / 硬接」徽标和 final reply。",
+              }}
               extra={
                 <pre className="text-[10px] text-gray-500 bg-gray-50 border-l-2 border-gray-300 px-2 py-1 rounded whitespace-pre-wrap">
 {`POST /api/hybrid { query }

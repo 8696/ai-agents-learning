@@ -94,7 +94,14 @@
                 <StatusPill status={status} />
               </header>
               <main id="page-main" className="container mx-auto p-4 space-y-4">
-                <PageIntro summary="System 要 JSON-only，User 要长文段。看谁压过谁。" steps={INTRO_STEPS} />
+                <PageIntro
+                  summary="System 要 JSON-only，User 要长文段。看谁压过谁。"
+                  steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "角色优先级 System > User > Assistant 是训练事实（不是厂商开关）；System 写「JSON-only 约束」时，User 的「长文段」要求被压住，模型仍按 System 走。",
+                    observe: "点「跑对照」看协议 A / B 两列的判定 pill：SYSTEM_WIN(绿) = System 压住；USER_WIN = User 反压成功（违反直觉）；PARTIAL = JSON 出现但掺了别的字符（协议 A 的 <think> 嵌进 content 就会出现这个）。",
+                  }}
+                />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
                   <PageNav />
                   {!env.hasKey && (

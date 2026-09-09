@@ -94,6 +94,10 @@
                 <PageIntro
                   summary="同一 System、同一句输入，对比 Zero-shot 和 Few-shot。稳 = 下游 parse 能否吃进去。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Few-shot 真正稳的是「格式契约 + 灰区判法」——示例对齐的是 I/O 形状和产品定义的判例，不是事实真相；Zero-shot 嘴边常夹思考块（协议 A），网关先剥 think 再 parse 是 Zod 前的标配。",
+                    observe: "点「跑对照」看 Zero / Few 两列：① formatValid(绿/红) 反映剥完 think 后能否进 Zod；② hadThinking(true/false) 反映嘴边是否夹了思考块；③ 标签两边都可中评——稳的不是「答得对」，是「壳对得齐」。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

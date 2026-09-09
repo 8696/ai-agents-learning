@@ -69,6 +69,10 @@
                 <PageIntro
                   summary="Token 管「哪个号」，Embedding 管「哪边近」。不是同一层。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Embedding = 把一段文本映射成实数向量,让**语义近的文本在向量空间里挨得近**——这是 RAG / 语义记忆 / 工具匹配的最底层机制。**两层拆分**(易混):Token = 词表整数 ID(索书号,只能「标号」算不出远近);Embedding = ID 对应的实数向量(经纬度,能算远近用余弦相似度)。**Embedding 不是人标的,是训练时学出来的**——让模型做「填空题」,上下文里经常一起出现的词向量自然靠近。",
+                    observe: "怎么观察:本 Demo 用 2 维玩具向量(坐标编的只为能看见「近/远」)① Token ID 相减 → 差值无语义(证明「ID 不是语义」);② Embedding 余弦排序 → 「宠物」和「猫」「狗」挨得近,和「石头」远(证明「近/远 = 语义」);③ 真实 RAG 把这套排序放大到百万条向量上,只是维度从 2 → 768 / 1536 / 3072。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`① Token ID 相减 → 差值无语义

@@ -97,6 +97,10 @@
                 "前端：链式 gantt 时序图（2 bar 顺序堆叠，totalMs ≈ 130ms）+ 2 条 tool_result + final summary",
                 "观察：与 step-3 区别 —— 这里是 await 串行（不是 Promise.all）；B 的 content = A 的 result",
               ]}
+              takeaway={{
+                point: "依赖链的物理动作是「B 拿到 A 的 result 当参数」——路由层 hard-code `await search_doc(query)` 拿到 hits 后,再 `await summarize(content=hits, style)`;一旦误用 Promise.all,B 的 content 仍是 undefined——快是快了,但 summary 是空壳。",
+                observe: "跑一次看三件:① gantt 时序图 2 bar 顺序堆叠(bar2 的 left = bar1 的 endMs);② final summary 是基于 hits 的真总结(不是 '(未知 query)');③ totalMs ≈ 130ms(A+B 累加)——这是「对的慢」。",
+              }}
             />
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -171,6 +171,12 @@
                 <li><b>对照 step-3</b>：step-3 摘要失败 → 502 → 用户看到红字 ❌；step-4 摘要失败 → 200 + fallback 标记 → 用户无感知（服务端日志可见）</li>
                 <li>点「演示上游失败」→ 5xx 红字 + 页面红底（这是另一种失败通道，与兜底降级形成对照）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">摘要失败**不能**让用户看到 502——catch → fallback 标记 `used: "sliding_window"` → 用滑动窗口答题(仍 200);服务端日志 warn「摘要失败,降级为滑动窗口」可见,前端体感不到失败。**生产里几乎都是「摘要为主 + 滑动窗口兜底」混合用**——本条演示兜底逻辑的物理形态。失败通道有两种:① 摘要 LLM 失败 → 内部降级到滑动窗口(用户无感);② 上游/网关 5xx → 页面红字(用户可见)。</div>
+                <div className="text-xs text-gray-600">怎么观察:① 默认(模拟失败=false)→ 同 step-3 三方对照,摘要成功 → 摘要压缩版答题;② 勾「模拟摘要失败」→ 摘要 throw → catch → fallback used=true → 滑动窗口答题,**仍是 200**(status 绿底/黄底而不是红底);③ 服务端日志 warn「摘要失败,降级为滑动窗口」;④ 点「演示上游失败」→ 5xx 红字 + 页面红底——对照证明兜底降级只处理「摘要内部失败」不处理「外部 5xx」。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

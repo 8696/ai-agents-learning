@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token 预算管理 · 第一步</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ── 粗估 token（前端口径；服务端 gpt-tokenizer 是权威，这里只是给旋钮即时反馈）──
+    function approxTokens(text) {
+      let chinese = 0, other = 0;
+      for (const ch of text) {
+        if (/[一-鿿]/.test(ch)) chinese += 1;
+        else other += 1;
+      }
+      return Math.ceil(chinese / 1.5 + other / 4);
+    }
+
+    function App() {
+      const [health, setHealth] = useState(null);
+      const [historyCount, setHistoryCount] = useState(50);
+      const [outputBudget, setOutputBudget] = useState(800);
+      const [totalBudget, setTotalBudget] = useState(2000);
+      const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
+      const [errorMsg, setErrorMsg] = useState("");
+      const [errorKind, setErrorKind] = useState(null); // null | "4xx" | "5xx"
+      const [result, setResult] = useState(null);
+      const inFlightRef = useRef(false);
+
+      // ── 页脚 /health 加载 ──
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+      }, []);
+
+      async function runBudget() {
+        if (inFlightRef.current) return;
+        if (health && !health.hasKey) {
+          setErrorMsg("apps/.env 没配当前模型提供商的密钥（看页脚 密钥 ❌）");
+          setErrorKind("5xx");
+          return;
+        }
+        setErrorMsg("");
+        setErrorKind(null);
+        setResult(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中（1 次真调模型）" });
+
+        try {
+          const resp = await fetch("/api/budget", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ historyCount, outputBudget, totalBudget }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            const kind = resp.status >= 500 ? "5xx" : "4xx";
+            setErrorKind(kind);
+            const detail = data.issues
+              ? ` · ${data.issues.map(i => i.message || JSON.stringify(i)).join("；")}`
+              : "";
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}${detail}`.trim());
+            setStatus({ key: "error", text: "❌ 错误" });
+            return;
+          }
+          setResult(data);
+          setStatus({ key: "done", text: "✅ 完成" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      async function simulateUpstreamError() {
+        if (inFlightRef.current) return;
+        setErrorMsg("");
+        setErrorKind(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+        try {
+          const resp = await fetch("/api/budget-force-error", { method: "POST" });
+          const data = await resp.json();
+          setErrorKind("5xx");
+          setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+          setStatus({ key: "error", text: "❌ 错误" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      const runDisabled = inFlightRef.current || (health && !health.hasKey);
+
+      // 单条消息渲染
+      function MsgItem({ m }) {
+        const cls = m.role === "user"
+          ? "bg-gray-50 border-gray-300"
+          : m.role === "assistant"
+          ? "bg-green-50 border-green-300"
+          : "bg-yellow-50 border-yellow-300";
+        return (
+          <li className={"border rounded p-2 text-xs " + cls}>
+            <div className="flex items-center justify-between text-gray-500 mb-1">
+              <span><b>角色：{m.role === "user" ? "用户" : m.role === "assistant" ? "助手" : "系统"}</b></span>
+              <span>≈ {approxTokens(m.content)} 个 token</span>
+            </div>
+            <div className="whitespace-pre-wrap text-gray-800">{m.content}</div>
+          </li>
+        );
+      }
+
+      // 三块预算展示组件（裁前/裁后共用）
+      function BudgetTable({ label, budget, totalLimit, triggered }) {
+        const over = budget.total > totalLimit;
+        return (
+          <div className={
+            "border rounded p-3 " +
+            (triggered && over ? "border-red-300 bg-red-50" :
+             triggered && !over ? "border-green-300 bg-green-50" :
+             "border-gray-300 bg-white")
+          }>
+            <div className="text-xs text-gray-500 mb-1">{label}</div>
+            <table className="text-xs w-full">
+              <tbody>
+                <tr><td className="text-gray-600">系统提示段（system）</td><td className="text-right font-mono">{budget.systemTokens}</td></tr>
+                <tr><td className="text-gray-600">历史对话段（history）</td><td className="text-right font-mono">{budget.historyTokens}</td></tr>
+                <tr><td className="text-gray-600">给模型输出的预留（output budget）</td><td className="text-right font-mono">{budget.outputBudget}</td></tr>
+                <tr className="border-t"><td className="text-gray-800 font-semibold pt-1">三块合计（total）</td>
+                  <td className={"text-right font-mono pt-1 " + (over ? "text-red-700" : "text-gray-800")}>
+                    {budget.total}
+                  </td>
+                </tr>
+                <tr><td className="text-gray-500">总预算上限（totalBudget）</td><td className="text-right font-mono">{totalLimit}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">Token 预算管理（Token Budget） · 第一步（step-1） · 三块分账 + 拼装前打印 + 超预算裁最旧</h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status.key === "loading" ? "bg-yellow-200" :
+               status.key === "done"    ? "bg-green-200" :
+               status.key === "error"   ? "bg-red-200" :
+                                          "bg-gray-200")
+            }>{status.text}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>Token 预算三块分账</b>——在 messages 拼装之前，先算 system / history / output 三块 token；超预算时按「丢最旧非 system」裁剪；最后真调一次模型对照实际输出。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>调旋钮：历史对话轮数 / 给模型输出的预留 / 总预算上限</li>
+                <li>点「跑预算」→ 服务端算 system + history + output 三块 token</li>
+                <li>三块合计 &gt; 上限 → 触发裁剪（丢最旧非系统消息）</li>
+                <li>拼装 messages：[system, ...裁后 history, userText]，调真模型</li>
+                <li>对照三块预算裁前/裁后 + 实际 messages + 模型回答</li>
+                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
+              </ol>
+
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">Token 预算（Token Budget）= 拼装 messages 之前，先算 system / history / output 三块 token 的硬上限。唯一可裁的是 history；system 是规则不能动，output 是预留不能事后裁。</div>
+                <div className="text-xs text-gray-600">怎么观察：看「② 三块预算分账（裁前 vs 裁后）」表的「三块合计（total）」和「总预算上限（totalBudget）」差值 — 红色 = 超预算已触发裁剪；调整三个旋钮看 trigger / dropped 怎么变。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="text-xs text-gray-600">
+                  历史对话轮数（historyCount · 每轮 = 1 条 user + 1 条 assistant）：<span className="font-mono">{historyCount}</span>
+                  <input id="ctrl-history-count" type="range" min="0" max="200" step="1"
+                    value={historyCount} onChange={e => setHistoryCount(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  给模型输出的预留（outputBudget · token）：<span className="font-mono">{outputBudget}</span>
+                  <input id="ctrl-output-budget" type="range" min="64" max="4000" step="64"
+                    value={outputBudget} onChange={e => setOutputBudget(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+                <label className="text-xs text-gray-600">
+                  总预算上限（totalBudget · token）：<span className="font-mono">{totalBudget}</span>
+                  <input id="ctrl-total-budget" type="range" min="512" max="32000" step="128"
+                    value={totalBudget} onChange={e => setTotalBudget(Number(e.target.value))}
+                    className="w-full" />
+                </label>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  id="btn-run-budget"
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                  onClick={runBudget}
+                  disabled={runDisabled}
+                >跑预算（算账 → 裁剪 → 调真模型 · runBudget）</button>
+                <button
+                  id="btn-simulate-error"
+                  className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
+                  onClick={simulateUpstreamError}
+                >演示上游失败（5xx · 第二类错误 · /api/budget-force-error）</button>
+              </div>
+              {errorMsg ? (
+                <div
+                  id="error-box"
+                  className={
+                    "text-xs px-3 py-2 rounded border " +
+                    (errorKind === "5xx"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-yellow-300 bg-yellow-50 text-yellow-800")
+                  }
+                >
+                  <div className="font-semibold">
+                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                  </div>
+                  <div className="mt-1">{errorMsg}</div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-xs text-gray-400">（还没结果。先调三个旋钮，再点「跑预算」。）</div>
+              ) : (
+                <>
+                  {/* 卡 ① 触发说明 */}
+                  <article id="card-trigger" className={
+                    "border rounded p-3 space-y-1 " +
+                    (result.triggered ? "border-orange-300 bg-orange-50" : "border-gray-300 bg-white")
+                  }>
+                    <div className="text-sm font-semibold text-gray-800">① 触发说明</div>
+                    <div className="text-xs text-gray-700">{result.触发说明}</div>
+                    <div className="text-xs text-gray-500">
+                      模型（modelA） = <span className="font-mono">{result.config.modelA}</span> ·
+                      丢掉的非系统消息条数（dropped） = <span className="font-mono">{result.dropped}</span> 条
+                    </div>
+                  </article>
+
+                  {/* 卡 ② 三块预算 裁前 vs 裁后 */}
+                  <article id="card-budget" className="border border-gray-300 rounded p-3 space-y-2">
+                    <div className="text-sm font-semibold text-gray-800">② 三块预算分账（裁前 vs 裁后）</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <BudgetTable label="裁前" budget={result.beforeBudget} totalLimit={result.config.totalBudget} triggered={false} />
+                      <BudgetTable label="裁后" budget={result.afterBudget} totalLimit={result.config.totalBudget} triggered={result.triggered} />
+                    </div>
+                  </article>
+
+                  {/* 卡 ③ 实际发给模型的 messages */}
+                  <article id="card-messages" className="border border-gray-300 rounded p-3 space-y-2">
+                    <header className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">
+                        ③ 实际发给模型的完整 messages
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        messages 长度 = <span id="msgs-len" className="font-mono">{result.messages.length}</span>
+                        {" · "}
+                        估算输入 token ≈ <span className="font-mono">
+                          {result.messages.reduce((s, m) => s + approxTokens(m.content), 0)}
+                        </span>
+                      </div>
+                    </header>
+                    <ol id="msgs-list" className="space-y-1 max-h-64 overflow-auto">
+                      {result.messages.map((m, i) => <MsgItem key={i} m={m} />)}
+                    </ol>
+                  </article>
+
+                  {/* 卡 ④ 模型回答 */}
+                  <article id="card-reply" className="border border-gray-300 rounded p-3 space-y-2">
+                    <header className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">④ 模型回答（reply）</div>
+                      <div className="text-xs text-gray-500">
+                        模型实际输出 token ≈ <span id="reply-tokens" className="font-mono">{result.replyTokens}</span>
+                        {" / "}
+                        给模型输出的预留 = <span className="font-mono">{result.config.outputBudget}</span>
+                      </div>
+                    </header>
+                    <div id="reply-text" className="bg-green-50 border border-green-300 rounded p-2 text-sm whitespace-pre-wrap text-gray-800">
+                      {result.reply}
+                    </div>
+                  </article>
+                </>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 50045 · 协议 A（openai Chat Completions） · 模型服务商 {health?.provider ?? "(待连接)"} · 模型 {health?.model ?? "(待连接)"} · 密钥 {health?.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -138,6 +138,10 @@
                 <PageIntro
                   summary="tools + tool_choice 强制调 Intent。input 已是对象。这是软约束，不是协议 A 那种 token-mask。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "协议 B 强制 tool_choice（`tools[]` + `tool_choice: { type: \"tool\", name: \"Intent\" }`）是协议 B 的最强档——守约率实测 ~85%（国内 provider 实测更稳,5/5 全 Zod ✓）；但 tool_choice 强制 ≠ token-mask,模型理论上可以拒绝调工具返回 text block,这时你的 server 拿到的是说明文字而不是 input 对象。",
+                    observe: "和 text 页同 prompt 对比:① 状态徽标 tool_use 名(Intent);② Zod 几乎全绿;③ raw content 里有 `type: \"tool_use\"` block,`input` 是已 parse 对象——服务端不需要 JSON.parse,这是协议 B 在客户端最省事的一点。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -139,6 +139,10 @@
                 <PageIntro
                   summary="json_schema + strict: true 在 token 层挡住不合规输出。schema 写法本身不对时，见「坏 schema」页。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Structured Output strict（`response_format.json_schema.strict: true`）是协议 A 的最强档——token-mask 在采样前就挡住所有会让最终 schema 违例的 token，模型想错也错不了（守约率 ~95%）；但严格 ≠ 一定能过 Zod，schema 写法本身不对时 API 直接 4xx。",
+                    observe: "和 json-mode 页用同一 prompt 对比：① Zod 几乎全绿;② extraKeys 区几乎为零——strict 把模型自由度压到 ~5%;③ 看 raw content 字符串里没有 fence 也没有 markdown 壳——结构化闸挡的是采样，不是事后正则。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -199,6 +199,12 @@
                 <li><b>核心可观察</b>：相同 token budget 下，按 token 比按条数更稳定（不受单条超长消息影响）</li>
                 <li><b>对照 step-1~4</b>：step-1~4 用「条数」控制窗口；step-5 用「token」控制窗口</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">按 token 算窗口(变体 2)= 滑动窗口 K 从「条数」换成「token 数」(`gpt-tokenizer` 估算每条 token + 从最新往旧累加 ≤ B 为止);system 仍 pin。**token 硬上限 = 生产里最稳的硬控制**——按条数会被单条超长消息(用户粘贴一篇长文)打穿,按 token 不受单条长度影响。本条同时演示「触发阈值 vs 滑动窗口 budget」两条独立的线(何时压 vs 怎么压)。</div>
+                <div className="text-xs text-gray-600">怎么观察:同份假历史 + 同一问句 + 同一模型,唯一变量是「窗口控制单位」(条数 vs token),调真模型 4 次看 5 张卡:① 完整 ② 按 token 滑动窗口(token budget=B)③ 摘要压缩 ④ summary 内容 ⑤ 按 token vs 按条数对照。相同 token budget 下,按 token 比按条数更稳定(对照 step-1~4 用「条数」时的差异)。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

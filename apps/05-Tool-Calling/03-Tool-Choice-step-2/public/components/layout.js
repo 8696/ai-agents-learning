@@ -35,6 +35,12 @@
           <li>服务端发协议 A：required 字符串，或指定函数的 object（type=function + name）</li>
           <li>看 firstToolName 是否被钉死；thinking 模型上强制可能 400（琥珀色教学卡）</li>
         </ol>
+        {/* 核心教学点卡片（§5.3.11.b 强制） */}
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+          <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+          <div className="text-xs text-gray-800">tool_choice 的两个写法语义完全不同:① 「required」字符串 = 强制必须调工具但**不指定哪个**(模型在多个 Tool 之间自选);② 用 function 类型 object 带 name 字段(object 形式) = 强制**钉死**具体工具名。required 只保证有 call,不保证是哪一个;钉死档 firstToolName 必须恒等于指定名。这是「强制自由度 vs 强制钉死」的根本区分。</div>
+          <div className="text-xs text-gray-600">怎么观察:同时注册 query_logistics + get_weather 两个 Tool,跑三档:① required → firstToolName 是 query_logistics 或 get_weather(模型自选);② 钉死物流 → firstToolName 必须恒等于 query_logistics;③ 钉死天气 → 必须恒等于 get_weather。三档对照看「强制自由度」vs「强制钉死」怎么 work。</div>
+        </div>
       </section>
     );
   }

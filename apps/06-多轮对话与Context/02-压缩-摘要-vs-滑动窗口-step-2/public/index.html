@@ -176,6 +176,12 @@
                 <li><b>对照 step-1</b>：滑动窗口丢字面（卡 ① vs 卡 ② 关键事实丢失）；摘要压缩留语义（卡 ① vs 卡 ③ 关键事实还在）。</li>
                 <li><b>错误两类 · 一眼分开</b>：summarizeFrom + keepRecent 超 turnCount → 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">摘要压缩(Summarization)= **重写**——读远期 N 条 → 调 LLM 浓缩成 1 条 summary → summary 替代原 N 条 + 近期 K 条留原文。**字面细节仍丢,但语义保留**——「小明住上海」可能摘要成「用户住上海」留下来。代价:+1 次 LLM 调用(500ms~3s)+ summary 本身的 prompt token。生产里是「保留语义」的主力策略,但摘要失败时必须能降级到滑动窗口(step-4 演示)。</div>
+                <div className="text-xs text-gray-600">怎么观察:同 50 轮假历史 + 同 key fact + 同问句,跑 3 次真模型:① 完整(基线);② 摘要压缩(summary 替代前 N 条,key fact 在 summary 里);③ 摘要后问答。看四张卡:① 完整 ② summary 内容 ③ 摘要后 ④ 对比——beforeReply 答得出、summarizeReply 也答得出(因为 summary 留了语义),对照 step-1 滑动窗口答错。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -82,6 +82,10 @@
                 "浏览器渲 gantt：3 个色条的横向位置 + 长度 = 物理执行时序",
                 "观察点：parallel = 3 色条 left ≈ 0、长度 = 各 handler sleep；serial = 顺序堆叠、left 累加",
               ]}
+              takeaway={{
+                point: "Gantt 图的物理意义:每个色条的横向 left = 起始时间,长度 = durationMs——parallel 三色条 left≈0(同步起步)且总宽 ≈ 80ms(max handler),serial 三色条 left 累加且总宽 ≈ 165ms(sum)。颜色固定对应工具名便于对照。",
+                observe: "切换 mode 跑两次对比:① parallel 模式:看 3 色条都从 left=0 开始;② serial 模式:看 3 色条堆叠;③ 顶部数字 totalMs / durationMs 跟色条长度一致——gantt 不是装饰,是物理时序的可视化。",
+              }}
             />
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

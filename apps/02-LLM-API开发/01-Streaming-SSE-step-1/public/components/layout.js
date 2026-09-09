@@ -120,7 +120,7 @@
    * §5.3.11 说明区：一句「本页只演示什么」+ 3～5 步数据流。
    * extra 用来放本页额外的图（总览页的全局数据流就走这里）。
    */
-  function PageIntro({ summary, steps, extra }) {
+  function PageIntro({ summary, steps, extra, takeaway }) {
     return (
       <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
         <p className="text-sm text-gray-700">
@@ -133,6 +133,13 @@
           })}
         </ol>
         {extra}
+        {takeaway && (
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">{takeaway.point}</div>
+            <div className="text-xs text-gray-600">怎么观察：{takeaway.observe}</div>
+          </div>
+        )}
       </section>
     );
   }

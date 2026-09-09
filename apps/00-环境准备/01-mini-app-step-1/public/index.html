@@ -69,6 +69,10 @@
                 <PageIntro
                   summary="模块 00 的代码落点：一个 HTTP 进程。只跑协议 A 的流式对话。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "模块 00 mini-app = 一个 HTTP 进程(端口 50000)+ 协议 A 流式对话的最小闭环;闸门(400 / 503)**必须在开流之前**——一旦 SSE 头发出去了,HTTP 状态码就锁死,只能塞 data 帧。对账用 API 真实回传的 `usage`,不拿本地估算当账单。",
+                    observe: "怎么观察:① POST /api/chat 空 message → 400(黄底)证明「闸门在前」;② 缺 Key → 503(红底)证明「Key 闸门也在前」;③ 真模型流式响应每个 chunk 是 SSE `data: {json}\\n\\n` 帧,最后一帧 `data: [DONE]`;④ 流结束打印 `prompt_tokens / completion_tokens` 对账。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`yarn app:00-01-mini-server     HTTP + SSE · 端口 50000 · 仅协议 A

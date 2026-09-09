@@ -57,6 +57,10 @@
                 <PageIntro
                   summary="System 两版共用；区别只在 User 末尾那句。文本 diff 看不出行为差，跑一次才看得见。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Prompt 也是代码——版本号 + 元数据 + 回归样本集 + 模型绑定 + diff/评审；改 Prompt 没有编译错误这种 early signal，必须用回归样本量出来的数字判定 ship/no-ship，「看着差不多」= 骗自己。",
+                    observe: "总览页本身不调模型；看 v1.0.0（直接给答案）和 v1.1.0（Let's think step by step）两条 prompt 的文本 diff 极小。点「一字之差对照」跑对照，看字符数差（v1.0.0 ≈ 403 / v1.1.0 ≈ 901）、是否含推理标记、首段 preview——文本 diff 完全看不出这么大的行为差。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`v1.0.0  直接给答案，不要解释

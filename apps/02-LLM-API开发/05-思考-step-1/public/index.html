@@ -70,6 +70,10 @@
                 <PageIntro
                   summary="四家提供商 × 协议 A/B 的官方思考方言：怎么开、怎么关、思考回哪个字段。本页不调模型。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "思考(thinking/reasoning)= 模型在给用户看正文之前先走的内部推理,可能计费、通常不该直接渲染。**三层拆分**(不是协议一个维度):① 协议层(URL/SDK/字段名)→ 协议 A vs 协议 B;② 厂商方言(开关叫什么/响应在哪个键)→ MiniMax / 智谱 / DeepSeek / 千问各一套(`extra_body.thinking.type` / `thinking.type` / `extra_body.enable_thinking` 名字都不是同一套);③ 这个模型(会不会思考/默认开/能不能关)。**协议相同只保证信封长得像,思考怎么开/回哪/字段名都不保证**。",
+                    observe: "怎么观察:页顶四家官方方言对照表 → 每列标「这一轮实测」;流式页勾选提供商 + 协议 A/B + 开/关 → POST /api/stream → 看 SSE 帧里的 `meta`(这次开关字段)+ thinking/content 增量 + sources(实测字段位置);同一家协议 A 跑四家 → 看 `reasoning_content` / `reasoning_details` / `reasoning_effort` 名字全不一样 → 证明「协议相同 ≠ 厂商方言相同」。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`全局数据流

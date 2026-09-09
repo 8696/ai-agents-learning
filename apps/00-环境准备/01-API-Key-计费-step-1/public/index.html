@@ -70,6 +70,10 @@
                 <PageIntro
                   summary="一次请求的账单分输入 Token 和输出 Token 两栏，输出单价通常更高。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "LLM 计费按 Token,不是「点几次发送」;一次请求分两段:prompt_tokens(输入)× 输入单价 + completion_tokens(输出)× 输出单价(通常 3~5 倍) = total_tokens 计费单位。**网页订阅 Key ≠ 按量 API Key**——前者给网页产品用(健身房月卡),后者给代码调 HTTP 用(电表),抄错 Key 报 401 鉴权失败,看着像 SDK 错其实是凭证错。",
+                    observe: "怎么观察:看页脚 API 真实响应里的 `usage.prompt_tokens` / `usage.completion_tokens` / `usage.total_tokens` 三个字段;看 PricingTable 区显示各家输入/输出单价;编辑 Prompt 长度滑块→ 重跑 → 数字线性变化证明「不是按条数是按 Token 数」。国内站域名 `api.minimaxi.com`,海外 `*.minimax.io`,抄错会连错环境。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`usage.prompt_tokens      × 输入单价 → 输入这一栏的钱

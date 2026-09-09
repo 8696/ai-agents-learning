@@ -87,6 +87,10 @@
                 "观察：parallel 3 bar 同时起步，总长 ≈ 80ms（max handler sleep）；serial 3 bar 堆叠，总长 ≈ 165ms（sum）",
                 "加速比 ≈ 2×（不是 3× —— 因为 parallel 的天花板 = 最慢的那个 handler = 80ms）",
               ]}
+              takeaway={{
+                point: "对比页用「服务端 Promise.all 并发跑两种 mode」做控制变量——同一份 planToolCalls + 同一组 handler,唯一变量是 dispatch 方式;加速比数字直接量化「并行的物理收益」,且 = serial/parallel ≈ 2×(不是 3×),证明并行天花板 = 最慢单 tool。",
+                observe: "点「跑对比」看四个东西:① 两个 gantt 并排(parallel vs serial)直观看时序差;② 顶部数字 parallelRun.totalMs ≈ 80 vs serialRun.totalMs ≈ 165;③ speedup ≈ 2× 字段;④ tool_result 数组内容完全一致——证明是「执行方式」不同,不是「执行结果」不同。",
+              }}
             />
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -36,6 +36,12 @@
           <li>服务端把固定 tools + 你选的 tool_choice 发给协议 A；本步不执行 Tool，只看模型响应</li>
           <li>结果写入该档位卡片；对照 hasToolCalls，并看协议判定条是否标红</li>
         </ol>
+        {/* 核心教学点卡片（§5.3.11.b 强制） */}
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+          <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+          <div className="text-xs text-gray-800">tool_choice（协议 A 的 `tool_choice` 字段）控制「模型调不调 + 必须调哪个」三档：① `auto` = 模型自决(给 tool_calls 或直接答都可以);② `none` = 强制不调工具,即使有 tool_calls 模型也压住;③ `required` = 强制必须调至少一个工具,API 不能用空字符串(某些 Provider 会拒)。这是协议层「在采样倾向之前先硬约束模型自由度」的物理开关。</div>
+          <div className="text-xs text-gray-600">怎么观察:三档跑同一句 query:① auto 看 hasToolCalls 可能 true/false,模型自决;② none 强制 hasToolCalls=false,如果还出现 tool_calls 标红「Provider 违约」;③ required 强制 hasToolCalls=true,如果出现 tool_calls=[] 或 finish_reason 异常标红。thinking 模型 + required 经常撞 400 琥珀色「thinking × 强制 Choice 冲突」(变体 6)。</div>
+        </div>
       </section>
     );
   }

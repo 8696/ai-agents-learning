@@ -81,6 +81,12 @@
           <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
             {steps.map(function (s, i) { return <li key={i}>{s}</li>; })}
           </ol>
+          {/* 核心教学点卡片（§5.3.11.b 强制） */}
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">协议 A（OpenAI Chat Completions）Function Calling 完整两轮物理形态：Round 1 = tools + user → tool_calls(还没 final);Round 2 = messages=[user, assistant(tool_calls), tool, tool] → final_reply。`tool_calls[i].function.arguments` 是 JSON 字符串要 JSON.parse。tool_choice='auto' 让模型自决要不要调工具。</div>
+            <div className="text-xs text-gray-600">怎么观察：① 跑对话后看 #llm-protocol 区两轮完整 Request/Response JSON——Round 1 看 tool_calls 数组,Round 2 看 messages 变 4 条的拐点;② 编造检测区:扫 reply 数字 vs tool_result 数字,列出「reply 里出现但 tool_result 没出现」的 fake numbers——这是协议 A 自带的工具引用证据。</div>
+          </div>
         </section>
       );
     }

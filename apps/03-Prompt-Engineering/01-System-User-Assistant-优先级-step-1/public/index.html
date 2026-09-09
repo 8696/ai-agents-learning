@@ -63,6 +63,10 @@
               <PageIntro
                 summary="同一份 prompt 并排打协议 A 和协议 B，看 System 优先级和 assistant 历史塞不塞回去。"
                 steps={INTRO_STEPS}
+                takeaway={{
+                  point: "角色优先级是训练事实（System > User > Assistant，不是厂商开关）；协议 A 把 system 放进 messages[]，协议 B 放顶层 system——语义一样、字段位置不同；多轮漏塞 assistant 历史 ≠ 失忆，但 = 失去「我不知道」的诚实，模型会自信地编。",
+                  observe: "总览页本身不调模型，看三个 Case 入口旁的「预期」标签（Case 1 期望 SYSTEM_WIN；Case 2 期望 REMEMBERED；Case 3 期望 FORGOT）。点进去后看协议 A / B 两列的判定 pill 是否符合预期。",
+                }}
                 extra={
                   <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`浏览器 POST /api/caseN

@@ -388,6 +388,12 @@
                 <li>点「调一次 B 组（priority=string + enum）」 → 又一次 LLM 调用，结果存到右卡片</li>
                 <li>两份结果都出来后，下方「完整差异点」表自动列出两边的所有可观察差异（变体 5「Enum / Format 约束」实证）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">Schema 的 enum / format / pattern 是给模型的硬约束,不是程序校验——状态码枚举、日期 format、优先级枚举这类「有限集合」如果不写 enum,模型瞎填("超级急"/"很急"等自由词),Zod 在 round-2 拒掉,调用链断。enum 是「变量空间有限」的硬证据,首次拉开 A/B 显著差异。</div>
+                <div className="text-xs text-gray-600">怎么观察：默认 query "快递 12345 到了吗,比较急"(priority 暗示 high),看 A 组(priority=string 无 enum) vs B 组(priority=string + enum=["low","normal","high"])的 arguments.priority 值——A 组大概率瞎填 "very urgent" 或 "高";B 组稳定填 "high",且通过 Zod enum 校验。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

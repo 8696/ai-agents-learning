@@ -35,6 +35,12 @@
           <li>跑这一档 → POST /api/switch（body: switchId + query）</li>
           <li>请求卡片里核对 tool_choice；三档结果常驻对照</li>
         </ol>
+        {/* 核心教学点卡片（§5.3.11.b 强制） */}
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+          <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+          <div className="text-xs text-gray-800">产品开关 ≠ tool_choice 字段——用户在 UI 上点「强制查库」必须由后端把请求的 tool_choice 改成 `required`,而不是相信用户口头说「帮我查」就会触发调工具。这是「产品需求 → 协议字段」的映射层,前端 UI 只是一个开关,真正的硬约束在后端的请求构造里。</div>
+          <div className="text-xs text-gray-600">怎么观察:三档产品开关「只聊天 / 允许工具 / 强制查库」分别映射到 `none` / `auto` / `required`:① 点「只聊天」开关看请求卡片里 tool_choice="none";② 「允许工具」=auto 模型自决;③ 「强制查库」=required 强制调——必须在请求字段层硬改,不是只在 UI 上加文字。请求卡片对照看 mapping 表。</div>
+        </div>
       </section>
     );
   }

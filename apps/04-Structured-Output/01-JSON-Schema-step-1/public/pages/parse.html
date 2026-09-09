@@ -85,6 +85,10 @@
                 <PageIntro
                   summary="同一份 payload 看成功值和失败形状。schema 校验失败走 200 + success=false，不是 500。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Zod 的 `safeParse` 永不抛、返回 discriminated union（`{success:true, data}` 或 `{success:false, error: ZodError}`）；TS 在 false 分支自动 narrow 出 `error`，true 分支 narrow 出 `data`，下游不需要 any。",
+                    observe: "改输入框造一份缺字段 / 类型错的数据：① `success=false` 时 `error.issues` 数组展示（每条带 `path` + `message`）；② 看右侧 HTTP 状态码仍是 200——schema 校验失败属于业务错误，不是服务错误。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

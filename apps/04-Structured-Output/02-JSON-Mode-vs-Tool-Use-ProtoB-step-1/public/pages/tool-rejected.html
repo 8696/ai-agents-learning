@@ -95,6 +95,10 @@
                 <PageIntro
                   summary="故意让 prompt 说「action 填 unknown」（不在 enum 里），tool_choice 仍强制调 Intent。测的是模型守约，不是 API 400。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "协议 B tool_choice 强制不会因为 prompt 撞 enum 边界就 API 400——API 仍 200,只是模型守不守约是它的事;这与协议 A strict-rejected 那种「schema 写法不对直接 4xx」是完全不同的失败模式——协议 B 的闸在采样倾向,不在协议层。",
+                    observe: "提交「prompt 写 action 填 unknown（不在 enum 里）」跑:① 状态码仍是 200 不是 4xx——协议 B 闸不拒绝;② 看 tool_use.input.action 实际值,如果仍是合法 enum 值说明模型守了,如果真填 \"unknown\" 说明模型没守——测的是模型行为不是 API;③ 与协议 A strict-rejected 页对比(那边 API 直接拒,这边模型自己决定)。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

@@ -85,6 +85,10 @@
                 <PageIntro
                   summary="校验通过之后还可以改结构。输出比输入多 repaired / when 两个字段。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Zod 的 `.transform()` 在校验通过后改结构——输出 ≠ 输入；`z.infer` 推出来的类型是「transform 之后」的类型（输出多字段、原始字段被替换）。`default(x)` 在校验时补默认值，运行时一定拿得到。",
+                    observe: "改输入数据（合法）后点跑：① 输出比输入多了 `repaired: true` / `when: <时间戳>` 两个字段——这就是 transform 加的；② 把 status 字段删掉跑，看 `default(pending)` 自动补——证明 default 是「运行时一定拿得到」。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

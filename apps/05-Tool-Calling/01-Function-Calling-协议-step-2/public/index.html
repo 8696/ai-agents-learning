@@ -94,6 +94,12 @@
           <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
             {steps.map(function (s, i) { return <li key={i}>{s}</li>; })}
           </ol>
+          {/* 核心教学点卡片（§5.3.11.b 强制） */}
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">Function Calling 协议 A 真调一次的完整两轮：Round 1 = tools + user → 模型返回 tool_calls(还没 final);Round 2 = messages=[user, assistant(tool_calls), tool, tool] → 模型基于 tool_result 返回 final_reply。两轮之间 messages 数组从 1 条变 4 条,「塞回 tool_result」就是「让模型继续生成」的物理动作。</div>
+            <div className="text-xs text-gray-600">怎么观察：点「跑对照」后看两个区:① #llm-protocol 把两轮完整 Request/Response JSON 摆出来(看 messages 数组从 1 条变 4 条的拐点);② #output 把业务 trace 摆出来——这就是 Function Calling 真协议,而不是 mock。</div>
+          </div>
         </section>
       );
     }

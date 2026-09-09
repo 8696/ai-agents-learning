@@ -76,6 +76,10 @@
                 <PageIntro
                   summary="协议 A 的结构化输出有两道闸：json_object 只保语法，json_schema+strict 才保语义。两边都还要服务端 Zod 兜底。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "协议 A（OpenAI Chat Completions）有强语义的 `response_format` 字段：`json_object` 只保语法合法，`json_schema + strict: true` 是物理 token-mask 守 schema；两边模型吐回的都是字符串，要客户端/服务端 JSON.parse——结构化层只承诺加约束，不替你 parse。",
+                    observe: "总览页本身不调模型；3 个子页对比：① json-mode 页只保语法，字段名漂/缺字段 Zod 红;② structured 页 strict=true 守 schema，keysSeen/extraKeys 几乎零;③ strict-rejected 页演示「API 入口就该拒」(缺 additionalProperties:false / 含 anyOf 时 strict 直接 4xx 而不是 5xx 兜底)。",
+                  }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
 {`全局数据流

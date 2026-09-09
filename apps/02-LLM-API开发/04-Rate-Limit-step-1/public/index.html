@@ -35,6 +35,10 @@
             <main id="page-main" className="container mx-auto p-4 space-y-4">
               <PageIntro summary="可重试（429/5xx/网络）才退避；401 立刻停；有上限。本页不调模型。"
                 steps={["429/408/5xx/网络错 → 等 Retry-After 与指数退避的较大者，再加 jitter", "400/401/403/404/422 → NonRetryable，第一次就停", "maxAttempts + 总时长上限，避免永远重试"]}
+                takeaway={{
+                  point: "429 = `Too Many Requests` = 你太快了客户端该慢点(听 Retry-After + 指数退避 + jitter 防 thundering herd);5xx = 服务端错了,退避后**有限**重试;**401/403/404/422 = NonRetryable,第一次就停**——重试一万次 Key 还是错的。**重试必须有上限**(`maxAttempts` + 总时长),不能无限重试。LLM 一定有 429 是设计不是 bug——RPM/TPM/并发上限每个账号都被限制,生产并发 = 10 第一波就会撞。",
+                  observe: "怎么观察:看 5 端点对照:① /api/proxy?target=easy 看 happy path;② ?target=chaos 看服务端故意返 429 + 客户端退避后重试最终 200;③ ?target=auth 看 401 → 客户端第一次就停,不再重试(NonRetryable);④ ?target=forever 看总时长/次数上限生效,不会永远重试;⑤ /api/real-burst 真并发撞限 → 看 burst 中间穿插 429,客户端按 Retry-After + 指数退避 + jitter 重试。",
+                }}
                 extra={<pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">{`GET /api/proxy?target=easy|chaos|auth|forever|ok
 GET /api/real          真 API 单次（需 Key）
 GET /api/real-burst    并发撞 429`}</pre>} />

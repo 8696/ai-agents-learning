@@ -280,6 +280,12 @@
                 <li>点「调一次 B 组」 → 又一次 LLM 调用，结果存到右卡片</li>
                 <li>两份结果都出来后，下方「完整差异点」表自动列出两边的所有可观察差异（变体 1「触发条件」实证）</li>
               </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">Tool description 是模型「要不要调」的唯一依据——A 组短/无反例 vs B 组带「何时调 + 何时别调」对照实证：description 里写明触发条件+不适用场景直接影响 pickedToolName 的物理决策。"我接了 Tool 怎么没生效" 90% 是 description 写得糊,不是代码 bug。</div>
+                <div className="text-xs text-gray-600">怎么观察：默认 query "我订单 12345 还没到" 分别点 A/B 两组,看「完整差异点」表的 pickedToolName / 是否调对 / token 使用 / 耗时——A 组可能 pickedToolName=null(不调,瞎答)或 picked 错的工具;B 组 picked 正确的 query_logistics。两组对照实证 description 写法怎么左右模型决定。</div>
+              </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

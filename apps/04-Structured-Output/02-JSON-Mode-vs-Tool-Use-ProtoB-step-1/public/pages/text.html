@@ -138,6 +138,10 @@
                 <PageIntro
                   summary="协议 B 没有 response_format。这条路径只能靠 prompt 求模型吐 JSON，语法闸比协议 A 的 json_object 更弱。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "协议 B「无 tools」路径 = 模型完全自由，content[type=text] 是字符串,服务端要剥 <think> / fence + JSON.parse,守约率比协议 A 的 json_object 还低（实测 ~0% 不写 schema 也会自己加字段）；生产里这条路径几乎不用,要走 tool_use。",
+                    observe: "改 prompt 跑同一份 Intent 任务:① 看 raw content 经常带 markdown 壳 / <think> 块 / 自然语言解释——服务端剥完仍可能 parse 挂;② Zod 失败率高,因为 schema 没喂给模型;③ 和 tool-use 页同 prompt 对比,直观看「软约束 vs 软约束」。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

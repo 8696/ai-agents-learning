@@ -85,6 +85,10 @@
                 <PageIntro
                   summary="ZodError.issues 的每一条都能拼进 prompt。真正回灌模型看 02 / 05。"
                   steps={INTRO_STEPS}
+                  takeaway={{
+                    point: "Zod 的 `error.issues[]` 天然是给模型吃的——每条带 `path`（嵌套数组路径）+ `code` + `message`，把 issues 拼回 prompt 让模型修；这才是「JSON Schema 喂模型 → 模型吐 → Zod 验 → 失败回灌」的完整闭环。",
+                    observe: "造一份缺字段 / 类型错的数据点跑：① 看 issues 区逐条列出（path 用点号拼起来如 `address.city`）；② 看下面自动生成的「给模型吃的 repair prompt」字符串，每条 issue 一行——这就是把 ZodError 翻译成 repair prompt 的最小代码模板。",
+                  }}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">

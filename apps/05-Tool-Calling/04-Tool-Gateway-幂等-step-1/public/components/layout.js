@@ -33,6 +33,12 @@
           <li>点「调模型发请求」 → POST /api/chat（协议 B · Anthropic Messages API）</li>
           <li>输出区看：Round 1/2 四张数据卡 + 钩子判定链 + 拒绝/通过/二次确认 三态</li>
         </ol>
+        {/* 核心教学点卡片（§5.3.11.b 强制） */}
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+          <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+          <div className="text-xs text-gray-800">Tool Gateway = Tool handler 内部按顺序走「鉴权（admin role）→ 配额（每月 5 次）→ 危险（必须 confirm_token）」三钩子——任一不过直接拒绝,全过才伪执行。**模型发出 tool_use ≠ 允许执行**——Gateway 是「法官」,模型只是「开口要」的演员;不可逆操作（删用户）即使模型决定调了,也必须走二次确认。</div>
+          <div className="text-xs text-gray-600">怎么观察:① 跑 query 让模型想调 delete_user,role=user → 第一钩子鉴权失败直接拒;② role=admin + 不填 confirm_token → 走到第二/三钩子 NEEDS_CONFIRM;③ 全填 → 通过 + 伪执行成功。看输出区「拒绝/通过/二次确认」三态徽标 + 钩子判定链每一步的结果。</div>
+        </div>
       </section>
     );
   }

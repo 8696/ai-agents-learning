@@ -84,6 +84,12 @@
           <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
             {steps.map(function (s, i) { return <li key={i}>{s}</li>; })}
           </ol>
+          {/* 核心教学点卡片（§5.3.11.b 强制） */}
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">协议 B（Anthropic Messages API）Function Calling 与协议 A 的字段差异:① tool_use.input 是对象(JSON.parse 省了);② 回灌消息 role='user' + content=[type=tool_result 的数组] 而不是 role='tool' message;③ max_tokens 必填(协议 B 协议层要求);④ content blocks 是数组而不是字符串。</div>
+            <div className="text-xs text-gray-600">怎么观察:① 跑对话后看 #llm-protocol 区两轮 Request/Response——Round 1 看 content 数组里的 tool_use block,Round 2 看回灌的 tool_result block;② 与 step-6 协议 A 字段一一对照看(tool_use.input vs function.arguments / role:user vs role:tool / 多 max_tokens);③ 同样的对话在两个协议下跑,直接看字段差异。</div>
+          </div>
         </section>
       );
     }
