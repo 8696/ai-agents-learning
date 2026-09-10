@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死循环防护 · 第四步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const FALLBACK_PORT = 50062;
+    const POLL_INTERVAL_MS = 1000;
+
+    function App() {
+      // 用户任务 + 三按钮：启动 / 取消 / 立即读结果
+      const [query, setQuery] = useState("查 SKU-001 / SKU-002 / SKU-003 的库存，完成后输出 final_answer");
+      const [latencyMsPerStep, setLatencyMsPerStep] = useState(800);
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: true });
+      const [runId, setRunId] = useState(null);
+      const [status, setStatus] = useState("idle"); // idle | running | cancelled | finished
+      const [pollCount, setPollCount] = useState(0);
+      const [result, setResult] = useState(null);
+      const [cancelMsg, setCancelMsg] = useState("");
+      const [errMsg, setErrMsg] = useState("");
+      const pollTimerRef = useRef(null);
+      const stoppedRef = useRef(false);
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((j) => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => {});
+        return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+      }, []);
+
+      async function startRun() {
+        setStatus("running");
+        setRunId(null);
+        setResult(null);
+        setCancelMsg("");
+        setErrMsg("");
+        setPollCount(0);
+        stoppedRef.current = false;
+        try {
+          const res = await fetch(`/api/agent/run-with-cancel?query=${encodeURIComponent(query)}&latencyMsPerStep=${latencyMsPerStep}`, { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("idle");
+            return;
+          }
+          if (res.status >= 500) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`服务错误：HTTP ${res.status}（${body.error || "请看 logs/"}）`);
+            setStatus("idle");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const body = await res.json();
+          setRunId(body.runId);
+          // 开始轮询
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          pollTimerRef.current = setInterval(() => pollOnce(body.runId), POLL_INTERVAL_MS);
+        } catch (e) {
+          setErrMsg(`启动失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("idle");
+        }
+      }
+
+      async function pollOnce(rid) {
+        if (stoppedRef.current) return;
+        try {
+          const res = await fetch(`/api/agent/run-status/${rid}`);
+          if (res.status === 404) {
+            setErrMsg(`找不到 runId=${rid}`);
+            return;
+          }
+          if (!res.ok) return;
+          const j = await res.json();
+          setPollCount((c) => c + 1);
+          if (j.status === "running") return;
+          // 结束了
+          stoppedRef.current = true;
+          if (pollTimerRef.current) { clearInterval(pollTimerRef.current); pollTimerRef.current = null; }
+          setStatus(j.status);
+          setResult(j);
+        } catch {}
+      }
+
+      async function cancelRun() {
+        if (!runId) return;
+        try {
+          const res = await fetch(`/api/cancel/${runId}`, { method: "POST" });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setCancelMsg(`取消失败：HTTP ${res.status} · ${body.error || ""}`);
+            return;
+          }
+          setCancelMsg(`取消指令已发送：${body.reason || ""}`);
+        } catch (e) {
+          setCancelMsg(`取消请求失败：${String((e && e.message) || e)}`);
+        }
+      }
+
+      const busy = status === "running";
+      const pillText =
+        status === "running"   ? "🔄 运行中" :
+        status === "cancelled" ? "🚫 已取消" :
+        status === "finished"  ? "✅ 完成" :
+        status === "idle"      ? "⏸ 待连接" : "⏸ 待连接";
+      const pillClass =
+        status === "running"   ? "bg-blue-100 text-blue-800" :
+        status === "cancelled" ? "bg-orange-100 text-orange-800" :
+        status === "finished"  ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700";
+
+      const finalResult = result?.ok ? result.result : null;
+      const finalErr = result && !result.ok ? result.error : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              死循环防护（Loop Guard） · 第四步（step-4） · 用户取消 闸（AbortController · 变体 4）
+            </h1>
+            <span id="status-pill" className={`text-xs px-2 py-2 rounded ${pillClass}`}>
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>用户取消 闸（AbortController · 变体 4）</b>。启动 run 后立刻返 runId；用户中途点取消 → 后端 AbortController.abort() → runLoop 检测 abortSignal.aborted → break。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「启动 run」→ POST /api/agent/run-with-cancel → 立刻 202 + {"{ runId, status: \"running\" }"}</li>
+                <li>前端开始轮询 GET /api/agent/run-status/:runId（每秒一次）</li>
+                <li>中途点「取消」→ POST /api/cancel/:runId → runLoop 下一圈 while 看到 abortSignal.aborted → break</li>
+                <li>数字面板显示 stoppedReason = user_cancel；不点取消就跑到底，stoppedReason = model_says_stop / timeout / max_steps</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>用户取消 = AbortController.abort()</b>，不是 <code className="text-xs">process.exit()</code>。abort 是给 while 一个「该停」的信号；进程本身继续跑，处理别的请求。<code className="text-xs">process.exit()</code> 把整个 Node 进程杀掉，所有别的用户请求也跟着死。
+                </div>
+                <div className="text-xs text-gray-600">
+                  看结果盯四个数 + 一段话：<b>已跑轮数（stepCount）</b> · <b>累计 token 估算（tokenEstimate）</b> · <b>实际耗时（elapsedMs）</b> · <b>停下来的原因（stoppedReason · 取值 max_steps / timeout / model_says_stop / user_cancel）</b> · <b>模型总结文本（finalAnswer）</b>。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">启动 → 轮询 → 中途取消 · 每一步独立请求</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  每轮工具耗时（latency · 毫秒）：
+                  <input id="input-latency" type="number" min="0" max="2000" value={latencyMsPerStep} onChange={(e) => setLatencyMsPerStep(Math.max(0, Number(e.target.value) || 0))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+                <button id="run-start" onClick={startRun} disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  启动 run（模拟长任务）
+                </button>
+                <button id="run-cancel" onClick={cancelRun} disabled={!runId || !busy} className="bg-red-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  🚫 中途取消（用户取消 闸 · AbortController.abort）
+                </button>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-700">模型任务（query · 真模型用）：</label>
+                <textarea id="input-query" value={query} onChange={(e) => setQuery(e.target.value)} rows={2} className="border border-gray-300 rounded px-2 py-1 text-xs" />
+              </div>
+              <div className="text-xs text-gray-600">
+                runId：{runId ?? "（还没启动）"} · 已轮询 {pollCount} 次
+              </div>
+              {cancelMsg ? <div className="text-sm text-orange-700 bg-orange-50 border border-orange-300 rounded p-2">{cancelMsg}</div> : null}
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">{errMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-sm text-gray-500">空态：点「启动 run」开始。启动后立刻返 runId；中途点「🚫 取消」看 AbortController.abort() 效果。</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-gray-800">最终结果 · 状态 = {status}</div>
+                  {finalErr ? (
+                    <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">启动异常：{finalErr}</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div><span className="text-gray-500">已跑轮数（stepCount）：</span><b>{finalResult?.stepCount ?? "—"}</b></div>
+                      <div><span className="text-gray-500">累计 token 估算（tokenEstimate）：</span><b>{finalResult?.tokenEstimate ?? "—"}</b></div>
+                      <div><span className="text-gray-500">实际耗时（elapsedMs）：</span><b>{finalResult?.summary?.elapsedMs ?? "—"} ms</b></div>
+                      <div><span className="text-gray-500">停下来的原因（stoppedReason）：</span><b>{finalResult?.stoppedReason ?? "—"}</b></div>
+                      <div className="col-span-2"><span className="text-gray-500">闸门提示（gateTriggered）：</span><b className="break-all">{finalResult?.gateTriggered ?? "—"}</b></div>
+                      {finalResult?.summary?.finalAnswer ? (
+                        <div className="col-span-2 bg-yellow-50 border border-yellow-300 rounded p-2">
+                          <span className="text-gray-500">模型总结文本（finalAnswer）：</span><b className="text-yellow-900">{finalResult.summary.finalAnswer}</b>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-600">
+                    教学：{status === "cancelled"
+                      ? "✓ 用户取消闸 生效（stoppedReason=user_cancel）—— 进程没死，只是这个 run 停了；前端可以再启一个 runId 继续跑。"
+                      : status === "finished"
+                      ? "✓ run 正常结束（model_says_stop / timeout / max_steps）—— 取消闸 没触发；轮询看到 finished 后停。"
+                      : "—"}
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 会调真模型 · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

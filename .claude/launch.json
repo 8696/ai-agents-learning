@@ -184,6 +184,14 @@
       "port": 50061,
       "url": "http://127.0.0.1:50061/",
       "autoPort": false
+    },
+    {
+      "name": "07-03-loop-guard-step-4",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:07-03-loop-guard-step-4"],
+      "port": 50062,
+      "url": "http://127.0.0.1:50062/",
+      "autoPort": false
     }
   ]
 }
