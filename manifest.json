@@ -3160,8 +3160,16 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": []
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -3278,6 +3286,10 @@
                 "label": "lib",
                 "children": [
                   {
+                    "label": "flow",
+                    "children": []
+                  },
+                  {
                     "label": "http",
                     "children": [
                       {
@@ -3390,6 +3402,10 @@
               {
                 "label": "lib",
                 "children": [
+                  {
+                    "label": "flow",
+                    "children": []
+                  },
                   {
                     "label": "http",
                     "children": [
@@ -4425,6 +4441,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -4700,6 +4720,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -5067,8 +5091,16 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": []
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -5562,6 +5594,1841 @@
         ]
       },
       {
+        "label": "07-手写Agent",
+        "children": [
+          {
+            "label": "01-Agent-Loop-ReAct-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "execute-one-tool.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/flow/execute-one-tool.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "todo-data.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/tools/todo-data.ts"
+                      },
+                      {
+                        "label": "todo-tools.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/lib/tools/todo-tools.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "side-effect.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/components/side-effect.js"
+                      },
+                      {
+                        "label": "todo-row.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/components/todo-row.js"
+                      },
+                      {
+                        "label": "trajectory.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/components/trajectory.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "fmt-due.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/utils/fmt-due.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "agent.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/routes/agent.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "todos.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/routes/todos.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Agent-Loop-ReAct-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "execute-one-tool.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/flow/execute-one-tool.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "todo-data.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/tools/todo-data.ts"
+                      },
+                      {
+                        "label": "todo-tools.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/tools/todo-tools.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "parallel-card.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/components/parallel-card.js"
+                      },
+                      {
+                        "label": "side-effect.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/components/side-effect.js"
+                      },
+                      {
+                        "label": "todo-row.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/components/todo-row.js"
+                      },
+                      {
+                        "label": "trajectory.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/components/trajectory.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "fmt-due.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/utils/fmt-due.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "agent.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/routes/agent.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "todos.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/routes/todos.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Agent-Loop-ReAct-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "execute-one-tool.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/flow/execute-one-tool.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "todo-data.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/tools/todo-data.ts"
+                      },
+                      {
+                        "label": "todo-tools.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/lib/tools/todo-tools.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "fail-observe-card.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/fail-observe-card.js"
+                      },
+                      {
+                        "label": "parallel-card.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/parallel-card.js"
+                      },
+                      {
+                        "label": "side-effect.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/side-effect.js"
+                      },
+                      {
+                        "label": "todo-row.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/todo-row.js"
+                      },
+                      {
+                        "label": "trajectory.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/trajectory.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "fmt-due.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/utils/fmt-due.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "agent.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/routes/agent.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "todos.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/routes/todos.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-Agent-Loop-ReAct-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "cancellation.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/cancellation.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "execute-one-tool.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/flow/execute-one-tool.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "todo-data.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/tools/todo-data.ts"
+                      },
+                      {
+                        "label": "todo-tools.ts",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/lib/tools/todo-tools.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "cancel-badge.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/cancel-badge.js"
+                      },
+                      {
+                        "label": "side-effect.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/side-effect.js"
+                      },
+                      {
+                        "label": "todo-row.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/todo-row.js"
+                      },
+                      {
+                        "label": "trajectory.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/trajectory.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "fmt-due.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/utils/fmt-due.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "agent.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/routes/agent.ts"
+                  },
+                  {
+                    "label": "cancel.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/routes/cancel.ts"
+                  },
+                  {
+                    "label": "error-demo.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/routes/error-demo.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "todos.ts",
+                    "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/routes/todos.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-先规划再执行-vs-一步步走-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "plan-and-execute.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/lib/flow/plan-and-execute.ts"
+                      },
+                      {
+                        "label": "step-by-step.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/lib/flow/step-by-step.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "ops.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/lib/tools/ops.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "types.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/lib/types.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "metrics-strip.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "plan-panel.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/components/plan-panel.js"
+                      },
+                      {
+                        "label": "round-card.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/components/round-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "compare-metrics.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/utils/compare-metrics.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "plan-and-execute.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/routes/plan-and-execute.ts"
+                  },
+                  {
+                    "label": "step-by-step.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/routes/step-by-step.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-先规划再执行-vs-一步步走-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "parse-plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/flow/parse-plan.ts"
+                      },
+                      {
+                        "label": "plan-and-execute.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/flow/plan-and-execute.ts"
+                      },
+                      {
+                        "label": "step-by-step.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/flow/step-by-step.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "ops.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/tools/ops.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "types.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/lib/types.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "metrics-strip.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "plan-panel.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/components/plan-panel.js"
+                      },
+                      {
+                        "label": "round-card.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/components/round-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "compare-metrics.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/utils/compare-metrics.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "plan-and-execute.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/routes/plan-and-execute.ts"
+                  },
+                  {
+                    "label": "step-by-step.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/routes/step-by-step.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-先规划再执行-vs-一步步走-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "parse-plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/flow/parse-plan.ts"
+                      },
+                      {
+                        "label": "plan-and-execute.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/flow/plan-and-execute.ts"
+                      },
+                      {
+                        "label": "replan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/flow/replan.ts"
+                      },
+                      {
+                        "label": "step-by-step.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/flow/step-by-step.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "ops.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/tools/ops.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "types.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/lib/types.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "metrics-strip.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "plan-panel.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/components/plan-panel.js"
+                      },
+                      {
+                        "label": "round-card.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/components/round-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "compare-metrics.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/utils/compare-metrics.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "plan-and-execute.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/routes/plan-and-execute.ts"
+                  },
+                  {
+                    "label": "step-by-step.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/routes/step-by-step.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-先规划再执行-vs-一步步走-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "parse-plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/flow/parse-plan.ts"
+                      },
+                      {
+                        "label": "plan-and-execute.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/flow/plan-and-execute.ts"
+                      },
+                      {
+                        "label": "replan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/flow/replan.ts"
+                      },
+                      {
+                        "label": "step-by-step.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/flow/step-by-step.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "ops.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/tools/ops.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "types.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/lib/types.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "metrics-strip.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "plan-panel.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/components/plan-panel.js"
+                      },
+                      {
+                        "label": "round-card.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/components/round-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "compare-metrics.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/utils/compare-metrics.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "plan-and-execute.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/routes/plan-and-execute.ts"
+                  },
+                  {
+                    "label": "step-by-step.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/routes/step-by-step.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-先规划再执行-vs-一步步走-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "parse-plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/flow/parse-plan.ts"
+                      },
+                      {
+                        "label": "plan-and-execute.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/flow/plan-and-execute.ts"
+                      },
+                      {
+                        "label": "replan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/flow/replan.ts"
+                      },
+                      {
+                        "label": "step-by-step.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/flow/step-by-step.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "ops.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/tools/ops.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "types.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/lib/types.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "metrics-strip.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "plan-panel.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/components/plan-panel.js"
+                      },
+                      {
+                        "label": "round-card.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/components/round-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "compare-metrics.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/utils/compare-metrics.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/routes/health.ts"
+                  },
+                  {
+                    "label": "plan-and-execute.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/routes/plan-and-execute.ts"
+                  },
+                  {
+                    "label": "step-by-step.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/routes/step-by-step.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-先规划再执行-vs-一步步走-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "execute-plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/flow/execute-plan.ts"
+                      },
+                      {
+                        "label": "parse-plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/flow/parse-plan.ts"
+                      },
+                      {
+                        "label": "plan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/flow/plan.ts"
+                      },
+                      {
+                        "label": "replan.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/flow/replan.ts"
+                      },
+                      {
+                        "label": "sessions.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/flow/sessions.ts"
+                      },
+                      {
+                        "label": "step-by-step.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/flow/step-by-step.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/logger.ts"
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "ops.ts",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/tools/ops.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "types.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/lib/types.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "metrics-strip.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "plan-panel.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/components/plan-panel.js"
+                      },
+                      {
+                        "label": "round-card.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/components/round-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "compare-metrics.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/utils/compare-metrics.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "confirm-plan.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/routes/confirm-plan.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/routes/health.ts"
+                  },
+                  {
+                    "label": "plan.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/routes/plan.ts"
+                  },
+                  {
+                    "label": "step-by-step.ts",
+                    "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/routes/step-by-step.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-1/lib/flow/loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "no-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-1/routes/no-gate.ts"
+                  },
+                  {
+                    "label": "with-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-1/routes/with-gate.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-2/lib/flow/loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "dual-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-2/routes/dual-gate.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "timeout-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-2/routes/timeout-gate.ts"
+                  },
+                  {
+                    "label": "with-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-2/routes/with-gate.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-call.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-3/lib/flow/llm-call.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-3/lib/flow/loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "model-stop-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/routes/model-stop-gate.ts"
+                  },
+                  {
+                    "label": "timeout-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/routes/timeout-gate.ts"
+                  },
+                  {
+                    "label": "triple-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/routes/triple-gate.ts"
+                  },
+                  {
+                    "label": "with-gate.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-3/routes/with-gate.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-call.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-4/lib/flow/llm-call.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-4/lib/flow/loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "cancel.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/routes/cancel.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "run-status.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/routes/run-status.ts"
+                  },
+                  {
+                    "label": "run-with-cancel.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/routes/run-with-cancel.ts"
+                  },
+                  {
+                    "label": "runs.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-4/routes/runs.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-call.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/flow/llm-call.ts"
+                      },
+                      {
+                        "label": "loop-helpers.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/flow/loop-helpers.ts"
+                      },
+                      {
+                        "label": "loop-step.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/flow/loop-step.ts"
+                      },
+                      {
+                        "label": "loop-types.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/flow/loop-types.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "tool-retry.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/flow/tool-retry.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-5/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-5/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "always-fail.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-5/routes/always-fail.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-5/routes/health.ts"
+                  },
+                  {
+                    "label": "with-retry.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-5/routes/with-retry.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-call.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/flow/llm-call.ts"
+                      },
+                      {
+                        "label": "loop-helpers.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/flow/loop-helpers.ts"
+                      },
+                      {
+                        "label": "loop-step.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/flow/loop-step.ts"
+                      },
+                      {
+                        "label": "loop-types.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/flow/loop-types.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "tool-retry.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/flow/tool-retry.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-6/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-6/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-6/routes/health.ts"
+                  },
+                  {
+                    "label": "loop-detection.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-6/routes/loop-detection.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-6/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-7",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-call.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/flow/llm-call.ts"
+                      },
+                      {
+                        "label": "loop-helpers.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/flow/loop-helpers.ts"
+                      },
+                      {
+                        "label": "loop-step.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/flow/loop-step.ts"
+                      },
+                      {
+                        "label": "loop-types.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/flow/loop-types.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "tool-retry.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/flow/tool-retry.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-7/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-7/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-7/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-7/routes/health.ts"
+                  },
+                  {
+                    "label": "token-budget.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-7/routes/token-budget.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-7/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-死循环防护-step-8",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-call.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/flow/llm-call.ts"
+                      },
+                      {
+                        "label": "loop-helpers.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/flow/loop-helpers.ts"
+                      },
+                      {
+                        "label": "loop-step.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/flow/loop-step.ts"
+                      },
+                      {
+                        "label": "loop-types.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/flow/loop-types.ts"
+                      },
+                      {
+                        "label": "loop.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/flow/loop.ts"
+                      },
+                      {
+                        "label": "tool-retry.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/flow/tool-retry.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "index.html",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/07-手写Agent/03-死循环防护-step-8/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "cancel.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/routes/cancel.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/routes/health.ts"
+                  },
+                  {
+                    "label": "runs.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/routes/runs.ts"
+                  },
+                  {
+                    "label": "todo-assistant.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/routes/todo-assistant.ts"
+                  },
+                  {
+                    "label": "todo-run-status.ts",
+                    "path": "apps/07-手写Agent/03-死循环防护-step-8/routes/todo-run-status.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/07-手写Agent/03-死循环防护-step-8/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "label": "llm.ts",
         "path": "apps/llm.ts"
       },
@@ -5598,6 +7465,55 @@
   {
     "label": "scripts",
     "children": [
+      {
+        "label": "check-demo",
+        "children": [
+          {
+            "label": "check-frontend.cjs",
+            "path": "scripts/check-demo/check-frontend.cjs"
+          },
+          {
+            "label": "check-imports.cjs",
+            "path": "scripts/check-demo/check-imports.cjs"
+          },
+          {
+            "label": "check-one.cjs",
+            "path": "scripts/check-demo/check-one.cjs"
+          },
+          {
+            "label": "check-ports.cjs",
+            "path": "scripts/check-demo/check-ports.cjs"
+          },
+          {
+            "label": "check-structure.cjs",
+            "path": "scripts/check-demo/check-structure.cjs"
+          },
+          {
+            "label": "index.cjs",
+            "path": "scripts/check-demo/index.cjs"
+          },
+          {
+            "label": "jsx.cjs",
+            "path": "scripts/check-demo/jsx.cjs"
+          },
+          {
+            "label": "limits.cjs",
+            "path": "scripts/check-demo/limits.cjs"
+          },
+          {
+            "label": "parser.cjs",
+            "path": "scripts/check-demo/parser.cjs"
+          },
+          {
+            "label": "paths.cjs",
+            "path": "scripts/check-demo/paths.cjs"
+          },
+          {
+            "label": "report.cjs",
+            "path": "scripts/check-demo/report.cjs"
+          }
+        ]
+      },
       {
         "label": "check-demo.cjs",
         "path": "scripts/check-demo.cjs"
