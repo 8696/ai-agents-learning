@@ -60,7 +60,7 @@ Node SDK 接 AbortController = **SDK 自己不实现取消**，就是把 signal 
 ```
 
 **只有两种方式能让服务端真正停**：
-- (a) **关掉底层 socket**（fetch abort 通常能做到——TCP RST/FIN 让对端 HTTP 库知道断连，主流实现会停读）。但**有的实现是 graceful close（FIN 而非 RST）**，服务端写完所有缓存才返回——「关网络 ≠ 立刻停生成」的灰区。
+- (a) **关掉底层 socket**（fetch abort 通常能做到——TCP RST/FIN 让对端 HTTP 库知道断连，主流实现会停读）。但**有的实现是 graceful close（FIN 而非 RST）**，服务端写完所有缓存才返回——「关网络 ≠ 立刻停生成」的边界情况。
 - (b) **服务端原生 cancel API**（Anthropic 有 `client.messages.cancel()`，看版本；OpenAI 公开 API 没有，国产厂商看实现）。
 
 **严格说**：客户端 abort = 「告诉服务端我不想接了」，**不能保证模型立刻停**。**生成过的 token，费用按生成的算**。

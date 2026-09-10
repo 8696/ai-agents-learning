@@ -1,6 +1,6 @@
 # 模块 06 · 01 · Context vs Memory · step-2 Memory 持久化
 
-> step-2 状态：**✅ 已锁定**（2026-09-09）。§5.3.2 6 项齐 + `node scripts/check-demo.cjs` 过 + 闸门 3 独立 subagent 验证 49/49 已实现（0 未实现）。冻结；要改 bug 走 §5.3.14 锁后修。
+> step-2 状态：**✅ 已锁定**（2026-09-09）。§5.3.2 6 项齐 + `node scripts/check-demo.cjs` 过 + 过关检查 3 独立 subagent 验证 49/49 已实现（0 未实现）。冻结；要改 bug 走 §5.3.14 锁后修。
 
 ## 端口
 
@@ -21,7 +21,7 @@ cd apps && yarn app:06-01-context-vs-memory-step-2
        │
        │  POST /api/chat  { messages: [...] }
        ▼
-koa bodyParser → routes/chat.ts Zod 闸门
+koa bodyParser → routes/chat.ts Zod 校验
        │
        │  routes/chat.ts: kvList("default") → userPrefs
        │  baseSystem = "..." + JSON.stringify(userPrefs)   ← Memory 注入段（前端 React state 看不到）

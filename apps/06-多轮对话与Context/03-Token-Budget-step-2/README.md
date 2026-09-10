@@ -17,26 +17,26 @@ cd apps && yarn app:06-03-token-budget-step-2
 ## 数据流
 
 ```text
-浏览器调旋钮（historyCount / outputBudget / totalBudget / summarizeFrom / keepRecent）→ React state
+浏览器调页面参数（historyCount / outputBudget / totalBudget / summarizeFrom / keepRecent）→ React state
        │
        │  POST /api/compare  { historyCount, outputBudget, totalBudget, summarizeFrom, keepRecent }
        ▼
-koa bodyParser → routes/compare.ts Zod 闸门
+koa bodyParser → routes/compare.ts Zod 校验
        │
        │  buildMockHistory(historyCount)              ← 第 1 轮 = key fact（自我介绍）
        │  beforeBudget = estimateBudget(...)
        │
        │  trim 路径：
-       │    trimToBudget(...)                         ← 丢最旧直到 fit
+       │    trimToBudget(...)                         ← 丢最旧直到能塞进窗口
        │    messagesTrim = [system, ...trimmed, userText]
        │    ─── 调真模型 #1 ───→ trimReply
        │
        │  summarize 路径：
        │    oldForSummary = history.slice(0, summarizeFrom)
        │    recentOriginal = history.slice(summarizeFrom)
-       │    ─── 调真模型（摘要）───→ summary          ← 多 1 次出网
+       │    ─── 调真模型（摘要）───→ summary          ← 多 1 次真发网络请求
        │    messagesSummarize = [system, summaryMsg, ...recentOriginal, userText]
-       │    若仍超 → 继续丢最近原文直到 fit
+       │    若仍超 → 继续丢最近原文直到能塞进窗口
        │    ─── 调真模型 #2 ───→ summarizeReply
        │
        │  KEY_FACT 子串检测：trim.hasKeyFact / summarize.hasKeyFact
@@ -44,15 +44,15 @@ koa bodyParser → routes/compare.ts Zod 闸门
 React 四张卡：① 双策略判定小结  ② trim 路径  ③ summarize 路径（含 summary 内容）  ④ 裁前三块预算
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打：handler 入参 → trim 工具档 → summarizeOld（1 次出网）→ 调真模型 2 次核心档五件套 → handler 出参完整 body。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写：handler 入参 → trim（普通函数，日志简写） → summarizeOld（1 次真发网络请求）→ 调真模型 2 次主路径按五条日志写完整 → handler 出参完整 body。
 
 ## 当前能做什么
 
-- 五个旋钮：history 轮数（2~200）/ output 预留（64~4000）/ 三块合计上限（512~32000）/ summarizeFrom（远期 N）/ keepRecent（近期 K）
+- 五个页面可调参数：history 轮数（2~200）/ output 预留（64~4000）/ 三块合计上限（512~32000）/ summarizeFrom（远期 N）/ keepRecent（近期 K）
 - 点「跑对照」→ 服务端算预算 → 走 trim + summarize 两条路径 → 真调 3 次模型（1 次摘要 + 2 次问答）
 - 默认参数下：trim 路径 key fact 被丢 → trimReply ❌；summarize 路径 summary 里仍含 → summarizeReply ✅
 - 改 `historyCount` 调大 → trimDropped 增多 → trim 路径更惨；summarize 路径受影响小
-- 改 `summarizeFrom` 调小（如 5）→ 远期喂摘要的 N 少 → summary 短 → 拼装后预算更易 fit
+- 改 `summarizeFrom` 调小（如 5）→ 远期喂摘要的 N 少 → summary 短 → 拼装后预算更容易塞进窗口
 - 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`
 
@@ -63,7 +63,7 @@ React 四张卡：① 双策略判定小结  ② trim 路径  ③ summarize 路�
 - **「summarize」= 远期 N 条 → LLM 浓缩成 1 条 summary → summary 里仍含 key fact → 模型记起**
 - **「summarize 的代价」= 多 1 次 LLM 调用**：先调摘要、再调问答；trim 路径只调问答
 - **「远期 + 近期」= 生产最常见混合形态**：完整对话太贵，全丢又太狠，摘要是中间地带
-- **不在 step-2**：硬阈值应急、选择性注入、软硬双层、按 token 算窗口、失败兜底降级 —— 这些是 step-N。
+- **不在 step-2**：硬阈值应急、选择性注入、软阈值+硬阈值两层、按 token 算窗口、失败兜底降级 —— 这些是 step-N。
 
 ## 对应学习沉淀
 

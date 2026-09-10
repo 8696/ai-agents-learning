@@ -24,7 +24,7 @@ cd apps && yarn app:05-01-fc-protocol-step-7
       → while (rounds < MAX_ROUNDS=8) {
           ① decision = decideHybridAction(round, query, path, lastResult, weatherCalled, suggestItemsCalled)
           ② 路由层 hard-code 约束 1（拒绝越权）：suggest_items 必须在 get_weather 之后调
-             checkChainConstraint(decision.tool, weatherCalled) → 违反返 ok:false 回灌 → 模型下一轮退回 weather
+             checkChainConstraint(decision.tool, weatherCalled) → 违反返 ok:false 塞回 messages → 模型下一轮退回 weather
           ③ 路由层 hard-code 约束 2（路径 B 硬接）：
              shouldHardcodeSuggestItems(path, weatherCalled, suggestItemsCalled)
              → 模型调完 weather → final → 路由层自动跑 suggest_items（用 weather.rain_prob 派生参数）
@@ -57,7 +57,7 @@ routes/
 ## 本子节教学点
 
 - **混合编排定义**：路由层 hard-code 两条约束 + 模型自决要不要进两步链（MD 易混点「三种编排方式对比 · 混合」）
-- **路由层 hard-code 约束 1（拒绝越权）**：`suggest_items` 必须在 `get_weather` 之后调；违反 → `ok:false error` 回灌 → 模型下一轮决定先 weather
+- **路由层 hard-code 约束 1（拒绝越权）**：`suggest_items` 必须在 `get_weather` 之后调；违反 → `ok:false error` 塞回 messages → 模型下一轮决定先 weather
 - **路由层 hard-code 约束 2（路径 B 硬接）**：模型调完 weather → final → 路由层自动再调 suggest_items（用 weather.rain_prob 当参数）
 - **三条可观察路径**：
   - **路径 A** · weather-only：query 含天气/温度但不涉打包 → 模型仅调 get_weather → final

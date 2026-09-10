@@ -31,13 +31,13 @@ yarn app:03-02-few-shot-zero-shot-step-1
 
 ## 当前能做什么
 
-- **Happy path**：同一句评价并排 Zero-shot / Few-shot；网关剥思考块后再判格式；灰区标签（包装差但豆子可用 → 中评）。Zero-shot 仍可能 `hadThinking: true`（壳能过，但嘴边不纯）。
+- **Happy path**：同一句评价并排 Zero-shot / Few-shot；网关剥思考块后再判格式；边界不好判的例子标签（包装差但豆子可用 → 中评）。Zero-shot 仍可能 `hadThinking: true`（JSON 外壳能过，但嘴边不纯）。
 - **错误处理**：空输入 → HTTP 400；Key 缺失 → 页脚 Key ❌ 且主按钮 disabled；上游 API 失败 → 5xx 文案进红字；fetch 发不出去 → `#status-pill` 红色。
 - **Loading**：请求中 pill = 🔄请求中，按钮 `disabled`。
 - **单会话输出区**：`#output` 覆盖最新对照，不另开会话。
 - **环境元信息**：`GET /health` 填页脚 `#env-info`（provider / model / Key，不写死模型名）。
 
-预置五条样本：好评 / 中评 / 差评主路径、灰区、捣乱句。
+预置五条样本：好评 / 中评 / 差评主路径、边界不好判的例子、捣乱句。
 
 ## 对应学习沉淀
 

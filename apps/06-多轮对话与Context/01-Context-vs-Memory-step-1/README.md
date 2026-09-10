@@ -21,7 +21,7 @@ cd apps && yarn app:06-01-context-vs-memory-step-1
        │
        │  POST /api/chat  { messages: [...] }   ← 这就是 Context
        ▼
-koa bodyParser → routes/chat.ts Zod 闸门
+koa bodyParser → routes/chat.ts Zod 校验
        │
        │  messages 原样发给 llm.openai.chat.completions.create
        ▼
@@ -35,7 +35,7 @@ koa bodyParser → routes/chat.ts Zod 闸门
 React setMessages(data.messages) → 下一次发送把这份整个发给模型
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打完整 messages + token 估算 + 模型返回值 + 耗时。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写完整 messages + token 估算 + 模型返回值 + 耗时。
 
 ## 当前能做什么
 

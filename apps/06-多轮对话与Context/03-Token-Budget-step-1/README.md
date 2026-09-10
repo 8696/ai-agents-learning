@@ -2,7 +2,7 @@
 
 > step-1 状态：**✅ 已锁定**（2026-09-09）。§5.3.2 6 项齐 + `node scripts/check-demo.cjs` 过。冻结。
 >
-> **这一步只做了一件事**：公式 `total = system + history + output 预留`，超了 `totalBudget` 就丢最旧非 system 消息。**system / output 预留都不动**。摘要压缩、选择性注入、硬阈值、软硬双层都**不**在 step-1 — 留给 step-2+。
+> **这一步只做了一件事**：公式 `total = system + history + output 预留`，超了 `totalBudget` 就丢最旧非 system 消息。**system / output 预留都不动**。摘要压缩、选择性注入、硬阈值、软阈值+硬阈值两层都**不**在 step-1 — 留给 step-2+。
 
 ## 端口
 
@@ -19,11 +19,11 @@ cd apps && yarn app:06-03-token-budget-step-1
 ## 数据流
 
 ```text
-浏览器调旋钮（historyCount / outputBudget / totalBudget）→ React state
+浏览器调页面参数（historyCount / outputBudget / totalBudget）→ React state
        │
        │  POST /api/budget  { historyCount, outputBudget, totalBudget }
        ▼
-koa bodyParser → routes/budget.ts Zod 闸门
+koa bodyParser → routes/budget.ts Zod 校验
        │
        │  buildMockHistory(historyCount)              ← 生成 N 轮假 user/assistant 闲聊
        │
@@ -42,11 +42,11 @@ koa bodyParser → routes/budget.ts Zod 闸门
 React 四张卡：① 触发说明  ② 三块预算裁前/裁后  ③ 实际发给模型的 messages  ④ 模型回答 + 实际 output token
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打：handler 入参（含 systemText/historyCount/outputBudget/totalBudget/modelA）→ trimToBudget 入参/出参（裁前/裁后预算 + dropped）→ 调真模型核心档五件套（入参完整 messages + 返回值完整 completion）→ handler 出参完整 body。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写：handler 入参（含 systemText/historyCount/outputBudget/totalBudget/modelA）→ trimToBudget 入参/出参（裁前/裁后预算 + dropped）→ 调真模型主路径按五条日志写完整（入参完整 messages + 返回值完整 completion）→ handler 出参完整 body。
 
 ## 当前能做什么
 
-- 三个旋钮：history 轮数（0~200）/ output 预留（64~4000 token）/ 三块合计上限（512~32000 token）
+- 三个页面可调参数：history 轮数（0~200）/ output 预留（64~4000 token）/ 三块合计上限（512~32000 token）
 - 点「跑预算」→ 服务端算 system + history + output 三块 token → 超了就丢最旧 → 真调一次模型
 - 默认参数（history=50/outputBudget=800/totalBudget=2000）下大概率触发裁剪：看 `dropped` 和 `触发说明`
 - 改 `totalBudget` 调大（如 8000）→ 不触发裁剪 → 整段 history 全留
@@ -61,7 +61,7 @@ React 四张卡：① 触发说明  ② 三块预算裁前/裁后  ③ 实际发
 - **「Token Budget」= 在拼 messages 之前先算账**：system / history / output 三块各自占多少、合计超没超上限
 - **「拼装前打印 token」**：在 `messages = [...]` 之前算 total，超了先裁（不是发完等 400 报错）
 - **「output 预留不能事后裁」**：只能拼装前预留；模型用了多少看 `replyTokens` vs `outputBudget`
-- **step-1 只演示"丢最旧"这一种策略**：摘要压缩 / 选择性注入 / 硬阈值 / 软硬双层都不在 step-1 — 留给 step-N
+- **step-1 只演示"丢最旧"这一种策略**：摘要压缩 / 选择性注入 / 硬阈值 / 软阈值+硬阈值两层都不在 step-1 — 留给 step-N
 - **不在 step-1**：硬阈值应急（只留 system + 最新一轮）、摘要压缩、选择性注入、软阈值/硬阈值双层 —— 这些是 step-N。
 
 ## 对应学习沉淀

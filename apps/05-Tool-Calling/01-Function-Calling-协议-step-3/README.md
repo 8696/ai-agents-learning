@@ -64,8 +64,8 @@ step-1/2 修了 §5.4 A2 缺真实并行调用的阻塞点。3 个 Tool（`searc
 
 ## 对应学习沉淀
 
-- MD 需求 1 · 旅游规划助手 · 演示「含并行调用」：[需求清单 §需求 1](../../docs/学习模块/05-Tool-Calling/01-Function-Calling-协议.md#需求清单业务需求--62-item-6-硬性要求)
-- MD 需求 2 · 串/并行对比 · 总耗时 + 是否编造：[需求清单 §需求 2](../../docs/学习模块/05-Tool-Calling/01-Function-Calling-协议.md#需求清单业务需求--62-item-6-硬性要求)
+- MD 需求 1 · 旅游规划助手 · 演示「含并行调用」：[需求清单 §需求 1](../../docs/学习模块/05-Tool-Calling/01-Function-Calling-协议.md#需求清单业务需求--62-item-6-必须做到)
+- MD 需求 2 · 串/并行对比 · 总耗时 + 是否编造：[需求清单 §需求 2](../../docs/学习模块/05-Tool-Calling/01-Function-Calling-协议.md#需求清单业务需求--62-item-6-必须做到)
 
 ## 独立性
 

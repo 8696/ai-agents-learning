@@ -23,7 +23,7 @@ yarn app:04-02-json-mode-vs-structured-output-step-1
 场景页 (public/pages)
   → utils/api-client.js
   → POST /api/json-mode | /api/structured-output | /api/strict-rejected
-  → routes/*（薄：闸门 → flow → ctx.body）
+  → routes/*（薄：入参校验 → flow → ctx.body）
   → lib/flow/*（create + 剥壳 + JSON.parse + Zod + analysis）
   → lib/schema/intent.ts（同一份 Intent 契约）
 ```

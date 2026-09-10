@@ -13,9 +13,9 @@
 | 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
 |------|------|------|------|--------------|
 | ✅ | step-1 | `yarn app:06-03-token-budget-step-1` | `50045` | 公式 `total = system + history + output 预留`；超 `totalBudget` 丢最旧非 system 消息；output/system 不动；真调一次模型对照 replyTokens vs outputBudget |
-| ✅ | step-2 | `yarn app:06-03-token-budget-step-2` | `50046` | 双策略对照：方法一「直接丢最旧 / trim」vs 方法二「远期摘要 + 近期原文 / summarize」；同 query 同模型同 history 三块预算分账 + KEY_FACT 检测（肯定句式 + 否定标记）；3 次出网（1 摘要 + 2 问答） |
-| ✅ | step-3 | `yarn app:06-03-token-budget-step-3` | `50047` | 软硬双层：软路径（total ≤ hardLimit，走 trim 或 summarize）vs 硬路径（total > hardLimit = 应急模式，只留 system + history 末轮 + 提示「请用一句话重述」）；Zod 闸门 hardLimit ≥ outputBudget + 32；保证 50+ 轮不崩 |
-| ✅ | step-4 | `yarn app:06-03-token-budget-step-4` | `50048` | 选择性注入：5 段多话题 history（美食/天气/工作/电影/健身 × 10 轮 × 2 角色 = 100 条 messages）+ query 关键词匹配 → 取 top-N 命中段塞进 messages，其他段不进；对照全塞基线；省 ~90% 输入 token；2 次出网 |
+| ✅ | step-2 | `yarn app:06-03-token-budget-step-2` | `50046` | 双策略对照：方法一「直接丢最旧 / trim」vs 方法二「远期摘要 + 近期原文 / summarize」；同 query 同模型同 history 三块预算分账 + KEY_FACT 检测（肯定句式 + 否定标记）；3 次真发网络请求（1 摘要 + 2 问答） |
+| ✅ | step-3 | `yarn app:06-03-token-budget-step-3` | `50047` | 软阈值+硬阈值两层：先裁或摘要（total ≤ hardLimit，走 trim 或 summarize）vs 丢掉历史只留 3 条（total > hardLimit = 只留 3 条保服务，只留 system + history 末轮 + 提示「请用一句话重述」）；Zod 校验 hardLimit ≥ outputBudget + 32；保证 50+ 轮不崩 |
+| ✅ | step-4 | `yarn app:06-03-token-budget-step-4` | `50048` | 选择性注入：5 段多话题 history（美食/天气/工作/电影/健身 × 10 轮 × 2 角色 = 100 条 messages）+ query 关键词匹配 → 取 top-N 命中段塞进 messages，其他段不进；对照全塞基线；省 ~90% 输入 token；2 次真发网络请求 |
 
 ### 是什么
 
@@ -45,8 +45,8 @@ total > totalBudget? → 丢最旧非 system 消息(每次 2 条,user/assistant 
 | 变体 | 怎么裁 | 代价 | 何时用 |
 | -- | -- | -- | -- |
 | **trim**(step-1) | 丢最旧非 system 消息 | 0 额外 LLM | 短对话 / 事实均匀 / 不在乎远期 |
-| **summarize**(step-2) | 远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近期 K 条留原文 | + 1 次 LLM 出网 | 长程陪伴 / 整体氛围 / 远期事实重要 |
-| **soft+hard 双层**(step-3) | 软阈值先救(trim / summarize)→ 救不回来(超 hardLimit)→ 应急模式 = 只留 system + 末轮 + 提示"请重述" | 同 step-1 / 2 | 50+ 轮真长对话 / **保证服务不崩** |
+| **summarize**(step-2) | 远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近期 K 条留原文 | + 1 次 LLM 真发网络请求 | 长程陪伴 / 整体氛围 / 远期事实重要 |
+| **soft+hard 双层**(step-3) | 软阈值先救(trim / summarize)→ 裁或摘要后仍超限(超 hardLimit)→ 只留 3 条保服务 = 只留 system + 末轮 + 提示"请重述" | 同 step-1 / 2 | 50+ 轮真长对话 / **保证服务不崩** |
 | **selective inject**(step-4) | **遍历** history 每段,关键词匹配算命中数,取 top-N 命中段塞进 messages(其他不进) | O(N) 遍历 + 关键词 substring | 多话题并行 / history 不长但只 1 段相关 |
 | **hard threshold**(已被 step-3 覆盖) | — | — | — |
 
@@ -116,14 +116,14 @@ history 实际 = 2300(50 轮假对话)
 | # | 业务场景 | 目标 | 涉及本节知识点 | 验收标准 | step 覆盖 |
 | -- | -------- | ---- | -------------- | -------- | -- |
 | **1** | Chat App 多轮对话 | 演示"系统段固定预算 + 历史段预算 + 输出预留"三块分账 | 三块预算划分 / 配比策略 | 拼接 messages 前打印三块 token 数 + 总和;超出预算时**先裁历史**而不是直接报错 | step-1 ✅ |
-| **2** | 长对话测试(50+ 轮) | 演示"软阈值摘要 + 硬阈值应急"双层触发 | 触发时机变体 / 软硬阈值 | 跑 50+ 轮不崩;**每轮**打印当前 context 长度 + 已裁次数;**触发裁剪**时打 log:哪条被丢 + 为什么 | step-N 候选 |
+| **2** | 长对话测试(50+ 轮) | 演示"软阈值摘要 + 硬阈值应急"双层触发 | 触发时机变体 / 软硬阈值 | 跑 50+ 轮不崩;**每轮**打印当前 context 长度 + 已裁次数;**触发裁剪**时写日志:哪条被丢 + 为什么 | step-N 候选 |
 | **3** | 滑动窗口 vs 摘要 效果对比 | 演示两种裁剪**丢的信息不同** | 裁剪策略变体 1+2 | 同样 50 轮对话,**先跑丢最旧**让模型回答"我叫什么";**再跑摘要**同样问;**对比**——摘要保留了什么 / 丢最旧丢了什么 | **step-2 ✅** |
-| **4** | 选择性注入 | 演示"50 段历史 + 1 个 query,只塞相关 3 段" | 裁剪策略变体 3 | 在 50 段多话题历史中,query 提到第 30 段某关键词 → messages 里**只看到 3 段相关历史 + 系统 + 本轮**,其他 47 段**不打进** messages(打印证明) | **step-4 ✅** |
+| **4** | 选择性注入 | 演示"50 段历史 + 1 个 query,只塞相关 3 段" | 裁剪策略变体 3 | 在 50 段多话题历史中,query 提到第 30 段某关键词 → messages 里**只看到 3 段相关历史 + 系统 + 本轮**,其他 47 段**不放进** messages(打印证明) | **step-4 ✅** |
 | **5** | 拼装前打印完整 messages | 演示调试能力 | 监控变体 2 | 每次请求前,**前端页面**显示"本次实际发给模型的完整 messages"+ 每段 token 数 + 总 token 数 + 是否超预算 | step-1 ✅ + step-2 ✅ + step-3 ✅ + step-4 ✅ |
 | **6** | 50+ 轮测试场景不崩 | 演示硬阈值兜底 | 触发时机变体 4 / 硬裁变体 | 连续发 60 轮**长消息**;中途不抛 400;**任何一轮** context 超硬阈值时,自动只保留 system + 最新 1 轮 + 提示用户重述 | **step-3 ✅** |
 | **7** | Context 选择性注入(不是全塞) | 演示"有选择地塞"而不是"全塞或全不塞" | 预算思维 / 选择性注入 | 同样 query,全塞 vs 选择性注入,**对比**生成的 token 数 + 回答质量(主观评分也行) | step-N 候选 |
 
-### 追问筛门（落盘前必走 · 2026-09-08 立）
+### 写笔记前先筛追问（写进文件前必走 · 2026-09-08 立）
 
 对话全部追问 5 条；本节「我追问过的」落 5 行（M = 5，K = 0）。
 
@@ -131,7 +131,7 @@ history 实际 = 2300(50 轮假对话)
 
 - Q1 step-1 范围与边界 — 真知识，留
 - Q2 step-2 双路径机制（trim vs summarize 同 query 对照）— 真知识，留
-- Q3 step-3 增量最小化（仅多一根硬阈值红线 + 应急模式）— 真知识，留
+- Q3 step-3 每步只加一件（仅多一根硬上限（hardLimit） + 只留 3 条保服务）— 真知识，留
 - Q4 硬阈值 vs 软阈值的精确边界 — 真知识，留
 - Q5 step-4 遍历匹配机制 — 真知识，留
 
@@ -139,10 +139,10 @@ history 实际 = 2300(50 轮假对话)
 
 | 问题 | 针对什么 | 回答 |
 | -- | -- | -- |
-| step-1 是不是只做了丢最旧 history 这一件事?预算 2000,预留 800,减去 system 后 history 只能低于 1200,然后裁剪? | 对 step-1 的范围/边界有疑问;想确认三块里**唯一可裁的是 history**,system 和 output 预留都不动 | step-1 只演示"丢最旧"这一种裁剪策略。公式 `total = system + history + output 预留`,超 `totalBudget` 就丢最旧非 system 消息(按 user/assistant 对丢)。**system 不裁**(规则不能动)、**output 预留不裁**(只能预留,模型用多用少事前不知道)。摘要压缩 / 选择性注入 / 硬阈值 / 软硬双层都不在 step-1 — 留给 step-2+。详见 [Demo 子节进度](#demo-子节进度) + [取舍](#取舍)。 |
-| Step 二实现的功能是不是只有"超了总预算,就把超出的去调一个总结"? | 对 step-2 的边界有疑问;想知道"调一个总结"是不是 step-2 的全部 | step-2 = step-1(丢最旧)+ 新增 summarize 路径(远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近期 K 条留原文),**同 query 同模型同 history 双路径对照**。**不**只是"触发摘要就完事"——同时还跑一条 trim 路径做对照,让学习者看见"丢字面 vs 留语义"。默认参数下 **3 次出网**(1 摘要 + 2 问答),共 4 张卡片(触发说明 + 方法一/方法二 + 裁前基线)。详见 [step-2 教学点](#step-2-教学点) + [取舍](#取舍)。 |
-| step-3 相比 step-2 是不是就加了个硬阈值? | 对 step-3 的增量范围有疑问;想确认"增量最小化" | **对**。step-3 = step-2 + 三件新东西:(1) 多一个旋钮 `hardLimit`;(2) 多一段判定 `beforeBudget.total > hardLimit ? emergency : soft`;(3) 多一种 messages — 应急模式 = `[system, history 末轮, user 提示"请重述"]`,只 3 条。其它(trim / summarize / 拼 messages / 调模型)全是从 step-2 搬过来。**为什么只多这一根红线** — 软阈值是"尽量救",硬阈值是"救不回来就放弃 history 保命";两个教学点拆开是**增量最小化**,避免 step-2 信息量太大。详见 [step-3 教学点](#step-3-教学点软硬双层)。 |
-| 硬阈值是不是 `total > hardLimit` 就触发应急?软阈值是选裁剪还是总结? | 对硬阈值和软阈值的边界 / 触发条件 / 目的有疑问;想确认两者的角色不同 | **对**。**硬阈值 = 底线**:`total > hardLimit` 触发,**不能超**;应急模式只有 3 条 messages(`[system, history 末轮, user 提示"请重述"]`),**永远 fit**,保命用的。**软阈值 = 软目标**:`total > totalBudget` 触发,**选 trim 或 summarize 去救**,**救到 fit 为止**(不会裁过头)。**两条线目的不同**:软阈值是"能救就救",硬阈值是"救不回来就放弃 history 保服务不崩"。完整逻辑树见 [step-3 教学点](#step-3-教学点软硬双层) + [关键事实](#关键事实)。 |
+| step-1 是不是只做了丢最旧 history 这一件事?预算 2000,预留 800,减去 system 后 history 只能低于 1200,然后裁剪? | 对 step-1 的范围/边界有疑问;想确认三块里**唯一可裁的是 history**,system 和 output 预留都不动 | step-1 只演示"丢最旧"这一种裁剪策略。公式 `total = system + history + output 预留`,超 `totalBudget` 就丢最旧非 system 消息(按 user/assistant 对丢)。**system 不裁**(规则不能动)、**output 预留不裁**(只能预留,模型用多用少事前不知道)。摘要压缩 / 选择性注入 / 硬阈值 / 软阈值+硬阈值两层都不在 step-1 — 留给 step-2+。详见 [Demo 子节进度](#demo-子节进度) + [取舍](#取舍)。 |
+| Step 二实现的功能是不是只有"超了总预算,就把超出的去调一个总结"? | 对 step-2 的边界有疑问;想知道"调一个总结"是不是 step-2 的全部 | step-2 = step-1(丢最旧)+ 新增 summarize 路径(远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近期 K 条留原文),**同 query 同模型同 history 双路径对照**。**不**只是"触发摘要就完事"——同时还跑一条 trim 路径做对照,让学习者看见"丢字面 vs 留语义"。默认参数下 **3 次真发网络请求**(1 摘要 + 2 问答),共 4 张卡片(触发说明 + 方法一/方法二 + 裁前基线)。详见 [step-2 教学点](#step-2-教学点) + [取舍](#取舍)。 |
+| step-3 相比 step-2 是不是就加了个硬阈值? | 对 step-3 的增量范围有疑问;想确认"每步只加一件" | **对**。step-3 = step-2 + 三件新东西:(1) 多一个页面可调参数 `hardLimit`;(2) 多一段判定 `beforeBudget.total > hardLimit ? emergency : soft`;(3) 多一种 messages — 只留 3 条保服务 = `[system, history 末轮, user 提示"请重述"]`,只 3 条。其它(trim / summarize / 拼 messages / 调模型)全是从 step-2 搬过来。**为什么只多这一根硬上限** — 软阈值是"尽量救",硬阈值是"裁或摘要后仍超限就放弃 history 保服务不崩";两个教学点拆开是**每步只加一件**,避免 step-2 信息量太大。详见 [step-3 教学点](#step-3-教学点软阈值+硬阈值两层)。 |
+| 硬阈值是不是 `total > hardLimit` 就触发应急?软阈值是选裁剪还是总结? | 对硬阈值和软阈值的边界 / 触发条件 / 目的有疑问;想确认两者的角色不同 | **对**。**硬阈值 = 底线**:`total > hardLimit` 触发,**不能超**;应急只留 3 条 messages(`[system, history 末轮, user 提示"请重述"]`),**一定能发出请求**,用来保服务不崩。**软阈值 = 软目标**:`total > totalBudget` 触发,**选 trim 或 summarize 去裁**,**裁到能塞进窗口为止**(不会裁过头)。**两条线目的不同**:软阈值是"能救就救",硬阈值是"裁或摘要后仍超限就放弃 history 保服务不崩"。完整逻辑树见 [step-3 教学点](#step-3-教学点软阈值+硬阈值两层) + [关键事实](#关键事实)。 |
 | step-4 是不是通过遍历把相关历史对话找出来塞进去? | 对 step-4 的实现机制有疑问;想确认核心逻辑是"遍历" | **对**。step-4 = **遍历 history 每段** → 关键词匹配算命中数 → **取 top-N 命中段塞进 messages**,其他段全部不进。本步用的是最简的关键词 substring 匹配(不依赖 embedding);生产里会用向量余弦(模块 08 RAG)。详见 [step-4 教学点](#step-4-教学点选择性注入)。 |
 
 ### step-2 教学点
@@ -155,8 +155,8 @@ history 实际 = 2300(50 轮假对话)
 | -- | -- | -- |
 | **触发** | total > totalBudget | total > totalBudget |
 | **怎么裁** | 丢最旧非 system 消息(按 user/assistant 对丢) | 远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近期 K 条留原文 |
-| **出网次数** | 1 次问答 | 1 次摘要 + 1 次问答 = 2 次 |
-| **默认参数下 3 次出网** | 1 次问答 | + 1 次摘要 + 1 次问答 |
+| **真发网络请求次数** | 1 次问答 | 1 次摘要 + 1 次问答 = 2 次 |
+| **默认参数下 3 次真发网络请求** | 1 次问答 | + 1 次摘要 + 1 次问答 |
 | **何时"忘"** | key fact 在被丢的最旧段 | summary 把关键事实漏掉 / 近期被裁 |
 | **典型观察** | key fact 在第 1 轮(默认)→ trim 忘 → ❌ | summary 留住语义 → ✅ |
 
@@ -169,27 +169,27 @@ history 实际 = 2300(50 轮假对话)
 
 **页面 4 张卡**:① 双策略判定小结 ② 方法一:直接丢最旧(预算表 + 完整 messages + 模型回答 + 关键事实判定) ③ 方法二:远期摘要 + 近期原文(同上 + summary 原文) ④ 裁前三块预算(参照基线)
 
-### step-3 教学点(软硬双层)
+### step-3 教学点(软阈值+硬阈值两层)
 
-**核心增量**:相比 step-2,只多了一根**硬阈值**红线 + 应急模式。其它逻辑(trim / summarize / 拼 messages / 调模型)都是从 step-2 搬过来。
+**核心增量**:相比 step-2,只多了一条硬上限（hardLimit） + 只留 3 条保服务。其它逻辑(trim / summarize / 拼 messages / 调模型)都是从 step-2 搬过来。
 
 **双层防御结构**:
 
 ```
 层 1 软阈值(救):
   total > totalBudget → trim 或 summarize → 拼 messages → 调模型
-  (能救就救;救不回来就丢给层 2)
+  (能救就救;裁或摘要后仍超限就丢给层 2)
 
 层 2 硬阈值(兜底):
-  total > hardLimit → 应急模式 = 只留 system + 末轮 + 提示"请重述" → 调模型
-  (永远 fit,服务不崩)
+  total > hardLimit → 只留 3 条保服务 = 只留 system + 末轮 + 提示"请重述" → 调模型
+  (一定能发出请求,服务不崩)
 ```
 
 **触发判定**(`beforeBudget.total > hardLimit ? emergency : soft`):
-- `beforeBudget.total ≤ hardLimit` → 软路径:按 strategy 选 trim 或 summarize(同 step-2)
-- `beforeBudget.total > hardLimit` → 硬路径:应急模式
+- `beforeBudget.total ≤ hardLimit` → 先裁或摘要:按 strategy 选 trim 或 summarize(同 step-2)
+- `beforeBudget.total > hardLimit` → 丢掉历史只留 3 条:只留 3 条保服务
 
-**应急模式 messages 只剩 3 条**:
+**应急时 messages 只剩 3 条**:
 
 | 位置 | 内容 | 为什么 |
 | -- | -- | -- |
@@ -197,33 +197,33 @@ history 实际 = 2300(50 轮假对话)
 | 第 2 条 | history 末轮(原 user 或 assistant) | 保留"用户最后说了什么"——模型才知道上下文 |
 | 第 3 条(新加) | user 提示:"对话太长,请用一句话重新描述你想做什么" | **让模型知道发生了什么**——不要假装记得 |
 
-**Zod 闸门硬约束**:`hardLimit < outputBudget + 32` → 拒绝(400)。理由:hardLimit 太小 → 要么塞不下 output 预留,要么超模型窗口。**给 output 留够空间,再小就要么超窗口要么没输出**。
+**Zod 校验硬约束**:`hardLimit < outputBudget + 32` → 拒绝(400)。理由:hardLimit 太小 → 要么塞不下 output 预留,要么超模型窗口。**给 output 留够空间,再小就要么超窗口要么没输出**。
 
 **端到端 5 个用例**(实测全过):
 
 | 用例 | 输入 | 走哪条 | 结果 |
 | -- | -- | -- | -- |
-| 软路径 | 50 轮 / totalBudget=8000 / hardLimit=4000 | `mode: soft` / `soft.mode: trim` | total=3129 < 4000 → trim 不裁,102 条 messages |
-| 硬路径(默认参数) | 50 轮 / totalBudget=2000 / hardLimit=1000 | `mode: emergency` | total=3129 > 1000 → 应急 3 条 |
-| 硬路径(超长) | 200 轮 / hardLimit=1000 | `mode: emergency` | total=10029 > 1000 → 应急 3 条 |
+| 先裁或摘要 | 50 轮 / totalBudget=8000 / hardLimit=4000 | `mode: soft` / `soft.mode: trim` | total=3129 < 4000 → trim 不裁,102 条 messages |
+| 丢掉历史只留 3 条(默认参数) | 50 轮 / totalBudget=2000 / hardLimit=1000 | `mode: emergency` | total=3129 > 1000 → 应急 3 条 |
+| 丢掉历史只留 3 条(超长) | 200 轮 / hardLimit=1000 | `mode: emergency` | total=10029 > 1000 → 应急 3 条 |
 | 4xx | hardLimit=500 < outputBudget+32=832 | 拒绝 | 400 + Zod issue |
 | 5xx | `/api/emergency-force-error` | 立即 502 | 502 + 演示文案 |
 
-**页面 4 张卡**:① 触发说明 + mode 软硬判定(红/绿) ② 软路径(仅 mode=soft 时显示) ③ 硬路径(仅 mode=emergency 时显示,默认展开 messages) ④ 裁前三块预算
+**页面 4 张卡**:① 触发说明 + mode 软写死的判定(红/绿) ② 先裁或摘要(仅 mode=soft 时显示) ③ 丢掉历史只留 3 条(仅 mode=emergency 时显示,默认展开 messages) ④ 裁前三块预算
 
-**与 step-2 的差别一句话**:step-2 还在教"怎么救"(trim vs summarize 谁好);step-3 才教"救不回来怎么办"(应急模式保命)。拆开两个教学点是**增量最小化**——每步只加一个东西。
+**与 step-2 的差别一句话**:step-2 还在教"怎么救"(trim vs summarize 谁好);step-3 才教"裁或摘要后仍超限怎么办"（丢掉历史、只留 3 条保服务）。拆开两个教学点是**每步只加一件**——每步只加一个东西。
 
 **两条线(硬阈值 = 底线 / 软阈值 = 软目标)的精确边界**:
 
 | | 软阈值(soft) | 硬阈值(hard) |
 | -- | -- | -- |
-| **旋钮** | `totalBudget` | `hardLimit` |
+| **页面可调参数** | `totalBudget` | `hardLimit` |
 | **触发条件** | `total > totalBudget` | `total > hardLimit` |
 | **能不能超** | 可以超(下一步去救) | **不能超**(直接砍) |
-| **目的** | 能救就救 | 救不回来就放弃 history,保命 |
-| **做法** | trim 或 summarize(选一种去 fit) | 应急模式(只留 3 条 messages) |
+| **目的** | 能救就救 | 裁或摘要后仍超限就放弃 history,保服务不崩 |
+| **做法** | trim 或 summarize(选一种裁到能塞进窗口) | 丢掉历史，只留 3 条 messages 保服务 |
 | **结果** | 拼 messages → 调模型 | 拼 3 条 messages → 调模型 |
-| **边界** | 救到 fit 为止(不会裁过头) | **永远 fit**(3 条 messages < 任何 hardLimit ≥ 256) |
+| **边界** | 裁到能塞进窗口为止(不会裁过头) | **一定能发出请求**(3 条 messages < 任何 hardLimit ≥ 256) |
 | **类比** | 行李装不下 → 真空袋压一压 | 真空袋也装不下 → 不托运了,只带随身 |
 
 **完整逻辑树**(从拼装 messages 之前的判定开始):
@@ -231,11 +231,11 @@ history 实际 = 2300(50 轮假对话)
 ```
 调模型前先算账:total = system + history + output 预留
   total ≤ totalBudget  → 不裁,直接发请求
-  total ≤ hardLimit    → 软路径:trim 或 summarize(救到 fit)
-  total >  hardLimit   → 硬路径:应急模式(只留 system + 末轮 + 提示)
+  total ≤ hardLimit    → 先裁或摘要:trim 或 summarize(裁到能塞进窗口)
+  total >  hardLimit   → 丢掉历史只留 3 条:只留 3 条保服务(只留 system + 末轮 + 提示)
 ```
 
-**Zod 闸门硬约束(防止 hardLimit 配错)**:`hardLimit < outputBudget + 32` → 拒绝(400)。理由:hardLimit 太小 → 要么塞不下 output 预留,要么超模型窗口。**给 output 留够空间,再小就要么超窗口要么没输出**。这是个**配置安全护栏**——不是业务逻辑,是防止使用者把硬阈值配成"看起来有但永远触发"的值。
+**Zod 校验硬约束(防止 hardLimit 配错)**:`hardLimit < outputBudget + 32` → 拒绝(400)。理由:hardLimit 太小 → 要么塞不下 output 预留,要么超模型窗口。**给 output 留够空间,再小就要么超窗口要么没输出**。这是个**配置安全护栏**——不是业务逻辑,是防止使用者把硬阈值配成"看起来有但永远触发"的值。
 
 ### step-4 教学点(选择性注入)
 
@@ -316,7 +316,7 @@ selectN=3
 - 丢最旧 = 最浅、最快、可观察;不需要额外 LLM 调用,延迟 = 0
 - 摘要压缩 = 一次额外 LLM 调用 + 延迟,而且摘要**有损**(专有名词、数字、用户偏好经常被吞);对照 02-step-3 的三方对照能看到这一点
 - 选择性注入 = 需要关键词 / embedding 匹配;代码量大,且和"丢最旧"不是替代关系(选择性注入的本质是"挑哪些留",丢最旧的本质是"丢了哪就丢哪"),通常**组合**用而非互斥
-- 学习路径上 step-1 先把"算账 + 触发 + 裁最旧"这一刀讲清,step-2/3/4 再换不同裁法
+- 学习路径上 step-1 先把"算账 + 触发 + 裁最旧"这一步讲清,step-2/3/4 再换不同裁法
 
 **为什么按 user/assistant 对丢(2 条一次)?**
 
@@ -325,7 +325,7 @@ selectN=3
 
 **为什么不按 token 算窗口?(留 step-2)**
 
-- 按条数简单、可预测,适合教学"算账 → 触发"这一刀
+- 按条数简单、可预测,适合教学"算账 → 触发"这一步
 - 按 token 算 = 真正的"硬上限",生产里最稳(单条超长消息也不会爆),但代码稍多
 - step-5 在 02 已经有完整对照,可参照
 
@@ -333,7 +333,7 @@ selectN=3
 
 - **checkpoint 4(2026-09-09)** logger 拷顶层时注释里漏一个字("每条前空行" vs "每条前空一行")→ check-demo FAIL。**修法**:从顶层完整拷 logger.ts,核对 `每条前空一行` 这个短语原样存在(checker 用它当合规关键字)。
 - **checkpoint 4(2026-09-09)** Edit 时 old_string 含不可见字符差异导致替换失败。**修法**:不可见字符问题用 `python3` 脚本做 `str.replace` 更稳。
-- **演示时容易把"丢历史"当成"AI 失忆"的全部原因** — 其实还有注意力中段衰退、模型编造、超窗口静默截断。丢历史只是最容易观察到的那一刀。
+- **演示时容易把"丢历史"当成"AI 失忆"的全部原因** — 其实还有注意力中段衰退、模型编造、超窗口静默截断。丢历史只是最容易观察到的那一步。
 - **checkpoint 4(2026-09-09) · step-2** 页面里写了 `result.对-比小结`(中间含连字符 `-`),JSX 解析时把"对-比小结"当成表达式(`对 - 比小结 = ...`),`比小结` 当作未定义变量 → ReferenceError。**修法**:字段名不要含连字符;改成 `对比小结`(与 API 出参字段名一致)。
 - **checkpoint 4(2026-09-09) · step-2** KEY_FACT 检测第一版用 substring → 模型反例"你常问上海天气"也命中字串 → 误判 ✅。**修法**:加肯定句式(`你叫 Tina` / `你住在上海`)+ 否定标记(`未提及` / `不能据此推断`)排除反例。详 [step-2 教学点](#step-2-教学点)。
 - **checkpoint 4(2026-09-09) · 中文化** 改用户可见文案时,关键英文术语(`trim` / `summarize` / `historyCount` / `hasKeyFact` 等)用括号附在中文后面。**修法**:`中文 + 括号附英文` 格式([§5.3.11.a](agents/05-demo.md))。JS 变量名 / API 字段名 / CSS className / HTML id **不动**。
@@ -347,12 +347,12 @@ selectN=3
 - [ ] 能解释为什么 step-1 只演示"丢最旧",其他策略(摘要 / 选择性 / 硬阈值)留到 step-2+
 - [ ] 看着 step-1 截图能说出:default 参数下裁前 3129 → 裁后 1979,dropped=50,output 不动,system 永远 29
 - [ ] 能用一句话复述"三块里唯一可裁的是 history",以及为什么(system 是规则、output 是预留)
-- [ ] 能用两句话区分软阈值 vs 硬阈值:**软阈值 = 软目标**(选 trim / summarize 去救,救到 fit 为止)/ **硬阈值 = 底线**(`total > hardLimit` 直接砍到只剩 3 条 messages,永远 fit,保命)
-- [ ] 能解释 step-3 为什么"应急模式只留 3 条"够:system + 末轮 + 提示 token 总和 < 任何 `hardLimit ≥ 256`
-- [ ] 能说出"Zod 闸门卡 hardLimit ≥ outputBudget + 32"是为了防"硬阈值配成永远触发"的死循环
+- [ ] 能用两句话区分软阈值 vs 硬阈值:**软阈值 = 软目标**(选 trim / summarize 去救,裁到能塞进窗口为止)/ **硬阈值 = 底线**(`total > hardLimit` 直接砍到只剩 3 条 messages,一定能发出请求,保服务不崩)
+- [ ] 能解释 step-3 为什么应急只留 3 条就够：system + 末轮 + 提示的 token 总和 < 任何 `hardLimit ≥ 256`
+- [ ] 能说出"Zod 校验卡 hardLimit ≥ outputBudget + 32"是为了防"硬阈值配成永远触发"的死循环
 
 ### 还没搞懂的
 
 - 摘要压缩"丢了什么细节"的具体边界 — 没在 03 step 里实跑过,只在 02 step-2/3 见过。需要时跑 step-2 验证。
 - 选择性注入的"相关"判定:关键词匹配 vs embedding 余弦 vs BM25 各自的优劣 — 模块 08 RAG 会展开。
-- 50+ 轮超长对话不崩 — **step-3 已覆盖**(应急模式 + Zod 硬约束 + 200 轮实测)。剩余候选:选择性注入(多话题)、按 token 算窗口、失败兜底降级。
+- 50+ 轮超长对话不崩 — **step-3 已覆盖**(只留 3 条保服务 + Zod 硬约束 + 200 轮实测)。剩余候选:选择性注入(多话题)、按 token 算窗口、失败兜底降级。

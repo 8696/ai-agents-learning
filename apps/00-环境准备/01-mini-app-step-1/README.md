@@ -24,7 +24,7 @@ yarn app:00-01-mini-app-step-1
 
 ```text
 浏览器 POST /api/chat { message }
-  → routes/chat.ts（闸门必须在开流之前）
+  → routes/chat.ts（入参校验必须在开流之前）
   → lib/flow/stream-chat.ts（上游 stream:true，chunk 原样转发）
   → lib/sse/sse-writer.ts（data: {json}\\n\\n … data: [DONE]）
   → public/utils/sse-client.js 切帧

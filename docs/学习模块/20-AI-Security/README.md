@@ -9,19 +9,19 @@
 
 ## 小节进度
 
-> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不落代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
+> 先外部（从上到下）→ 最后一行是**模块复盘**（只写 MD，不写代码，[AGENTS.md §7.3](../../../AGENTS.md#73-模块复盘进度表最后一行)）。看过的材料填「我的链接」，空着写 `—`。官方文档 → [资源清单](../../05-资源清单.md)。外部条勾 ✅ 前须判断本条 Demo（[AGENTS.md §5.2](../../../AGENTS.md#52-小节-demo)）。
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
 | ⬜ | [**Prompt Injection**：用户直接注入；RAG 文档里的间接注入](./01-Prompt-Injection.md) | 能各演示或讲清一种攻击路径；能区分 Jailbreak（诱使突破安全策略）和 Injection（外部内容当指令）；Tool Injection 发生在工具返回值里 | `prompt injection LLM attack` `indirect prompt injection RAG` `jailbreak vs prompt injection` · [OWASP LLM Top 10](https://genai.owasp.org/llm-top-10/) · Anthropic 安全文档 | — |
-| ⬜ | [**SSRF / Sandbox**：Agent 能出网、能跑代码时的边界](./02-SSRF-Sandbox.md) | 知道「让模型决定 URL」有什么危险 | `SSRF prevention` `sandbox code execution agent` · OWASP SSRF · Docker 安全基线 | — |
+| ⬜ | [**SSRF / Sandbox**：Agent 能真发网络请求、能跑代码时的边界](./02-SSRF-Sandbox.md) | 知道「让模型决定 URL」有什么危险 | `SSRF prevention` `sandbox code execution agent` · OWASP SSRF · Docker 安全基线 | — |
 | ⬜ | [**Tool Gateway / OAuth**：执行前策略层；用户身份 ≠ 上帝 Key](./03-Tool-Gateway-OAuth.md) | 能画出「谁授权、谁执行」 | `OAuth for AI agents` `MCP authorization` · MCP Auth 规范 · OWASP LLM | — |
 | ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 
 > 写**模块复盘**时对照本节：复盘的「模块验收对答」表逐条抄这里。
-> `coach complete` 勾复盘行前走 [AGENTS.md §7.3 闸门](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不打 Demo 判断块）。
+> `coach complete` 勾复盘行前走 [AGENTS.md §7.3 过关检查](../../../AGENTS.md#73-模块复盘进度表最后一行)（不查代码、不写 Demo 判断表）。
 
 **一句话目标**：Agent 能执行真实操作，因此安全非常重要。
 

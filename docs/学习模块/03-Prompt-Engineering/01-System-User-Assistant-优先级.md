@@ -51,7 +51,7 @@ messages: [
 |------|------|
 | System prompt = "系统消息" = 平台公告 | 完全不是。"系统消息"在工程上指 `role: "system"` 这一**种**消息字段；跟你部署在哪、跟 system clock 都没关系 |
 | User 和 System 冲突时模型"随机选" | **不是随机**。System > User > Assistant 是训练事实。但模型不是 if-else，强诱导仍可能偏；所以关键约束做双层（System + Gateway） |
-| System = 给模型"扮演角色" | 角色（persona）只是 System 的**一小块**。System 的真正职责是**写不变量**：输出格式、拒绝条件、风格、工具使用约束、持久偏好。**业务规则、领域知识、当前任务** → 多数情况放 User 或 RAG 注入 |
+| System = 给模型"扮演角色" | 角色（persona）只是 System 的**一小块**。System 的真正职责是**写固定不变的规则**：输出格式、拒绝条件、风格、工具使用约束、持久偏好。**业务规则、领域知识、当前任务** → 多数情况放 User 或 RAG 注入 |
 | 协议 A 和协议 B 对 System 行为不同 | **角色语义一致**，但 Anthropic 的 System 在多数模型上**权重更高**；OpenAI 允许 developer / system 双层 system role。差异是**程度**，不是"两边不一样"。另：thinking 控制能力差异巨大（见下方"取舍"） |
 | 把"JSON 出现"和"输出只能有 JSON"当一回事（**这是我第一次写 Judge 时犯的错**） | 判定优先级时问的是"模型有没有按 System 输出 JSON"，**不是**"输出里有没有别的字符"。thinking 块是**模型行为**，不是优先级问题，不该混进优先级判定 |
 
@@ -199,7 +199,7 @@ return JSON.parse(cleaned);
 ## 过关自检
 
 - **冲突时谁说了算？** System > User > Assistant；这是训练时的事实，不是厂商开关；但模型不是 if-else，强诱导仍可能偏，所以**关键约束做双层**（System + Gateway 校验）。
-- **System 该放什么？** 不变量：身份、输出格式、风格、拒绝条件、工具约束；**不放**长 PRD、不放临时任务、不放当前文档。
+- **System 该放什么？** 固定不变的规则：身份、输出格式、风格、拒绝条件、工具约束；**不放**长 PRD、不放临时任务、不放当前文档。
 - **Assistant 消息干嘛用？** 多轮里把模型之前的回复**原样**塞回去当上下文；不塞 = 失忆 / 失去"我不知道"的诚实。
 - **协议 A 的 thinking 怎么"关"？** API 不给关。工程答案三档：① 适配层 regex 剥 `<think>…</think>`（推荐，最常见）；② 换协议 B 不传 `thinking` 参数（推荐，如果业务允许）；③ System 写"不要思考"（**不推荐**，反向锚定）。
 - **协议 A 的 `JSON.parse(content)` 为什么会挂？** 因为模型把 `<think>…</think>` 嵌进了 content 字符串。剥 think 后再 parse。

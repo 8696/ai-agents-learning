@@ -17,11 +17,11 @@ cd apps && yarn app:06-02-compress-vs-window-step-3
 ## 数据流
 
 ```text
-浏览器调 5 个旋钮（turnCount / slidingWindowSize / summarizeFrom / keepRecent / keyFactAtTurn）
+浏览器调 5 个页面可调参数（turnCount / slidingWindowSize / summarizeFrom / keepRecent / keyFactAtTurn）
        │
        │  POST /api/three-way
        ▼
-koa bodyParser → routes/three-way.ts Zod 闸门
+koa bodyParser → routes/three-way.ts Zod 校验
        │
        │  buildMockHistory(turnCount, keyFactAtTurn)  ← 同 step-1/2
        │
@@ -42,11 +42,11 @@ koa bodyParser → routes/three-way.ts Zod 闸门
 React 5 张卡：① 完整（fullReply） ② 滑动窗口（slidingReply） ③ 摘要压缩（summarizeReply） ④ summary 内容 ⑤ 三方对比小结
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打：入参 → 摘要核心档五件套 → 三次问答核心档五件套 → handler 结束含三方判定。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写：入参 → 摘要主路径按五条日志写完整 → 三次问答主路径按五条日志写完整 → handler 结束含三方判定。
 
 ## 当前能做什么
 
-- 五个旋钮：假对话轮数 / 滑动窗口 K / 待摘要条数 / 保留近期 / key fact 放第几轮
+- 五个页面可调参数：假对话轮数 / 滑动窗口 K / 待摘要条数 / 保留近期 / key fact 放第几轮
 - 点「跑三方对照」→ 服务端调 4 次真模型 → 5 张卡片
 - 默认参数（50/6/45/5/1）下：full ✅ / sliding ❌ / summarize ✅ → 标准结果「丢字面 vs 留语义」
 - 卡 ④ summary 内容单独展示，看 LLM 把远期 N 条浓缩成啥

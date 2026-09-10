@@ -17,11 +17,11 @@ cd apps && yarn app:06-03-token-budget-step-4
 ## 数据流
 
 ```text
-浏览器调旋钮（query / keywords / selectN）→ React state
+浏览器调页面参数（query / keywords / selectN）→ React state
        │
        │  POST /api/selective
        ▼
-koa bodyParser → routes/selective.ts Zod 闸门
+koa bodyParser → routes/selective.ts Zod 校验
        │
        │  5 段多话题 history(美食/天气/工作/电影/健身 × 10 轮 × 2 角色) = 100 条 messages
        │  算每段命中关键词数 → 排序 → 取 top-N
@@ -36,11 +36,11 @@ React 5 张卡：① 触发说明 ② 路径 A 全塞基线(完整 messages) ③
               ④ 对比小结(段数 / 输入 token / 输出 token 三行差) ⑤ 命中明细(5 段 × 10 轮 = 50 段 score 分布)
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打：handler 入参（含 query / keywords / 5 段 topicGroups 分数明细）→ 两次调真模型核心档五件套 → handler 出参含完整 saved token。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写：handler 入参（含 query / keywords / 5 段 topicGroups 分数明细）→ 两次调真模型主路径按五条日志写完整 → handler 出参含完整 saved token。
 
 ## 当前能做什么
 
-- **3 个旋钮**:query（决定"相关"判定）/ keywords（逗号分隔,决定哪些段被命中）/ selectN（取 top-N 命中段,1~20）
+- **3 个页面可调参数**:query（决定"相关"判定）/ keywords（逗号分隔,决定哪些段被命中）/ selectN（取 top-N 命中段,1~20）
 - **5 段多话题 history**(共 100 条 messages):美食 1-10 / 天气 11-20 / 工作 21-30 / 电影 31-40 / 健身 41-50
 - **关键词匹配** = 段内 substring 命中数(取 top-N) — 本步最简版本;生产用 embedding 余弦(模块 08)
 - 默认(query=寿司,keywords=寿司/拉面/日料/餐厅/美食/上海,selectN=3):只命中美食 1-3 段,选择性 6 条 messages vs 全塞 100 条,**省 ~90% 输入 token**

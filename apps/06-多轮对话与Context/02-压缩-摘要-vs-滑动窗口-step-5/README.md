@@ -17,11 +17,11 @@ cd apps && yarn app:06-02-compress-vs-window-step-5
 ## 数据流
 
 ```text
-浏览器调 5 个旋钮（turnCount / slidingTokenBudget / summarizeTokenBudget / keepRecent / keyFactAtTurn）
+浏览器调 5 个页面可调参数（turnCount / slidingTokenBudget / summarizeTokenBudget / keepRecent / keyFactAtTurn）
        │
        │  POST /api/token-budget
        ▼
-koa bodyParser → Zod 闸门
+koa bodyParser → Zod 校验
        │
        │  buildMockHistory + encode 每条 token 数（gpt-tokenizer）
        │
@@ -44,7 +44,7 @@ React 5 张卡：① 完整 ② 滑动窗口（按 token） ③ 摘要压缩 ④
 
 ## 当前能做什么
 
-- 5 个旋钮：假对话轮数 / 滑动窗口 token B / 摘要触发阈值 / 保留近期 / key fact 放第几轮
+- 5 个页面可调参数：假对话轮数 / 滑动窗口 token B / 摘要触发阈值 / 保留近期 / key fact 放第几轮
 - 点「跑按 token 对照」→ 服务端算 token + 调 4 次真模型 → 5 张卡片
 - 默认参数（50/500/5000/5/1）下：full ✅ / sliding ❌ / summarize ✅ → 「按 token 滑动窗口也丢 key fact」（远期超预算）
 - 改 `slidingTokenBudget` = 10000 → 预算够大，sliding 也记得 key fact
@@ -57,7 +57,7 @@ React 5 张卡：① 完整 ② 滑动窗口（按 token） ③ 摘要压缩 ④
 - **「按 token 算窗口」= 从最新往旧累加 token，累加到 ≤ budget 为止；system pin**
 - **「按 token 触发摘要」= 远期 token 累计 > 阈值才摘要**
 - **「token 预算」= 生产里最稳的硬上限控制方式（不依赖消息长度）**
-- **生产建议**：用「按 token」做硬上限 + 「按条数」做辅助 = 「token 预算 + 最小条数」双闸门
+- **生产建议**：用「按 token」做硬上限 + 「按条数」做辅助 = 「token 预算 + 最小条数」双重限制
 
 ## 对应学习沉淀
 
@@ -65,4 +65,4 @@ React 5 张卡：① 完整 ② 滑动窗口（按 token） ③ 摘要压缩 ④
 
 ## 下一步
 
-学习者主动锁定 step-5 后 → 5 个 step 全部已落 + 锁定 → `coach complete` 闸门 1→2→3 全过 → 勾 ✅ 本条。
+学习者主动锁定 step-5 后 → 5 个 step 全部已落 + 锁定 → `coach complete` 过关检查 1→2→3 全过 → 勾 ✅ 本条。

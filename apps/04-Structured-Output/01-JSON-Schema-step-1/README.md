@@ -26,7 +26,7 @@ Intent (Zod)
 
 - 总览页看见同一份契约的 JSON Schema
 - parse 页对照成功值 vs `success=false` 时没有 data
-- repair 页把 path / code / message 拼成可回灌文本（本条不真的调模型）
+- repair 页把 path / code / message 拼成可塞回 messages文本（本条不真的调模型）
 - transform 页看见 default 补 action、再加字段
 - 空 raw / 非法 JSON / 缺 query → HTTP 400；断网按钮 → fetch reject
 - 页脚写「本地计算（不调 LLM）」；缺 Key 不禁用主按钮

@@ -30,7 +30,7 @@ cd apps && yarn app:05-04-tool-gateway-step-3
         ① fail-closed（actor.userId === "platform-god" → FORBIDDEN）
         ② 鉴权（oauth_tokens[userId] 不存在 → FORBIDDEN）
         ③ 用该用户自己的 token 调" Gmail API"（mock）
-    → Round 2: messages + tool_result blocks 回灌 → callProtocolB(req2) → final_reply
+    → Round 2: messages + tool_result blocks 塞回 messages → callProtocolB(req2) → final_reply
   → 返 { user_input, actor, round_1, model_tool_uses, tool_results, round_2, final_reply }
 ```
 
@@ -39,7 +39,7 @@ cd apps && yarn app:05-04-tool-gateway-step-3
 - **per-user 资源隔离**：alice token 只返 alice 邮件，bob token 只返 bob 邮件（5 封邮件各不相同）
 - **fail-closed**：actor.userId="platform-god" → 立即 FORBIDDEN
 - **未 OAuth 拒绝**：actor.userId="carol"（oauth_tokens 表里没记录）→ FORBIDDEN
-- **协议 B 物理形态**：content blocks 数组、tool_use.input 是对象、必填 max_tokens、回灌用 role:"user" + tool_result blocks
+- **协议 B 物理形态**：content blocks 数组、tool_use.input 是对象、必填 max_tokens、塞回 messages用 role:"user" + tool_result blocks
 - **单 Tool Registry**（只 read_recent_emails）；变体 1 / 2 在 step-1 / step-2
 
 ## 教学覆盖的需求清单条

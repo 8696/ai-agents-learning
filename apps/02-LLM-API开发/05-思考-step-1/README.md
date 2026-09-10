@@ -44,7 +44,7 @@ yarn 入口只有这一条：`app:02-05-thinking-step-1`。
 ├── lib/
 │   ├── dialect/              # 官方方言表（算法不改）
 │   ├── compare/              # 协议无关：请求形状 / meta 帧 / 实测归类
-│   ├── http/                 # PORT / 入参闸门 / SSE
+│   ├── http/                 # PORT / 入参校验 / SSE
 │   ├── protocol-a/           # 只碰 openai 流
 │   └── protocol-b/           # 只碰 anthropic 流
 └── public/

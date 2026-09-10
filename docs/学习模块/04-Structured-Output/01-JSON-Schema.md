@@ -4,7 +4,7 @@
 
 - **来源**：本对话主讲（聊到 `apps/04-Structured-Output/01-JSON-Schema-step-1/`） · [json-schema.org](https://json-schema.org) · [Zod v3](https://zod.dev)
 - **状态**：Demo 已落 / 沉淀首次写满 + 增量 #1（2026-09-03）· 待勾 ✅
-- **Demo**：`apps/04-Structured-Output/01-JSON-Schema-step-1/`（CLI，可在终端跑 `yarn app:04-01-json-schema-step-1`；不调 LLM API）· 详见 §5.2 Demo 判断块
+- **Demo**：`apps/04-Structured-Output/01-JSON-Schema-step-1/`（CLI，可在终端跑 `yarn app:04-01-json-schema-step-1`；不调 LLM API）· 详见 §5.2 Demo 判断表
 
 > 各节写什么、怎么判断归哪一节、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -190,7 +190,7 @@ type Cat = z.infer<typeof Cat>;       // { name: string; age: number }
 | 跨语言 | ★★★（任何语言都能读、能校验） | ★（只在 TS/JS 里跑） |
 | 编译期类型 | ✗ | ★★★（`z.infer` 推 TS 类型） |
 | 谁消耗 | HTTP API、OpenAI、MCP、消息队列 | 服务端验证、配置校验、测试数据 |
-| Agent 场景位置 | **入口**：喂给模型 | **出口**：模型吐回来后解析 + 校验 |
+| Agent 场景位置 | **喂给模型的形状** | **模型吐回来后再校验** |
 
 ### 我追问过的
 

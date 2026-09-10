@@ -17,11 +17,11 @@ cd apps && yarn app:06-02-compress-vs-window-step-2
 ## 数据流
 
 ```text
-浏览器调旋钮（turnCount / summarizeFrom / keepRecent / keyFactAtTurn）→ React state
+浏览器调页面参数（turnCount / summarizeFrom / keepRecent / keyFactAtTurn）→ React state
        │
        │  POST /api/summarize  { turnCount, summarizeFrom, keepRecent, keyFactAtTurn }
        ▼
-koa bodyParser → routes/summarize.ts Zod 闸门（summarizeFrom + keepRecent ≤ turnCount）
+koa bodyParser → routes/summarize.ts Zod 校验（summarizeFrom + keepRecent ≤ turnCount）
        │
        │  buildMockHistory(turnCount, keyFactAtTurn)  ← 同 step-1
        │
@@ -44,11 +44,11 @@ koa bodyParser → routes/summarize.ts Zod 闸门（summarizeFrom + keepRecent �
 React 四张卡：① 裁剪前（messages + beforeReply） ② summary 内容（LLM 写的文本） ③ 摘要后（messages + summarizeReply） ④ 对比小结
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打：入参 → before 核心档五件套 → 摘要核心档五件套 → after 核心档五件套 → handler 结束含 `summaryHasKeyFact/summarizeReplyHasKeyFact` 判定。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写：入参 → before 主路径按五条日志写完整 → 摘要主路径按五条日志写完整 → after 主路径按五条日志写完整 → handler 结束含 `summaryHasKeyFact/summarizeReplyHasKeyFact` 判定。
 
 ## 当前能做什么
 
-- 四个旋钮：假对话轮数（2~80）、待摘要条数（1~turnCount）、保留近期（0~turnCount-1）、key fact 放第几轮（1~turnCount）
+- 四个页面可调参数：假对话轮数（2~80）、待摘要条数（1~turnCount）、保留近期（0~turnCount-1）、key fact 放第几轮（1~turnCount）
 - 点「跑摘要压缩对照」→ 服务端调 3 次真模型 → 四张卡片
 - 默认参数（50/45/5/1）下：before 记得 key fact、summary 里也写 key fact、摘要后也记得 → 一眼看见「摘要压缩保留了什么」
 - 卡 ② summary 内容单独展示，让学习者**直接看到** LLM 把远期 N 条浓缩出来的文本

@@ -24,7 +24,7 @@
 |----------|------|--------|------|
 | **Context** | C1 · System 段 | 产品规则 / 角色设定 | "你是 XX 客服" |
 | | C2 · 多轮消息 | 本会话的 user/assistant 交替 | "上轮用户问 X，本轮问 Y" |
-| | C3 · Tool result | 工具调用结果回灌 | "订单号 OD-... 已查，金额 299" |
+| | C3 · Tool result | 工具调用结果塞回 messages | "订单号 OD-... 已查，金额 299" |
 | | C4 · 附件 / 多模态 | 图片 / 文件 / RAG 召回段落 | "用户上传截图" / "RAG 召回段落" |
 | **Memory** | M1 · 事实 | 用户的客观属性 | user_name=Tina、注册时间 |
 | | M2 · 偏好 | 用户喜欢 / 不喜欢什么 | 不喜欢推销 X 套餐 |
@@ -36,7 +36,7 @@
 | | O3 · 更新 / 覆盖 | 用户改主意 | "其实我叫 Tina Lee" → 覆盖 M1 |
 | | O4 · 删除 / 遗忘 | 用户要求清空 | "忘掉之前所有" |
 
-> 变体 C2 的「裁剪」（压缩 / 摘要 / 滑动窗口）是模块 06 第 2 条教学点；C1-C4 的「Token Budget 一起算」是第 3 条。**本条只点变体不展开裁剪。** M1-M5 的存储选型（SQLite / 向量库 / 容量策略）是模块 10 Memory；Memory 何时由 Agent 哪一拍写是模块 07 手写 Agent。本条**留接口**给后续条，**不重复展开**。
+> 变体 C2 的「裁剪」（压缩 / 摘要 / 滑动窗口）是模块 06 第 2 条教学点；C1-C4 的「Token Budget 一起算」是第 3 条。**本条只点变体不展开裁剪。** M1-M5 的存储选型（SQLite / 向量库 / 容量策略）是模块 10 Memory；Memory 何时由 Agent 哪一阶段写是模块 07 手写 Agent。本条对后续条**只明确说要、不展开**。
 
 ---
 
@@ -200,7 +200,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 ### 需求清单
 
-需求清单是**验收准绳**（[AGENTS.md §1 底线 3](../../AGENTS.md#1-角色) + [06-teach.md §6.2 item 6](../../agents/06-teach.md#62-概念讲解任意终端--外部节奏)）；不是 step 生产的驱动器。step 生产仍按本节知识动态推进（[§5.3.14](../../agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新)）。`coach complete` 勾 ✅ 时按需求逐条对闸门 3。
+需求清单是**验收准绳**（[AGENTS.md §1 底线 3](../../AGENTS.md#1-角色) + [06-teach.md §6.2 item 6](../../agents/06-teach.md#62-概念讲解任意终端--外部节奏)）；不是 step 生产的驱动器。step 生产仍按本节知识动态推进（[§5.3.14](../../agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新)）。`coach complete` 勾 ✅ 时按需求逐条对过关检查 3。
 
 #### 需求 1 · 多轮对话里保留本会话上下文（C2）
 
@@ -302,7 +302,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 |------|---------|------|
 | 「现在 step-1 有记忆吗」 | 区分 Context / Memory 在代码里怎么分 | **没有**。step-1 只有 routes/health.ts + routes/chat.ts + routes/error-demo.ts + lib/logger.ts + lib/http/runtime-ctx.ts + public/index.html，**没有任何 db.ts / store.ts / sqlite.ts / memory.ts**。前端的 messages 是 React state（Context）；服务端的 messages 是请求 body（Context）。两个都不是 Memory。**实验验证**：刷新页面 → 模型答"不知道" → 证明没 Memory。详见「例子 5」。 |
 | 「这是不是拷贝的顶层日志代码？下次怎么避免这个发生？」 | 顶层 logger.ts 跟 demo logger.ts 的边界 + 路径写错怎么发现 | **是拷的**（§5.3.16 硬规则：每个 demo 必须自带完整 `lib/logger.ts`，禁止运行时 import 顶层）。**bug 出在我自己加的 `export const logger = createLogger(...)` 这一行**（顶层只 export 工厂函数 `createLogger`，路径 demo 自己定）。**写法模板**：`path.resolve(__dirname, "..", "logs")` 配合 `import { fileURLToPath } from "node:url"`。**唯一验证方法**：起服务那一刻 `server.start` 已在写日志，看 logs/ 在不在 + 文件大小 > 0 = 路径 100% 正确。详细：[agents/05-demo.md §5.3.16 写法模板](../../agents/05-demo.md#5316-详细日志强制)。 |
-| 「刚刚 step-1 的日志不完整啊。调用模型参数没全部打印出来」 | 日志要打**完整入参**才能体现教学核心可观察点 | **是缺口**：原来 `data.入参 = { messagesCount, totalTokensEstimate }` 是摘要，不是完整 messages。**修法**：chat.ts 把 `request` 拼成独立变量 `{ model, messages }`，日志 `data.入参 = { request, totalTokensEstimate }` —— 完整 messages 数组落地。日志从此可复习：每条都打完整入参 + 完整返回值 + 字段释义 + 本轮为什么是这些参数（§5.3.16 「data 建议键」）。 |
+| 「刚刚 step-1 的日志不完整啊。调用模型参数没全部打印出来」 | 日志要打**完整入参**才能体现教学核心可观察点 | **是缺口**：原来 `data.入参 = { messagesCount, totalTokensEstimate }` 是摘要，不是完整 messages。**修法**：chat.ts 把 `request` 拼成独立变量 `{ model, messages }`，日志 `data.入参 = { request, totalTokensEstimate }` —— 完整 messages 数组落地。日志从此可复习：每条都写完整入参 + 完整返回值 + 字段释义 + 本轮为什么是这些参数（§5.3.16 「data 建议键」）。 |
 | 「看日志有没有落库直接看 logs/ 就行。不用像现在这样搞这么复杂」 | 服务起那一刻已经在写日志 = 路径 OK 唯一检查 | **核心认知**：server.ts 的 `app.listen` 回调里 `logger.info("server.start", ...)` —— 服务起那一刻（不是 curl 触发那一刻）就在写日志。**因此最简单的烟雾测试 = `cd apps && PORT=31001 npx tsx .../server.ts &` + sleep 4 + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` + kill**。**不需要** curl / mtime / grep / 端口释放校验 —— 全是过度设计。详细：[agents/05-demo.md §5.3.16 烟雾测试](../../agents/05-demo.md#5316-详细日志强制)。 |
 | 「memory 一般就是在提示词里面注入的吗？」 | 区分 Memory 注入的 N 种位置（变体） | **不是唯一**。Memory 注入位置有 6 变体：① system 末尾（step-2 演示）；② system 顶部；③ 消息中间插入；④ 多模态（图像 / 附件）；⑤ Tool 调用结果（作为 Tool 返回值，模型用工具上下文读）；⑥ **不注入** —— 模型按需 Tool Calling 读 Memory。最常见是 ①；最灵活是 ⑥；体量大了上 ⑤ 或 ⑥。**判错会怎样**：永远用变体 ① + 偏好体量一大 → system 直接爆 → 触发模块 06 第 2 条「压缩 / 滑动窗口」。详见「易混点 · Memory 注入的 N 种位置」。 |
 | 「一定要使用 SQLite 吗？」+「以后其他业务也叫 Memory 吗？（接口名 / 文件名绑死）」 | §5.3.17 KV 抽象层 + 业务层 / 持久化层解耦 | **不是必须 SQLite，KV 抽象层更值得约定**。① 接口层 = `lib/db.ts` 永远 `kvGet / kvSet / kvDel / kvList`（**不绑业务**；不是 `getMemory / setMemory / ...`）；② 文件名按 demo 业务起（`preferences.db` / `facts.db` / `state.db`），**不要统一叫** `memory.db`（未来非 Memory 业务 demo 改名反而别扭）；③ SQLite 表名固定 = `kv`（接口层抽象，跟业务无关）；④ schema 最小集 4 字段（user_id / key / value / updated_at），业务字段加在 `value` JSON 里即可。**理由**：接口签名不变 → 换驱动（同步 → 异步如 `node:sqlite` / `libsql`）、加表 / 加字段 / 加缓存层 / 加向量索引，业务代码全部零改动，只动 `lib/db.ts` 一个文件。详见「取舍 · §5.3.17 KV 抽象」+ [agents/05-demo.md §5.3.17](../../agents/05-demo.md#5317-持久化存储libdbts--data-db-抽象--数据目录分离新)。 |
@@ -318,13 +318,13 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 > step-N 是工作区（自由打磨），学习者主动说「锁定」才算这步完成（§5.3.14）；锁定那一刻才校验 §5.3.2 6 项 + `node scripts/check-demo.cjs` 过。
 > **N 动态**：禁止预判；每步加什么由「学习者确认懂了吗 + 双方决定下一步」驱动。
-> **当前闸门**：step-1 ✅ + step-2 ✅（2026-09-09）；本条后续需求 3-4-5（O3 覆盖 / O4 批量清 / C2 触发）留 step-3+ 落 demo。**下一条**：模块 06 进度表第 2 条「压缩 / 摘要 vs 滑动窗口」。
+> **当前过关检查**：step-1 ✅ + step-2 ✅（2026-09-09）；本条后续需求 3-4-5（O3 覆盖 / O4 批量清 / C2 触发）留 step-3+ 落 demo。**下一条**：模块 06 进度表第 2 条「压缩 / 摘要 vs 滑动窗口」。
 
 ---
 
 ### 过关自检
 
-合上笔记能否用自己的话讲清：
+合上文件后还能自己讲出来能否用自己的话讲清：
 
 - [ ] **Context = 本轮 messages；Memory = 跨会话持久化。**（最核心一句话）
 - [ ] Context 不是单一概念，是分类（C1-C4）。Memory 也是（M1-M5）。操作是 O1-O4。
@@ -341,7 +341,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 ### 还没搞懂的
 
 - **M1-M5 各变体的存储选型**（KV / 向量 / 容量策略）→ 模块 10 Memory。
-- **Memory 何时由 Agent 哪一拍写**（Loop 内 / 显式工具 / 后台事件）→ 模块 07 手写 Agent。
+- **Memory 何时由 Agent 哪一阶段写**（Loop 内 / 显式工具 / 后台事件）→ 模块 07 手写 Agent。
 - **C2 裁剪**（摘要 vs 滑动窗口）→ 模块 06 第 2 条（下一步）。
 - **C1-C4 Token Budget** → 模块 06 第 3 条。
 - **Memory 的写入冲突 / 并发 / 容量淘汰** → 模块 10 + 模块 19 可靠性。

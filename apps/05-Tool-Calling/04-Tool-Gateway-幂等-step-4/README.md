@@ -27,7 +27,7 @@ cd apps && yarn app:05-04-tool-gateway-step-4
     → execute: toolUsesFromLLM → executeTool(\"divide\", { a: 10, b: 0 }, tool_use_id, {})
       → handler: b === 0 → throw new Error(\"divide by zero: b 不能为 0\")
       → registry.executeTool try/catch 捕获 → 包成 {ok:false, code:\"DIVIDE_BY_ZERO\", retryable:true, status:\"error\"}
-    → Round 2: messages + tool_result blocks（is_error:true + code + retryable）回灌
+    → Round 2: messages + tool_result blocks（is_error:true + code + retryable）塞回 messages
       → callProtocolB(req2) → resp2（模型看到错误 → 改 b 重试 → final_reply）
   → 返 { user_input, round_1, model_tool_uses, tool_results, round_2, final_reply }
 ```
@@ -53,7 +53,7 @@ cd apps && yarn app:05-04-tool-gateway-step-4
 - 环境元信息 ✓ /health + 页脚 #env-info（含 provider / model / hasKey）
 - 页面自解释 ✓ #page-intro 完整 3 场景说明 + 大白话解释
 
-## 关键教学点（合上笔记也能讲清）
+## 关键教学点（合上文件后还能自己讲出来也能讲清）
 
 | 概念 | 演示 |
 | ---- | ---- |

@@ -24,7 +24,7 @@ yarn 入口只有这一条。需要 `apps/.env` 里当前 `LLM_PROVIDER` 对应�
 ```text
 场景页
   → POST /api/case1-priority | /api/case2-with-history | /api/case3-no-history
-  → routes/*（薄：闸门 → 分叉 send）
+  → routes/*（薄：入参校验 → 分叉 send）
        ├ lib/protocol-a/send-once.ts   只 openai；system 进 messages[]
        └ lib/protocol-b/send-once.ts   只 Anthropic；system 走顶层
   → lib/flow/judge.ts（协议无关：SYSTEM_WIN / USER_WIN / REMEMBERED / FORGOT）

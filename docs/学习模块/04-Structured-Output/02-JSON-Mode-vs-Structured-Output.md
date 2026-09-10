@@ -13,7 +13,7 @@
 - **Demo**：
   - 协议 A · `apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/`（端口 `50015`，`yarn app:04-02-json-mode-vs-structured-output-step-1`）
   - 协议 B · `apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/`（端口 `50016`，`yarn app:04-02-anthropic-tool-use-step-1`；按占用表顺序分配）
-  - 详见 §5.2 Demo 判断块
+  - 详见 §5.2 Demo 判断表
 
 > 章节随这条知识切，不套固定九节。覆盖：协议 A/B 全景 → 机制数据怎么走 → 翻车点 → 6 路例子 → 易混 → 怎么选用 → 取舍 → 踩坑（本 demo 实测数据）→ 仓库内约定 → 追问过 → 过关自检 → 还没搞懂。
 
@@ -557,7 +557,7 @@ async function callWithRepair(prompt, schema, model, maxRetries = 2) {
 
 ---
 
-## §5.2 Demo 判断块（按 [§6.3 行 717](../../AGENTS.md#6-交互命令) 必须打）
+## §5.2 Demo 判断表（按 [§6.3 行 717](../../AGENTS.md#6-交互命令) 必须打）
 
 ```text
 Demo 判断

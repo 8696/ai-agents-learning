@@ -1,6 +1,6 @@
 # 04 · 踩坑沉淀（自更新）
 
-**Why**：本仓库硬规定不写 Claude 记忆（`memory/`），但 Agent 在 Cursor / Claude Code / Codex 间反复踩同一类坑（端口撞、日志截断、logger 委托、路径写错…）。把坑版本化进仓库，跨 Agent 共享，比本地记忆可靠。
+**Why**：本仓库写死规定不写 Claude 记忆（`memory/`），但 Agent 在 Cursor / Claude Code / Codex 间反复踩同一类坑（端口撞、日志截断、logger 委托、路径写错…）。把坑版本化进仓库，跨 Agent 共享，比本地记忆可靠。
 **How to apply**：任何 Agent 在做以下动作**前**，先 grep 本文件 §3「坑索引」对一遍：落 / 改 Demo、跑命令、写日志、改 `AGENTS.md` / `agents/`、跑 `check-demo`、处理端口冲突、git 操作。**踩坑当场追加**（§2 协议），不积压、不写记忆。
 
 ---
@@ -73,7 +73,7 @@
 - **症状**：`check-demo` 报「缺多行 data / 入参截断」
 - **触发**：写 `data: { 入参长度: msgs.length, 前 200 字: msgs[0].content.slice(0,200) }`
 - **根因**：logger 顶层模板已禁 `MAX_BYTES` / `…truncated`；缩略 = 截断 = 不算「原样完整」
-- **修复**：直接 `data: { 入参: msgs }`；对象 / 数组原样打，logger 不截就不截
+- **修复**：直接 `data: { 入参: msgs }`；对象 / 数组原样写，logger 不截就不截
 - **反模式**：`入参预览` / `入参长度` / `入参前 N 字` / `…已截断`
 - **关联**：AGENTS.md §5.6、2026-09-09 强制
 
@@ -103,6 +103,15 @@
 - **修复**：`cd apps && npm rebuild better-sqlite3`（让 node-gyp 按当前 Node ABI 重编 `.node`，原地覆盖旧 prebuild；其它原生模块 prebuild 不动）
 - **反模式**：`rm -rf apps/node_modules && yarn install` 全量重装（清掉所有原生模块 prebuild，全得重编，慢且容易再翻车）；只删 `apps/node_modules/better-sqlite3/build` 单目录（可能漏掉 `.deps` / `obj.target`）；不切回旧 Node 逃避
 - **关联**：任何 better-sqlite3 / 原生模块依赖的 Demo；模块 06 `01-Context-vs-Memory-step-2`（首次引入 better-sqlite3）；`yarn` 装包时 Node 跨大版本升级后必踩
+
+### P-006  ·  又写出黑话 / 口令句
+
+- **症状**：对话或 MD 里出现「听起来重要、读完却对不上简单意思」的压缩说法（如「为什么打」「三拍」「五件套」「出门包」「这一刀」「闸门」「落盘」「合上笔记」）
+- **触发**：为了短、为了像协议口令、或从旧笔记/旧协议习惯性抄词
+- **根因**：把陪跑口令当成教材用语；读者要先翻译才能懂
+- **修复**：当场改成白话（写日志 / 三个阶段 / 五条日志 / 提问清单 / 这一步 / 过关检查 / 写进文件 / 合上文件后还能讲出来）；对照根 [AGENTS.md 白话强制](../AGENTS.md)
+- **反模式**：明知是黑话仍「先写着、以后再改」；新造更短的黑话替换旧黑话
+- **关联**：AGENTS.md 白话强制（2026-09-10）；本对话黑话清理
 
 ---
 

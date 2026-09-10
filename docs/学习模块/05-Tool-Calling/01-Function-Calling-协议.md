@@ -2,8 +2,8 @@
 
 > 对应模块：[模块 05 · Tool Calling / Function Calling ⭐⭐⭐⭐⭐](./README.md) · 小节进度第 1 条
 
-- **来源**：本对话（`coach start` 详解 §6.2 + 落 step-1 锁定 + step-2 真 LLM）+ 2026-09-04 重新讲解一轮（补「需求清单」独立节 + 「例子 4」点名 §5.4.A2 + step-3 落 + 1:1 规则 + 并行/串行选型与依赖写法）+ MiniMax-M3 实测响应（[apps/05-Tool-Calling/01-Function-Calling-协议-step-2](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-2/README.md)）
-- **状态**：已沉淀 · 进度表仍 ⬜ · 2026-09-05 §5.4 按「已实现/未实现」重写（禁「❌ 不阻塞」）· 闸门未全过，不可勾 ✅
+- **来源**：本对话（`coach start` 详解 §6.2 + 落 step-1 锁定 + step-2 真 LLM）+ 2026-09-04 重新讲解一轮（补「需求清单」独立节 + 「例子 4」明确说要 §5.4.A2 + step-3 落 + 1:1 规则 + 并行/串行选型与依赖写法）+ MiniMax-M3 实测响应（[apps/05-Tool-Calling/01-Function-Calling-协议-step-2](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-2/README.md)）
+- **状态**：已沉淀 · 进度表仍 ⬜ · 2026-09-05 §5.4 按「已实现/未实现」重写（禁「❌ 不阻塞」）· 过关检查未全过，不可勾 ✅
 - **Demo**：已落 `apps/05-Tool-Calling/01-Function-Calling-协议-step-1/`（✅ 锁定 · mock 不调 LLM）+ `…-step-2/`（✅ 锁定 · 真 LLM 协议 A · 请求/响应可视化）+ `…-step-3/`（✅ 锁定 · 并行 Promise.all + gantt + 串/并行对比）+ `…-step-4/`（✅ 锁定 · 串行依赖 search_doc→summarize）+ `…-step-5/`（✅ 锁定 · while 自编排 + 自纠 + MAX_ROUNDS）—— 详见 [§Demo 子节进度](#demo-子节进度)
 
 > 各节写什么、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
@@ -34,7 +34,7 @@ model          (模型读到 tool_result → 输出 "北京今天 25 度，晴")
 
 1. **Agent 能力的根。** 所有动手能力（查 DB、下单、写文件、发邮件、查天气）必须由模型**自己判断**何时调哪个；hard-code 调用的程序只能做"嘴炮"。Function Calling 把"判断"这一步下放给模型。
 2. **协议 = 万能钥匙。** OpenAI / Anthropic / 智谱 / Ollama 各家 SDK 长不一样，**骨架一样**（工具 schema → 模型返回 tool_call → 你执行 → 结果塞回去）。学会一套，剩下都是字段命名差异。Anthropic 多了 `max_tokens` 必填、content blocks 结构；OpenAI 多 `tool` role；其余形状同构。
-3. **天然的安全边界**。模型只"开口要"，**不**真的执行。这给了你做权限校验、限流、人工审核的中间层——「Tool Gateway / 幂等」那一刀会专门讲。
+3. **天然的安全边界**。模型只"开口要"，**不**真的执行。这给了你做权限校验、限流、人工审核的中间层——「Tool Gateway / 幂等」那一步会专门讲。
 4. **后续概念的物理前置**。ReAct 循环、Memory、Workflow、多 Agent——都建立在"模型能在生成过程中穿插 tool_call"上。今天这一条没讲清，后面 07 手写 Agent 直接卡死。
 
 ### 选型准则（并行 vs 串行 · 主轴 = 依赖关系）
@@ -122,7 +122,7 @@ const result = await realApi(args);                 // ③ 真正副作用
 | 对比 | 真相 | 判错代价 |
 | --- | --- | --- |
 | **Function Calling ≠ JSON Mode** | JSON Mode 只保 `JSON.parse` 不抛；FC 多保"结构化 tool_call + 触发外部执行" | 用 JSON Mode 写 Agent → 拿到字符串还得自己解析 + 触发执行，绕一圈 |
-| **模型"决定调" ≠ "已执行"** | 模型只"开口"，不执行 | 把 `await fetch(...)` 直接接在 tool_call 上 → 任何 prompt 注入都能调你的真接口；**Gateway 必须**（05-04 那一刀讲） |
+| **模型"决定调" ≠ "已执行"** | 模型只"开口"，不执行 | 把 `await fetch(...)` 直接接在 tool_call 上 → 任何 prompt 注入都能调你的真接口；**Gateway 必须**（05-04 那一步讲） |
 | **并行 vs 串行 ≠ 快 vs 慢** | 主轴是「依赖关系」：B 需不需要 A 的输出？需要 = 串行；不需要 = 并行 | 把独立 IO 写成串行浪费延迟 + 模型嫌慢编造结果；把依赖链放进 Promise.all 拿 undefined 当参数 |
 | **OpenAI vs Anthropic 协议 A vs B** | 字段命名不同，骨架同构（见下表） | 学了一个 SDK 以为另一个不会 → 其实换字段名就一样 |
 | **并行调用 ≠ SDK 自动** | SDK 只把 `tool_calls[]` 列表交给你，**你**负责并行执行 | 默认 `for (const c of tool_calls) await execute(c)` → 串行 5 秒，模型嫌你慢，可能编造结果 |
@@ -172,9 +172,9 @@ const summary = await summarize({ content: searchResults, style });  // ② 第�
 
 **关键观察**：「串行」不等于「慢」——是「有数据依赖」。模型**自己**会判断要不要把 `search_doc` 的结果传给 `summarize`（`description` 写好触发条件 + 参数说明是关键，详 02 Tool Description）。
 
-**点名**：这是后面 08 RAG 基础与 11 Workflow 的物理前置。例子 5 与例子 4 形成「依赖 vs 独立」的完整对照——同一份协议骨架，两种编排方式。
+**明确说要**：这是后面 08 RAG 基础与 11 Workflow 的物理前置。例子 5 与例子 4 形成「依赖 vs 独立」的完整对照——同一份协议骨架，两种编排方式。
 
-**点名**：例子 4 / 5 都点名了 §5.4.A1「能画出完整一圈」；例子 5 多带出一层——**链式调用**让 messages 历史变长（`assistant(tool_calls) + tool` × N 轮），模型 Round-2 / Round-3 仍按「finish_reason === "tool_calls" → 再来一轮」的判定继续，直到 `finish_reason === "stop"` 才终态。
+**明确说要**：例子 4 / 5 都你明确说了 §5.4.A1「能画出完整一圈」；例子 5 多带出一层——**链式调用**让 messages 历史变长（`assistant(tool_calls) + tool` × N 轮），模型 Round-2 / Round-3 仍按「finish_reason === "tool_calls" → 再来一轮」的判定继续，直到 `finish_reason === "stop"` 才终态。
 
 ### 例子 5.5 · **模型自己编排链**（while + finish_reason 循环）
 
@@ -201,7 +201,7 @@ async function chatWithTools(userInput: string) {
 
     // ── 执行（这一轮 tool_calls 内部可并行 / 串行，看依赖关系）──
     const results = await Promise.all(toolCalls.map(c => executeTool(c)));
-    // ── 回灌：tool × N ──
+    // ── 塞回 messages：tool × N ──
     messages.push(...results.map(r => ({
       role: "tool", tool_call_id: r.tool_call_id, content: JSON.stringify(r.ok ? r.result : { error: r.error }),
     })));
@@ -215,7 +215,7 @@ async function chatWithTools(userInput: string) {
 - `while + finish_reason === "tool_calls"` 是循环骨架，**代码不写死**链顺序
 - `MAX_ROUNDS = 4` 是必要的 stop 条件（防止模型无限调；详 step-5 [routes/self-correct.ts:40](apps/05-Tool-Calling/01-Function-Calling-协议-step-5/routes/self-correct.ts#L40)）
 - 每一轮内部 `Promise.all` 还是 `for await` **由本轮 tool_calls 的依赖关系决定**（回到选型准则）
-- `tool_result` 失败也要回灌（`{error}`），让模型能换方案自纠，而不是抛崩
+- `tool_result` 失败也要塞回 messages（`{error}`），让模型能换方案自纠，而不是抛崩
 
 ### 三种编排方式对比
 
@@ -271,9 +271,9 @@ async function chatWithTools(userInput: string) {
 - 3 个 tool_result 一起塞回（一次回传三条）
 - 模型合成"机票约 ¥3500、5 月平均 22°C 需带薄外套和雨伞、冲锋衣不必要"
 
-**关键观察**：模型一次返回多个 tool_call 是合法且常见的；你的 `Promise.all` 是**必须的**——串行 `for await` 让模型不耐烦，甚至在长延迟下编造结果。这条单独点名，是因为「本条要能讲清」列了"含并行调用"。
+**关键观察**：模型一次返回多个 tool_call 是合法且常见的；你的 `Promise.all` 是**必须的**——串行 `for await` 让模型不耐烦，甚至在长延迟下编造结果。这条单独明确说要，是因为「本条要能讲清」列了"含并行调用"。
 
-**点名**：本条就是 [§5.4 闸门](#54-目标--代码整合闸门) 的 **A2 阻塞点**（step-1/2 全是同步 `.map`，无真实 `Promise.all` 证据）。需求清单见下一节。
+**明确说要**：本条就是 [§5.4 过关检查](#54-目标--代码整合过关检查) 的 **A2 阻塞点**（step-1/2 全是同步 `.map`，无真实 `Promise.all` 证据）。需求清单见下一节。
 
 ### 例子 6 · 前端：**编造检测可观察**（step-6 真 LLM + 4 张数据卡）
 
@@ -317,7 +317,7 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 
 1. **Round 1 Request** · `messages=[user] + tools + tool_choice='auto'`
 2. **Round 1 Response** · 模型决定调工具（含 `tool_calls`）
-3. **tool_results** · 执行结果（作为 round-2 的 tool 消息回灌）
+3. **tool_results** · 执行结果（作为 round-2 的 tool 消息塞回 messages）
 4. **Round 2 Response** · `final_reply`
 5. **🔍 编造检测栏** · 自动列出 sourceNumbers / replyNumbers / fakeNumbers
 
@@ -326,9 +326,9 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 - 但模型**也可能**自纠：`calc 工具返回 42` 但模型识别为错，自己答 "正确是 500"——这是"自纠"不是"编造"，但纯数字 500 不在检测范围
 - 真要堵编造只能靠**事后对照检测 + 业务规则**，prompt 改不动模型本质
 
-**点名**：本例是 [step-6 demo](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-6/README.md) · step-3 mock 路线是"按 mode 强制注入假数字"模拟编造，step-6 真 LLM 路线是"让模型自己决定编不编"，两者互补。
+**明确说要**：本例是 [step-6 demo](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-6/README.md) · step-3 mock 路线是"按 mode 强制注入假数字"模拟编造，step-6 真 LLM 路线是"让模型自己决定编不编"，两者互补。
 
-## 需求清单（业务需求 · §6.2 item 6 + §6.3 变体覆盖硬性要求）
+## 需求清单（业务需求 · §6.2 item 6 + §6.3 变体覆盖必须做到）
 
 每核心对象 ≥1 条贴近业务的需求（**验收准绳，不是 step 生产的驱动器**——step 生产仍按本节知识动态推进 [§5.3.14](agents/05-demo.md#5314-demo-子节拆分动态引导由浅入深新)；`coach complete` 勾 ✅ 时按需求**逐条对**）。
 
@@ -347,7 +347,7 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 ### 需求 1（主）· 旅游规划助手 · 演示「含并行调用」
 
 - **业务场景**：用户在 chatbox 问"5 月去东京 7 天要带什么、机票多少钱"
-- **目标**：让"并行调用"这一刀变成**可观察行为**
+- **目标**：让"并行调用"这一步变成**可观察行为**
 - **涉及本节知识点**：并行 tool_call · `Promise.all` 并发 · 多 tool_result 一次回传
 - **验收标准**：
   - 模型**一次响应**返回 3 个 tool_call（`search_flight` / `get_weather` / `get_packing_list`）
@@ -366,7 +366,7 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 ### 需求 3 · 串行依赖 · search_doc → summarize（B 用 A 输出）
 
 - **业务场景**：用户在 chatbox 让"总结最近 AI Agent 进展"——需要先搜文档，再对搜索结果做摘要
-- **目标**：让"链式依赖"这一刀变成**可观察行为**——B 必须等 A 完成才能拿到 `content` 参数
+- **目标**：让"链式依赖"这一步变成**可观察行为**——B 必须等 A 完成才能拿到 `content` 参数
 - **涉及本节知识点**：依赖链 `await A; await B(A.result)` · Promise.all **不能**用于此场景（会拿 undefined）
 - **验收标准**：
   - search_doc 返回 hits 后
@@ -377,7 +377,7 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 ### 需求 4 · 模型自编排 · while + finish_reason 多轮链
 
 - **业务场景**：用户在 chatbox 让"自动规划 + 总结"—— 模型**自己**决定要搜几次、要不要扩 query、什么时候停
-- **目标**：把"模型自己编排链"这一刀变成**可观察行为**——while 循环 + 每轮由模型决定
+- **目标**：把"模型自己编排链"这一步变成**可观察行为**——while 循环 + 每轮由模型决定
 - **涉及本节知识点**：`while (rounds < MAX_ROUNDS)` 循环 · `decideNextAction` 模拟 LLM 决策 · 推进历史（`messages.push(assistant(tool_calls))` + `messages.push(...tool)`）·终止条件 1 = kind === "final" / 终止条件 2 = MAX_ROUNDS 触发
 - **验收标准**：
   - 真实 while 循环骨架（不是 hard-code 几步）
@@ -388,8 +388,8 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 ### 需求 5 · 自纠 + 边界 · 空 tool_result → 换 query 重试
 
 - **业务场景**：用户搜得太模糊（query 太短）→ search_doc 返空 hits → **不能崩** → 模型扩 query 重试
-- **目标**：把"模型自纠"这一刀变成**可观察行为**——tool_result 不满意 → 模型换参数再调
-- **涉及本节知识点**：tool_result 回灌（详 §5.3.16 + 例子 5.5 `messages.push(...tool)`）· 模型根据 result 内容决策 · 重试参数可与上次不同
+- **目标**：把"模型自纠"这一步变成**可观察行为**——tool_result 不满意 → 模型换参数再调
+- **涉及本节知识点**：tool_result 塞回 messages（详 §5.3.16 + 例子 5.5 `messages.push(...tool)`）· 模型根据 result 内容决策 · 重试参数可与上次不同
 - **验收标准**：
   - search_doc(query 短) → 空 hits → 模型扩 query 重试 → 拿到 hits → summarize
   - 故意触发失败模式（如含 ❌ 标记或极端参数）→ 多次自纠仍失败 → MAX_ROUNDS 触发 → 业务降级（structured error）
@@ -410,7 +410,7 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 | 失败抛异常不 tool_result | 模型断片、用户看到 500 | catch → 构造 `{ok:false, error:"timeout"}` 塞回去 |
 | 串行 `for await` 执行多 tool_call | 慢 + 模型不耐烦 → 编造结果 | `Promise.all` |
 | 独立 IO 写串行（看起来"安全"实际浪费） | 总耗时 = sum 而非 max；模型嫌慢 → 编造结果 | 看「选型准则」节：依赖关系是主轴 |
-| 把 model 当 root user 直接 execute | 任何 prompt 注入 = 真接口被调 | 中间必过 **Gateway**（05-04 那一刀）；本条 Gateway 教学点落到 [step-1 demo](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-1/README.md) 的"试危险工具 calc"按钮——`dangerous: true` 的工具被 Gateway 拦下，回灌 `{ok:false, error}` |
+| 把 model 当 root user 直接 execute | 任何 prompt 注入 = 真接口被调 | 中间必过 **Gateway**（05-04 那一步）；本条 Gateway 教学点落到 [step-1 demo](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-1/README.md) 的"试危险工具 calc"按钮——`dangerous: true` 的工具被 Gateway 拦下，把 `{ok:false, error}` 塞回 messages |
 | OpenAI strict 模式不带 `additionalProperties:false` | API 直接 400，模型没法救 | 严格模式下 JSON Schema 必带 `additionalProperties:false` + `required:[...]` |
 | `arguments` 当对象用（不是字符串） | `tool.name(args)` 报 "args is not a function" | **记住：`tool_calls[i].function.arguments` 是 JSON 字符串**，先 `JSON.parse` |
 | 模型拿到 tool_result 仍凭空填数字 | 用户看到"机票 ¥5500"，实际航司返的是 ¥3500 → **业务结果错** | 业务层**事后对照** tool_result 检测 reply 里的数字；纯 prompt 改不动——例子 6 step-6 路由层 `detectHallucination` 演示这件事**可观察** |
@@ -460,12 +460,12 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 |------|---------|------|
 | 「调用模型的请求参数和响应参数原理是什么？前端看得到」 | 协议 A 字段语义 + 想「看见」协议层数据 | 答在 [step-2 lib/llm/protocol-a.ts](../../apps/05-Tool-Calling/01-Function-Calling-协议-step-2/lib/llm/protocol-a.ts) 类型注释（每个字段"是什么 / 为什么"）+ 前端 #llm-protocol 把同一份注释的**物理形态**摆出来 |
 | 「step-2 Gateway 拦截演示不出来怎么办？」 | Gateway 在 step-2 没演示到，怕教学点缺失 | 模型自己读 `description` 主动拒绝 dangerous tool；Gateway 是**第二道防线**（防 prompt injection），不是**第一道**（第一道是模型自律）。要强制演示需绕开模型直接喂 dangerous tool_call 给 Registry（step-3 候选） |
-| 「重新讲解本条」 | 本条已沉淀过但漏了「含并行调用」教学点 + 需求清单 | 答在 2026-09-04 沉淀增量：「含并行调用」点名 §5.4.A2 阻塞 + 「需求清单」独立节（含 step-3 起步 spec：旅游规划助手 + 串/并行对比）+ §5.4.B 增量重跑新增业务需求行 |
+| 「重新讲解本条」 | 本条已沉淀过但漏了「含并行调用」教学点 + 需求清单 | 答在 2026-09-04 沉淀增量：「含并行调用」明确说要 §5.4.A2 阻塞 + 「需求清单」独立节（含 step-3 起步 spec：旅游规划助手 + 串/并行对比）+ §5.4.B 增量重跑新增业务需求行 |
 | 「拆页面 vs 拆文件的规则」 | 拆页面 vs 拆文件的规则不清 | 答在 agents/05-demo.md §5.3.8 「页与接口 1:1」规则（每个独立场景 = 单独 page + 单独 route 文件）。**正例**：单跑 → routes/plan.ts / 对比 → routes/compare.ts（前者 mode 切换 parallel\|serial 是同一场景 sub-variant，**不**触发拆分）。**反例**：单 `/api/plan` 用 mode 同时服务「跑单跑」+「对比」两个独立场景。规则 = **按场景拆，不按 mode 拆** |
 | 「并行和串行的在代码中应用场景是什么？什么情况下使用哪种？」 | 并行/串行的选型标准 | 答在本节「选型准则」节（主轴 = 依赖关系）+ 「例子 5 · 串行依赖」+ 「踩坑」节新增「独立 IO 写串行」反例 |
 | 「模型自己编排链这个说了吗」 | 担心「模型自编排」这一变体没被讲到 | 答：本轮先讲后沉：例子 5.5 已补 while + finish_reason === "tool_calls" 骨架代码块 + 三种编排方式对比表 + 链路深度 vs 成本；§5.4.B 标 ✅（知识沉淀；step-N 演示不是本条必做，对应模块是 07 / 11）。**编排方式三档对比**：① 路由层 hard-code（如 step-3 Promise.all 并行）② 模型单链自编排（while + finish_reason 终止，如 step-5）③ 多 Agent 编排（RouterAgent / WorkerAgent 分发，本仓库模块 14） |
-| 「为什么我刚刚不问你，你都不会告诉我，这个自我编排这个模式？我在agents不是约定的是由浅入深吗？为什么感觉你这个东西都会忘记？是不是这个有问题啊？」 | 怀疑 Agent 没主动讲核心变体（违反由浅入深约定） | **2026-09-04 最重要的一条追问**。承认错误：把 MD 需求清单当"本条要 demo 的清单"（2 条 happy-path）而不是"核心概念的所有变体"（5 个变体）。修补 6 处：① agents/06-teach.md §6.3 讲完前自查触发器（含 case study + 判别信号）② AGENTS.md §1 底线扩 4 条（含「核心概念所有变体未覆盖 = 没讲完」）③ MD 需求清单 2 条 → 5 条 ④ agents/{03-progress,05-demo,07-notes} 三处加 §6.3 工作流钩子 ⑤ MD §5.4.B 闸门表扩到 5 条证据行 ⑥ memory 写入 feedback 记忆。下次进 02 Tool Description 前必须主动列变体 |
-| 「你确定吗？确定落好了，我要不是自己发现，这就过了，知识都没学完」 | 怀疑前面「全部改完」的承诺是否真的做到了 | 承认前面那次嘴上说"全部改完"是过于自信；列了 5 个真正的缺口（A 工作流钩子 / B demo 判断块 / C 沉淀对齐 / D 闸门表扩到 5 行 / E case study），全部补完。本轮 grep 验证 12 处引用 + 5 行证据 + case study 在位 |
+| 「为什么我刚刚不问你，你都不会告诉我，这个自我编排这个模式？我在agents不是约定的是由浅入深吗？为什么感觉你这个东西都会忘记？是不是这个有问题啊？」 | 怀疑 Agent 没主动讲核心变体（违反由浅入深约定） | **2026-09-04 最重要的一条追问**。承认错误：把 MD 需求清单当"本条要 demo 的清单"（2 条 happy-path）而不是"核心概念的所有变体"（5 个变体）。修补 6 处：① agents/06-teach.md §6.3 讲完前自查触发器（含 case study + 判别信号）② AGENTS.md §1 底线扩 4 条（含「核心概念所有变体未覆盖 = 没讲完」）③ MD 需求清单 2 条 → 5 条 ④ agents/{03-progress,05-demo,07-notes} 三处加 §6.3 工作流钩子 ⑤ MD §5.4.B 过关检查表扩到 5 条证据行 ⑥ memory 写入 feedback 记忆。下次进 02 Tool Description 前必须主动列变体 |
+| 「你确定吗？确定落好了，我要不是自己发现，这就过了，知识都没学完」 | 怀疑前面「全部改完」的承诺是否真的做到了 | 承认前面那次嘴上说"全部改完"是过于自信；列了 5 个真正的缺口（A 工作流钩子 / B demo Demo 判断表 / C 沉淀对齐 / D 过关检查表扩到 5 行 / E case study），全部补完。本轮 grep 验证 12 处引用 + 5 行证据 + case study 在位 |
 | 「什么是编造数字」 | 编造 vs 模型解析错 vs JSON Mode 误生成的混淆 | 答在本节「例子 6」首段 + 易混点末条「编造 ≠ JSON Mode 误生成」 |
 | 「为什么要切两个 mode」 | 编造检测 demo 需要对照演示的混淆 | mode 决定 mockReply 真/编对照演示；让"凭空"两个字靠对照才说得清；单 mode 没法演示"用 vs 不用"基准。**单 mode 也能检测**（一段 reply + 一个 tool_result 就能判"哪几个数字不在源集里"），两 mode 是为了演示"两种行为模式的差异" |
 | 「是不是把 3500 塞到工具里 / 那跟我说的差别是放在问题里」 | 编造发生位置的混淆（工具注册时 vs 用户问题里） | 答在本节「例子 6 · 5 个数字位置表」：3500 既不在工具 schema 里（注册时只给"我能查机票"），也不在用户问题里（用户问"多少钱"没给数字），**在 ④ 工具执行结果里**（代码真去查了 API 才有）；编造发生在 ⑤，模型**已经拿到 3500** 却自己说 5500 |
@@ -481,17 +481,17 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 | ✅ | step-3 | `yarn app:05-01-fc-protocol-step-3` | `50019` | 3 个 async Tool（search_flight 80ms / get_weather 50ms / get_packing_list 30ms）+ `Promise.all` 真并发 + gantt 时序图 + 串/并行对比按钮（修 §5.4.A2 阻塞 · mock 不调 LLM · §5.3.2 6 项齐） |
 | ✅ | step-4 | `yarn app:05-01-fc-protocol-step-4` | `50020` | 串行依赖链：search_doc → summarize（B 用 A 输出当参数）；路由层 hard-code A→B 链；§5.3.8 页与接口 1:1（独立 page + 独立 route）+ gantt 链式时序。**已锁定，描述 2026-09-05 终版**：+ Promise.all 反例可跑（`routes/chain-bad.ts` + `pages/chain-bad.html` · 修 §5.4.B 缺口 ④；反例证据：summarize 拿 `content=undefined` → summary 缺数据 `query='(未知 query)'` / `hits=0` / `totalMs ≈ 83ms` 同时起步） |
 | ✅ | step-5 | `yarn app:05-01-fc-protocol-step-5` | `50021` | 模型自编排：while + finish_reason 循环骨架 + 每轮 decideNextAction mock 决定 + 自纠触发（query 短 → 扩 query 重试）+ MAX_ROUNDS 边界 + 业务降级 |
-| ✅ | step-6 | `yarn app:05-01-fc-protocol-step-6` | `50022` | **协议层数据形态 · 真 LLM + 编造检测可观察**：2 轮 LLM 调用的 Request/Response 全量打回前端 + 路由层 `detectHallucination` 自动扫 reply 数字 vs tool_result 数字（只检带单位的：`¥` / `°C` / `℃`）；把"模型到底有没有引用 tool_result"在页面**自动可见**（修闸门 3 backlog 的延伸方向 · 不在原 §5.4.B 17 行表里） |
+| ✅ | step-6 | `yarn app:05-01-fc-protocol-step-6` | `50022` | **协议层数据形态 · 真 LLM + 编造检测可观察**：2 轮 LLM 调用的 Request/Response 全量打回前端 + 路由层 `detectHallucination` 自动扫 reply 数字 vs tool_result 数字（只检带单位的：`¥` / `°C` / `℃`）；把"模型到底有没有引用 tool_result"在页面**自动可见**（修过关检查 3 backlog 的延伸方向 · 不在原 §5.4.B 17 行表里） |
 | ✅ | step-7 | `yarn app:05-01-fc-protocol-step-7` | `50023` | **混合编排 · 路由层 hard-code 两条约束 + 模型自决要不要进**：约束 1（拒绝越权）suggest_items 必须在 get_weather 之后调；约束 2（路径 B 硬接）用户问带伞 → 模型调 weather → final → 路由层自动跑 suggest_items；3 条路径（A 仅 weather / B weather+硬接 suggest / C 直接打包被拒→退回）。**已锁定，2026-09-06 终版**：3 路径 curl 实测全对得上（路径 A: 2 轮/无硬接/无拒绝 · 路径 B: 3 轮/硬接 1/无拒绝 · 路径 C: 4 轮/无硬接/拒绝 1） |
 | ✅ | step-8 | `yarn app:05-01-fc-protocol-step-8` | `50024` | **协议 B（Anthropic Messages API）· 单协议 B Function Calling 演示**：真 LLM + 3 Tool 同 step-6 mock 数据；4 张数据卡（Round 1/2 Request/Response）+ 字段差异对照表（协议 A step-6 vs 协议 B step-8）· **不做协议 A vs B 同页并排**（§5.3.13 硬约束 · 字段并排**真实对照**是模块 02-02 教学点）。**已锁定，2026-09-06 终版**：curl 实测 round_1.stop_reason=tool_use / tool_use.input type=dict（vs 协议 A JSON 字符串）/ round_2.stop_reason=end_turn / final_reply 含 25°C 与 tool_result 一致 |
 
-## §5.4 目标 ↔ 代码整合闸门
+## §5.4 目标 ↔ 代码整合过关检查
 
-跑闸门日期：2026-09-04（[AGENTS.md §5.2 闸门 = 三件事](../AGENTS.md#52-小节-demo)：MD §7.2 + Demo §5.2 + 目标↔代码 §5.4；本节跑 §5.4）
+跑过关检查日期：2026-09-04（[AGENTS.md §5.2 过关检查 = 三件事](../AGENTS.md#52-小节-demo)：MD §7.2 + Demo §5.2 + 目标↔代码 §5.4；本节跑 §5.4）
 
-跑闸门日期：2026-09-04（重跑 · step-3 已落；`node scripts/check-demo.cjs 05-Tool-Calling/01-Function-Calling-协议-step-3` 全部通过；curl 实测 `mode=parallel` totalMs=82 / `mode=serial` totalMs=165 / 3 tool_call 并行 startMs=0 串行堆叠）
+跑过关检查日期：2026-09-04（重跑 · step-3 已落；`node scripts/check-demo.cjs 05-Tool-Calling/01-Function-Calling-协议-step-3` 全部通过；curl 实测 `mode=parallel` totalMs=82 / `mode=serial` totalMs=165 / 3 tool_call 并行 startMs=0 串行堆叠）
 
-跑闸门日期：2026-09-04（重跑 · step-4 已落；`node scripts/check-demo.cjs 05-Tool-Calling/01-Function-Calling-协议-step-4` 全部通过；curl 实测 `POST /api/chain` totalMs=134 / step1 search_doc 0→82ms / step2 summarize 82→134ms（链式堆叠）/ finalSummary 三种 style 全跑通）
+跑过关检查日期：2026-09-04（重跑 · step-4 已落；`node scripts/check-demo.cjs 05-Tool-Calling/01-Function-Calling-协议-step-4` 全部通过；curl 实测 `POST /api/chain` totalMs=134 / step1 search_doc 0→82ms / step2 summarize 82→134ms（链式堆叠）/ finalSummary 三种 style 全跑通）
 
 ### §5.4.A 目标 → 代码覆盖
 
@@ -513,26 +513,26 @@ const fakeNumbers = replyNumbers.filter(n => !sourceSet.has(n));
 | 「例子 4 · 前端：并行调用（旅游规划助手）」 | step-3 Promise.all + gantt + parallel 按钮 | 已实现 |
 | 「易混点：并行调用 ≠ SDK 自动；必须 `Promise.all`」 | step-3 `routes/plan.ts` `Promise.all` | 已实现 |
 | 「踩坑：串行 `for await` → 模型嫌慢」 | step-3 serial 分支 + 对比按钮 | 已实现 |
-| 「核心对象 ④ · tool_result 失败也回传」 | step-1/2/3 `ok:false` 回灌 | 已实现 |
+| 「核心对象 ④ · tool_result 失败也回传」 | step-1/2/3 `ok:false` 塞回 messages | 已实现 |
 | 「例子 5 · 串行依赖 search_doc → summarize」 | step-4 `routes/chain.ts` await 链 | 已实现 |
 | 「例子 5.5 · while 自编排 + 自纠 + MAX_ROUNDS」 | step-5 `routes/self-correct.ts` | 已实现 |
 | 「选型准则：主轴 = 依赖关系」 | step-3 并行 / step-4 串行 / step-5 while | 已实现 |
 | 「三种编排方式对比」含**混合** | 混合编排 demo 已落（step-7 · 路由层 hard-code 两条约束 + 模型自决要不要进）；3 条路径 A/B/C 全可观察 | 已实现 | step-7 routes/hybrid.ts:91-180（while + 路由层硬约束）；约束 1 `routes/hybrid.ts:151-176` 调 `registry.ts:256-266` checkChainConstraint；约束 2 `routes/hybrid.ts:100-137` 调 `registry.ts:269-275` shouldHardcodeSuggestItems；模型自决 `routes/hybrid.ts:91` while + `registry.ts:147-252` decideHybridAction 三路径决策矩阵；curl 实测 3 路径全对（path A:2 轮/无硬接/无拒绝 · 路径 B:3 轮/硬接 1/无拒绝 · 路径 C:4 轮/无硬接/拒绝 1） |
 | 「踩坑：独立 IO 写串行」 | step-3 `mode=serial` 可观察 | 已实现 |
-| 「协议 A vs B 字段对照表」需可观察对照 | 单协议 B Function Calling 演示已落（step-8 · 协议 A vs B 字段并排**真实对照**是模块 02-02 教学点，那里有 `app:02-02-protocol-ab-step-1` 真 LLM 双协议对照 demo）；本条保留"概念上 OpenAI/Anthropic 骨架同构 + 4 处关键差异"的概念说明 | 已实现（拆走"需可观察对照"措辞） | step-8 `lib/llm/protocol-b.ts:25-33` AnthropicToolSchema（无 function 包裹）+ `routes/chat.ts:42-46` 派生 `{name, description, input_schema}`；`lib/llm/protocol-b.ts:44` tool_use.input 类型注释明写"input 是对象"+ `routes/chat.ts:131` `const args = tu.input`（vs 协议 A 的 `JSON.parse`）；`lib/llm/protocol-b.ts:40` + `:45` 回灌用 `role:"user"` + `content:[{type:"tool_result", tool_use_id, content}]` + `routes/chat.ts:158-169` 拼装；`lib/llm/protocol-b.ts:54` max_tokens 必填 + `routes/chat.ts:73-78` 每轮 `request.max_tokens = maxTokens`；curl 实测 round_1.stop_reason=tool_use / input type=dict / round_2.stop_reason=end_turn / final_reply 含 25°C 与 tool_result 一致 |
+| 「协议 A vs B 字段对照表」需可观察对照 | 单协议 B Function Calling 演示已落（step-8 · 协议 A vs B 字段并排**真实对照**是模块 02-02 教学点，那里有 `app:02-02-protocol-ab-step-1` 真 LLM 双协议对照 demo）；本条保留"概念上 OpenAI/Anthropic 骨架同构 + 4 处关键差异"的概念说明 | 已实现（拆走"需可观察对照"措辞） | step-8 `lib/llm/protocol-b.ts:25-33` AnthropicToolSchema（无 function 包裹）+ `routes/chat.ts:42-46` 派生 `{name, description, input_schema}`；`lib/llm/protocol-b.ts:44` tool_use.input 类型注释明写"input 是对象"+ `routes/chat.ts:131` `const args = tu.input`（vs 协议 A 的 `JSON.parse`）；`lib/llm/protocol-b.ts:40` + `:45` 塞回 messages用 `role:"user"` + `content:[{type:"tool_result", tool_use_id, content}]` + `routes/chat.ts:158-169` 拼装；`lib/llm/protocol-b.ts:54` max_tokens 必填 + `routes/chat.ts:73-78` 每轮 `request.max_tokens = maxTokens`；curl 实测 round_1.stop_reason=tool_use / input type=dict / round_2.stop_reason=end_turn / final_reply 含 25°C 与 tool_result 一致 |
 | 「需求 1 · 并行」 | step-3 | 已实现 |
 | 「需求 2 · 串/并行对比 · 含是否编造」 | 耗时对比 + 编造检测（step-3 routes/compare.ts `detectHallucination`：`¥\s*\d+` 提取钱 + `\d+\s*°C` 提取温度；reply 数字不在 source 集 → fakeNumbers）；前端 pages/compare.html 展示 parallel ✅ / serial ❌ + 列 fakeNumbers。**延伸**：step-6 真 LLM + 自动编造检测可观察（4 张数据卡 + 🔍 栏） | 已实现 |
 | 「需求 3 · 串行依赖 · 含 Promise.all 反例可跑」 | 正例 + 反例有（step-4 routes/chain.ts + chain-bad.ts；pages/chain-bad.html 标红 ❌） | 已实现 |
 | 「需求 4 · 自编排」 | step-5 | 已实现 |
 | 「需求 5 · 自纠 + MAX_ROUNDS」 | step-5 | 已实现 |
 
-**B 段小结**：**本轮全补**：① 混合编排 → step-7 已落 + 闸门 3 过；② 协议 B 字段对照 → step-8 单协议 B 演示已落 + 拆走"需可观察对照"措辞（字段并排真实对照是模块 02-02 教学点）+ 闸门 3 过。**0 条未实现**。
+**B 段小结**：**本轮全补**：① 混合编排 → step-7 已落 + 过关检查 3 过；② 协议 B 字段对照 → step-8 单协议 B 演示已落 + 拆走"需可观察对照"措辞（字段并排真实对照是模块 02-02 教学点）+ 过关检查 3 过。**0 条未实现**。
 
-（「链路深度 vs 成本」为纯知识指针 → 模块 10/19/11，**已挪出本表**，不进闸门 3 清单。）
+（「链路深度 vs 成本」为纯知识指针 → 模块 10/19/11，**已挪出本表**，不进过关检查 3 清单。）
 
-### §5.4 闸门结论
+### §5.4 过关检查结论
 
-- §5.4.A：以闸门 3 当次报告为准（勿信本表历史「已过」）
-- §5.4.B：**本轮全补**（混合编排 step-7 + 协议 B step-8）· **0 条未实现** · 闸门 3 过
+- §5.4.A：以过关检查 3 当次报告为准（勿信本表历史「已过」）
+- §5.4.B：**本轮全补**（混合编排 step-7 + 协议 B step-8）· **0 条未实现** · 过关检查 3 过
 
 → **可勾本条 ✅**（前提：step-7 + step-8 学习者主动说"锁定" → Demo 子节进度表 🔄 → ✅）。

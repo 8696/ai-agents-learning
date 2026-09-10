@@ -45,7 +45,7 @@ step-2 是 step-1 的**真 LLM 升级版**（[§5.3.14](../../AGENTS.md#5314-dem
 | step-1（mock） | step-2（真 LLM） |
 | --- | --- |
 | `decideToolCalls(mode, input)` hardcode 返回 tool_calls | 真 `openai.chat.completions.create()` → 模型自己决定 |
-| `buildFinalReply(results)` 拼字符串 | 真 LLM 第二轮：把 tool_result 回灌，模型生成自然语言 |
+| `buildFinalReply(results)` 拼字符串 | 真 LLM 第二轮：把 tool_result 塞回 messages，模型生成自然语言 |
 | execute 用 mock get_weather/search/calc | execute 不变（Registry 是 SDK 无关中间层） |
 | 前端只显示业务 trace | 前端**多一节 #llm-protocol**：Round 1/2 的 Request/Response JSON 全量摆出来 |
 

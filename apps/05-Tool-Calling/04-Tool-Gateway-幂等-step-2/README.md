@@ -23,7 +23,7 @@ cd apps && yarn app:05-04-tool-gateway-step-2
       → callProtocolB(req1) → resp1（content blocks 含 tool_use）
     → execute: toolUsesFromLLM → executeTool("create_order", { items, idempotency_key }, ...)
       → create_order handler: 1. 查 idempotencyCache 2. 未命中写 ordersDb + cache.set
-    → Round 2: messages + tool_result blocks 回灌 → callProtocolB(req2) → final_reply
+    → Round 2: messages + tool_result blocks 塞回 messages → callProtocolB(req2) → final_reply
   → 返 { user_input, items, idempotency_key, round_1, model_tool_uses, tool_results, round_2, final_reply }
   → 输出区渲染三次调用对照：每条的 tool_result（cacheHit / dbInserted / order_id）+ summary
 ```
@@ -31,7 +31,7 @@ cd apps && yarn app:05-04-tool-gateway-step-2
 ## 当前能做什么
 
 - **变体 2 · create_order 幂等**：同 idempotency_key 调 3 次 /api/chat → 模型发 create_order → 走幂等 → DB 只插 1 行 + 后两次缓存命中
-- **协议 B 物理形态**：content blocks 数组、tool_use.input 是对象、必填 max_tokens、回灌用 role:"user" + tool_result blocks
+- **协议 B 物理形态**：content blocks 数组、tool_use.input 是对象、必填 max_tokens、塞回 messages用 role:"user" + tool_result blocks
 - **前端演示「同 key 调 3 次」**：浏览器内部 fetch × 3，每次都走完整 LLM 两轮（不是直调 Tool）
 - **单 Tool Registry**（只 create_order）；变体 1 / 3 在 step-1 / step-3
 

@@ -5,7 +5,7 @@
 > **状态**：已沉淀（增量更新 · 2026-09-08）
 > **Demo**：可运行 · **step-1~4 已锁定 ✅（2026-09-08）** · `yarn app:05-04-tool-gateway-step-{1..4}` —— 详见 [Demo 子节进度](#demo-子节进度)
 
-上一节 [Tool Choice](./03-Tool-Choice.md) 管的是「模型这一轮**能不能产出** tool_call」（上游策略旋钮）。  
+上一节 [Tool Choice](./03-Tool-Choice.md) 管的是「模型这一轮**能不能产出** tool_call」（上游策略开关）。  
 本节接的是**下游那根闸**：模型已经发请求了，你的后端**到底敢不敢执行**——以及执行之后，重试 / 网络抖动 / 用户重复点按钮，会不会把业务做错两次。
 
 人话：Choice = 点菜规则；Gateway = 厨房**接单前**再核一遍（验钞 / 看额度 / 危险菜要签字）；幂等 = 同一桌同一道菜做三次，**还是只上一份**；委托授权 = 管家**拿你的钥匙**开你的信箱，不是管家有把万能钥匙。
@@ -133,12 +133,12 @@ step-3 demo 是这套流程的**接口形状 mock**——`oauthTokens.set("alice
 | --- | ---- | ------ | ---------- |
 | **1. handler** | `lib/tools/divide.ts` | 识别业务错误 → `throw new Error("divide by zero")` | 不该懂协议层（Anthropic / Zod / Registry 概念）|
 | **2. Registry 中间件** | `lib/tools/registry.ts` try/catch | 捕获原始 Error → 从 message 推断 `code` / `retryable` → 包装 `ExecResult {ok:false, code, retryable}` | 不该懂协议字段（`is_error` / `tool_use_id`）|
-| **3. chat.ts 协议适配** | `routes/chat.ts` toolResultBlocks | 把 ExecResult → Anthropic `tool_result` 块 + `is_error:true` → 回灌 Round 2 | 不该懂业务（不重判 code）|
+| **3. chat.ts 协议适配** | `routes/chat.ts` toolResultBlocks | 把 ExecResult → Anthropic `tool_result` 块 + `is_error:true` → 塞回 messages Round 2 | 不该懂业务（不重判 code）|
 | **4. 模型决策** | 协议 B 第二轮 | 读字段（`code=DIVIDE_BY_ZERO` / `retryable=true`）→ 改 `b` 重发 `tool_use` | 不该接异常 / 不该 try/catch 工具执行 |
 
 **为什么这么分层**：handler 抛语义错（不懂协议）→ Registry 翻译成模型能读的元数据（不懂协议字段）→ chat.ts 做协议适配（不懂业务）→ 模型决策（读字段）。每一层只懂自己的事，合起来才是「业务错误 ≠ 整轮崩」。如果让模型去 try/catch 工具执行，模型就被卷进基础设施错误 —— 边界就破了。
 
-**拓展 · 整圈 Tool Calling 协议都是契约，不止错误回传这一刀**
+**拓展 · 整圈 Tool Calling 协议都是契约，不止错误回传这一步**
 
 错误回传只是 Tool Calling 协议的**一格**。把视角推上去：`description` / `schema` / `tool_choice` / `is_error` / `code` / `retryable` / `stop_reason` 全是**同一种东西**——都是 **JSON 字段 → 模型读 → 决策** 的契约字段。模型不变，只改字段，行为就变。**整圈没有一处是超字段之外的东西**。
 
@@ -161,7 +161,7 @@ step-3 demo 是这套流程的**接口形状 mock**——`oauthTokens.set("alice
 - `code` 没说对？→ 模型不知道错是哪类（改 code 推断）
 - `retryable` 没标对？→ 模型不知道改不改输入（改 Registry 的 retryable 推断）
 
-> 备注：上面「入参契约 / 出参契约」两张表（紧接"三层分工"前的两张）保留 —— 它们是 step-4 `divide` 错误回传那一刀的精确刻画；本表是更上层的视角，覆盖整个 Tool Calling 协议。
+> 备注：上面「入参契约 / 出参契约」两张表（紧接"三层分工"前的两张）保留 —— 它们是 step-4 `divide` 错误回传那一步的精确刻画；本表是更上层的视角，覆盖整个 Tool Calling 协议。
 
 ---
 
@@ -310,7 +310,7 @@ Round 2 模型读字段                                                 ← ④ 
   → 改 b=2 重发 tool_use: divide({a:10, b:2}) → tool_result: {ok:true, result:5}
 ```
 
-**反例（不这么走会怎样）**：Tool handler 不结构化 → 直接抛到 koa 顶层 → koa 返 HTTP 500 → 整轮 agent 崩 → 用户看到「出错了请重试」。**业务继续** vs **整轮崩** —— 差在这一刀。
+**反例（不这么走会怎样）**：Tool handler 不结构化 → 直接抛到 koa 顶层 → koa 返 HTTP 500 → 整轮 agent 崩 → 用户看到「出错了请重试」。**业务继续** vs **整轮崩** —— 差在这一步。
 
 ---
 
@@ -324,7 +324,7 @@ Round 2 模型读字段                                                 ← ④ 
 | 2 | **下订单 Tool**（有副作用） | 网络抖动 / 重复点按钮 = 同一结果 | 幂等性 | 同一 `idempotency_key` 调 3 次：DB 只插 1 行 + 后两次返**与第一次完全相同**的 order 对象 + 缓存命中日志可见 |
 | 3 | **拉邮件 Tool** | 用户 A 拉不到用户 B 的邮件 | 用户委托授权 | 模拟两个 user：`alice` token 调 Gmail Tool → 只能拉 alice 资源；用 platform 上帝 Key 兜底 → 启动期就**拒启动**（fail-closed） |
 | 4 | **任意 Tool 抛错** | Tool 业务错误 = tool_result，不是 HTTP 500 | 错误回传 | Tool 内部抛异常 → koa 中间件捕获 → 返回结构化 tool_result `{status:"error",code,message,retryable}` → 模型下轮能基于此改输入 |
-| 5 | **限流撞线** | Tool 配额耗尽 = 友好提示，不崩 | 配额 / 边界 | 用户配额打满后调 Tool → 返 `RATE_LIMITED` + retry_after；模型读到能告诉用户「今天调满了」 |
+| 5 | **限流撞线** | Tool 配额耗尽 = 友好提示，不崩 | 配额 / 边界 | 用户配额用完后调 Tool → 返 `RATE_LIMITED` + retry_after；模型读到能告诉用户「今天调满了」 |
 
 ---
 
@@ -383,7 +383,7 @@ Round 2 模型读字段                                                 ← ④ 
 | 变体 3 · 委托授权（OAuth）是什么 + 真实场景 | 不知道 Gateway 第三条腿在解决什么 | 让 Agent 调第三方 SaaS（Gmail / GitHub / Calendar / 飞书 / 企微）时**用用户自己的 OAuth Token**，**不能用平台上帝 Key**。3 类真实场景：① AI IDE 帮你 commit GitHub PR（Cursor / Continue 用你的 token 提交，PR 上 author 是你的名字）② AI 助手读邮件（Cursor / Notion AI 用你的 Gmail token 只读你的邮件）③ 企业 SaaS 集成（员工各 onboard 一次，Agent 用员工 token 读自己的群消息）。没委托授权的代价：平台用上帝 Key 代读 → Bob 拉到 alice 邮件 + Google 吊销 client_id + 平台倒闭 |
 | 变体 3 · OAuth 委托授权链路 = 用户 onboard → 调 Tool → 资源隔离在哪 | 真实设计逻辑在 Agent 端还是 OAuth 服务端 | 链路 = 用户 onboard（一次性，用户点 Allow → 后端拿 refresh_token）→ 调 Tool（handler 拿 ctx.actor.userId → oauth_tokens[userId] 拿 refresh_token → 用 refresh_token 换 access_token → 调 API）。**两个精确点**：① refresh_token 长期（存 DB）vs access_token 短期（每次现换不存）—— Agent 后端只存 refresh_token；② **资源隔离在 OAuth 服务端不在 Agent 这边**——alice token 拉 alice 邮件是 Gmail API 服务端按 access_token 强制返回，不是 Agent 按 userId 过滤。所以**架构上**不可能有平台上帝 Key：平台一个 token 换的 access_token 是「平台自己的身份」，OAuth 服务端不允许一个 token 假装成所有用户 |
 | 变体 3 · 生产版 OAuth 流程（授权码模式 4 步） | 真实 OAuth 流程 vs demo mock 的关系 | 授权码模式 Authorization Code Grant 4 步：① 用户点「连接 Gmail」→ 后端跳 Google OAuth 同意页（带 client_id + redirect_uri + scope + state + `access_type=offline` 要 refresh_token）；② 用户点 Allow → Google 重定向 callback 带 code；③ 后端拿 code 换 token（POST oauth2.googleapis.com/token → 返 access_token + refresh_token + expires_in）；④ 后端存 refresh_token（生产 `db.save("alice", { refresh, scope })` · step-3 demo 是 `oauthTokens.set("alice", {...})`）。step-3 demo 是这套流程的**接口形状 mock**——handler 拿 userId → 查 token → 调 API 链路跟生产一致 |
-| 变体 4 · 错误捕获的归属 | 工具 / Registry / 模型 三层谁负责错误 | **Registry 中间件**（registry.ts try/catch），不是 Tool handler，也不是模型。**精确分工**：① handler 只识别业务错误 → `throw new Error("divide by zero")`（不懂协议）；② Registry try/catch 捕获 + 从 message 推断 `code` / `retryable` + 包装成 `ExecResult {ok:false, code, retryable}`（翻译成模型能读的元数据）；③ chat.ts 把 ExecResult 转成 Anthropic `tool_result` 块 + `is_error:true` 回灌 Round 2（协议适配）；④ 模型读字段决策（读 `code=DIVIDE_BY_ZERO` / `retryable=true` → 改 `b` 重发）。**关键修正**：模型不"接异常"，只读字段 —— 它根本不知道 handler 抛过 Error，只看到 `{code, retryable}`。如果让模型 try/catch 工具执行，模型就被卷进基础设施错误，边界就破了 |
+| 变体 4 · 错误捕获的归属 | 工具 / Registry / 模型 三层谁负责错误 | **Registry 中间件**（registry.ts try/catch），不是 Tool handler，也不是模型。**精确分工**：① handler 只识别业务错误 → `throw new Error("divide by zero")`（不懂协议）；② Registry try/catch 捕获 + 从 message 推断 `code` / `retryable` + 包装成 `ExecResult {ok:false, code, retryable}`（翻译成模型能读的元数据）；③ chat.ts 把 ExecResult 转成 Anthropic `tool_result` 块 + `is_error:true` 塞回 messages Round 2（协议适配）；④ 模型读字段决策（读 `code=DIVIDE_BY_ZERO` / `retryable=true` → 改 `b` 重发）。**关键修正**：模型不"接异常"，只读字段 —— 它根本不知道 handler 抛过 Error，只看到 `{code, retryable}`。如果让模型 try/catch 工具执行，模型就被卷进基础设施错误，边界就破了 |
 | 变体 4 · 工具跟模型的交互本质是什么 | 工具调用的最小抽象 | **两段字段约定（契约）**，仅此而已。**入参契约**：`tools_schema`（chat.ts 序列化给 LLM 的 name / description / input_schema）↔ Zod schema（registry.ts 的 `safeParse`）—— 模型按 schema 填 `tool_use.input`，Registry 用同一个 schema 对账；**出参契约**：`tool_result.content`（JSON 化的 `{error, code, retryable}` 或 `{result}`）+ `is_error`（Anthropic 协议字段）+ 协议 B 块结构 —— 模型读 `code` / `retryable` 字段决策。整个交互 = 两张字段表的握手，**没有别的**。模型不"理解" Tool，Tool 也不"理解"模型 —— 都是字段对账，跟两个 JSON 对象走协议一模一样 |
 | 变体 4 · 改输入是什么意思 | retryable 的语义混淆 | **改输入 = 流程没死 + 改输入能成**。`retryable:true` =「流程还能继续，这一轮换入参就行」的元数据信号（给模型看的）。模型在 Round 2 看到这个信号 → 知道"重发个不一样的 tool_use 就行"。`retryable:false` = 改了也白搭，该告诉用户 / 换工具。**关键**：`retryable` 不是 handler 自己说的，是 [registry.ts:113-114](../../apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/lib/tools/registry.ts) **从 Error.message 推断**的元数据 —— handler 只 throw，Registry 翻译。模型不是"必须改"，是"可以改"——也可以告诉用户 / 换工具。**对照**：`retryable:true` 的场景（b=0 DIVIDE_BY_ZERO / b="abc" INVALID_PARAM）= 改输入能成；`retryable:false` 的场景（user_id 不存在 USER_NOT_FOUND / 默认 TOOL_THREW）= 改了也白搭 |
 | 变体 4 · description 跟 retryable 是同一类约束吗 | 工具协议字段的本质是否同类 | **是，都是契约字段**。description 约束"何时调用 / 怎么填"（入参侧）；retryable 约束"出错后下一步怎么走"（出参侧）；中间还有 `schema` / `tool_choice` / `is_error` / `code` / `stop_reason` 等。**整圈 Tool Calling 协议都是字段约定，没有一个超字段之外的东西**。Tool Calling 调试的所有问题——乱调 / 不调 / 调错参 / 错后乱走——查的都是字段，不是模型"理解力"。**模型不变，只改字段，行为就变** |

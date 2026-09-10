@@ -36,7 +36,7 @@ yarn app:01-02-token-step-1
 02-Token/
 ├── server.ts
 ├── lib/tokenize/          # encode + 对照样本
-├── lib/http/              # PORT / 入参闸门
+├── lib/http/              # PORT / 入参校验
 ├── routes/health.ts · encode.ts
 └── public/pages/compare.html · encode.html
 ```

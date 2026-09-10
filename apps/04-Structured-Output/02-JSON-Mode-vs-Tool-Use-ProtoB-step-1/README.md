@@ -23,7 +23,7 @@ yarn app:04-02-anthropic-tool-use-step-1
 场景页 (public/pages)
   → utils/api-client.js
   → POST /api/text | /api/tool-use | /api/tool-rejected
-  → routes/*（薄：闸门 → flow → ctx.body）
+  → routes/*（薄：入参校验 → flow → ctx.body）
   → lib/flow/*（messages.create + 剥壳或直接 Zod）
   → lib/schema/intent.ts（同一份 Intent 契约 + input_schema）
 ```

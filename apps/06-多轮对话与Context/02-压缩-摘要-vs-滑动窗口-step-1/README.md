@@ -17,11 +17,11 @@ cd apps && yarn app:06-02-compress-vs-window-step-1
 ## 数据流
 
 ```text
-浏览器调旋钮（turnCount / windowSize / keyFactAtTurn）→ React state
+浏览器调页面参数（turnCount / windowSize / keyFactAtTurn）→ React state
        │
        │  POST /api/compare  { turnCount, windowSize, keyFactAtTurn }
        ▼
-koa bodyParser → routes/compare.ts Zod 闸门
+koa bodyParser → routes/compare.ts Zod 校验
        │
        │  buildMockHistory(turnCount, keyFactAtTurn)
        │    → 第 keyFactAtTurn 轮 user 说「我叫 Tina 住上海 爱日料」 + assistant 回应
@@ -38,11 +38,11 @@ koa bodyParser → routes/compare.ts Zod 闸门
 React 三张卡：① 裁剪前（messages + beforeReply） ② 裁剪后（messages + afterReply） ③ 对比小结（key fact 在 / 不在）
 ```
 
-服务端日志（`logs/YYYY-MM-DD.log`）每次请求打：入参 → 滑动窗口工具档五件套 → 两次模型调用核心档五件套 → handler 结束含 `keyFactInBefore/After` 判定 + 总耗时。
+服务端日志（`logs/YYYY-MM-DD.log`）每次请求写：入参 → 滑动窗口普通函数按五条日志写完整 → 两次模型调用主路径按五条日志写完整 → handler 结束含 `keyFactInBefore/After` 判定 + 总耗时。
 
 ## 当前能做什么
 
-- 三个旋钮：假对话轮数（2~80）、滑动窗口 K（2~20）、key fact 放第几轮（1~当前 turnCount）
+- 三个页面可调参数：假对话轮数（2~80）、滑动窗口 K（2~20）、key fact 放第几轮（1~当前 turnCount）
 - 点「跑对比」→ 服务端跑 50 轮假历史 + 调两次真模型 → 三张卡片对照
 - 默认参数（50/6/1）下：before 记得 key fact；after 忘掉 key fact → 一眼看见「滑动窗口丢了什么」
 - 改 `keyFactAtTurn` = 49 → key fact 在窗口内 → 两边都记得 → 反向印证

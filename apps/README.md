@@ -2,7 +2,7 @@
 
 `apps/` 是本仓库**唯一的代码落点**——所有外部小节的最小可运行样例 + 模块 00 的代码落点（[AGENTS.md §5](../AGENTS.md#5-demo-落点)）。
 
-模块 00 的代码落在 `00-环境准备/01-mini-app-step-1/`；其余模块按条 Demo 落到各自小节。**模块复盘不落代码**（[AGENTS.md §7.3](../AGENTS.md#73-模块复盘进度表最后一行)）。
+模块 00 的代码落在 `00-环境准备/01-mini-app-step-1/`；其余模块按条 Demo 落到各自小节。**模块复盘不写代码**（[AGENTS.md §7.3](../AGENTS.md#73-模块复盘进度表最后一行)）。
 
 | | 这里 `apps/` |
 | - | ------------- |
@@ -58,7 +58,7 @@
 | `yarn app:05-04-tool-gateway-step-2` | `50035` | 模块 05 · 04 · Tool Gateway step-2：变体 2 create_order 幂等（调 LLM 协议 B · 同 idempotency_key 调 3 次 /api/chat → DB 只插 1 行） |
 | `yarn app:05-04-tool-gateway-step-3` | `50036` | 模块 05 · 04 · Tool Gateway step-3：变体 3 read_recent_emails 委托授权（调 LLM 协议 B · per-user OAuth + fail-closed + 未 OAuth 拒绝） |
 | `yarn app:05-04-tool-gateway-step-4` | `50037` | 模块 05 · 04 · Tool Gateway step-4：变体 4 Tool 抛错结构化（调 LLM 协议 B · 3 按钮演示成功 / 业务错 / 参数错 → handler throw → 结构化错误 → Round 2 模型改输入） |
-| `yarn app:06-01-context-vs-memory-step-1` | `50038` | 模块 06 · 01 · Context vs Memory step-1：最小可观察；输入框 + 发送 / 清空 + 真 LLM（协议 A）；messages 数组即 Context，服务端日志打完整 messages + token 估算；演示 Context 累积与「清空 = Context 消失」（step-1 sketch） |
+| `yarn app:06-01-context-vs-memory-step-1` | `50038` | 模块 06 · 01 · Context vs Memory step-1：最小可观察；输入框 + 发送 / 清空 + 真 LLM（协议 A）；messages 数组即 Context，服务端日志写完整 messages + token 估算；演示 Context 累积与「清空 = Context 消失」（step-1 sketch） |
 | `yarn app:06-01-context-vs-memory-step-2` | `50039` | 模块 06 · 01 · Context vs Memory step-2：Memory 持久化（SQLite · `data/preferences.db` · §5.3.17 KV 抽象 `kvGet/kvSet/kvDel/kvList`）；POST /api/memory 写入偏好 + GET /api/memory 列出 + DELETE /api/memory 删除；每次发送从 db 读偏好注入 system 末尾；服务端日志 `data.fromMemory` + `request.messages[0]` 完整可见；前端 React state 看不到 Memory 段；跨会话还记：关浏览器再发仍按偏好回答 |
 | `yarn app:06-02-compress-vs-window-step-1` | `50040` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-1：滑动窗口（按条数 K + system pin）对照实验；50 轮假历史 + 1 轮「自我介绍」含 key fact + 1 轮「你还记得吗」；调真模型 #1（完整）→ beforeReply + 滑动窗口裁剪 → 调真模型 #2（裁剪后）→ afterReply；三张卡：① 裁剪前 messages + beforeReply  ② 裁剪后 messages + afterReply  ③ 对比小结（key fact 在 / 不在）；step-1 sketch：跑滑动窗口这一条策略的「丢了什么」 |
 | `yarn app:06-02-compress-vs-window-step-2` | `50041` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-2：摘要压缩（远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近 K 条留原文）；同 50 轮假历史，调真模型 3 次（before 基线 + 远期摘要 + after 验证）；四张卡：① 裁剪前 ② summary 内容（看 LLM 写了啥） ③ 摘要后 ④ 对比小结；step-2 sketch：跑摘要压缩这一条策略的「保留了什么」 |
@@ -66,9 +66,9 @@
 | `yarn app:06-02-compress-vs-window-step-4` | `50043` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-4：失败兜底降级 · 同 step-3 三方对照 + 1 个「模拟摘要失败」开关；摘要 LLM throw → catch → fallback 标记 used=true → 用滑动窗口答题（仍 200）；服务端日志 warn「摘要失败，降级为滑动窗口」；用户感知不到失败；点「演示上游失败」→ 5xx 红字（与兜底降级形成对照）；覆盖需求 5「摘要失败兜底降级」 |
 | `yarn app:06-02-compress-vs-window-step-5` | `50044` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-5：按 token 算窗口（变体 2）· 滑动窗口 K 从「条数」换成「token 数」（gpt-tokenizer 估算）；从最新往旧累加 ≤ B 为止；system pin；同份假历史 + 同一问句 + 同一模型 → 五张卡：① 完整 ② 滑动窗口（按 token B={B}） ③ 摘要压缩 ④ summary 内容 ⑤ 「按 token vs 按条数」对照；token 硬上限 = 生产里最稳的硬控制方式（不受单条超长消息影响） |
 | `yarn app:06-03-token-budget-step-1` | `50045` | 模块 06 · 03 · Token Budget step-1：三块预算分账（system / history / output）+ 拼装前打印 token + 超预算丢最旧非 system 消息 + 调真模型一次；前端 4 卡对照（触发说明 / 裁前裁后预算 / 完整 messages / 模型回复）；覆盖需求 1「三块预算分账」+ 需求 5「完整 messages 打印」 |
-| `yarn app:06-03-token-budget-step-2` | `50046` | 模块 06 · 03 · Token Budget step-2：双策略对照 — 方法一「直接丢最旧 / trim」vs 方法二「远期摘要 + 近期原文 / summarize」；同 query 同模型同 history 走两条路径 3 次出网（1 摘要 + 2 问答）+ KEY_FACT 检测（肯定句式 + 否定标记）；前端 4 卡（对比小结 / 方法一 / 方法二 + summary 原文 / 裁前基线）；覆盖需求 3「滑动窗口 vs 摘要 效果对比」+ 需求 5 |
-| `yarn app:06-03-token-budget-step-3` | `50047` | 模块 06 · 03 · Token Budget step-3：软硬双层（soft / emergency）· 同 history 走两条路径 — total ≤ hardLimit 走软路径（trim 或 summarize 二选一）；total > hardLimit 走硬路径 = 应急模式（只留 system + history 末轮 + 提示「请用一句话重述」）；覆盖需求 6「50+ 轮长对话不崩」 |
-| `yarn app:06-03-token-budget-step-4` | `50048` | 模块 06 · 03 · Token Budget step-4：选择性注入 — 5 段多话题 history（美食/天气/工作/电影/健身 × 10 轮）+ query 关键词匹配 → 只 top-N 命中段塞进 messages（其他不进）；对照全塞基线；2 次出网（1 全塞 + 1 选择性）；覆盖需求 4「选择性注入」+ 需求 7「全塞 vs 选择性对比」 |
+| `yarn app:06-03-token-budget-step-2` | `50046` | 模块 06 · 03 · Token Budget step-2：双策略对照 — 方法一「直接丢最旧 / trim」vs 方法二「远期摘要 + 近期原文 / summarize」；同 query 同模型同 history 走两条路径 3 次真发网络请求（1 摘要 + 2 问答）+ KEY_FACT 检测（肯定句式 + 否定标记）；前端 4 卡（对比小结 / 方法一 / 方法二 + summary 原文 / 裁前基线）；覆盖需求 3「滑动窗口 vs 摘要 效果对比」+ 需求 5 |
+| `yarn app:06-03-token-budget-step-3` | `50047` | 模块 06 · 03 · Token Budget step-3：软阈值+硬阈值两层（soft / emergency）· 同 history 走两条路径 — total ≤ hardLimit 走软路径（trim 或 summarize 二选一）；total > hardLimit 走硬路径 = 应急模式（只留 system + history 末轮 + 提示「请用一句话重述」）；覆盖需求 6「50+ 轮长对话不崩」 |
+| `yarn app:06-03-token-budget-step-4` | `50048` | 模块 06 · 03 · Token Budget step-4：选择性注入 — 5 段多话题 history（美食/天气/工作/电影/健身 × 10 轮）+ query 关键词匹配 → 只 top-N 命中段塞进 messages（其他不进）；对照全塞基线；2 次真发网络请求（1 全塞 + 1 选择性）；覆盖需求 4「选择性注入」+ 需求 7「全塞 vs 选择性对比」 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
