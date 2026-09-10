@@ -47,6 +47,7 @@ React 按圈渲染：每圈一张卡（assistant + tool_calls + tool_results + �
 
 - 输入框写一句任务 → 点「跑 Agent」→ 真调 LLM 跑一整轮 Agent Loop
 - 期望看到 ≥ 2 圈：第 1 圈 `list_todos`（变体 D 串行依赖起点）→ 第 2~N 圈 `complete_todo` → 最后一圈无 tool_calls → 绿卡最终答案
+- 「💬 闲聊算术（1+1）」预设按钮 → 期望只 1 圈、tool_calls=0、最终正文直接给答案（变体 C 零工具 + J 最终答案 + A/B 注解闭环；2026-09-10 coach complete 补缺口）
 - 轨迹区按圈展开：每圈显示 Reason（assistant 摘要 + tool_calls 或正文）/ Act+Observe（每个 tool_result 原文 + 是否成功）/ 圈耗时
 - 跑完可展开「完整 messages」看到 Loop 把 assistant+tool 一圈一圈追加进了什么
 - 类 A 错误：发空字符串 → 400 黄字（Zod 校验）

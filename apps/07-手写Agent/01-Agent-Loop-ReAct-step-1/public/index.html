@@ -201,6 +201,7 @@
                 <div className="text-xs text-gray-600">
                   怎么观察：跑一次 → 期望看到至少 2 圈（list_todos 看清楚 → complete_todo 逐条完成）→ 最后一圈无 tool_calls → 绿卡最终答案 → stoppedReason=final_answer。
                   然后看「数据前后对照」三栏：before 列「逾期未完成」、after 列「已完成」（绿字删除线）、diff 列只列「被 Loop 改了的那几条」。
+                  想看「变体 C 零工具直接答」（C + J + A/B 注解）→ 点预设按钮「💬 闲聊算术（1+1）」→ 期望 trajectory 只 1 圈、tool_calls=0、最终正文「2」。
                   想看其它停止条件（K 最大轮次 / L 超时 / M 用户取消）→ step-2+ 加；想看并行（变体 E）/ 失败 Observe（变体 G）→ 也 step-2+ 加。
                 </div>
               </div>
@@ -239,6 +240,22 @@
                 value={query}
                 onChange={e => setQuery(e.target.value)}
               />
+              {/* 预设 query 按钮组（§5.3.14 锁定后补最小可观察点 · 2026-09-10 coach complete 缺口） */}
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="text-gray-500 self-center">预设 query：</span>
+                <button
+                  id="btn-preset-casual-math"
+                  className="border border-purple-300 text-purple-700 px-2 py-1 rounded"
+                  onClick={() => setQuery("1+1")}
+                  title="零工具直接答 · 变体 C + J 闭环 · 期望 trajectory 显示 0 次 execute + 1 圈直接最终答案"
+                >💬 闲聊算术（1+1）</button>
+                <button
+                  id="btn-preset-default"
+                  className="border border-gray-300 text-gray-700 px-2 py-1 rounded"
+                  onClick={() => setQuery("把逾期购物待办标完成")}
+                  title="默认演示 · 变体 D 串行依赖 + H 多圈 + J 最终答案"
+                >🛒 默认演示</button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   id="btn-run-agent"
