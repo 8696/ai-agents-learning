@@ -14,7 +14,7 @@ import type { Context, Next } from "koa";
 import type Router from "@koa/router";
 import { z } from "zod";
 import { runLoop } from "../lib/flow/loop.js";
-import { registerRun, finalizeRun } from "./runs.js";
+import { registerRun, finalizeRun, setRunProgress } from "./runs.js";
 import { logger } from "../lib/logger.js";
 
 const HARD_CAP = 200;
@@ -83,6 +83,8 @@ export function mountTodoAssistantRoutes(router: Router): void {
           hardCap: HARD_CAP,
           label: `todo 助手端到端（装了 ${enabledGates.length} 闸）`,
           abortSignal: controller.signal,
+          // 实时进度：loop.ts 每步调一次 → setRunProgress → 前端 GET run-status 时拿到
+          onProgress: (progress) => setRunProgress(runId, progress),
         });
         return { ok: true as const, result: out };
       } catch (e: unknown) {

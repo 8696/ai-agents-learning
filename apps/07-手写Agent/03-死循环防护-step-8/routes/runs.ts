@@ -6,19 +6,45 @@
  * §5.3.12「禁止全局共享 KV」反例：进程级 state 必须按 userId 隔离；本 demo 单用户故用 `default` 占位。
  */
 import { logger } from "../lib/logger.js";
+import type { RunLoopOutput } from "../lib/flow/loop.js";
+
+/** routes 包 runLoop 的返回值：成功返 { ok:true, result }，抛错 catch 后返 { ok:false, error }。 */
+export type RunResult = { ok: true; result: RunLoopOutput } | { ok: false; error: string };
+
+/** 实时进度：每步由 loop.ts 通过 onProgress 推过来，run-status route 直接读给前端。 */
+export interface RunProgress {
+  /** 当前正在跑第几步（0 = 启动中；1+ = 第 N 步进行中或已结束） */
+  currentStep: number;
+  /** 累计 token 估算（同步自 state.tokenEstimate） */
+  totalTokens: number;
+  /** 累计调用模型次数（每步 1 次） */
+  apiCalls: number;
+  /** 最后动作描述（调模型 / 调工具 / 闸门触发） */
+  lastAction: string;
+}
 
 interface RunHandle {
   controller: AbortController;
-  promise: Promise<unknown>;
+  promise: Promise<RunResult>;
   finished: boolean;
   /** 拿 runId 时填进去；用户取消时不再返回结果，runWithCancel 把 cancel 当成终结信号。 */
   aborted: boolean;
+  /** 实时进度（loop.ts 每步推一次；前端轮询时拿到；finished=true 后冻结最后状态） */
+  progress: RunProgress | null;
 }
 
 const handles = new Map<string, RunHandle>();
 
-export function registerRun(runId: string, controller: AbortController, promise: Promise<unknown>): void {
-  handles.set(runId, { controller, promise, finished: false, aborted: false });
+export function registerRun(runId: string, controller: AbortController, promise: Promise<RunResult>): void {
+  handles.set(runId, { controller, promise, finished: false, aborted: false, progress: null });
+}
+
+/** loop.ts 通过 onProgress 推过来；前端 GET run-status 拿。finished=true 后不再覆盖（保留最后一次）。 */
+export function setRunProgress(runId: string, progress: RunProgress): void {
+  const h = handles.get(runId);
+  if (!h) return;
+  if (h.finished) return;
+  h.progress = progress;
 }
 
 export function abortRun(runId: string): { ok: boolean; reason: string } {

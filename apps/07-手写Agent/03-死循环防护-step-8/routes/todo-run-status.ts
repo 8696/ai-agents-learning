@@ -19,15 +19,19 @@ export function mountTodoRunStatusRoutes(router: Router): void {
     }
     if (h.finished) {
       const r = await h.promise;
-      ctx.body = { runId, status: h.aborted ? "cancelled" : "finished", ...r };
+      if (r.ok) {
+        ctx.body = { runId, status: h.aborted ? "cancelled" : "finished", ok: true, result: r.result };
+      } else {
+        ctx.body = { runId, status: "failed", ok: false, error: r.error };
+      }
       return;
     }
     logger.info(
       "路由-todo-run-status",
       "调用函数：GET /api/agent/todo-run-status/:runId",
-      "为什么写这条日志：轮询中；让前端知道「还在跑」。当前：runId=" + runId,
+      "为什么写这条日志：轮询中；让前端知道「还在跑」，并把实时进度推过去。当前：runId=" + runId + " · step=" + (h.progress?.currentStep ?? "—") + " · lastAction=" + (h.progress?.lastAction ?? "—"),
       { 入参: { runId } },
     );
-    ctx.body = { runId, status: "running" };
+    ctx.body = { runId, status: "running", progress: h.progress };
   });
 }

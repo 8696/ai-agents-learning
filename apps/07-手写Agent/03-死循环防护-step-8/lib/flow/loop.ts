@@ -22,7 +22,7 @@ import { logger } from "../logger.js";
 import { callRealLlmStep, SYSTEM_PROMPT } from "./llm-call.js";
 import { mockLlmStepContinue, mockLlmStepStop } from "./loop-helpers.js";
 import { runOneStep } from "./loop-step.js";
-import type { RunLoopInput, RunLoopOutput } from "./loop-types.js";
+import type { RunLoopInput, RunLoopOutput, RunProgress } from "./loop-types.js";
 
 // 重新导出 type（routes/*.ts 仍 import 自这里）
 export type { RunLoopInput, RunLoopOutput } from "./loop-types.js";
@@ -71,13 +71,30 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
     loopDetected: false,
     trajectory: [] as RunLoopOutput["trajectory"],
     useRealLlm,
+    // StepState 强制要求 pushMessages；实际推送走 deps.pushMessages（loop-step.ts 的 deps 顶层），state.pushMessages 是冗余占位。
+    pushMessages: (_assistant: unknown, _tool: unknown) => {
+      /* no-op：实际推送走 runOneStep 的 deps.pushMessages */
+    },
   };
+
+  // 实时进度推送（不写日志——onProgress 是 UI 推送，不是业务调用）
+  function pushProgress(action: string, currentStep: number): void {
+    const p: RunProgress = {
+      currentStep,
+      totalTokens: state.tokenEstimate,
+      apiCalls: state.stepCount,
+      lastAction: action,
+    };
+    input.onProgress?.(p);
+  }
+  pushProgress("启动 while 循环", 0);
 
   while (state.stepCount < effectiveMax) {
     // 闸门 4 · 用户取消
     if (enableUserCancelGate && abortSignal?.aborted) {
       state.stoppedReason = "user_cancel";
       state.gateTriggered = `用户取消（${abortSignal.reason || "客户端断开 / 取消按钮"}）`;
+      pushProgress("闸门 4 触发 · user_cancel", state.stepCount);
       break;
     }
     // 闸门 2 · 超时
@@ -85,6 +102,7 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
     if (elapsedNow >= effectiveTimeoutMs) {
       state.stoppedReason = "timeout";
       state.gateTriggered = `达到超时上限（${input.timeoutMs}ms · 实际 ${elapsedNow}ms）`;
+      pushProgress("闸门 2 触发 · timeout", state.stepCount);
       break;
     }
 
@@ -103,6 +121,7 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
       state.stoppedReason = "model_says_stop";
       state.finalAnswer = decision.content || "（模型没返回 final_answer 字段）";
       state.gateTriggered = `模型主动停（finishReason=${decision.finishReason} · final_answer=${state.finalAnswer?.slice(0, 80)}）`;
+      pushProgress("闸门 3 触发 · model_says_stop", state.stepCount);
       break;
     }
 
@@ -122,6 +141,7 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
             "为什么写这条日志：闸门 6 兜底——同工具同参数连续 N 次 = 死循环信号。当前：tool=" + decision.toolCall.name + " · window=" + input.loopDetectionWindow,
             { toolName: decision.toolCall.name, args: decision.toolCall.args, window: input.loopDetectionWindow, recent: state.recentToolCalls },
           );
+          pushProgress("闸门 6 触发 · tool_call_loop", state.stepCount);
           break;
         }
       }
@@ -137,6 +157,7 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
         "为什么写这条日志：闸门 7 兜底——token 烧到上限了，账单要停。当前：累计 token=" + state.tokenEstimate + " · 预算=" + input.tokenBudget,
         { totalTokens: state.tokenEstimate, tokenBudget: input.tokenBudget },
       );
+      pushProgress("闸门 7 触发 · token_budget", state.stepCount);
       break;
     }
 
@@ -156,18 +177,21 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
     if (decision.toolCall) {
       state.recentToolCalls.push({ name: decision.toolCall.name, args: decision.toolCall.args });
     }
+    pushProgress(`完成第 ${state.stepCount} 步 · ${decision.toolCall ? "调工具 " + decision.toolCall.name : "没调工具"}`, state.stepCount);
     if (!continueLoop) break;
 
     // 闸门 1 · 最大步数
     if (enableMaxStepsGate && state.stepCount >= input.maxSteps) {
       state.stoppedReason = "max_steps";
       state.gateTriggered = `达到最大迭代次数（${input.maxSteps} 步）`;
+      pushProgress("闸门 1 触发 · max_steps", state.stepCount);
       break;
     }
     // 全关闸的人为硬上限
     if (!enableMaxStepsGate && !enableTimeoutGate && !enableModelStopGate && !enableUserCancelGate && !enableToolRetryGate && !enableToolCallLoopGate && !enableTokenBudgetGate && state.stepCount >= hardCap) {
       state.stoppedReason = "never_stopped";
       state.gateTriggered = `达到硬上限（${hardCap} 步，演示闸门缺失）`;
+      pushProgress("达到硬上限 · never_stopped", state.stepCount);
       break;
     }
   }

@@ -71,6 +71,10 @@ export async function runLoop(input: RunLoopInput): Promise<RunLoopOutput> {
     loopDetected: false,
     trajectory: [] as RunLoopOutput["trajectory"],
     useRealLlm,
+    // StepState 强制要求 pushMessages；实际推送走 deps.pushMessages（loop-step.ts 的 deps 顶层），state.pushMessages 是冗余占位。
+    pushMessages: (_assistant: unknown, _tool: unknown) => {
+      /* no-op：实际推送走 runOneStep 的 deps.pushMessages */
+    },
   };
 
   while (state.stepCount < effectiveMax) {

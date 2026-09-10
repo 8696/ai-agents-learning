@@ -19,7 +19,11 @@ export function mountRunStatusRoutes(router: Router): void {
     }
     if (h.finished) {
       const r = await h.promise;
-      ctx.body = { runId, status: h.aborted ? "cancelled" : "finished", ...r };
+      if (r.ok) {
+        ctx.body = { runId, status: h.aborted ? "cancelled" : "finished", ok: true, result: r.result };
+      } else {
+        ctx.body = { runId, status: "failed", ok: false, error: r.error };
+      }
       return;
     }
     logger.info(

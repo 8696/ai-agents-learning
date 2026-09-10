@@ -25,6 +25,10 @@ export interface RunLoopInput {
   enableToolCallLoopGate: boolean;
   /** step-6 新增：连续 N 次同工具同参数视为循环（默认 3） */
   loopDetectionWindow: number;
+  /** step-7 新增：是否启用 token 预算闸 */
+  enableTokenBudgetGate: boolean;
+  /** step-7 新增：token 累计上限（超了就 break） */
+  tokenBudget: number;
   useRealLlm: boolean;
   query: string;
   mockStopAt: number;

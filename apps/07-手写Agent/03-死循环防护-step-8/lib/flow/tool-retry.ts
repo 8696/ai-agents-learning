@@ -10,6 +10,8 @@ import { logger } from "../logger.js";
 export interface RetryResult {
   ok: boolean;
   available?: number;
+  /** step-8 新增：工具返回的业务负载（todo 助手用）：成功时附带 */
+  payload?: unknown;
   latencyMs: number;
   error?: string;
   attempt: number;

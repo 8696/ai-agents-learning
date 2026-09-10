@@ -6,10 +6,14 @@
  * §5.3.12「禁止全局共享 KV」反例：进程级 state 必须按 userId 隔离；本 demo 单用户故用 `default` 占位。
  */
 import { logger } from "../lib/logger.js";
+import type { RunLoopOutput } from "../lib/flow/loop.js";
+
+/** routes 包 runLoop 的返回值：成功返 { ok:true, result }，抛错 catch 后返 { ok:false, error }。 */
+export type RunResult = { ok: true; result: RunLoopOutput } | { ok: false; error: string };
 
 interface RunHandle {
   controller: AbortController;
-  promise: Promise<unknown>;
+  promise: Promise<RunResult>;
   finished: boolean;
   /** 拿 runId 时填进去；用户取消时不再返回结果，runWithCancel 把 cancel 当成终结信号。 */
   aborted: boolean;
@@ -17,7 +21,7 @@ interface RunHandle {
 
 const handles = new Map<string, RunHandle>();
 
-export function registerRun(runId: string, controller: AbortController, promise: Promise<unknown>): void {
+export function registerRun(runId: string, controller: AbortController, promise: Promise<RunResult>): void {
   handles.set(runId, { controller, promise, finished: false, aborted: false });
 }
 

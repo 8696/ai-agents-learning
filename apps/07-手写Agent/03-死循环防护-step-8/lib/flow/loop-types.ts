@@ -13,6 +13,18 @@ export type StoppedReason =
   | "tool_call_loop"
   | "token_budget";
 
+/** 实时进度：loop.ts 每步推一次；前端轮询时拿到，避免「running 阶段什么反应都没有」。 */
+export interface RunProgress {
+  /** 当前正在跑第几步（0 = 启动中；1+ = 第 N 步进行中或已结束） */
+  currentStep: number;
+  /** 累计 token 估算（同步自 state.tokenEstimate） */
+  totalTokens: number;
+  /** 累计调用模型次数（每步 1 次） */
+  apiCalls: number;
+  /** 最后动作描述（调模型 / 调工具 / 闸门触发） */
+  lastAction: string;
+}
+
 export interface RunLoopInput {
   enableMaxStepsGate: boolean;
   maxSteps: number;
@@ -25,6 +37,12 @@ export interface RunLoopInput {
   enableToolCallLoopGate: boolean;
   /** step-6 新增：连续 N 次同工具同参数视为循环（默认 3） */
   loopDetectionWindow: number;
+  /** step-7 新增：是否启用 token 预算闸 */
+  enableTokenBudgetGate: boolean;
+  /** step-7 新增：token 累计上限（超了就 break） */
+  tokenBudget: number;
+  /** step-8 新增：每步调一次，把当前进度推给 routes/runs.ts；前端轮询时拿到。 */
+  onProgress?: (progress: RunProgress) => void;
   useRealLlm: boolean;
   query: string;
   mockStopAt: number;
