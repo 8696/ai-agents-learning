@@ -192,6 +192,38 @@
       "port": 50062,
       "url": "http://127.0.0.1:50062/",
       "autoPort": false
+    },
+    {
+      "name": "07-03-loop-guard-step-5",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:07-03-loop-guard-step-5"],
+      "port": 50063,
+      "url": "http://127.0.0.1:50063/",
+      "autoPort": false
+    },
+    {
+      "name": "07-03-loop-guard-step-6",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:07-03-loop-guard-step-6"],
+      "port": 50064,
+      "url": "http://127.0.0.1:50064/",
+      "autoPort": false
+    },
+    {
+      "name": "07-03-loop-guard-step-7",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:07-03-loop-guard-step-7"],
+      "port": 50065,
+      "url": "http://127.0.0.1:50065/",
+      "autoPort": false
+    },
+    {
+      "name": "07-03-loop-guard-step-8",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:07-03-loop-guard-step-8"],
+      "port": 50066,
+      "url": "http://127.0.0.1:50066/",
+      "autoPort": false
     }
   ]
 }

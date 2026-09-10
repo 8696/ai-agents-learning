@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死循环防护 · 第七步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const FALLBACK_PORT = 50065;
+
+    function App() {
+      const [maxSteps, setMaxSteps] = useState(20);
+      const [tokenBudget, setTokenBudget] = useState(500);
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: false });
+      const [result, setResult] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [errMsg, setErrMsg] = useState("");
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((j) => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => {});
+      }, []);
+
+      const busy = status === "loading";
+      const pillText =
+        status === "loading" ? "🔄 请求中" :
+        status === "ok"      ? "✅ 完成" :
+        status === "err"     ? "❌ 错误" : "⏸ 待连接";
+      const pillClass =
+        status === "loading" ? "bg-blue-100 text-blue-800" :
+        status === "ok"      ? "bg-green-100 text-green-800" :
+        status === "err"     ? "bg-red-100 text-red-800" : "bg-gray-200 text-gray-700";
+
+      async function callApi() {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+          const res = await fetch(`/api/agent/token-budget?maxSteps=${maxSteps}&tokenBudget=${tokenBudget}`, { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("err");
+            return;
+          }
+          if (res.status >= 500) {
+            setErrMsg(`服务错误：HTTP ${res.status}（请看 logs/）`);
+            setStatus("err");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          setResult(await res.json());
+          setStatus("ok");
+        } catch (e) {
+          setErrMsg(`请求失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("err");
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              死循环防护（Loop Guard） · 第七步（step-7） · token 预算 闸（变体 7）
+            </h1>
+            <span id="status-pill" className={`text-xs px-2 py-2 rounded ${pillClass}`}>
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>token 预算 闸（变体 7）</b>。mock 模型每轮调不同 sku，累计 token 估算超预算 → 闸门 7 触发。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「跑 token 预算」→ POST /api/agent/token-budget → mock 模型每轮调不同 sku（避开闸门 6 干扰）</li>
+                <li>每轮累 tokenEstimate；超 tokenBudget → stoppedReason=token_budget + 闸门提示「累计 X 超过预算 Y」</li>
+                <li>调小 tokenBudget（50）让闸门更快触发；调大（5000）让 max 闸先到</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>token 预算 = 按「累计成本」计的硬闸</b>，跟 max iterations 的「按轮数」、timeout 的「按时间」是第三个维度。光装 max iterations 拦不住慢模型把响应拖到分钟级 + token 烧光；token 预算补了这个洞——「多少钱」级别的兜底。
+                </div>
+                <div className="text-xs text-gray-600">
+                  看结果盯四个数 + 一段话：<b>已跑轮数（stepCount）</b> · <b>累计 token 估算（tokenEstimate）</b> · <b>token 预算（tokenBudget）</b> · <b>停下来的原因（stoppedReason · 取值 token_budget）</b>。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">单按钮演示 · 闸门 7 触发后 break</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  最大步数上限（maxSteps · 步）：
+                  <input id="input-max-steps" type="number" min="1" max="1000" value={maxSteps} onChange={(e) => setMaxSteps(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  token 预算（tokenBudget · tokens）：
+                  <input id="input-token-budget" type="number" min="1" max="1000000" value={tokenBudget} onChange={(e) => setTokenBudget(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-20" />
+                </label>
+                <button id="run-token-budget" onClick={callApi} disabled={busy} className="bg-purple-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 token 预算（mock · 每轮累 token 估算）
+                </button>
+              </div>
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">{errMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-sm text-gray-500">空态：点「跑 token 预算」看 mock 模型被 token 预算闸 拦在哪一步。</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-gray-500">已跑轮数（stepCount）：</span><b>{result.stepCount}</b></div>
+                    <div><span className="text-gray-500">实际耗时（elapsedMs）：</span><b>{result.summary.elapsedMs} ms</b></div>
+                    <div><span className="text-gray-500">累计 token 估算（tokenEstimate）：</span><b>{result.tokenEstimate}</b></div>
+                    <div><span className="text-gray-500">token 预算（tokenBudget）：</span><b>{tokenBudget}</b></div>
+                    <div className="col-span-2"><span className="text-gray-500">停下来的原因（stoppedReason · 取值 token_budget / max_steps）：</span><b>{result.stoppedReason}</b></div>
+                    <div className="col-span-2"><span className="text-gray-500">闸门提示（gateTriggered）：</span><b className="break-all">{result.gateTriggered ?? "—"}</b></div>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    教学：{result.stoppedReason === "token_budget"
+                      ? <span className="block border-2 border-red-500 bg-red-100 rounded p-2 text-red-900 font-semibold">✓ 闸门 7 生效（stoppedReason=token_budget）—— 累计 {result.tokenEstimate} 超过预算 {tokenBudget}（超 {result.tokenEstimate - tokenBudget} 个 token）。换大预算或加 max steps 就能继续。验：闸门 7 是「按钱」硬闸；max iterations 看不到这一层。</span>
+                      : result.stoppedReason === "max_steps"
+                      ? <span className="block border border-gray-300 bg-gray-50 rounded p-2 text-gray-700">→ 闸门 1 抢先（stoppedReason=max_steps）—— token 没到预算。加大 maxSteps 或减小 tokenBudget 让闸门 7 触发。</span>
+                      : "—"}
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 本地计算 · 不调 LLM · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "—"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

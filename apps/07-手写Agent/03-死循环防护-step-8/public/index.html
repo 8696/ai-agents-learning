@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死循环防护 · 第八步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const FALLBACK_PORT = 50066;
+    const POLL_INTERVAL_MS = 1000;
+
+    const GATES = [
+      { key: "enableMaxSteps",   num: 1, name: "最大步数（max iterations · 变体 1）", must: true,  desc: "兜底必须有" },
+      { key: "enableTimeout",     num: 2, name: "超时（wall-clock timeout · 变体 2）", must: true,  desc: "兜底必须有" },
+      { key: "enableModelStop",   num: 3, name: "模型说停（model_says_stop · 变体 3）", must: true,  desc: "兜底必须有" },
+      { key: "enableUserCancel",  num: 4, name: "用户取消（user_cancel · 变体 4）",        must: true,  desc: "前端交互必装；本 demo 演示" },
+      { key: "enableToolRetry",   num: 5, name: "工具重试上限（tool_retry_cap · 变体 5）", must: false, desc: "工具层防抖（推荐装）" },
+      { key: "enableToolLoop",    num: 6, name: "同工具循环检测（tool_call_loop · 变体 6）", must: false, desc: "防模式死循环（推荐装）" },
+      { key: "enableTokenBudget", num: 7, name: "token 预算（token_budget · 变体 7）", must: false, desc: "成本护栏（推荐装）" },
+    ];
+
+    function App() {
+      const [gateToggles, setGateToggles] = useState({
+        enableMaxSteps: true,
+        enableTimeout: true,
+        enableModelStop: true,
+        enableUserCancel: true,
+        enableToolRetry: true,
+        enableToolLoop: true,
+        enableTokenBudget: true,
+      });
+      const [maxSteps, setMaxSteps] = useState(15);
+      const [timeoutMs, setTimeoutMs] = useState(60000);
+      const [tokenBudget, setTokenBudget] = useState(5000);
+      const [toolMaxRetries, setToolMaxRetries] = useState(3);
+      const [loopDetectionWindow, setLoopDetectionWindow] = useState(3);
+      const [query, setQuery] = useState("项目：电商购物助手。需要查所有未完成 todo（status=pending）并给出最终建议（最多 100 字总结）。");
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: true });
+      const [runId, setRunId] = useState(null);
+      const [pollCount, setPollCount] = useState(0);
+      const [result, setResult] = useState(null);
+      const [status, setStatus] = useState("idle"); // idle | running | finished | cancelled
+      const [cancelMsg, setCancelMsg] = useState("");
+      const [errMsg, setErrMsg] = useState("");
+      const pollTimerRef = useRef(null);
+      const stoppedRef = useRef(false);
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((j) => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => {});
+        return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+      }, []);
+
+      const enabledCount = Object.values(gateToggles).filter(Boolean).length;
+      const busy = status === "running";
+
+      const pillText =
+        status === "running"   ? "🔄 运行中" :
+        status === "finished"  ? "✅ 完成" :
+        status === "cancelled" ? "🚫 已取消" :
+        status === "idle"      ? "⏸ 待连接" : "⏸ 待连接";
+      const pillClass =
+        status === "running"   ? "bg-blue-100 text-blue-800" :
+        status === "cancelled" ? "bg-orange-100 text-orange-800" :
+        status === "finished"  ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700";
+
+      async function startRun() {
+        setResult(null);
+        setRunId(null);
+        setPollCount(0);
+        setCancelMsg("");
+        setErrMsg("");
+        setStatus("running");
+        stoppedRef.current = false;
+        try {
+          const params = new URLSearchParams({
+            query,
+            maxSteps: String(maxSteps),
+            timeoutMs: String(timeoutMs),
+            tokenBudget: String(tokenBudget),
+            toolMaxRetries: String(toolMaxRetries),
+            loopDetectionWindow: String(loopDetectionWindow),
+            ...Object.fromEntries(Object.entries(gateToggles).map(([k, v]) => [k, String(v)])),
+          });
+          const res = await fetch(`/api/agent/todo-assistant?${params}`, { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("idle");
+            return;
+          }
+          if (res.status === 401 || res.status === 403) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`密钥/鉴权失败：${body.error || "HTTP " + res.status}（请检查 apps/.env）`);
+            setStatus("idle");
+            return;
+          }
+          if (res.status >= 500) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`服务错误：HTTP ${res.status}（${body.error || "请看 logs/"}）`);
+            setStatus("idle");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const body = await res.json();
+          setRunId(body.runId);
+          // 开始轮询
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          pollTimerRef.current = setInterval(() => pollOnce(body.runId), POLL_INTERVAL_MS);
+        } catch (e) {
+          setErrMsg(`启动失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("idle");
+        }
+      }
+
+      async function pollOnce(rid) {
+        if (stoppedRef.current) return;
+        try {
+          const res = await fetch(`/api/agent/todo-run-status/${rid}`);
+          if (res.status === 404) {
+            setErrMsg(`找不到 runId=${rid}`);
+            return;
+          }
+          if (!res.ok) return;
+          const j = await res.json();
+          setPollCount((c) => c + 1);
+          if (j.status === "running") return;
+          // 结束了
+          stoppedRef.current = true;
+          if (pollTimerRef.current) { clearInterval(pollTimerRef.current); pollTimerRef.current = null; }
+          setStatus(j.status);
+          setResult(j);
+        } catch {}
+      }
+
+      async function cancelRun() {
+        if (!runId) return;
+        try {
+          const res = await fetch(`/api/cancel/${runId}`, { method: "POST" });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setCancelMsg(`取消失败：HTTP ${res.status} · ${body.error || ""}`);
+            return;
+          }
+          setCancelMsg(`取消指令已发送：${body.reason || ""}`);
+        } catch (e) {
+          setCancelMsg(`取消请求失败：${String((e && e.message) || e)}`);
+        }
+      }
+
+      const finalResult = result?.ok ? result.result : null;
+      const finalErr = result && !result.ok ? result.error : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              死循环防护（Loop Guard） · 第八步（step-8） · todo 助手端到端 + 业务选型 7 闸面板
+            </h1>
+            <span id="status-pill" className={`text-xs px-2 py-2 rounded ${pillClass}`}>
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>todo 助手端到端 · 真循环调模型查 10 个 todo + 业务选型 7 闸面板</b>。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>勾选/取消闸门复选框（变体 1~7）</li>
+                <li>点「跑 todo 助手」→ POST /api/agent/todo-assistant → 立刻 202 + runId；后台真调模型循环 10 步查 T001~T010</li>
+                <li>前端轮询 GET /api/agent/todo-run-status/:runId（每秒一次）→ 看 trajectory 真实 10 步 + finalAnswer</li>
+                <li>点「🚫 中途取消」→ POST /api/cancel/:runId → AbortController.abort() → runLoop 下一圈 break</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>7 道闸可独立开关（业务选型面板）+ 端到端 10 步真循环</b>。模型真调 10 次 queryTodo（T001~T010），每步 trajectory 一目了然。默认 7 闸齐装；可改 checkbox 模拟「最少 4 道」看差异。点「立即取消」演示 user_cancel 闸——同一个 runId，轮询从 running → cancelled。
+                </div>
+                <div className="text-xs text-gray-600">
+                  看结果盯四个数 + 一段话：<b>已装闸数量（enabledCount）</b> · <b>已跑轮数（stepCount）</b> · <b>实际耗时（elapsedMs）</b> · <b>停下来的原因（stoppedReason）</b> · <b>模型总结（finalAnswer）</b>。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm font-semibold text-gray-800">业务选型面板 · 7 道闸（最少必备 4 道 · 推荐全装 7 道）</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                {GATES.map(g => (
+                  <label key={g.key} className="flex items-center gap-2 p-2 border border-gray-200 rounded">
+                    <input
+                      id={`gate-${g.key}`}
+                      type="checkbox"
+                      checked={!!gateToggles[g.key]}
+                      onChange={(e) => setGateToggles({ ...gateToggles, [g.key]: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className={g.must ? "text-red-700 font-semibold" : "text-gray-700"}>
+                      {g.num < 5 ? "必装" : "推荐"} · {g.name}
+                    </span>
+                    <span className="text-gray-500 ml-auto text-xs">{g.desc}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <label className="flex items-center gap-2">
+                  最大步数（maxSteps · 步）：
+                  <input id="input-max-steps" type="number" min="1" max="1000" value={maxSteps} onChange={(e) => setMaxSteps(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+                <label className="flex items-center gap-2">
+                  超时上限（timeoutMs · 毫秒）：
+                  <input id="input-timeout-ms" type="number" min="1" max="60000" value={timeoutMs} onChange={(e) => setTimeoutMs(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-20" />
+                </label>
+                <label className="flex items-center gap-2">
+                  token 预算（tokenBudget · tokens）：
+                  <input id="input-token-budget" type="number" min="1" max="1000000" value={tokenBudget} onChange={(e) => setTokenBudget(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-20" />
+                </label>
+                <label className="flex items-center gap-2">
+                  工具重试上限（toolMaxRetries · 次）：
+                  <input id="input-tool-max-retries" type="number" min="0" max="10" value={toolMaxRetries} onChange={(e) => setToolMaxRetries(Math.max(0, Number(e.target.value) || 0))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+                <label className="flex items-center gap-2">
+                  循环检测窗口（loopDetectionWindow · 连续次数）：
+                  <input id="input-window" type="number" min="1" max="10" value={loopDetectionWindow} onChange={(e) => setLoopDetectionWindow(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-700">模型任务（query · 真模型用 · 触发 10 步循环）：</label>
+                <textarea id="input-query" value={query} onChange={(e) => setQuery(e.target.value)} rows={2} className="border border-gray-300 rounded px-2 py-1 text-xs" />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-xs text-gray-500">已装 {enabledCount} / 7 闸</div>
+                <button id="run-todo" onClick={startRun} disabled={busy || (env.callsModel && !env.hasKey)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 todo 助手（真模型 · 端到端 · 装了 {enabledCount} 闸）
+                </button>
+                <button id="run-cancel" onClick={cancelRun} disabled={!runId || !busy} className="bg-red-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  🚫 中途取消（user_cancel 闸 · AbortController.abort）
+                </button>
+                <button id="preset-min" onClick={() => setGateToggles({ enableMaxSteps: true, enableTimeout: true, enableModelStop: true, enableUserCancel: true, enableToolRetry: false, enableToolLoop: false, enableTokenBudget: false })} disabled={busy} className="bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm disabled:opacity-50">
+                  一键「最少必备 4 道」
+                </button>
+                <button id="preset-max" onClick={() => setGateToggles({ enableMaxSteps: true, enableTimeout: true, enableModelStop: true, enableUserCancel: true, enableToolRetry: true, enableToolLoop: true, enableTokenBudget: true })} disabled={busy} className="bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm disabled:opacity-50">
+                  一键「生产标准 7 道」
+                </button>
+              </div>
+              <div className="text-xs text-gray-600">
+                runId：{runId ?? "（还没启动）"} · 已轮询 {pollCount} 次
+              </div>
+              {cancelMsg ? <div className="text-sm text-orange-700 bg-orange-50 border border-orange-300 rounded p-2">{cancelMsg}</div> : null}
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">{errMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-sm text-gray-500">空态：点「跑 todo 助手」→ 看 trajectory 真的跑 N 步 + finalAnswer。</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-gray-800">最终结果 · 状态 = {status}</div>
+                  {finalErr ? (
+                    <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">启动异常：{finalErr}</div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div><span className="text-gray-500">已装闸数量：</span><b>{enabledCount} / 7</b></div>
+                        <div><span className="text-gray-500">实际触发哪道闸：</span><b>{finalResult?.stoppedReason ?? "—"}</b></div>
+                        <div><span className="text-gray-500">已跑轮数（stepCount）：</span><b>{finalResult?.stepCount ?? "—"}</b></div>
+                        <div><span className="text-gray-500">累计 token 估算：</span><b>{finalResult?.tokenEstimate ?? "—"}</b></div>
+                        <div><span className="text-gray-500">实际耗时（elapsedMs）：</span><b>{finalResult?.summary?.elapsedMs ?? "—"} ms</b></div>
+                        <div className="col-span-2"><span className="text-gray-500">闸门提示（gateTriggered）：</span><b className="break-all">{finalResult?.gateTriggered ?? "—"}</b></div>
+                      </div>
+                      {finalResult?.summary?.finalAnswer ? (
+                        <div className="bg-yellow-50 border border-yellow-300 rounded p-2">
+                          <div className="text-xs text-gray-500">模型总结文本（finalAnswer）：</div>
+                          <b className="text-yellow-900 text-sm">{finalResult.summary.finalAnswer}</b>
+                        </div>
+                      ) : null}
+                      <div className="text-xs bg-blue-50 border border-blue-200 rounded p-2 max-h-96 overflow-auto">
+                        <div className="font-semibold text-blue-900 mb-1">轨迹（trajectory · 共 {finalResult?.trajectory?.length ?? 0} 步）：</div>
+                        {(finalResult?.trajectory ?? []).map((s) => (
+                          <div key={s.stepIndex} className="font-mono text-xs border-t border-blue-100 py-1">
+                            step {s.stepIndex}：finishReason={s.decision.finishReason}
+                            {s.toolCall ? ` · 调 ${s.toolCall.name}(${JSON.stringify(s.toolCall.args)})` : " · 无工具调用"}
+                            {s.toolResult ? ` → ${s.toolResult.ok ? "ok" : "失败: " + s.toolResult.error}` : ""}
+                            {" · tokenAfter=" + s.tokenAfter}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-600">
+                    教学：{finalResult?.stoppedReason === "model_says_stop"
+                      ? <span className="block border-2 border-green-300 bg-green-50 rounded p-2 text-green-900">✓ 模型说停 闸触发（变体 3 · final_answer）—— 10 个 todo 都查完了。验：trajectory 应该有 10 步 + 5~7 个 pending/in_progress 的 status。</span>
+                      : finalResult?.stoppedReason === "user_cancel"
+                      ? <span className="block border-2 border-orange-300 bg-orange-50 rounded p-2 text-orange-900">✓ user_cancel 闸触发（变体 4 · AbortController.abort）—— 进程没死，只是这个 run 停了；点「跑 todo 助手」可以再启一个 runId。</span>
+                      : finalResult?.stoppedReason === "max_steps"
+                      ? `→ 闸门 1 抢先：max 到了，换大 maxSteps。`
+                      : finalResult?.stoppedReason === "timeout"
+                      ? `→ 闸门 2 抢先：超时到了。`
+                      : finalResult?.stoppedReason === "token_budget"
+                      ? <span className="block border-2 border-red-300 bg-red-50 rounded p-2 text-red-900">✓ token_budget 闸触发（变体 7 · 钱闸）—— 累计 token 超预算。</span>
+                      : finalResult?.stoppedReason === "tool_call_loop"
+                      ? `→ 闸门 6 抢先：模型重复调同工具同参数。`
+                      : finalResult?.stoppedReason === "tool_retry_cap"
+                      ? `→ 闸门 5 抢先：工具一直失败。`
+                      : "—"}
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 会调真模型 · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

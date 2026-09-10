@@ -83,6 +83,10 @@
 | `yarn app:07-03-loop-guard-step-2` | `50060` | 模块 07 · 03 · 死循环防护 step-2：max iterations 单闸 vs timeout 单闸 vs 双闸叠加 · 三按钮分请求 · 数字面板对照 stepCount / elapsedMs / stoppedReason（latency/轮参数让 timeout 闸能真触发） |
 | `yarn app:07-03-loop-guard-step-3` | `50061` | 模块 07 · 03 · 死循环防护 step-3：max iterations + timeout + model_says_stop 三闸叠加 + 真模型调（按钮 ③④ 真调模型看 finish_reason） |
 | `yarn app:07-03-loop-guard-step-4` | `50062` | 模块 07 · 03 · 死循环防护 step-4：用户取消 闸（AbortController · 变体 4）· 启 run 后立刻返 runId · 用户点取消 → controller.abort() → runLoop break |
+| `yarn app:07-03-loop-guard-step-5` | `50063` | 模块 07 · 03 · 死循环防护 step-5：工具重试上限 闸（变体 5）· 偶发失败（flakyRate=0.5 · 3 次重试）vs 100% 失败（重试 3 次后降级 tool_retry_cap） |
+| `yarn app:07-03-loop-guard-step-6` | `50064` | 模块 07 · 03 · 死循环防护 step-6：同工具循环检测 闸（变体 6）· mock 模型永远调 SKU-LOOP → 连续 N 次同工具同参数 → tool_call_loop |
+| `yarn app:07-03-loop-guard-step-7` | `50065` | 模块 07 · 03 · 死循环防护 step-7：token 预算 闸（变体 7）· mock 模型每轮调不同 sku → 累计 token 超预算 → token_budget |
+| `yarn app:07-03-loop-guard-step-8` | `50066` | 模块 07 · 03 · 死循环防护 step-8：todo 助手端到端（真模型）· 业务选型 7 闸面板（checkbox 控制每闸装/不装 · 一键「4 道」「7 道」） |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。

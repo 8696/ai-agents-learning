@@ -1296,7 +1296,7 @@ export const logger = createLogger(path.resolve(__dirname, "..logs"));
 服务起的**那一刻**（listen 回调里的 `logger.info("server.start", ...)`）就已经写日志了——`server.ts` import logger 时 mkdir，listen 回调 emit 时 write。**不需要 curl 触发、不需要 mtime 验证**。看到 logs/ 文件夹在 + 当天 .log 文件在 + 文件大小 > 0 = 路径 100% 正确。
 
 ```bash
-cd /Users/i2025/Desktop/ai-agents-learning/apps && \
+cd apps && \
   PORT=31001 npx tsx {demo-path}/server.ts > /tmp/srv-{demo}.log 2>&1 &
 SERVER_PID=$!
 sleep 4
@@ -1328,7 +1328,7 @@ kill $SERVER_PID
 date "+before=%H:%M:%S" && pkill ... && PORT=31001 npx tsx 06-.../server.ts
 
 # ✅ 对（第一条就是 cd apps；cd 之后所有 && 都跑在 apps/ 下）
-cd /Users/i2025/Desktop/ai-agents-learning/apps && date "+before=%H:%M:%S" && pkill ... && PORT=31001 npx tsx 06-.../server.ts
+cd apps && date "+before=%H:%M:%S" && pkill ... && PORT=31001 npx tsx 06-.../server.ts
 ```
 
 每条 Bash 命令 cwd 都从仓库根重置，**不写 cd = 必失败**。
@@ -1337,8 +1337,8 @@ cd /Users/i2025/Desktop/ai-agents-learning/apps && date "+before=%H:%M:%S" && pk
 
 ```bash
 # 兜底方案 1：绝对路径 + --prefix（绕开 cd；agent 写命令时若跳过 cd 用这条保服务不崩）
-PORT=31001 npx --prefix /Users/i2025/Desktop/ai-agents-learning/apps \
-  tsx /Users/i2025/Desktop/ai-agents-learning/apps/06-.../server.ts > /tmp/srv.log 2>&1 &
+PORT=31001 npx --prefix apps \
+  tsx apps/06-.../server.ts > /tmp/srv.log 2>&1 &
 ```
 
 **首选 `cd apps &&`**（约定优于兜底）；**只在 agent 写命令时漏 cd 才用绝对路径兜底**。

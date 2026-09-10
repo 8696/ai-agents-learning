@@ -158,6 +158,24 @@
 - **反模式**：为了让新 Demo 过关去扩豁免名单；把「同一业务」理解成「同一 `/api/X` 前缀就可以同文件」
 - **关联**：agents/05-demo.md §5.3.8、scripts/check-demo/limits.cjs、P-008
 
+### P-012  ·  Bash 第一条不 cd apps，npx tsx 找不到 demo
+
+- **症状**：跑烟雾测试 `PORT=xxxx npx tsx {demo}/server.ts` 报 `ERR_MODULE_NOT_FOUND: Cannot find module '.../apps/{demo}/server.ts'`（cwd 在仓库根，npx 解析仓库根下的 `{demo}/server.ts`，路径少一段 `apps/`）；`yarn install` / `yarn check-demo` 同样报路径不存在
+- **触发**：落 / 改 Demo 后写 Bash 跑 `npx tsx ...` / `yarn ...` / `node .../check-demo.cjs` 时，第一条命令没以 `cd .../apps` 开头；常见于「这条命令很短，应该不用 cd」的直觉
+- **根因**：Bash cwd 每条命令都从仓库根重置（不持久）；`apps/` 是仓库子目录，仓库根跑 `npx tsx` 看不到 apps/ 下的文件。已有协议 [agents/05-demo.md §5.3.16](../agents/05-demo.md) 「Bash 命令第一条必须是 cd /.../apps」+ AGENTS.md §5.6 末尾「Bash 第一条必须 cd apps」，但 §3 没单独 P-NNN，Agent 不扫 §3 时容易忘
+- **修复**：每条 Bash 第一条 token **必须是** `cd apps &&`（仓库根下操作，apps 是子目录）；后续 `&&` 串起来。兜底：`npx --prefix apps tsx apps/{demo}/server.ts`（从仓库根起的相对路径）。**禁止**用 cwd 推断「应该已经在 apps/ 下」——Bash 不持久
+- **反模式**：`PORT=xxxx npx tsx {demo}/server.ts`（不 cd）；`yarn check-demo`（cwd 在仓库根，scripts/check-demo.cjs 找不到）；`git log` 顺手跑完不 cd 后面继续跑 npx；cd 后忘了 && 把后续命令接到同一行；用 `cd apps && npx ... &` 的后台进程脱离当前 shell 后 cwd 跑回根
+- **关联**：AGENTS.md §5.6 末尾、agents/05-demo.md §5.3.16「Bash 命令第一条必须是 cd」、P-003 / P-010
+
+### P-013  ·  agents/ 协议示例写死本机绝对路径
+
+- **症状**：`agents/*.md` 里出现 `cd /Users/i2025/Desktop/ai-agents-learning/apps &&` 或 `npx --prefix /Users/i2025/...`；不同机器 clone 仓库路径不一样，协议示例在别人机器上跑不起来
+- **触发**：落协议 / 改协议示例命令时直接照搬本机 cwd 路径；尤其 §5.3.16 烟雾测试示例（2026-09-10 模块 07 step5 拆 Demo 时发现 04-pitfalls.md P-012 + 05-demo.md §5.3.16 共 5 处写死）
+- **根因**：协议要进仓库跟版本走，被所有 clone 者用；本机绝对路径 ≠ 仓库相对路径，不能写进共享规范
+- **修复**：所有 Bash 示例用 `cd apps && ...`（cwd 假设仓库根）；绝对路径兜底改成 `npx --prefix apps tsx apps/{demo}/server.ts`
+- **反模式**：`agents/*.md` 出现 `/Users/...`；`cd {绝对路径}/apps`；写示例前先 `echo $PWD` 拿本机路径再抄
+- **关联**：P-012、04-pitfalls.md §1 字段约定、AGENTS.md 白话强制、2026-09-10 清理
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

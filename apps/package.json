@@ -74,7 +74,11 @@
     "app:07-03-loop-guard-step-1": "PORT=50059 tsx 07-手写Agent/03-死循环防护-step-1/server.ts",
     "app:07-03-loop-guard-step-2": "PORT=50060 tsx 07-手写Agent/03-死循环防护-step-2/server.ts",
     "app:07-03-loop-guard-step-3": "PORT=50061 tsx 07-手写Agent/03-死循环防护-step-3/server.ts",
-    "app:07-03-loop-guard-step-4": "PORT=50062 tsx 07-手写Agent/03-死循环防护-step-4/server.ts"
+    "app:07-03-loop-guard-step-4": "PORT=50062 tsx 07-手写Agent/03-死循环防护-step-4/server.ts",
+    "app:07-03-loop-guard-step-5": "PORT=50063 tsx 07-手写Agent/03-死循环防护-step-5/server.ts",
+    "app:07-03-loop-guard-step-6": "PORT=50064 tsx 07-手写Agent/03-死循环防护-step-6/server.ts",
+    "app:07-03-loop-guard-step-7": "PORT=50065 tsx 07-手写Agent/03-死循环防护-step-7/server.ts",
+    "app:07-03-loop-guard-step-8": "PORT=50066 tsx 07-手写Agent/03-死循环防护-step-8/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

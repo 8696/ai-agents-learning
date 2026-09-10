@@ -15,8 +15,8 @@
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**Agent Loop / ReAct**：Reason → Act → Observe，以及停止条件](./01-Agent-Loop-ReAct.md) | 能画 Loop，能说出何时停 | `ReAct agent loop explained` `reason act observe agent` · [ReAct 论文](https://arxiv.org/abs/2210.03629) 摘要+图 · Yannic Kilcher 视频摘要 | 暂无链接（本对话 §6.2 详解；未打开外部论文页） |
 | ✅ | [**先规划再执行 vs 一步步走**：两种策略的代价](./02-先规划再执行-vs-一步步走.md) | 知道什么时候值得先出计划 | `LLM agent planning` `plan and execute agent` · LangGraph 概念文档（只读概念） | — |
-| ⬜ | [**死循环防护**：最大步数、超时、模型说停](./03-死循环防护.md) | 能列举至少 3 种停下来的条件 | `agent infinite loop prevention` · 自己调试日志 | — |
-| ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
+| ✅ | [**死循环防护**：最大步数、超时、模型说停](./03-死循环防护.md) | 能列举至少 3 种停下来的条件 | `agent infinite loop prevention` · 自己调试日志 | — |
+| ✅ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 
