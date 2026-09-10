@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死循环防护 · 第三步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const FALLBACK_PORT = 50061;
+
+    function App() {
+      // 三个参数 + 四个按钮的结果
+      const [maxSteps, setMaxSteps] = useState(10);
+      const [timeoutMs, setTimeoutMs] = useState(3000);
+      const [latencyMsPerStep, setLatencyMsPerStep] = useState(80);
+      const [query, setQuery] = useState("查 SKU-001 / SKU-002 / SKU-003 的库存，完成后输出 final_answer");
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: true });
+      const [singleResult, setSingleResult] = useState(null);
+      const [timeoutResult, setTimeoutResult] = useState(null);
+      const [modelStopResult, setModelStopResult] = useState(null);
+      const [tripleResult, setTripleResult] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [errMsg, setErrMsg] = useState("");
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((j) => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => {});
+      }, []);
+
+      const busy = status === "loading";
+      const callsModel = env.callsModel === true;
+      const pillText =
+        status === "loading" ? "🔄 请求中" :
+        status === "ok"      ? "✅ 完成" :
+        status === "err"     ? "❌ 错误" : "⏸ 待连接";
+      const pillClass =
+        status === "loading" ? "bg-blue-100 text-blue-800" :
+        status === "ok"      ? "bg-green-100 text-green-800" :
+        status === "err"     ? "bg-red-100 text-red-800" : "bg-gray-200 text-gray-700";
+
+      async function callApi(path, setResult, needsModel) {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+          const res = await fetch(path, { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("err");
+            return;
+          }
+          if (res.status === 401 || res.status === 403) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`密钥/鉴权失败：${body.error || "HTTP " + res.status}（请检查 apps/.env）`);
+            setStatus("err");
+            return;
+          }
+          if (res.status >= 500) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`服务错误：HTTP ${res.status}（${body.error || "请看 logs/"}）`);
+            setStatus("err");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          setResult(await res.json());
+          setStatus("ok");
+        } catch (e) {
+          setErrMsg(`请求失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("err");
+        }
+      }
+
+      function MetricsCard({ title, result, accent }) {
+        if (!result) {
+          return (
+            <div className="border border-gray-200 rounded p-3 space-y-2">
+              <div className="text-sm font-semibold text-gray-800">{title}</div>
+              <div className="text-xs text-gray-400">还没跑 · 点对应按钮</div>
+            </div>
+          );
+        }
+        const tone =
+          result.stoppedReason === "max_steps"      ? "border-red-300 bg-red-50" :
+          result.stoppedReason === "timeout"        ? "border-orange-300 bg-orange-50" :
+          result.stoppedReason === "model_says_stop" ? "border-green-300 bg-green-50" :
+          result.stoppedReason === "never_stopped"  ? "border-red-500 bg-red-100" :
+          "border-gray-300 bg-white";
+        return (
+          <div className={`border-2 rounded p-3 space-y-2 ${tone}`}>
+            <div className="text-sm font-semibold text-gray-800">{title}</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-gray-500">已跑轮数（stepCount）：</span><b>{result.stepCount}</b></div>
+              <div><span className="text-gray-500">累计 token 估算（tokenEstimate）：</span><b>{result.tokenEstimate}</b></div>
+              <div><span className="text-gray-500">实际耗时（elapsedMs）：</span><b>{result.summary.elapsedMs} ms</b></div>
+              <div><span className="text-gray-500">停下来的原因（stoppedReason · 取值 max_steps / timeout / model_says_stop）：</span><b>{result.stoppedReason}</b></div>
+              <div className="col-span-2"><span className="text-gray-500">闸门提示（gateTriggered）：</span><b className="break-all">{result.gateTriggered ?? "—"}</b></div>
+              {result.summary.finalAnswer ? (
+                <div className="col-span-2 bg-yellow-50 border border-yellow-300 rounded p-2">
+                  <span className="text-gray-500">模型总结文本（finalAnswer）：</span><b className="text-yellow-900">{result.summary.finalAnswer}</b>
+                </div>
+              ) : null}
+            </div>
+            <div className="text-xs text-gray-600">{accent}</div>
+          </div>
+        );
+      }
+
+      const modelDisabled = callsModel && !env.hasKey;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              死循环防护（Loop Guard） · 第三步（step-3） · 模型说停 闸（model_says_stop · 变体 3）+ 三闸叠加（真模型）
+            </h1>
+            <span id="status-pill" className={`text-xs px-2 py-2 rounded ${pillClass}`}>
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>模型说停 闸（model_says_stop · 变体 3）单闸 + 三闸叠加</b>。按钮 ① ② 走 mock；按钮 ③ ④ 真调模型，看真 finish_reason。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「跑 最大迭代次数 单闸」→ POST /api/agent/with-gate → stoppedReason=max_steps（mock）</li>
+                <li>点「跑 超时 单闸」→ POST /api/agent/timeout-gate → stoppedReason=timeout（mock）</li>
+                <li>点「跑 模型说停 单闸」→ POST /api/agent/model-stop-gate → 真模型自己停（finish_reason=stop）</li>
+                <li>点「跑三闸叠加」→ POST /api/agent/triple-gate → 最大迭代次数+超时+模型说停 谁先到</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>「模型说停（model_says_stop）」= 软闸，必须叠硬闸（最大迭代次数 / 超时）</b>。模型上一轮说停这一轮又说「再试一次」很常见——它不可信。三闸叠加时：模型说停 先到就 break；超时 先到就 break；最大迭代次数 先到就 break。
+                </div>
+                <div className="text-xs text-gray-600">
+                  看结果盯四个数 + 一段话：<b>已跑轮数（stepCount）</b> · <b>累计 token 估算（tokenEstimate）</b> · <b>实际耗时（elapsedMs）</b> · <b>停下来的原因（stoppedReason · 取值 max_steps / timeout / model_says_stop）</b> · <b>模型总结文本（finalAnswer）</b>（模型自己停时返回的文本）。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">每个按钮各发一条请求 · 数字面板并排对照</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  最大迭代次数上限（maxSteps · 步）：
+                  <input id="input-max-steps" type="number" min="1" max="1000" value={maxSteps} onChange={(e) => setMaxSteps(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  超时上限（timeoutMs · 毫秒）：
+                  <input id="input-timeout-ms" type="number" min="1" max="60000" value={timeoutMs} onChange={(e) => setTimeoutMs(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-20" />
+                </label>
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  每轮工具耗时（latency · 毫秒）：
+                  <input id="input-latency" type="number" min="0" max="2000" value={latencyMsPerStep} onChange={(e) => setLatencyMsPerStep(Math.max(0, Number(e.target.value) || 0))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-700">模型任务（query · 真模型用）：</label>
+                <textarea id="input-query" value={query} onChange={(e) => setQuery(e.target.value)} rows={2} className="border border-gray-300 rounded px-2 py-1 text-xs" />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button id="run-single" onClick={() => callApi(`/api/agent/with-gate?maxSteps=${maxSteps}&latencyMsPerStep=${latencyMsPerStep}`, setSingleResult, false)} disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 最大迭代次数 单闸（mock · 上限 {maxSteps} 步）
+                </button>
+                <button id="run-timeout" onClick={() => callApi(`/api/agent/timeout-gate?timeoutMs=${timeoutMs}&latencyMsPerStep=${latencyMsPerStep}`, setTimeoutResult, false)} disabled={busy} className="bg-orange-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 超时 单闸（mock · 上限 {timeoutMs} 毫秒）
+                </button>
+                <button id="run-model-stop" onClick={() => callApi(`/api/agent/model-stop-gate?maxSteps=${maxSteps}&latencyMsPerStep=${latencyMsPerStep}&query=${encodeURIComponent(query)}`, setModelStopResult, true)} disabled={busy || modelDisabled} className="bg-green-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 模型说停 单闸（真模型
+                  {modelDisabled ? " · 缺 密钥 禁用" : ""}）
+                </button>
+                <button id="run-triple" onClick={() => callApi(`/api/agent/triple-gate?maxSteps=${maxSteps}&timeoutMs=${timeoutMs}&latencyMsPerStep=${latencyMsPerStep}&query=${encodeURIComponent(query)}`, setTripleResult, true)} disabled={busy || modelDisabled} className="bg-purple-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑三闸叠加（真模型 · 最大迭代次数={maxSteps} · 超时={timeoutMs} 毫秒）
+                </button>
+              </div>
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">{errMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!singleResult && !timeoutResult && !modelStopResult && !tripleResult ? (
+                <div className="text-sm text-gray-500">空态：还没点按钮。① ② 是 mock 闸（不会调真模型）；③ ④ 是真模型闸（会真问模型）。</div>
+              ) : (
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <MetricsCard
+                    title={`① 最大迭代次数 单闸（mock · 上限 ${maxSteps} 步）`}
+                    result={singleResult}
+                    accent="mock 模型每轮都「再查一次」；到最大迭代次数上限就 break。验：单独装最大迭代次数闸能拦住循环。"
+                  />
+                  <MetricsCard
+                    title={`② 超时 单闸（mock · 上限 ${timeoutMs} 毫秒）`}
+                    result={timeoutResult}
+                    accent="mock 模型 + 每轮 sleep；到超时上限就 break。验：单独装超时闸能拦住循环。"
+                  />
+                  <MetricsCard
+                    title={`③ 模型说停 单闸（真模型）`}
+                    result={modelStopResult}
+                    accent="真模型自己停（finish_reason=stop 且无 tool_call）。验：模型「软闸」单独装时不可信——必须叠硬闸。"
+                  />
+                  <MetricsCard
+                    title={`④ 三闸叠加（真模型 · 最大迭代次数=${maxSteps} · 超时=${timeoutMs} 毫秒）`}
+                    result={tripleResult}
+                    accent="最大迭代次数 + 超时 + 模型说停 谁先到谁说了算。验：软闸叠硬闸，真业务里的标准配置。"
+                  />
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 会调真模型 · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

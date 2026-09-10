@@ -140,6 +140,24 @@
 - **反模式**：核心写在 `routes/*.ts`；一函数一文件把 while 拆成看不懂的碎片；对照拆成两个 HTML 却仍把调模型写在 route 里
 - **关联**：AGENTS.md §5.7、agents/05-demo.md §5.3.8「落代码前先点名本步核心」、过关检查 2 第 10 项
 
+### P-010  ·  验证完忘关服务（起服务做 verify，端口没释放）
+
+- **症状**：Demo 跑完 / `check-demo` 过了之后端口仍被 `npx tsx` / `yarn app:xx` 进程占着；学习者回来开 `yarn app:...` 直接 `EADDRINUSE`；`lsof -i :{端口}` 能查到 ghost 进程；多个 Demo 之间互相撞口
+- **触发**：落 / 改 Demo 后用 `preview_start` 或 `Bash ... &` 起服务做 verify（`node scripts/check-demo.cjs` 过 + 至少一次 snapshot 或 fetch），verify 完没调 `preview_stop` / `TaskStop` / `kill $PID`；用 Bash `yarn ... &` 绕开 `preview_*` 让服务脱离生命周期管控；用 `Ctrl+Z` 挂起当"关了"（端口仍占）
+- **根因**：端口是仓库共享资源（占用表见 [apps/README.md](../apps/README.md)）；Agent 不替学习者持有长跑服务；服务起完不关 = 学习者下次回来必撞口 + Demo 一多互相影响
+- **修复**：verify 完成（`check-demo` 过 + 至少一次 snapshot 或 fetch）后**立刻**收尾 —— `preview_stop` / `TaskStop` / `kill $SERVER_PID`。烟雾测试三步固定：起服务（`cd apps && PORT=31001 npx tsx {demo}/server.ts > /tmp/srv.log 2>&1 &`）→ `sleep 4` + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` 验路径 → **`kill $SERVER_PID`** 收尾。**不留长跑**。
+- **反模式**：verify 完留着 server 不关 / 没事先启一遍"以防万一" / 用 Bash `yarn ... &` 绕开 `preview_*` / 多个 Demo 同进程抢口不报 / `Ctrl+Z` 挂起冒充关服务 / `yarn app:xx` 跑烟雾测试（占学习者默认口 50038）
+- **关联**：AGENTS.md §5.5、§5.6；[agents/05-demo.md §5.3.15「验证服务生命周期（起完必须关）」](05-demo.md#5315-验证服务生命周期起完必须关)、[§5.3.16 烟雾测试](05-demo.md#5316-详细日志强制)
+
+### P-011  ·  check-demo 把 /api/X/a 和 /api/X/b 收成一条
+
+- **症状**：一个 `routes/*.ts` 里挂了 `/api/agent/with-gate`、`/api/agent/timeout-gate` 等多条静态路径，`node scripts/check-demo.cjs` 仍报「一路由 … → /api/agent」通过
+- **触发**：落 Demo 时路由写成 `/api/{资源}/{变体}`（第三段是静态名字）；或以为 `health.ts` / `error-demo.ts` 不查就可以往里塞；Agent 以为 check-demo 过了就符合 §5.3.8
+- **根因**：`routePathFamily` 把所有 `/api/X/...` 收成 `/api/X`，把「只把 `:id` 当同族」写过头了
+- **修复**：`scripts/check-demo/limits.cjs` 的 `routePathFamily` 只剥 `/:[^/]+` 动态段；`/api/foo` 与 `/api/foo/:id` 同族，`/api/agent/a` 与 `/api/agent/b` 必须拆文件。改完跑 `node scripts/check-demo.cjs apps/07-手写Agent/03-死循环防护-step-3` 应失败。旧锁定文件才进 `ONE_URL_GRANDFATHER`
+- **反模式**：为了让新 Demo 过关去扩豁免名单；把「同一业务」理解成「同一 `/api/X` 前缀就可以同文件」
+- **关联**：agents/05-demo.md §5.3.8、scripts/check-demo/limits.cjs、P-008
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

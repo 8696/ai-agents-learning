@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死循环防护 · 第一步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const FALLBACK_PORT = 50059;
+
+    function App() {
+      // 数字面板：当前跑的是反例还是闸门；跑完把结果塞回来
+      const [maxSteps, setMaxSteps] = useState(10);
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: false });
+      const [noGateResult, setNoGateResult] = useState(null);
+      const [gateResult, setGateResult] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [errMsg, setErrMsg] = useState("");
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((j) => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => {});
+      }, []);
+
+      const busy = status === "loading";
+      const pillText =
+        status === "loading" ? "🔄 请求中" :
+        status === "ok"      ? "✅ 完成" :
+        status === "err"     ? "❌ 错误" : "⏸ 待连接";
+      const pillClass =
+        status === "loading" ? "bg-blue-100 text-blue-800" :
+        status === "ok"      ? "bg-green-100 text-green-800" :
+        status === "err"     ? "bg-red-100 text-red-800" : "bg-gray-200 text-gray-700";
+
+      async function runNoGate() {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+          const res = await fetch("/api/agent/no-gate", { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            // 后端 body.error 已是「输入有误：xxx」完整文本，前端不要再加前缀
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("err");
+            return;
+          }
+          if (res.status >= 500) {
+            setErrMsg(`服务错误：HTTP ${res.status}（服务端异常，请看 logs/）`);
+            setStatus("err");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          setNoGateResult(await res.json());
+          setStatus("ok");
+        } catch (e) {
+          setErrMsg(`请求失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("err");
+        }
+      }
+
+      async function runWithGate() {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+          const res = await fetch(`/api/agent/with-gate?maxSteps=${maxSteps}`, { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            // 后端 body.error 已是「输入有误：xxx」完整文本，前端不要再加前缀
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("err");
+            return;
+          }
+          if (res.status >= 500) {
+            setErrMsg(`服务错误：HTTP ${res.status}（服务端异常，请看 logs/）`);
+            setStatus("err");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          setGateResult(await res.json());
+          setStatus("ok");
+        } catch (e) {
+          setErrMsg(`请求失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("err");
+        }
+      }
+
+      function MetricsCard({ title, result, accent }) {
+        if (!result) {
+          return (
+            <div className="border border-gray-200 rounded p-3 space-y-2">
+              <div className="text-sm font-semibold text-gray-800">{title}</div>
+              <div className="text-xs text-gray-400">还没跑 · 点对应按钮</div>
+            </div>
+          );
+        }
+        const tone =
+          result.stoppedReason === "max_steps" ? "border-red-300 bg-red-50" :
+          result.stoppedReason === "never_stopped" ? "border-red-500 bg-red-100" :
+          "border-green-300 bg-green-50";
+        return (
+          <div className={`border-2 rounded p-3 space-y-2 ${tone}`}>
+            <div className="text-sm font-semibold text-gray-800">{title}</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-gray-500">跑了多少轮（stepCount）：</span><b>{result.stepCount}</b></div>
+              <div><span className="text-gray-500">累计 token 估算（tokenEstimate）：</span><b>{result.tokenEstimate}</b></div>
+              <div><span className="text-gray-500">停下来的原因（stoppedReason）：</span><b>{result.stoppedReason}</b></div>
+              <div><span className="text-gray-500">闸门提示：</span><b className="break-all">{result.gateTriggered ?? "—"}</b></div>
+            </div>
+            <div className="text-xs text-gray-500">耗时 {result.summary.elapsedMs} ms · 最后查的 SKU（lastSku）：{result.summary.lastSku ?? "—"}</div>
+            <div className="text-xs text-gray-600">{accent}</div>
+          </div>
+        );
+      }
+
+      function TrajectoryList({ result }) {
+        if (!result) return null;
+        // 太长只显前 12 步 + 末尾 2 步，避免页面炸
+        const all = result.trajectory;
+        const head = all.slice(0, 12);
+        const tail = all.length > 14 ? all.slice(-2) : [];
+        const headEnd = head.length;
+        const tailStart = all.length - tail.length;
+        return (
+          <div className="space-y-2">
+            <div className="text-xs text-gray-500">trajectory（步骤快照，共 {all.length} 条）</div>
+            <div className="space-y-1">
+              {head.map((s) => (
+                <div key={s.stepIndex} className="text-xs bg-gray-50 border border-gray-200 rounded p-2">
+                  <span className="font-mono text-gray-700">#{s.stepIndex}</span>
+                  <span className="ml-2">调 {s.toolCall?.name}({JSON.stringify(s.toolCall?.args)})</span>
+                  <span className="ml-2 text-green-700">→ available={s.toolResult?.available ?? "—"}</span>
+                  <span className="ml-2 text-gray-500">tokenAfter={s.tokenAfter}</span>
+                </div>
+              ))}
+              {tail.length > 0 ? (
+                <>
+                  <div className="text-xs text-gray-400">… 中间 {headEnd} ~ {tailStart - 1} 步省略 …</div>
+                  {tail.map((s) => (
+                    <div key={s.stepIndex} className="text-xs bg-gray-50 border border-gray-200 rounded p-2">
+                      <span className="font-mono text-gray-700">#{s.stepIndex}</span>
+                      <span className="ml-2">调 {s.toolCall?.name}({JSON.stringify(s.toolCall?.args)})</span>
+                      <span className="ml-2 text-green-700">→ available={s.toolResult?.available ?? "—"}</span>
+                      <span className="ml-2 text-gray-500">tokenAfter={s.tokenAfter}</span>
+                    </div>
+                  ))}
+                </>
+              ) : null}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              死循环防护（Loop Guard） · 第一步（step-1） · 反例 vs 最大迭代次数 闸门
+            </h1>
+            <span id="status-pill" className={`text-xs px-2 py-1 rounded ${pillClass}`}>
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>最大迭代次数（max iterations · 变体 1）一道硬闸</b>。反例 vs 闸门版各发各的请求，数字面板并排对比。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「跑反例（不装闸）」→ POST /api/agent/no-gate → 看 已跑轮数（stepCount）涨到 200（人为硬上限）才停</li>
+                <li>点「跑闸门版（最大迭代次数）」→ POST /api/agent/with-gate?maxSteps=N → 跑到 N 步就 break</li>
+                <li>对比两个数字面板的 已跑轮数（stepCount） / 累计 token 估算（tokenEstimate） / 停下来的原因（stoppedReason）—— 闸门效果一眼可见</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>while 条件 = 还没达到闸门上限</b>。最大迭代次数（max iterations）是「轮次」硬闸（按 step 计数）；它和 超时（timeout · 按时间）不是一回事，必须叠用。
+                </div>
+                <div className="text-xs text-gray-600">
+                  看结果盯三个数：<b>已跑轮数（stepCount）</b> · <b>累计 token 估算（tokenEstimate）</b> · <b>停下来的原因（stoppedReason）</b>。反例 = "never_stopped"（被硬上限截停）；闸门版 = "max_steps"（被闸门 break）。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">每个按钮各发一条请求 · 数字面板并排对照</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  最大迭代次数上限（maxSteps · 步）：
+                  <input
+                    id="max-steps-input"
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={maxSteps}
+                    onChange={(e) => setMaxSteps(Number(e.target.value) || 1)}
+                    className="border border-gray-300 rounded px-2 py-1 text-xs w-20"
+                  />
+                </label>
+                <button id="run-no-gate" onClick={runNoGate} disabled={busy} className="bg-red-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑反例（不装闸）
+                </button>
+                <button id="run-with-gate" onClick={runWithGate} disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑闸门版（最大迭代次数 = {maxSteps}）
+                </button>
+              </div>
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">错误：{errMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!noGateResult && !gateResult ? (
+                <div className="text-sm text-gray-500">空态：还没点按钮。点「跑反例」看没闸会怎样，点「跑闸门版」看装闸后 stepCount 涨到多少停。</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <MetricsCard
+                      title="反例（不装闸）"
+                      result={noGateResult}
+                      accent="没闸 = 跑到人为硬上限 200 步才停；真实业务里就是「烧光账单 / 卡死外部服务 / 用户永远等不到结果」。"
+                    />
+                    <MetricsCard
+                      title={`闸门版（最大迭代次数 = ${maxSteps}）`}
+                      result={gateResult}
+                      accent={`有 最大迭代次数 闸（max iterations）= 跑到 ${maxSteps} 步就 break；token 估算远低于反例，循环被硬闸截住。`}
+                    />
+                  </div>
+
+                  {gateResult ? (
+                    <div className="border-t pt-3">
+                      <TrajectoryList result={gateResult} />
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 本地计算 · 不调 LLM · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "—"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -558,13 +558,14 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
 | **每个独立功能场景**（另一个教学点，不是对照的另一侧） | **必须再拆页**（`public/pages/{场景}.html` + `routes/{场景}.ts`） |
 | **Registry / 执行器 / 错误处理要复用** | 抽到 `lib/tools/`、`lib/flow/`、`lib/http/` 分层；不重复实现 |
 
-**一个业务 URL 一个文件（2026-09-10 收紧）**：每个 `routes/*.ts`（不含 `health.ts` / `error-demo.ts`）默认只挂 **一条业务路径族**。`check-demo` 会拦。
+**一个业务 URL 一个文件（2026-09-10 收紧）**：`routes/**/*.ts` **每个文件都查**（含子目录、含 `health.ts` / `error-demo.ts`），默认只挂 **一条业务路径族**。`check-demo` 会拦。`health.ts` / `error-demo.ts` 通常只有一条，会过；往里面再塞业务 URL 就不准。
 
 | 可以同文件 | 必须拆成两个文件 |
 | -- | -- |
 | 同一路径的 GET / POST / DELETE（同一资源） | 对照的两侧（`/api/step-by-step` 与 `/api/plan-and-execute`） |
 | `/api/agent-run` + `/api/agent-run/:runId`（同一资源的发起 / 查询） | 先规划 / 再确认（`/api/plan` 与 `/api/confirm-plan`） |
 | 同一 URL 用 query/body 区分短任务 / 长任务 | `/api/tools` 列表 与 `/api/chat` 对话（新 Demo 拆开；旧文件豁免） |
+| （没有「同一 `/api/X` 前缀就可以同文件」这条例外） | `/api/agent/with-gate` 与 `/api/agent/timeout-gate`（第三段是静态名字，不是 `:id`） |
 
 **对照可以同页（2026-09-10 说清）**：对照的教学点就是「并排看见差异」，**允许左右两栏放在同一个 HTML**。不是「必须拆成两个页面」。禁止的是：一个超级接口打包跑两侧；把两侧卡片的 JSX 全堆进 `index.html` 内联块。正确：每侧自己的请求 + 左栏 / 右栏 / 对照数字各自组件。
 
@@ -816,6 +817,31 @@ router.get("/health", (ctx: Context) => {
 **JS 变量名 / API 字段名 / CSS className / HTML id**：**不**改。代码层的 `result.trim.hasKeyFact` / `data.replyTokens` / `id="page-title"` 必须和 API 字段一致才能对得上 — 只在**显示给用户的字符串**里加括注。
 
 **check-demo 怎么查**：scan `<h1>` / 按钮 / 可调参数 / 卡片标题 / 页脚 — 出现 `Key` 单字（应改成「密钥」）/ 出现 `provider` 单词直接展示（应改成「模型服务商」）/ 出现 `model` 单字（应改成「模型」）/ 出现 `summarizeFrom` 单独展示（应改成「远期喂摘要的条数（summarizeFrom）」）这类**没中文化的纯英文术语** → FAIL。**协议 A / B / 4xx / 5xx / token / ID / API 路径** 保留不查。
+
+**Coach 落 / 改 Demo 当下自查清单（2026-09-10 立 · 必走 · 避免再踩「英文术语裸展示」）**：
+
+落 / 改一个 `public/index.html` 前，先按下面清单扫一遍现有/新写的字符串；不通过不要勾 ✅：
+
+| # | 扫哪里 | 禁止出现 | 应改成 |
+| - | ----- | -------- | ----- |
+| 1 | `<label>` 可调参数 | `maxSteps：` / `timeoutMs：` / `latency：` 单独 | `中文名（英文 · 单位）：`，例 `最大迭代次数上限（maxSteps · 步）：` |
+| 2 | `<button>` 按钮 caption | `跑 max iterations 单闸` / `跑 timeout 单闸` / `model_says_stop 单闸` 直接展示 | `中文为主`，例 `跑 最大迭代次数 单闸` |
+| 3 | `<h1>` 主标题 | `... vs max iterations 单闸 vs timeout 单闸 ...` 英文术语单字 | `中文为主`，例 `... vs 最大迭代次数 单闸 vs 超时 单闸 ...` |
+| 4 | `<span>` 字段标签 | `跑了多少轮（stepCount）：` 缺中文括注尾巴；`tokenEstimate：stoppedReason：finalAnswer：` 单独 | 完整 `中文（English · 说明）：` |
+| 5 | 错误提示 / 状态栏 | `缺 Key 禁用`（Key 单字） | `缺 密钥 禁用` |
+| 6 | 页脚 `#env-info` | `Key ✅ / Key ❌`（Key 单字） | `密钥 ✅ / 密钥 ❌` |
+| 7 | `<title>` | `... · 第一步` 极简；可保留 | 视情况，可中可中+英 |
+
+**例外清单**（这些不查，可以原样保留）：
+
+- 协议名 `协议 A` / `协议 B`
+- HTTP 状态 `4xx` / `5xx`
+- 计量单位 `token` / `毫秒`（作为单位时）
+- 端点路径 `/api/...`
+- 内部字段名（JS 变量 / API 字段 / CSS className / HTML id）—— 不在用户可见文案里出现
+- 「可以保留」清单：`Key ❌` → `密钥 ❌` ✅；`provider` → `模型服务商` ✅；`model` → `模型` ✅；`hasKey` → `密钥` ✅
+
+**Coach 自查时机**：写完 `public/index.html` 准备告诉学习者「Demo 写完了」之前，**自己读一遍 `#controls` / `<button>` / 字段标签 / `#page-footer`**；凡看到上表「禁止出现」列里的英文单字裸出 → 当场改完再报告完成。**禁止**「以后再说」/「下条再改」/「check-demo 没拦就行」——check-demo 是给机器看的兜底，Coach 自己读一遍是给学习者看的质量关。
 
 ##### §5.3.11.b 写完 Demo 后必须输出「改了 + 为什么」+ 页面要看得见核心（2026-09-09 立 · 强制）
 

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死循环防护 · 第二步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const FALLBACK_PORT = 50060;
+
+    function App() {
+      // 三个按钮的参数；超时双闸的 latency 必填（否则超时 看不到）
+      const [maxSteps, setMaxSteps] = useState(5);
+      const [timeoutMs, setTimeoutMs] = useState(300);
+      const [latencyMsPerStep, setLatencyMsPerStep] = useState(80);
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: false });
+      const [singleResult, setSingleResult] = useState(null);
+      const [timeoutResult, setTimeoutResult] = useState(null);
+      const [dualResult, setDualResult] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [errMsg, setErrMsg] = useState("");
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((j) => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => {});
+      }, []);
+
+      const busy = status === "loading";
+      const pillText =
+        status === "loading" ? "🔄 请求中" :
+        status === "ok"      ? "✅ 完成" :
+        status === "err"     ? "❌ 错误" : "⏸ 待连接";
+      const pillClass =
+        status === "loading" ? "bg-blue-100 text-blue-800" :
+        status === "ok"      ? "bg-green-100 text-green-800" :
+        status === "err"     ? "bg-red-100 text-red-800" : "bg-gray-200 text-gray-700";
+
+      async function callApi(path, setResult) {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+          const res = await fetch(path, { method: "POST" });
+          if (res.status === 400) {
+            const body = await res.json().catch(() => ({}));
+            setErrMsg(`${body.error || "参数不合法"}（HTTP 400 · 第二类错误）`);
+            setStatus("err");
+            return;
+          }
+          if (res.status >= 500) {
+            setErrMsg(`服务错误：HTTP ${res.status}（服务端异常，请看 logs/）`);
+            setStatus("err");
+            return;
+          }
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          setResult(await res.json());
+          setStatus("ok");
+        } catch (e) {
+          setErrMsg(`请求失败：${String((e && e.message) || e)}（网络 / fetch reject · 第一类错误）`);
+          setStatus("err");
+        }
+      }
+
+      function MetricsCard({ title, result, accent }) {
+        if (!result) {
+          return (
+            <div className="border border-gray-200 rounded p-3 space-y-2">
+              <div className="text-sm font-semibold text-gray-800">{title}</div>
+              <div className="text-xs text-gray-400">还没跑 · 点对应按钮</div>
+            </div>
+          );
+        }
+        const tone =
+          result.stoppedReason === "max_steps" ? "border-red-300 bg-red-50" :
+          result.stoppedReason === "timeout"   ? "border-orange-300 bg-orange-50" :
+          result.stoppedReason === "never_stopped" ? "border-red-500 bg-red-100" :
+          "border-green-300 bg-green-50";
+        return (
+          <div className={`border-2 rounded p-3 space-y-2 ${tone}`}>
+            <div className="text-sm font-semibold text-gray-800">{title}</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-gray-500">已跑轮数（stepCount）：</span><b>{result.stepCount}</b></div>
+              <div><span className="text-gray-500">累计 token 估算（tokenEstimate）：</span><b>{result.tokenEstimate}</b></div>
+              <div><span className="text-gray-500">实际耗时（elapsedMs）：</span><b>{result.summary.elapsedMs} ms</b></div>
+              <div><span className="text-gray-500">停下来的原因（stoppedReason · 取值 max_steps / timeout）：</span><b>{result.stoppedReason}</b></div>
+              <div className="col-span-2"><span className="text-gray-500">闸门提示（gateTriggered）：</span><b className="break-all">{result.gateTriggered ?? "—"}</b></div>
+            </div>
+            <div className="text-xs text-gray-600">{accent}</div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              死循环防护（Loop Guard） · 第二步（step-2） · 最大迭代次数 单闸 vs 超时 单闸 vs 双闸叠加
+            </h1>
+            <span id="status-pill" className={`text-xs px-2 py-2 rounded ${pillClass}`}>
+              {pillText}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>最大迭代次数 单闸 vs 超时 单闸 vs 双闸叠加</b>，三个按钮各发各的请求，数字面板并排对比。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「跑 最大迭代次数 单闸」→ POST /api/agent/with-gate → 看 stoppedReason=max_steps</li>
+                <li>点「跑 超时 单闸」→ POST /api/agent/timeout-gate → 看 stoppedReason=timeout + elapsedMs≈timeoutMs</li>
+                <li>点「跑双闸叠加」→ POST /api/agent/dual-gate → 看谁先到谁说了算</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>双闸叠加：谁先到谁说了算，不冲突</b>。最大迭代次数（max iterations）按 step 计数；超时（timeout）按墙钟时间。两者互相补位：最大迭代次数 拦不住慢模型把响应拖到分钟级；超时 拦不住快模型 + 高 max 把账单烧光。
+                </div>
+                <div className="text-xs text-gray-600">
+                  看结果盯四个数：<b>已跑轮数（stepCount）</b> · <b>累计 token 估算（tokenEstimate）</b> · <b>实际耗时（elapsedMs）</b> · <b>停下来的原因（stoppedReason · 取值 max_steps / timeout）</b>。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">每个按钮各发一条请求 · 数字面板并排对照</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  最大迭代次数上限（maxSteps · 步）：
+                  <input id="input-max-steps" type="number" min="1" max="1000" value={maxSteps} onChange={(e) => setMaxSteps(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  超时上限（timeoutMs · 毫秒）：
+                  <input id="input-timeout-ms" type="number" min="1" max="60000" value={timeoutMs} onChange={(e) => setTimeoutMs(Math.max(1, Number(e.target.value) || 1))} className="border border-gray-300 rounded px-2 py-1 text-xs w-20" />
+                </label>
+                <label className="text-xs text-gray-700 flex items-center gap-2">
+                  每轮工具耗时（latency · 毫秒）：
+                  <input id="input-latency" type="number" min="0" max="2000" value={latencyMsPerStep} onChange={(e) => setLatencyMsPerStep(Math.max(0, Number(e.target.value) || 0))} className="border border-gray-300 rounded px-2 py-1 text-xs w-16" />
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button id="run-single" onClick={() => callApi(`/api/agent/with-gate?maxSteps=${maxSteps}&latencyMsPerStep=${latencyMsPerStep}`, setSingleResult)} disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 最大迭代次数 单闸（mock · 上限 {maxSteps} 步）
+                </button>
+                <button id="run-timeout" onClick={() => callApi(`/api/agent/timeout-gate?timeoutMs=${timeoutMs}&latencyMsPerStep=${latencyMsPerStep}`, setTimeoutResult)} disabled={busy} className="bg-orange-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑 超时 单闸（mock · 上限 {timeoutMs} 毫秒）
+                </button>
+                <button id="run-dual" onClick={() => callApi(`/api/agent/dual-gate?maxSteps=${maxSteps}&timeoutMs=${timeoutMs}&latencyMsPerStep=${latencyMsPerStep}`, setDualResult)} disabled={busy} className="bg-purple-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">
+                  跑双闸叠加（mock · 最大迭代次数={maxSteps} · 超时={timeoutMs} 毫秒）
+                </button>
+              </div>
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">{errMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!singleResult && !timeoutResult && !dualResult ? (
+                <div className="text-sm text-gray-500">空态：还没点按钮。点「跑 最大迭代次数 单闸」看最大迭代次数 怎么拦，点「跑 超时 单闸」看超时 怎么拦，点「跑双闸叠加」看谁先到。</div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <MetricsCard
+                    title={`① 最大迭代次数 单闸（上限 ${maxSteps} 步）`}
+                    result={singleResult}
+                    accent="按 step 计数；拦的是「轮次」。"
+                  />
+                  <MetricsCard
+                    title={`② 超时 单闸（上限 ${timeoutMs} 毫秒）`}
+                    result={timeoutResult}
+                    accent="按墙钟时间；拦的是「累计毫秒」。每轮工具耗时（latency）越大，跑到超时需要的轮数越少。"
+                  />
+                  <MetricsCard
+                    title={`③ 双闸叠加（最大迭代次数=${maxSteps} · 超时=${timeoutMs} 毫秒）`}
+                    result={dualResult}
+                    accent="两闸同时生效；谁先到谁说了算。最大迭代次数 拦「轮次」、超时 拦「时间」，互相补位不冲突。"
+                  />
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 本地计算 · 不调 LLM · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "—"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

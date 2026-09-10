@@ -79,6 +79,9 @@
 | `yarn app:07-02-plan-vs-step-step-4` | `50056` | 模块 07 · 02 · 先规划再执行 vs 一步步走 step-4：短任务 vs 长任务对照 —— 四组各自请求（`?task=short\|long` × 一步步走 / 先规划）；变体 D：短任务 B 多付 1 次规划（不值得）/ 长任务 B 更省模型调用（值得） |
 | `yarn app:07-02-plan-vs-step-step-5` | `50057` | 模块 07 · 02 · 先规划再执行 vs 一步步走 step-5：变体 E 演示 —— 两侧分请求；mock write_copy 第 1 次调用强制返回 `{ok:false}`；shouldReplan 不看 ok=false → 按旧清单继续做错；UI 执行卡标黄「⚠ 变体 E 触发」 |
 | `yarn app:07-02-plan-vs-step-step-6` | `50058` | 模块 07 · 02 · 先规划再执行 vs 一步步走 step-6：变体 F 演示 —— GET /api/plan 只规划（status=pending）→ 用户点确认 → POST /api/confirm-plan 只执行已保存计划（禁止再跑 A）；左栏独立 GET /api/step-by-step；UI 状态机 idle → planned → executed；确认前无副作用 |
+| `yarn app:07-03-loop-guard-step-1` | `50059` | 模块 07 · 03 · 死循环防护 step-1：反例 vs max iterations 闸门 · 两按钮分请求 · 数字面板并排对照 stepCount / tokenEstimate / stoppedReason（mock 模型 + mock 工具 · 不调真 LLM · 走 §5.3.0 例外「纯协议形状演示」） |
+| `yarn app:07-03-loop-guard-step-2` | `50060` | 模块 07 · 03 · 死循环防护 step-2：max iterations 单闸 vs timeout 单闸 vs 双闸叠加 · 三按钮分请求 · 数字面板对照 stepCount / elapsedMs / stoppedReason（latency/轮参数让 timeout 闸能真触发） |
+| `yarn app:07-03-loop-guard-step-3` | `50061` | 模块 07 · 03 · 死循环防护 step-3：max iterations + timeout + model_says_stop 三闸叠加 + 真模型调（按钮 ③④ 真调模型看 finish_reason） |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。
