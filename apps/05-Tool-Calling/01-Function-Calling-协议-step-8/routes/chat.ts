@@ -10,8 +10,8 @@
  *       → callProtocolB(req2) → resp2 (final_reply)
  *     ctx.body = { user_input, round_1, tool_results, round_2, final_reply }
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostChat 封装层）；
- *   闸门挡掉单独打 warn；子调用 callLlmOnce / executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostChat 封装层）；
+ *   校验挡下单独写 warn；子调用 callLlmOnce / executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -58,7 +58,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[]): Promise<CallResult> {
       logger.error(
         "│ chat-callLlmOnce",
         "调用函数结束：callLlmOnce（失败）",
-        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        "为什么写这条日志：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
         {
           返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
           err: err instanceof Error ? err.message : String(err),
@@ -83,7 +83,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[]): Promise<CallResult> {
   logger.info(
     "│ chat-callLlmOnce",
     "调用函数开始：callLlmOnce",
-    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolB」）。当前：即将调 callProtocolB，model / max_tokens / messagesCount / toolsCount 都要打。",
+    "为什么写这条日志：route 只认这一层返回的 CallResult；里面那次才是真发网络请求（看「调用函数开始：callProtocolB」）。当前：即将调 callProtocolB，model / max_tokens / messagesCount / toolsCount 都要写。",
     {
       入参: { model: request.model, max_tokens: request.max_tokens, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0 },
       __code: `await callProtocolB(${JSON.stringify(request, null, 2)});`,
@@ -95,7 +95,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[]): Promise<CallResult> {
     logger.info(
       "│ chat-callLlmOnce",
       "调用函数结束：callLlmOnce",
-      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 stopReason / toolUseCount 便于核对。",
+      "为什么写这条日志：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 stopReason / toolUseCount 便于核对。",
       {
         返回值: {
           ok: true,
@@ -115,7 +115,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[]): Promise<CallResult> {
     logger.error(
       "│ chat-callLlmOnce",
       "调用函数结束：callLlmOnce（失败）",
-      "为什么打：协议 B 抛异常；记 upstreamStatus + 错误信息便于排错。",
+      "为什么写这条日志：协议 B 抛异常；记 upstreamStatus + 错误信息便于排错。",
       {
         返回值: { ok: false, error: msg, upstreamStatus },
         耗时ms: Date.now() - tFuncStart,
@@ -136,7 +136,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数开始：handlePostChat",
-      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是「真活」。当前：step-8 演示协议 B 物理形态（Anthropic Messages API）；记 input + inputLen 便于核对。",
+      "为什么写这条日志：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是真正干活的那一层。当前：step-8 演示协议 B 物理形态（Anthropic Messages API）；记 input + inputLen 便于核对。",
       {
         入参: { inputPreview: input.slice(0, 60), inputLen: input.length, bodyKeys: Object.keys(body) },
         __code: `// 两轮调用 + execute + 回灌`,
@@ -146,8 +146,8 @@ export function mountChatRoutes(router: Router): void {
     if (!input) {
       logger.warn(
         "api.chat",
-        "调用函数结束：handlePostChat（闸门拒绝）",
-        "为什么打：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
+        "调用函数结束：handlePostChat（校验拒绝）",
+        "为什么写这条日志：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
         {
           返回值: { httpStatus: 400, error: "input 不能为空" },
           耗时ms: Date.now() - tHandlerStart,
@@ -165,7 +165,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "api.chat",
         "调用函数结束：handlePostChat（round-1 失败）",
-        "为什么打：Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        "为什么写这条日志：Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错。",
         {
           返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
           耗时ms: Date.now() - tHandlerStart,
@@ -181,7 +181,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "││ chat-handlePostChat",
       "调用循环进行中：round-1 OK",
-      "为什么打：Round 1 模型决定；记 stopReason + toolNames 便于核对协议 B 物理形态。",
+      "为什么写这条日志：Round 1 模型决定；记 stopReason + toolNames 便于核对协议 B 物理形态。",
       {
         中间状态: {
           stopReason: r1.response.stop_reason,
@@ -199,7 +199,7 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "││ chat-handlePostChat",
         `tool_result（${tu.name}）`,
-        "为什么打：工具执行完；result 摘要打，便于核对返回内容（不打全文）。",
+        "为什么写这条日志：工具执行完；result 摘要打，便于核对返回内容（不写全文）。",
         {
           中间状态: { toolUseId: tu.id, name: tu.name, ok: r.ok, error: r.ok ? undefined : r.error },
         },
@@ -214,7 +214,7 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "api.chat",
         "调用函数结束：handlePostChat（no-tool-call）",
-        "为什么打：模型没调工具；content blocks 全是 text；记 finalLen 便于核对。",
+        "为什么写这条日志：模型没调工具；content blocks 全是 text；记 finalLen 便于核对。",
         {
           返回值: { httpStatus: 200, finalLen: directReply.length, contentPreview: directReply.slice(0, 50) },
           耗时ms: Date.now() - tHandlerStart,
@@ -248,7 +248,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "api.chat",
         "调用函数结束：handlePostChat（round-2 失败）",
-        "为什么打：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        "为什么写这条日志：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
         {
           返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
           耗时ms: Date.now() - tHandlerStart,
@@ -273,7 +273,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "││ chat-handlePostChat",
       "调用循环进行中：round-2 OK",
-      "为什么打：Round 2 成功；拿到 final reply 准备返回。",
+      "为什么写这条日志：Round 2 成功；拿到 final reply 准备返回。",
       {
         中间状态: { stopReason: r2.response.stop_reason, finalLen: finalText.length },
       },
@@ -282,7 +282,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数结束：handlePostChat",
-      "为什么打：route 要把响应包（4 张数据卡，协议 B 形态）写进 ctx.body 交给页面 stats 区；记 finalLen 便于核对。",
+      "为什么写这条日志：route 要把响应包（4 张数据卡，协议 B 形态）写进 ctx.body 交给页面 stats 区；记 finalLen 便于核对。",
       {
         返回值: { status: 200, finalLen: finalText.length, toolUseCount: toolUsesFromLLM.length, okCount: toolResults.filter(r => r.ok).length },
         耗时ms: Date.now() - tHandlerStart,

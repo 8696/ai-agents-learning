@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel }；
- *   页面加载时打一次，用来填页脚 #env-info。
+ *   页面加载时写一次，用来填页脚 #env-info。
  *
  * step-7 是 mock demo：不调 LLM（callsModel: false），所以缺 Key 不影响主按钮。
  */

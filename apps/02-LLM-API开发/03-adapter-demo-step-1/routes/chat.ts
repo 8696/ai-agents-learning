@@ -1,5 +1,5 @@
 /**
- * 职责：POST /api/chat —— 一次性 unified 响应（薄：闸门 → adapter.sendMessage）。
+ * 职责：POST /api/chat —— 一次性 unified 响应（薄：校验 → adapter.sendMessage）。
  * 数据流：{ message, protocol, … } → UnifiedResponse JSON。
  * 本页教学点在 public/pages/once.html：业务层看不见 SDK。
  */

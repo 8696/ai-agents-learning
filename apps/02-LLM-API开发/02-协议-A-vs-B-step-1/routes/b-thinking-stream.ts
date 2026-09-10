@@ -1,6 +1,6 @@
 /**
  * 职责：POST /api/b-thinking-stream —— 协议 B 流式 + 启用 thinking（完整事件流）。
- * 数据流：闸门 → streamOnceBThinkingEvents → 原始 Anthropic 事件原样转发。
+ * 数据流：校验 → streamOnceBThinkingEvents → 原始 Anthropic 事件原样转发。
  * 本文件只调 protocol-b，禁止 import protocol-a。
  */
 import type { Context } from "koa";

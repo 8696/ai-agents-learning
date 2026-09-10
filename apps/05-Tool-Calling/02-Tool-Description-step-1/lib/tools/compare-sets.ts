@@ -13,7 +13,7 @@
  *   字段级 description（order_id.description）也是给模型看的；写「用户的订单号，如 '12345'」
  *   比只写「订单号」更不容易被模型错填（比如把 '12345' 拼成中文「一万两千三百四十五」）。
  *
- * 不调 LLM、不打日志：纯常量导出。
+ * 不调 LLM、不写日志：纯常量导出。
  */
 import type { ToolSchema } from "../llm/protocol-a.js";
 
@@ -119,7 +119,7 @@ export type CompareSide = {
   pickedToolName: string | null | undefined;
   /** 模型填的参数（JSON.parse 后的对象） */
   pickedToolArgs: unknown;
-  /** 本次调用耗时（ms），含 LLM 出网 */
+  /** 本次调用耗时（ms），含 LLM 真发网络请求 */
   elapsedMs: number;
 };
 

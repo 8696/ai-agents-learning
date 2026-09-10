@@ -3,7 +3,7 @@
  * 数据流：process.env.PORT / getLlmOptional() → routes/health.ts 与 server 启动日志共用。
  * 为什么单独成文件：/health 与 listen 必须读同一个 PORT；/health 的 provider/model 来自 llm 单例。
  *
- * 本 demo 真调 LLM（trim + summarize 各 1 次问答 + summarize 路径多 1 次摘要 → 共 3 次出网），
+ * 本 demo 真调 LLM（trim + summarize 各 1 次问答 + summarize 路径多 1 次摘要 → 共 3 次真发网络请求），
  *   用 getLlmOptional 让缺 Key 时服务仍能起，
  *   /health 的 hasKey=false → 页面把主按钮 disabled。
  *   真正调 LLM 的路由（routes/compare.ts）单独 try/catch getLlm() 抛错，给前端回 502。

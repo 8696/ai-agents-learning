@@ -15,7 +15,7 @@
  *   对应的正确 Tool；如果放进去，模型可能调 query_order（对），那就看错反例了。
  *   真正的对照：user 问订单详情 → A 组瞎调 query_logistics（错）/ B 组不调任何 Tool（对）。
  *
- * 不调 LLM、不打日志：纯常量导出。
+ * 不调 LLM、不写日志：纯常量导出。
  */
 import type { ToolSchema } from "../llm/protocol-a.js";
 

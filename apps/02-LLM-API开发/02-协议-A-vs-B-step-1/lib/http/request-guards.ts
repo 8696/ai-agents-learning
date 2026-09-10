@@ -1,5 +1,5 @@
 /**
- * 职责：业务路由共用入参闸门（有 Key？message 非空？）。
+ * 职责：业务路由共用入参校验（有 Key？message 非空？）。
  * 数据流：ctx → 通过则返回值；失败已写 status/body，返回 null，route 直接 return。
  */
 import type { Context } from "koa";
@@ -48,7 +48,7 @@ export function readCallBody(ctx: Context): DemoCallBody | null {
 }
 
 /**
- * SSE 端点：先 ctx.respond=false，再闸门。
+ * SSE 端点：先 ctx.respond=false，再校验。
  * 失败必须自己 writeHead——koa 已经不再发 ctx.body。
  */
 export function beginSseCall(

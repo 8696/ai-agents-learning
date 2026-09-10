@@ -3,8 +3,8 @@
  * 数据流：string → gpt-tokenizer encode() → { text, charCount, tokenCount, previewIds }。
  * 为什么只返回前 5 个 id：本条要看见「Token 是代号」即可，整表刷满页面没有新信息。
  *
- * 日志（§5.3.16）：本条不调 LLM、不出网——核心档函数体逐步 + 教学相关字段释义；
- *   调用函数 五件套（encodeText 封装层）+ 调用函数 五件套（gpt-tokenizer encode 内部实现）。
+ * 日志（§5.3.16）：本条不调 LLM、不发网络请求——主路径函数体逐步 + 教学相关字段释义；
+ *   调用函数 五条日志（encodeText 封装层）+ 调用函数 五条日志（gpt-tokenizer encode 内部实现）。
  */
 import { encode } from "gpt-tokenizer";
 import { VOCAB_LABEL } from "./presets.js";
@@ -23,7 +23,7 @@ export function encodeText(text: string): EncodeResult {
   logger.info(
     "│ 切词-encodeText",
     "调用函数开始：encodeText",
-    "为什么打：route 只认这一层返回的 EncodeResult；里面那次才是「Token 化」的真活（看「调用函数开始：gpt-tokenizer.encode」）。当前：即将用 cl100k 词表切给定文本。",
+    "为什么写这条日志：route 只认这一层返回的 EncodeResult；里面那次才是「Token 化」真正干活的部分（看「调用函数开始：gpt-tokenizer.encode」）。当前：即将用 cl100k 词表切给定文本。",
     {
       入参: {
         textPreview: text.slice(0, 50),
@@ -38,7 +38,7 @@ export function encodeText(text: string): EncodeResult {
   logger.info(
     "││ 切词实现-gpt-tokenizer.encode",
     "调用函数开始：gpt-tokenizer.encode",
-    "为什么打：本地 cl100k 词表的真实现，不打就没法复现「切了多少 id」。当前：即将跑 gpt-tokenizer encode()。",
+    "为什么写这条日志：本地 cl100k 词表的真实现，不写就没法复现「切了多少 id」。当前：即将跑 gpt-tokenizer encode()。",
     {
       入参: {
         textLen: text.length,
@@ -51,7 +51,7 @@ export function encodeText(text: string): EncodeResult {
   logger.info(
     "││ 切词实现-gpt-tokenizer.encode",
     "调用函数结束：gpt-tokenizer.encode",
-    "为什么打：id 长度就是 Token 数 = 计费粒度；不打就丢了这一步的真活。当前：encode 已返回 number[]，下一步组装 EncodeResult。",
+    "为什么写这条日志：id 长度就是 Token 数 = 计费粒度；不写就丢了这一步真正干活的部分。当前：encode 已返回 number[]，下一步组装 EncodeResult。",
     {
       返回值: {
         tokenIdsLen: tokenIds.length,
@@ -78,7 +78,7 @@ export function encodeText(text: string): EncodeResult {
   logger.info(
     "│ 切词-encodeText",
     "调用函数结束：encodeText",
-    "为什么打：route 要把 EncodeResult 写进 ctx.body 交给页面 stats 区。当前：EncodeResult 已组装好（含 chars vs tokens 比）。",
+    "为什么写这条日志：route 要把 EncodeResult 写进 ctx.body 交给页面 stats 区。当前：EncodeResult 已组装好（含 chars vs tokens 比）。",
     {
       返回值: {
         charCount: result.charCount,

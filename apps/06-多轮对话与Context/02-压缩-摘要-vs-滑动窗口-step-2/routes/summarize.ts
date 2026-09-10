@@ -4,7 +4,7 @@
  *
  * 数据流：
  *   浏览器 fetch { turnCount, summarizeFrom, keepRecent, keyFactAtTurn }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory() 生成 N 轮假对话（同 step-1 buildMockHistory）
  *       → messagesBefore = [system, ...mockHistory, 问句]
  *         → callLlmOnce(messagesBefore) → beforeReply                                  ← 调真模型 #1（基线）
@@ -110,8 +110,8 @@ async function callLlmOnce(
     "││ 调用模型-对比补全",
     `调用模型开始：${label}`,
     stage === "before"
-      ? "为什么打：基线对照——没摘要前模型答什么；不打完整 messages 就讲不清对照。当前：messagesBefore 已拼好，即将发请求。"
-      : "为什么打：验证摘要后模型还记不记得 key fact；不打完整 messages 就讲不清「摘要到底保留了什么」。当前：messagesAfter 已拼好（含 summary + 近期原文）。",
+      ? "为什么写这条日志：基线对照——没摘要前模型答什么；不写完整 messages 就讲不清对照。当前：messagesBefore 已拼好，即将发请求。"
+      : "为什么写这条日志：验证摘要后模型还记不记得 key fact；不写完整 messages 就讲不清「摘要到底保留了什么」。当前：messagesAfter 已拼好（含 summary + 近期原文）。",
     {
       入参: request,
       stage,
@@ -132,8 +132,8 @@ async function callLlmOnce(
       "││ 调用模型-对比补全",
       `调用模型结束：${label}`,
       stage === "before"
-        ? "为什么打：要把完整 completion 打到日志，对照 after。当前：基线模型已返回。"
-        : "为什么打：要把完整 completion 打到日志，对照 before 是不是「丢字面、留语义」。当前：摘要后模型已返回。",
+        ? "为什么写这条日志：要把完整 completion 写到日志，对照 after。当前：基线模型已返回。"
+        : "为什么写这条日志：要把完整 completion 写到日志，对照 before 是不是「丢字面、留语义」。当前：摘要后模型已返回。",
       {
         返回值: completion,
         stage,
@@ -186,7 +186,7 @@ async function summarizeOld(
   logger.info(
     "││ 调用模型-对话摘要",
     "调用模型开始：对话摘要",
-    "为什么打：这是真出网的摘要调用；不打完整 request 就讲不清「摘要压缩的代价 / 模型到底看见了什么」。当前：远期 N 条已切出并转录成纯文本。",
+    "为什么写这条日志：这是真正发网络请求的摘要调用；不写完整 request 就讲不清「摘要压缩的代价 / 模型到底看见了什么」。当前：远期 N 条已切出并转录成纯文本。",
     {
       入参: request,
       oldMessages,
@@ -204,7 +204,7 @@ async function summarizeOld(
     logger.info(
       "││ 调用模型-对话摘要",
       "调用模型结束：对话摘要",
-      "为什么打：要把完整 completion + summary 原文打到日志；学习者能直接看到「summary 写进去什么」。当前：摘要已返回。",
+      "为什么写这条日志：要把完整 completion + summary 原文写到日志；学习者能直接看到「summary 写进去什么」。当前：摘要已返回。",
       {
         返回值: completion,
         summaryTokens: encode(summary).length,
@@ -229,7 +229,7 @@ async function summarizeOld(
 
 export function mountSummarizeRoutes(router: Router): void {
   router.post("/api/summarize", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -263,13 +263,13 @@ export function mountSummarizeRoutes(router: Router): void {
     ];
 
     const tHandler0 = Date.now();
-    logger.info("summarize.handler", "调用函数开始：summarize", "为什么打：路由是摘要压缩对照实验的唯一入口；不打完整数据流下面就讲不清「摘要压缩到底保留了什么」。当前：假历史已拼好，即将调 3 次模型。", {
+    logger.info("summarize.handler", "调用函数开始：summarize", "为什么写这条日志：路由是摘要压缩对照实验的唯一入口；不写完整数据流下面就讲不清「摘要压缩到底保留了什么」。当前：假历史已拼好，即将调 3 次模型。", {
       入参: { turnCount, summarizeFrom, keepRecent, keyFactAtTurn, modelA, messagesBefore },
       字段释义: {
         "turnCount": "生成的假对话轮数（不含 system；含 key fact 那一轮）",
         "summarizeFrom": "取前 N 条 user/assistant 喂给 LLM 做摘要（远期）",
         "keepRecent": "最后 K 条 user/assistant 留原文（近期）",
-        "summarizeFrom + keepRecent": "必须 ≤ turnCount（闸门已拦）",
+        "summarizeFrom + keepRecent": "必须 ≤ turnCount（校验已拦）",
         "keyFactAtTurn": "key fact「自我介绍」放在第几轮",
         "modelA": "来自 apps/.env 顶层 LLM_MODEL 或该家默认",
         "messagesBefore": "摘要前完整 messages（system + 假历史 + 问句）",
@@ -283,7 +283,7 @@ export function mountSummarizeRoutes(router: Router): void {
       __code: "const messagesBefore = [system, ...mockHistory, 问句];",
     });
 
-    // ── ④ 调真模型 #1（基线：完整 messages；五件套在 callLlmOnce 内）──
+    // ── ④ 调真模型 #1（基线：完整 messages；五条日志在 callLlmOnce 内）──
     let beforeReply = "";
     try {
       beforeReply = await callLlmOnce(messagesBefore, modelA, "before");
@@ -293,7 +293,7 @@ export function mountSummarizeRoutes(router: Router): void {
       return;
     }
 
-    // ── ⑤ 切分：远期 summarizeFrom 条 → 摘要（五件套在 summarizeOld 内）──
+    // ── ⑤ 切分：远期 summarizeFrom 条 → 摘要（五条日志在 summarizeOld 内）──
     const oldForSummary = mockHistory.slice(0, summarizeFrom);
     const recentOriginal = mockHistory.slice(summarizeFrom);
 
@@ -315,7 +315,7 @@ export function mountSummarizeRoutes(router: Router): void {
       { role: "user", content: RECALL_QUESTION },
     ];
 
-    // ── ⑦ 调真模型 #3（验证：摘要后问答；五件套在 callLlmOnce 内）──
+    // ── ⑦ 调真模型 #3（验证：摘要后问答；五条日志在 callLlmOnce 内）──
     let summarizeReply = "";
     try {
       summarizeReply = await callLlmOnce(messagesAfter, modelA, "after");
@@ -349,7 +349,7 @@ export function mountSummarizeRoutes(router: Router): void {
       summaryReplacesCount: oldForSummary.length,
     };
 
-    logger.info("summarize.handler", "调用函数结束：summarize", "为什么打：要把本路由完整出参打到日志；学习者事后翻日志一眼能看到「摘要保留了什么」。当前：3 次 LLM 都已返回。", {
+    logger.info("summarize.handler", "调用函数结束：summarize", "为什么写这条日志：要把本路由完整出参写到日志；学习者事后翻日志一眼能看到「摘要保留了什么」。当前：3 次 LLM 都已返回。", {
       返回值: body,
       字段释义: {
         "messagesBefore / messagesAfter": "摘要前后完整 messages",

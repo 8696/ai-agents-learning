@@ -22,14 +22,14 @@
 
   <script type="text/babel">
     /**
-     * 本页教学点：任意一段文本都能切出 id 列表。空串被闸门 400，不是「0 个 Token」。
+     * 本页教学点：任意一段文本都能切出 id 列表。空串被校验 400，不是「0 个 Token」。
      */
     const { useState } = React;
 
     const INTRO_STEPS = [
       "在框里贴一段话，点「切成 Token」→ POST /api/encode { text }",
       "服务端 gpt-tokenizer encode()，返回字符数 / Token 数 / 前 5 个 id",
-      "空串或只空格 → HTTP 400（闸门，不是 encode 结果为 0）",
+      "空串或只空格 → HTTP 400（校验，不是 encode 结果为 0）",
       "「故意断网」打一个没人听的端口，#status-pill 变红",
     ];
 
@@ -85,7 +85,7 @@
 
               <main id="page-main" className="container mx-auto p-4 space-y-4">
                 <PageIntro
-                  summary="自己贴一段，看 cl100k 切出几个 id。空串会被服务端闸门拦下。"
+                  summary="自己贴一段，看 cl100k 切出几个 id。空串会被服务端校验拦下。"
                   steps={INTRO_STEPS}
                 />
 

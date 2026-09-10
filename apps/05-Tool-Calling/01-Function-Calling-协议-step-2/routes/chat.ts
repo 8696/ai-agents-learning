@@ -14,8 +14,8 @@
  *
  * 教学锚点：每个 LLM 调用的 request/response 都回给前端可视化；这就是协议层数据的物理形态。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostChat / handleGetTools 封装层）；
- *   闸门挡掉单独打 warn；子调用 callProtocolA / executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostChat / handleGetTools 封装层）；
+ *   校验挡下单独写 warn；子调用 callProtocolA / executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -66,7 +66,7 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
       logger.error(
         "│ chat-callLlmOnce",
         "调用函数结束：callLlmOnce（失败）",
-        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。error + （失败）见 spec §5.3.16。",
+        "为什么写这条日志：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。error + （失败）见 spec §5.3.16。",
         {
           返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
           err: err instanceof Error ? err.message : String(err),
@@ -91,7 +91,7 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
   logger.info(
     "│ chat-callLlmOnce",
     "调用函数开始：callLlmOnce",
-    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，model / messagesCount / toolsCount 都要打。",
+    "为什么写这条日志：route 只认这一层返回的 CallResult；里面那次才是真发网络请求（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，model / messagesCount / toolsCount 都要写。",
     {
       入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice },
       __code: `await callProtocolA(${JSON.stringify(request, null, 2)});`,
@@ -103,7 +103,7 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
     logger.info(
       "│ chat-callLlmOnce",
       "调用函数结束：callLlmOnce",
-      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 finishReason / toolCallCount 便于核对。",
+      "为什么写这条日志：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 finishReason / toolCallCount 便于核对。",
       {
         返回值: {
           ok: true,
@@ -122,7 +122,7 @@ async function callLlmOnce(messages: ChatMsg[]): Promise<CallResult> {
     logger.error(
       "│ chat-callLlmOnce",
       "调用函数结束：callLlmOnce（失败）",
-      "为什么打：协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错。",
+      "为什么写这条日志：协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错。",
       {
         返回值: { ok: false, error: msg, upstreamStatus },
         耗时ms: Date.now() - tFuncStart,
@@ -141,7 +141,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数开始：handleGetTools",
-      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」（debug 等级）。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      "为什么写这条日志：route 只认这一层返回的 { tools }；里面 getToolsMeta 是真正干活的那一层（debug 等级）。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
       {
         入参: { endpoint: "GET /api/tools" },
         __code: `ctx.body = { tools: TOOLS_META };`,
@@ -151,7 +151,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数结束：handleGetTools",
-      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板；记 count 便于核对。",
+      "为什么写这条日志：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板；记 count 便于核对。",
       {
         返回值: { count: TOOLS_META.length },
         耗时ms: Date.now() - tHandlerStart,
@@ -168,7 +168,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数开始：handlePostChat",
-      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是「真活」。当前：前端发来用户输入；记 inputLen 便于复现与防滥用。",
+      "为什么写这条日志：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是真正干活的那一层。当前：前端发来用户输入；记 inputLen 便于复现与防滥用。",
       {
         入参: { inputPreview: input.slice(0, 60), inputLen: input.length, bodyKeys: Object.keys(body) },
         __code: `const r1 = await callLlmOnce([{role:"user", content:input}]);\n// ... executeTool + r2`,
@@ -178,8 +178,8 @@ export function mountChatRoutes(router: Router): void {
     if (!input) {
       logger.warn(
         "api.chat",
-        "调用函数结束：handlePostChat（闸门拒绝）",
-        "为什么打：用户输入是空字符串；这是业务失败（不是 LLM 错），走 400 不让 round-1 浪费 token。warn 是「业务失败但能走通」的等级。",
+        "调用函数结束：handlePostChat（校验拒绝）",
+        "为什么写这条日志：用户输入是空字符串；这是业务失败（不是 LLM 错），走 400 不让 round-1 浪费 token。warn 是「业务失败但能走通」的等级。",
         {
           返回值: { httpStatus: 400, error: "input 不能为空" },
           耗时ms: Date.now() - tHandlerStart,
@@ -197,7 +197,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "api.chat",
         "调用函数结束：handlePostChat（round-1 失败）",
-        "为什么打：Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        "为什么写这条日志：Round 1 调模型失败；502 返回前端；记 error + upstreamStatus 便于排错。",
         {
           返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
           耗时ms: Date.now() - tHandlerStart,
@@ -213,7 +213,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数进行中：handlePostChat（round-1 OK）",
-      "为什么打：记 finishReason 让排错时知道模型选了哪条路（tool_calls / stop）。",
+      "为什么写这条日志：记 finishReason 让排错时知道模型选了哪条路（tool_calls / stop）。",
       {
         中间状态: {
           finishReason: r1.response.choices[0].finish_reason,
@@ -233,7 +233,7 @@ export function mountChatRoutes(router: Router): void {
         logger.info(
           "││ chat-handlePostChat",
           `tool_call.arguments JSON 解析成功（${tc.function.name}）`,
-          "为什么打：tool_call.arguments 是合法 JSON；解析成功准备 Zod 校验。",
+          "为什么写这条日志：tool_call.arguments 是合法 JSON；解析成功准备 Zod 校验。",
           {
             第几轮: 1,
             本轮为什么是这些参数: { toolCallId: tc.id, name: tc.function.name, argsKeys: Object.keys(args) },
@@ -243,7 +243,7 @@ export function mountChatRoutes(router: Router): void {
         logger.warn(
           "││ chat-handlePostChat",
           `tool_call.arguments 不是合法 JSON（${tc.function.name}）`,
-          "为什么打：模型生成了非 JSON 的 arguments（常见踩坑）；记 raw 让 round-2 能纠正。",
+          "为什么写这条日志：模型生成了非 JSON 的 arguments（常见踩坑）；记 raw 让 round-2 能纠正。",
           {
             第几轮: 1,
             本轮为什么是这些参数: { toolCallId: tc.id, name: tc.function.name, raw: tc.function.arguments },
@@ -260,7 +260,7 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "││ chat-handlePostChat",
         `tool_result（${tc.function.name}）`,
-        "为什么打：工具执行完；result 摘要打，便于核对返回内容（不打全文）。",
+        "为什么写这条日志：工具执行完；result 摘要打，便于核对返回内容（不写全文）。",
         {
           第几轮: 1,
           本轮结果: { toolCallId: tc.id, name: tc.function.name, ok: r.ok, error: r.ok ? undefined : r.error },
@@ -274,7 +274,7 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "api.chat",
         "调用函数结束：handlePostChat（no-tool-call）",
-        "为什么打：模型没调工具、直接自然语言答；这种情况跳过 round-2 直接返回 final 节省一次 LLM 调用。",
+        "为什么写这条日志：模型没调工具、直接自然语言答；这种情况跳过 round-2 直接返回 final 节省一次 LLM 调用。",
         {
           返回值: {
             httpStatus: 200,
@@ -313,7 +313,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "││ chat-handlePostChat",
       "调用循环开始：第 2 轮 / 共 2 轮",
-      "为什么打：Round 2 调模型发起 chat；带 messages + tool_results 让模型用工具结果合成最终答。",
+      "为什么写这条日志：Round 2 调模型发起 chat；带 messages + tool_results 让模型用工具结果合成最终答。",
       {
         第几轮: 2,
         本轮为什么是这些参数: {
@@ -328,7 +328,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "││ chat-handlePostChat",
         "调用循环结束：第 2 轮（失败）",
-        "为什么打：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        "为什么写这条日志：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
         {
           第几轮: 2,
           本轮结果: { error: r2.error, upstreamStatus: r2.upstreamStatus },
@@ -337,7 +337,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "api.chat",
         "调用函数结束：handlePostChat（round-2 失败）",
-        "为什么打：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
+        "为什么写这条日志：Round 2 失败；502 返回前端；记 error + upstreamStatus 便于排错。",
         {
           返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
           耗时ms: Date.now() - tHandlerStart,
@@ -359,7 +359,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "││ chat-handlePostChat",
       "调用循环结束：第 2 轮",
-      "为什么打：Round 2 成功；拿到 final reply 准备返回前端。",
+      "为什么写这条日志：Round 2 成功；拿到 final reply 准备返回前端。",
       {
         第几轮: 2,
         本轮结果: {
@@ -381,7 +381,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数结束：handlePostChat",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；记 finalLen 便于核对。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；记 finalLen 便于核对。",
       {
         返回值: { httpStatus: 200, finalLen: finalReply.length, toolCallCount: toolCallsFromLLM.length, okCount: toolResults.filter(r => r.ok).length, failCount: toolResults.filter(r => !r.ok).length },
         耗时ms: Date.now() - tHandlerStart,

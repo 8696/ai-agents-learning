@@ -13,8 +13,8 @@
  *   - multi   → get_weather + search 并行（Promise.all）
  *   - danger  → calc（gateway 必须拦；这是本条新增的核心教学点）
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostChatMock / handleGetTools 封装层）；
- *   闸门挡掉（input 空）单独打 warn；子调用 executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostChatMock / handleGetTools 封装层）；
+ *   校验挡下（input 空）单独写 warn；子调用 executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -30,7 +30,7 @@ function decideToolCalls(mode: string, input: string): ToolCall[] {
   logger.info(
     "│ 模型决定-decideToolCalls",
     "调用函数开始：decideToolCalls",
-    "为什么打：route 只认这一层返回的 ToolCall[]；step-1 不调真 LLM。当前：step-1 sketch 按 mode mock 不同 tool_calls；锁定后这层换成 openai.chat.completions({ tools, tool_choice })。",
+    "为什么写这条日志：route 只认这一层返回的 ToolCall[]；step-1 不调真 LLM。当前：step-1 sketch 按 mode mock 不同 tool_calls；锁定后这层换成 openai.chat.completions({ tools, tool_choice })。",
     {
       入参: { mode, inputPreview: input.slice(0, 60), inputLen: input.length },
       __code: `function decideToolCalls(mode: string, input: string): ToolCall[]`,
@@ -53,7 +53,7 @@ function decideToolCalls(mode: string, input: string): ToolCall[] {
   logger.info(
     "│ 模型决定-decideToolCalls",
     "调用函数结束：decideToolCalls",
-    "为什么打：route 要把 tool_calls 写进 ctx.body 交给页面 stats 区；记 count + calls 便于对照「single / multi / danger」差异。当前：tool_calls 已生成。",
+    "为什么写这条日志：route 要把 tool_calls 写进 ctx.body 交给页面 stats 区；记 count + calls 便于对照「single / multi / danger」差异。当前：tool_calls 已生成。",
     {
       返回值: { count: calls.length, calls },
       耗时ms: Date.now() - tFuncStart,
@@ -71,7 +71,7 @@ function buildFinalReply(results: ExecResult[]): string {
   logger.info(
     "│ 模型终回复-buildFinalReply",
     "调用函数开始：buildFinalReply",
-    "为什么打：route 只认这一层返回的 finalReply 字符串；step-1 不调真 LLM 第二轮。当前：按 tool_results 拼人话；锁定后把这段换成 openai.chat.completions(messages 含 tool_results)。",
+    "为什么写这条日志：route 只认这一层返回的 finalReply 字符串；step-1 不调真 LLM 第二轮。当前：按 tool_results 拼人话；锁定后把这段换成 openai.chat.completions(messages 含 tool_results)。",
     {
       入参: { resultCount: results.length, okCount: results.filter(r => r.ok).length, failCount: results.filter(r => !r.ok).length },
       __code: `function buildFinalReply(results: ExecResult[]): string`,
@@ -98,7 +98,7 @@ function buildFinalReply(results: ExecResult[]): string {
   logger.info(
     "│ 模型终回复-buildFinalReply",
     "调用函数结束：buildFinalReply",
-    "为什么打：route 要把 finalReply 写进 ctx.body 交给页面 stats 区；记 finalReply 便于核对。",
+    "为什么写这条日志：route 要把 finalReply 写进 ctx.body 交给页面 stats 区；记 finalReply 便于核对。",
     {
       返回值: { finalReply },
       耗时ms: Date.now() - tFuncStart,
@@ -115,7 +115,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数开始：handleGetTools",
-      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；只返回 name/description/dangerous 三个声明字段，不返 handler 实现。",
+      "为什么写这条日志：route 只认这一层返回的 { tools }；里面 getToolsMeta 是真正干活的那一层。当前：前端 Tool Registry 面板拉一次；只返回 name/description/dangerous 三个声明字段，不返 handler 实现。",
       {
         入参: { endpoint: "GET /api/tools" },
         __code: `const meta = getToolsMeta();\nctx.body = { tools: meta };`,
@@ -125,7 +125,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数结束：handleGetTools",
-      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板；记 count 便于核对。",
+      "为什么写这条日志：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板；记 count 便于核对。",
       {
         返回值: { count: meta.length },
         耗时ms: Date.now() - tHandlerStart,
@@ -143,19 +143,19 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat-mock",
       "调用函数开始：handlePostChatMock",
-      "为什么打：route 只认这一层返回的响应包；里面 decideToolCalls + executeTool + buildFinalReply 是「真活」。当前：step-1 不调真 LLM，但跑完整一遍 model → tool_call → execute → tool_result → model_final 协议骨架。",
+      "为什么写这条日志：route 只认这一层返回的响应包；里面 decideToolCalls + executeTool + buildFinalReply 是真正干活的那一层。当前：step-1 不调真 LLM，但跑完整一遍 model → tool_call → execute → tool_result → model_final 协议骨架。",
       {
         入参: { input, mode, bodyKeys: Object.keys(body) },
         __code: `const model_tool_calls = decideToolCalls(mode, input);\nconst tool_results = model_tool_calls.map(c => executeTool(c.name, c.arguments, c.id));\nconst model_final_reply = buildFinalReply(tool_results);`,
       },
     );
 
-    // §5.3.12 入参闸门：empty input 且 mode != danger → 400（不抛异常）
+    // §5.3.12 入参校验：empty input 且 mode != danger → 400（不抛异常）
     if (!input && mode !== "danger") {
       logger.warn(
         "api.chat-mock",
-        "调用函数结束：handlePostChatMock（闸门拒绝）",
-        "为什么打：§5.3.12 — input 为空且 mode 非 danger 时前端按钮未填文本；直接回 400 不抛异常，前端按 error 处理。",
+        "调用函数结束：handlePostChatMock（校验拒绝）",
+        "为什么写这条日志：§5.3.12 — input 为空且 mode 非 danger 时前端按钮未填文本；直接回 400 不抛异常，前端按 error 处理。",
         {
           返回值: { httpStatus: 400, error: "input 不能为空（danger 模式可空）" },
           耗时ms: Date.now() - tHandlerStart,
@@ -174,7 +174,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat-mock",
       "调用函数进行中：handlePostChatMock（executeTool 批处理）",
-      "为什么打：协议 A 第三步：每个 tool_call 走 Registry → Gateway → Zod → handler；真实场景用 Promise.all 并发，这里同步走同样能看见形状。",
+      "为什么写这条日志：协议 A 第三步：每个 tool_call 走 Registry → Gateway → Zod → handler；真实场景用 Promise.all 并发，这里同步走同样能看见形状。",
       {
         中间状态: { batchSize: model_tool_calls.length, toolCallIds: model_tool_calls.map(c => c.id) },
         耗时ms: Date.now() - tHandlerStart,
@@ -197,7 +197,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat-mock",
       "调用函数结束：handlePostChatMock",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；记 ok / fail 数便于核对。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；记 ok / fail 数便于核对。",
       {
         返回值: {
           user_input: input,

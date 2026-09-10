@@ -1,6 +1,6 @@
 /**
  * 职责：POST /api/b-stream-raw —— 协议 B 流式、不启用 thinking（包一层 anthropic_event）。
- * 数据流：闸门 → streamOnceBRawEvents → { type:"anthropic_event", eventIdx, event }。
+ * 数据流：校验 → streamOnceBRawEvents → { type:"anthropic_event", eventIdx, event }。
  * 本文件只调 protocol-b，禁止 import protocol-a。
  */
 import type { Context } from "koa";

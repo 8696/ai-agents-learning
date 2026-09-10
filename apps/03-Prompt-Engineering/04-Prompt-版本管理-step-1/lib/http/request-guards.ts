@@ -1,8 +1,8 @@
 /**
- * 职责：/api/compare 的入参闸门（Key、问题文本、两版 Prompt、modes）。
+ * 职责：/api/compare 的入参校验（Key、问题文本、两版 Prompt、modes）。
  * 数据流：ctx.request.body → 通过则返回对象；失败已写 ctx.status / ctx.body，返回 null。
  *
- * 日志（§5.3.16）：工具档——五件套（含 __code）仍要；闸门挡掉打 warn / error。
+ * 日志（§5.3.16）：普通函数——五条日志（含 __code）仍要；校验挡下写 warn / error。
  */
 import type { Context } from "koa";
 import type { Llm } from "../../../../llm.js";
@@ -25,9 +25,9 @@ export function requireLlm(ctx: Context): Llm | null {
   const t0 = Date.now();
   if (!llm) {
     logger.error(
-      "│ 闸门-requireLlm",
+      "│ 校验-requireLlm",
       "调用函数结束：requireLlm",
-      "为什么打：当前 LLM_PROVIDER 没有 Key（见 apps/.env.example）；503 回前端；这是阻塞性错误必须立刻告诉用户怎么修。error + （失败）见 spec §5.3.16。",
+      "为什么写这条日志：当前 LLM_PROVIDER 没有 Key（见 apps/.env.example）；503 回前端；这是阻塞性错误必须立刻告诉用户怎么修。error + （失败）见 spec §5.3.16。",
       {
         返回值: { ok: false, status: 503 },
         provider: process.env.LLM_PROVIDER ?? null,
@@ -41,9 +41,9 @@ export function requireLlm(ctx: Context): Llm | null {
     return null;
   }
   logger.debug(
-    "│ 闸门-requireLlm",
+    "│ 校验-requireLlm",
     "调用函数结束：requireLlm",
-    "为什么打：debug 是「细节」等级；闸门是高频路径，命中 ok 时不打 info 免刷屏。当前：llm 已就绪。",
+    "为什么写这条日志：debug 是「细节」等级；校验是高频路径，命中 ok 时不写 info 免刷屏。当前：llm 已就绪。",
     {
       返回值: { ok: true, status: 200, provider: llm.provider },
       耗时ms: Date.now() - t0,
@@ -57,9 +57,9 @@ export function readCompareBody(ctx: Context): CompareBody | null {
   const parsed = bodySchema.safeParse(ctx.request.body ?? {});
   if (!parsed.success) {
     logger.warn(
-      "│ 闸门-readCompareBody",
+      "│ 校验-readCompareBody",
       "调用函数结束：readCompareBody（失败）",
-      "为什么打：Zod 校验失败（text 空 / 超长 / modes 不在 v1,v2）；这是业务失败不是 LLM 错，走 400 不让对照浪费 token。",
+      "为什么写这条日志：Zod 校验失败（text 空 / 超长 / modes 不在 v1,v2）；这是业务失败不是 LLM 错，走 400 不让对照浪费 token。",
       {
         返回值: { ok: false, status: 400 },
         issues: parsed.error.issues,
@@ -76,9 +76,9 @@ export function readCompareBody(ctx: Context): CompareBody | null {
     return null;
   }
   logger.debug(
-    "│ 闸门-readCompareBody",
+    "│ 校验-readCompareBody",
     "调用函数结束：readCompareBody",
-    "为什么打：debug 等级；闸门是高频路径，命中 ok 时不打 info 免刷屏。当前：body 已通过校验。",
+    "为什么写这条日志：debug 等级；校验是高频路径，命中 ok 时不写 info 免刷屏。当前：body 已通过校验。",
     {
       返回值: { ok: true, status: 200, textLen: parsed.data.text.length, modes: parsed.data.modes, v1Len: parsed.data.prompts.v1.length, v2Len: parsed.data.prompts.v2.length },
       耗时ms: Date.now() - t0,

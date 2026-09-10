@@ -9,8 +9,8 @@
  *   - 同一份 Tool schema + 同一个 user query，分别走 OpenAI 和 Anthropic
  *   - 两家 Provider 是否都能正确理解 schema、做出一致的 tool_call → 跨 Provider 可迁移的证据
  *
- * 日志（§5.3.16）：调用函数 五件套（handleCompare{baseline|improved} / runOneSide / runAnthropicSide / callLlmOnce 封装层）；
- *   闸门挡掉单独打 warn；子调用 callProtocolA / callProtocolB 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handleCompare{baseline|improved} / runOneSide / runAnthropicSide / callLlmOnce 封装层）；
+ *   校验挡下单独写 warn；子调用 callProtocolA / callProtocolB 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -50,7 +50,7 @@ async function callLlmOnce(scope: string, tools: ToolSchema[], query: string): P
       logger.error(
         `│ ${scope}-callLlmOnce`,
         "调用函数结束：callLlmOnce（失败）",
-        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        "为什么写这条日志：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
         {
           返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
           err: err instanceof Error ? err.message : String(err),
@@ -76,7 +76,7 @@ async function callLlmOnce(scope: string, tools: ToolSchema[], query: string): P
   logger.info(
     `│ ${scope}-callLlmOnce`,
     "调用函数开始：callLlmOnce",
-    `为什么打：route 只认这一层返回的 CallOnceResult；里面那次才是出网（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，scope=${scope} 便于 grep。`,
+    `为什么写这条日志：route 只认这一层返回的 CallOnceResult；里面那次才是真发网络请求（看「调用函数开始：callProtocolA」）。当前：即将调 callProtocolA，scope=${scope} 便于 grep。`,
     {
       入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice, queryPreview: query.slice(0, 60) },
       __code: `await callProtocolA(${JSON.stringify(request, null, 2)});`,
@@ -89,7 +89,7 @@ async function callLlmOnce(scope: string, tools: ToolSchema[], query: string): P
     logger.info(
       `│ ${scope}-callLlmOnce`,
       "调用函数结束：callLlmOnce",
-      "为什么打：route 要把 CallOnceResult 写进 ctx.body 交给页面 stats 区；记 finishReason + pickedToolName 便于核对。",
+      "为什么写这条日志：route 要把 CallOnceResult 写进 ctx.body 交给页面 stats 区；记 finishReason + pickedToolName 便于核对。",
       {
         返回值: {
           ok: true,
@@ -108,7 +108,7 @@ async function callLlmOnce(scope: string, tools: ToolSchema[], query: string): P
     logger.error(
       `│ ${scope}-callLlmOnce`,
       "调用函数结束：callLlmOnce（失败）",
-      "为什么打：协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错。",
+      "为什么写这条日志：协议 A 抛异常（网络 / 5xx / 4xx）；记 upstreamStatus + 错误信息便于排错。",
       {
         返回值: { ok: false, error: msg, upstreamStatus },
         耗时ms: Date.now() - tFuncStart,
@@ -156,7 +156,7 @@ async function runOneSide(
   logger.info(
     `│ 对照-runOneSide[${label}]`,
     "调用函数开始：runOneSide",
-    `为什么打：route 只认这一层返回的 CompareSide；里面那次才是出网（看「调用函数开始：callLlmOnce」）。当前：跑这一侧（${label}）的 LLM 调用。`,
+    `为什么写这条日志：route 只认这一层返回的 CompareSide；里面那次才是真发网络请求（看「调用函数开始：callLlmOnce」）。当前：跑这一侧（${label}）的 LLM 调用。`,
     {
       入参: { label, toolsCount: tools.length, queryPreview: query.slice(0, 60) },
       __code: `const r = await callLlmOnce("${label}", tools, query);`,
@@ -179,7 +179,7 @@ async function runOneSide(
     logger.error(
       `│ 对照-runOneSide[${label}]`,
       "调用函数结束：runOneSide（失败）",
-      "为什么打：LLM 调用失败；前端会看到错误信息。",
+      "为什么写这条日志：LLM 调用失败；前端会看到错误信息。",
       {
         返回值: { ok: false, pickedToolName: null },
         error: r.error,
@@ -212,7 +212,7 @@ async function runOneSide(
   logger.info(
     `│ 对照-runOneSide[${label}]`,
     "调用函数结束：runOneSide",
-    `为什么打：这一侧跑完；记 pickedToolName 给前端对照——这是 description 写得好不好的真实证据。`,
+    `为什么写这条日志：这一侧跑完；记 pickedToolName 给前端对照——这是 description 写得好不好的真实证据。`,
     {
       返回值: { ok: true, pickedToolName: out.pickedToolName, elapsedMs: out.elapsedMs },
       耗时ms: Date.now() - tFuncStart,
@@ -229,7 +229,7 @@ export function mountCompareRoutes(router: Router): void {
     logger.info(
       `api.compare.${side}`,
       `调用函数开始：handleCompare${side}`,
-      `为什么打：route 只认这一层返回的 CompareSide；里面 runOneSide 是「真活」。当前：step-6 跨 Provider 兼容：${side === "baseline" ? "协议 A · OpenAI" : "协议 B · Anthropic"} 调用同一份 Tool schema。`,
+      `为什么写这条日志：route 只认这一层返回的 CompareSide；里面 runOneSide 是真正干活的那一层。当前：step-6 跨 Provider 兼容：${side === "baseline" ? "协议 A · OpenAI" : "协议 B · Anthropic"} 调用同一份 Tool schema。`,
       {
         入参: { endpoint: `POST /api/compare-${side}`, bodyKeys: Object.keys((ctx.request.body ?? {}) as object) },
         __code: `const result = side === "baseline" ? await runOneSide(label, tools, query) : await runAnthropicSide(label, tools, query);`,
@@ -238,8 +238,8 @@ export function mountCompareRoutes(router: Router): void {
     if (!parsed.success) {
       logger.warn(
         `api.compare.${side}`,
-        `调用函数结束：handleCompare${side}（闸门拒绝）`,
-        "为什么打：入参 schema 不通过；走 400。",
+        `调用函数结束：handleCompare${side}（校验拒绝）`,
+        "为什么写这条日志：入参 schema 不通过；走 400。",
         {
           返回值: { httpStatus: 400, error: "请求体不合法" },
           耗时ms: Date.now() - tHandlerStart,
@@ -259,7 +259,7 @@ export function mountCompareRoutes(router: Router): void {
       logger.error(
         `api.compare.${side}`,
         `调用函数结束：handleCompare${side}（失败）`,
-        "为什么打：LLM 调失败（catch 路径）；返回 502。",
+        "为什么写这条日志：LLM 调失败（catch 路径）；返回 502。",
         {
           返回值: { httpStatus: 502, pickedToolName: result.pickedToolName },
           耗时ms: Date.now() - tHandlerStart,
@@ -272,7 +272,7 @@ export function mountCompareRoutes(router: Router): void {
     logger.info(
       `api.compare.${side}`,
       `调用函数结束：handleCompare${side}`,
-      `为什么打：route 要把 CompareSide 写进 ctx.body 交给页面 stats 区；记 pickedToolName + elapsedMs 便于核对。`,
+      `为什么写这条日志：route 要把 CompareSide 写进 ctx.body 交给页面 stats 区；记 pickedToolName + elapsedMs 便于核对。`,
       {
         返回值: { status: 200, pickedToolName: result.pickedToolName, elapsedMs: result.elapsedMs },
         耗时ms: Date.now() - tHandlerStart,
@@ -295,7 +295,7 @@ async function runAnthropicSide(
   logger.info(
     `│ 对照-runAnthropicSide[${label}]`,
     "调用函数开始：runAnthropicSide",
-    `为什么打：route 只认这一层返回的 CompareSide；里面那次才是出网（看「调用函数开始：callProtocolB」）。当前：step-6 关键——协议 B 调同一份 Tool schema（schema 翻译 + tool_use 解析）。`,
+    `为什么写这条日志：route 只认这一层返回的 CompareSide；里面那次才是真发网络请求（看「调用函数开始：callProtocolB」）。当前：step-6 关键——协议 B 调同一份 Tool schema（schema 翻译 + tool_use 解析）。`,
     {
       入参: { label, toolsCount: tools.length, queryPreview: query.slice(0, 60) },
       __code: `await callProtocolB(req); // 翻译 schema + 解析 tool_use`,
@@ -325,7 +325,7 @@ async function runAnthropicSide(
     logger.error(
       `│ 对照-runAnthropicSide[${label}]`,
       "调用函数结束：runAnthropicSide（失败）",
-      "为什么打：协议 B 调用失败；前端会看到错误信息。",
+      "为什么写这条日志：协议 B 调用失败；前端会看到错误信息。",
       {
         返回值: { httpStatus: 502, error: errorMsg, upstreamStatus },
         耗时ms: Date.now() - tFuncStart,
@@ -383,7 +383,7 @@ async function runAnthropicSide(
   logger.info(
     `│ 对照-runAnthropicSide[${label}]`,
     "调用函数结束：runAnthropicSide",
-    `为什么打：协议 B 调完；记 pickedToolName + elapsedMs 便于和协议 A 对照。`,
+    `为什么写这条日志：协议 B 调完；记 pickedToolName + elapsedMs 便于和协议 A 对照。`,
     {
       返回值: { ok: true, pickedToolName, elapsedMs: Date.now() - t0 },
       耗时ms: Date.now() - tFuncStart,

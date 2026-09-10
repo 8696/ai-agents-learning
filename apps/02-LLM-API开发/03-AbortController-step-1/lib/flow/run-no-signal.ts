@@ -9,8 +9,8 @@
  * 为什么单独成文件：这是「忘了传 signal 会长什么样」的反例，必须和带 signal 的 cancel 分开，
  *   混在一个 if 里读者会以为 abort 总是有效。
  *
- * 日志（§5.3.16）：调用函数 五件套（runNoSignalAbort 封装层）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 socket-close / write-fail 单条 warn / info。
+ * 日志（§5.3.16）：调用函数 五条日志（runNoSignalAbort 封装层）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 socket-close / write-fail 单条 warn / info。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -70,7 +70,7 @@ export async function runNoSignalAbort(params: {
   logger.info(
     "│ no-signal-runNoSignalAbort",
     "调用函数开始：runNoSignalAbort",
-    "为什么打：route 只认这一层返回的 RunNoSignalStats；里面 createChatStream 是「真活」（看「调用模型开始：对话补全」）。当前：故意不传 signal 的反例即将开始；5s 后只关 SSE socket、不通知 SDK。",
+    "为什么写这条日志：route 只认这一层返回的 RunNoSignalStats；里面 createChatStream 是真正干活的那一层（看「调用模型开始：对话补全」）。当前：故意不传 signal 的反例即将开始；5s 后只关 SSE socket、不通知 SDK。",
     {
       入参: { model: llm.modelA, messagePreview: message.slice(0, 80), messageLen: message.length, closeSocketAtMs: 5000 },
       __code: `const closeTimer = setTimeout(() => writer.closeSocket(), 5000);\nconst stream = await createChatStream(llm, message); // 无 signal`,
@@ -159,7 +159,7 @@ export async function runNoSignalAbort(params: {
     logger.error(
       "│ no-signal-runNoSignalAbort",
       "调用函数结束：runNoSignalAbort（失败）",
-      "为什么打：反例路径下 SDK 抛错；记 upstreamStatus + message 让排错时区分是 abort 没生效还是真挂了。当前：抛错，已发 error 帧。",
+      "为什么写这条日志：反例路径下 SDK 抛错；记 upstreamStatus + message 让排错时区分是 abort 没生效还是真挂了。当前：抛错，已发 error 帧。",
       {
         返回值: {
           frameIdx,

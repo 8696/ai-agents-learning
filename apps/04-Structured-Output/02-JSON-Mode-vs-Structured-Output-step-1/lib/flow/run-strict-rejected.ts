@@ -4,7 +4,7 @@
  * 为什么单独成文件：这一刀测的不是模型守约，是「这家网关有没有真做 token-mask」。
  *   和诱导 enum 违规不是一回事，混进 structured 会让人以为是 prompt 写坏了。
  *
- * 日志（§5.3.16）：调用函数 五件套（runStrictRejected 封装层），调用模型 五件套（出网层）。
+ * 日志（§5.3.16）：调用函数 五条日志（runStrictRejected 封装层），调用模型 五条日志（真正发网络请求的那一层）。
  *   unexpectedSuccess 是 warn（业务语义——网关未守约）；正常 400 是上游抛错由 route catch 处理。
  */
 import { performance } from "node:perf_hooks";
@@ -42,7 +42,7 @@ export async function runStrictRejected(llm: Llm): Promise<StrictRejectedOk> {
   logger.info(
     "│ 坏 schema-runStrictRejected",
     "调用函数开始：runStrictRejected",
-    "为什么打：route 只认这一层返回的 StrictRejectedOk | StrictRejectedErr；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：bad schema + strict 应该被 API 入口 400。",
+    "为什么写这条日志：route 只认这一层返回的 StrictRejectedOk | StrictRejectedErr；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：bad schema + strict 应该被 API 入口 400。",
     {
       入参: { model: llm.modelA },
       __code: `await llm.openai.chat.completions.create(${JSON.stringify(request, null, 2)});`,
@@ -53,7 +53,7 @@ export async function runStrictRejected(llm: Llm): Promise<StrictRejectedOk> {
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：这一刀测的不是模型守约，是网关有没有真做 token-mask；缺 additionalProperties:false + 含 anyOf 都该在 API 入口 400。当前：即将发出坏 schema + strict 请求。",
+    "为什么写这条日志：这一刀测的不是模型守约，是网关有没有真做 token-mask；缺 additionalProperties:false + 含 anyOf 都该在 API 入口 400。当前：即将发出坏 schema + strict 请求。",
     {
       入参: {
         model: request.model,
@@ -68,7 +68,7 @@ export async function runStrictRejected(llm: Llm): Promise<StrictRejectedOk> {
   logger.warn(
     "││ 调用模型-协议A 对话补全",
     "调用模型结束：协议A 对话补全（unexpectedSuccess）",
-    "为什么打：bad schema + strict 居然 200 → 网关是软约束而非 token-level mask；记录 unexpectedSuccess 便于在页面标成「诊断结果：网关未守约」而非业务 bug。warn 是「业务语义——预期外但能走通」的等级。",
+    "为什么写这条日志：bad schema + strict 居然 200 → 网关是软约束而非 token-level mask；记录 unexpectedSuccess 便于在页面标成「诊断结果：网关未守约」而非业务 bug。warn 是「业务语义——预期外但能走通」的等级。",
     {
       返回值: { id: res.id, model: res.model, finishReason: res.choices?.[0]?.finish_reason, rawPreview: (res.choices?.[0]?.message?.content ?? "").slice(0, 400) },
       耗时ms: Date.now() - tModelStart,
@@ -83,7 +83,7 @@ export async function runStrictRejected(llm: Llm): Promise<StrictRejectedOk> {
   logger.info(
     "│ 坏 schema-runStrictRejected",
     "调用函数结束：runStrictRejected",
-    "为什么打：route 要把 StrictRejectedOk 写进 ctx.body 交给页面；记 unexpectedSuccess 状态便于前端标成「诊断结果：网关未守约」。当前：真 200 unexpectedSuccess。",
+    "为什么写这条日志：route 要把 StrictRejectedOk 写进 ctx.body 交给页面；记 unexpectedSuccess 状态便于前端标成「诊断结果：网关未守约」。当前：真 200 unexpectedSuccess。",
     {
       返回值: { mode: result.mode, unexpectedSuccess: true, rawLen: result.raw.length },
       耗时ms: Date.now() - tFuncStart,

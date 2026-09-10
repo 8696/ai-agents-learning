@@ -1,6 +1,6 @@
 /**
- * 职责：/api/classify 的入参闸门（有没有 Key、评价文本是否为空、modes 是否合法）。
- * 数据流：ctx.request.body → 通过则返回解析好的对象；不通过时闸门已写好 ctx.status / ctx.body，
+ * 职责：/api/classify 的入参校验（有没有 Key、评价文本是否为空、modes 是否合法）。
+ * 数据流：ctx.request.body → 通过则返回解析好的对象；不通过时校验已写好 ctx.status / ctx.body，
  *   返回 null，route 直接 return（route 里不再重复判空）。
  */
 import type { Context } from "koa";
@@ -27,7 +27,7 @@ export function requireLlm(ctx: Context): Llm | null {
   return llm;
 }
 
-/** ② 参数闸门：空输入走这里变成 HTTP 400，对应页面「空输入（看 400）」按钮。 */
+/** ② 参数校验：空输入走这里变成 HTTP 400，对应页面「空输入（看 400）」按钮。 */
 export function readClassifyBody(ctx: Context): ClassifyBody | null {
   const parsed = bodySchema.safeParse(ctx.request.body ?? {});
   if (!parsed.success) {

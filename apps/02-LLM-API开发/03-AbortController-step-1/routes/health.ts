@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境自检，不调模型、不花额度。
  * 数据流：无 body → runtime-ctx 的 llm / PORT → JSON。
- *   每个页面加载时打一次，填页脚 #env-info（§5.3.9）；总览页还用它画三场景导航。
+ *   每个页面加载时写一次，填页脚 #env-info（§5.3.9）；总览页还用它画三场景导航。
  * 为什么单独成文件：它是唯一「不碰模型」的端点，和三条 SSE 的写法完全不同（这里能用 ctx.body）。
  */
 import type { Context } from "koa";

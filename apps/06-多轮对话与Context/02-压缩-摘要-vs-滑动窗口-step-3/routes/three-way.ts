@@ -4,7 +4,7 @@
  *
  * 数据流：
  *   浏览器 fetch { turnCount, slidingWindowSize, summarizeFrom, keepRecent, keyFactAtTurn }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory() 生成 N 轮假对话
  *       → messagesFull      = [system, ...mockHistory, 问句]                                  ← ① 完整
  *       → messagesSliding   = slidingWindowTrim(messagesFull, slidingWindowSize)              ← ② 滑动窗口（按条数 + system pin）
@@ -145,7 +145,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-三方对比",
     `调用模型开始：三方对比-${stageZh}`,
-    `为什么打：三方对照的关键证据——同一问句同一模型，唯一变量是 messages 裁剪策略。当前：${stageZh}（${stage === "full" ? "基线" : stage === "sliding" ? "K=" + "滑动窗口后" : "summary 后"}）。`,
+    `为什么写这条日志：三方对照的关键证据——同一问句同一模型，唯一变量是 messages 裁剪策略。当前：${stageZh}（${stage === "full" ? "基线" : stage === "sliding" ? "K=" + "滑动窗口后" : "summary 后"}）。`,
     {
       入参: request,
       tokensEstimate,
@@ -160,7 +160,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-三方对比",
       `调用模型结束：三方对比-${stageZh}`,
-      `为什么打：要把完整 completion 打到日志，对照是否含 key fact。当前：${stageZh} 已返回。`,
+      `为什么写这条日志：要把完整 completion 写到日志，对照是否含 key fact。当前：${stageZh} 已返回。`,
       {
         返回值: completion,
         stage,
@@ -182,7 +182,7 @@ async function callLlmOnce(
 
 export function mountThreeWayRoutes(router: Router): void {
   router.post("/api/three-way", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -219,7 +219,7 @@ export function mountThreeWayRoutes(router: Router): void {
     const oldForSummary = mockHistory.slice(0, summarizeFrom);
     const recentOriginal = mockHistory.slice(summarizeFrom);
 
-    logger.info("three-way.handler", "调用函数开始：three-way", "为什么打：三方对照是本条核心交付物（需求 4「对比演示页」）。不打完整数据流就讲不清「滑动窗口 vs 摘要压缩」的可观察区别。当前：三份 messages 已拼好（完整 + 滑动 + 待摘要），即将调 4 次模型。", {
+    logger.info("three-way.handler", "调用函数开始：three-way", "为什么写这条日志：三方对照是本条核心交付物（需求 4「对比演示页」）。不写完整数据流就讲不清「滑动窗口 vs 摘要压缩」的可观察区别。当前：三份 messages 已拼好（完整 + 滑动 + 待摘要），即将调 4 次模型。", {
       入参: { turnCount, slidingWindowSize, summarizeFrom, keepRecent, keyFactAtTurn, modelA },
       字段释义: {
         "turnCount": "生成的假对话轮数",
@@ -232,8 +232,8 @@ export function mountThreeWayRoutes(router: Router): void {
       __code: "三份 messages 拼装见上方；下一步：调 summarizeOld → 拼 messagesSummarize → 三次 callLlmOnce。",
     });
 
-    // ── ④ 摘要（出网）──
-    logger.info("││ 调用模型-对话摘要", "调用函数开始：summarizeOld", "为什么打：纯本地函数包住 LLM 摘要调用；不打就讲不清「摘要压缩的代价」。当前：远期 N 条已切出 + 转录成纯文本。", {
+    // ── ④ 摘要（真发网络请求）──
+    logger.info("││ 调用模型-对话摘要", "调用函数开始：summarizeOld", "为什么写这条日志：纯本地函数包住 LLM 摘要调用；不写就讲不清「摘要压缩的代价」。当前：远期 N 条已切出 + 转录成纯文本。", {
       入参: { summarizeFrom, oldMsgsCount: oldForSummary.length },
       __code: "const summary = await summarizeOld(oldForSummary, modelA);",
     });
@@ -241,7 +241,7 @@ export function mountThreeWayRoutes(router: Router): void {
     let summary = "";
     try {
       summary = await summarizeOld(oldForSummary, modelA);
-      logger.info("││ 调用模型-对话摘要", "调用函数结束：summarizeOld", "为什么打：要把 summary 原文打到日志；学习者能直接看到「summary 写进去什么」。", {
+      logger.info("││ 调用模型-对话摘要", "调用函数结束：summarizeOld", "为什么写这条日志：要把 summary 原文写到日志；学习者能直接看到「summary 写进去什么」。", {
         返回值: { summary, summaryTokens: encode(summary).length },
         耗时ms: Date.now() - tSum0,
       });
@@ -285,7 +285,7 @@ export function mountThreeWayRoutes(router: Router): void {
     const slidingHas = hasKey(slidingReply);
     const summarizeHas = hasKey(summarizeReply);
 
-    logger.info("three-way.handler", "调用函数结束：three-way", "为什么打：要把三方判定打到日志；学习者事后翻日志一眼能验证「丢字面 vs 留语义」。当前：3 次问答 LLM 都已返回。", {
+    logger.info("three-way.handler", "调用函数结束：three-way", "为什么写这条日志：要把三方判定写到日志；学习者事后翻日志一眼能验证「丢字面 vs 留语义」。当前：3 次问答 LLM 都已返回。", {
       返回值: {
         fullLen: messagesFull.length,
         slidingLen: messagesSliding.length,

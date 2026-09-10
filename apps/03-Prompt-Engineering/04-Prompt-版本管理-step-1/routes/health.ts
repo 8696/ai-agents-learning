@@ -2,7 +2,7 @@
  * 职责：GET /health —— 只读环境信息 + 两版默认 Prompt，不调模型。
  * 数据流：无 body → { ok, port, provider, model, hasKey, defaults, samples }。
  *
- * 日志（§5.3.16）：health.hit —— GET 一次打一次，便于核对面板默认值是不是和当前 presets 同步。
+ * 日志（§5.3.16）：health.hit —— GET 一次写一次，便于核对面板默认值是不是和当前 presets 同步。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -15,7 +15,7 @@ export function mountHealthRoutes(router: Router): void {
     logger.info(
       "health.hit",
       "GET /health",
-      "前端拉环境 + 默认 Prompt；记 hasKey / model 便于核对当前 provider 配置（不调模型所以不打 LLM 层）",
+      "前端拉环境 + 默认 Prompt；记 hasKey / model 便于核对当前 provider 配置（不调模型所以不写 LLM 层）",
       {
         provider: llm?.provider ?? null,
         model: llm?.modelA ?? null,

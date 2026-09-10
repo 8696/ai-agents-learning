@@ -1,8 +1,8 @@
 /**
- * 职责：三个业务端点共用的入参闸门（有没有 Key、prompt 是否为空、跑几次、采样参数是否越界）。
- * 数据流：ctx.request.body → 通过则返回解析好的对象；不通过时闸门已写好 ctx.status / ctx.body，
+ * 职责：三个业务端点共用的入参校验（有没有 Key、prompt 是否为空、跑几次、采样参数是否越界）。
+ * 数据流：ctx.request.body → 通过则返回解析好的对象；不通过时校验已写好 ctx.status / ctx.body，
  *   返回 null，route 直接 return（route 里不再重复判空）。
- * 为什么单独成文件：sweep 与 repeat 的 body 有一多半字段相同；闸门散在 route 里，
+ * 为什么单独成文件：sweep 与 repeat 的 body 有一多半字段相同；校验散在 route 里，
  *   两边的上下限迟早漂移成「同一个参数一个端点收 0~2、另一个收 0~1」。
  */
 import type { Context } from "koa";
@@ -38,7 +38,7 @@ export function requireLlm(ctx: Context): Llm | null {
   return llm;
 }
 
-/** ② 参数闸门：把 Zod 的 issues 原样回给页面，让「HTTP 400 长什么样」这类错误看得见。 */
+/** ② 参数校验：把 Zod 的 issues 原样回给页面，让「HTTP 400 长什么样」这类错误看得见。 */
 export function readSamplingBody(ctx: Context): SamplingBody | null {
   const parsed = bodySchema.safeParse(ctx.request.body ?? {});
   if (!parsed.success) {

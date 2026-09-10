@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 body → { ok, port, provider, modelB, hasKey, callsModel }；
- *   页面加载时打一次，用来填页脚 #env-info。
+ *   页面加载时写一次，用来填页脚 #env-info。
  *
  * step-8 是真 LLM demo：调协议 B（Anthropic Messages API），所以 modelB 必填 + maxTokensB 必填。
  * callsModel: true；主按钮因缺 Key 而 disabled（§5.3.9）。

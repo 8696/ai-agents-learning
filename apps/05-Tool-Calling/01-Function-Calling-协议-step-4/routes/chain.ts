@@ -15,8 +15,8 @@
  *
  * 教学锚点（覆盖 MD 例子 5）：B 需要 A 的输出当参数 → await chain；不能 Promise.all。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostChain 封装层）；
- *   闸门挡掉单独打 warn；子调用 executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostChain 封装层）；
+ *   校验挡下单独写 warn；子调用 executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -49,7 +49,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数开始：handleGetTools",
-      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      "为什么写这条日志：route 只认这一层返回的 { tools }；里面 getToolsMeta 是真正干活的那一层。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
       {
         入参: { endpoint: "GET /api/tools" },
         __code: `ctx.body = { tools: getToolsMeta() };`,
@@ -59,7 +59,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数结束：handleGetTools",
-      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
+      "为什么写这条日志：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
       {
         返回值: { count: meta.length },
         耗时ms: Date.now() - tHandlerStart,
@@ -76,19 +76,19 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "api.chain",
       "调用函数开始：handlePostChain",
-      "为什么打：route 只认这一层返回的响应包；里面 executeTool 是「真活」。当前：前端发来串行依赖链请求；记 query + style。",
+      "为什么写这条日志：route 只认这一层返回的响应包；里面 executeTool 是真正干活的那一层。当前：前端发来串行依赖链请求；记 query + style。",
       {
         入参: { queryPreview: query.slice(0, 60), queryLen: query.length, style, bodyKeys: Object.keys(body) },
         __code: `// step-1: await search_doc(query)\n// step-2: await summarize(search_doc.result, style)`,
       },
     );
 
-    // §5.3.12 入参闸门
+    // §5.3.12 入参校验
     if (!query) {
       logger.warn(
         "api.chain",
-        "调用函数结束：handlePostChain（闸门拒绝）",
-        "为什么打：query 不能为空；走 400 不让 round-1 浪费 token。",
+        "调用函数结束：handlePostChain（校验拒绝）",
+        "为什么写这条日志：query 不能为空；走 400 不让 round-1 浪费 token。",
         {
           返回值: { httpStatus: 400, error: "query 不能为空" },
           耗时ms: Date.now() - tHandlerStart,
@@ -101,8 +101,8 @@ export function mountChainRoutes(router: Router): void {
     if (style !== "tech" && style !== "oneliner" && style !== "bullets") {
       logger.warn(
         "api.chain",
-        "调用函数结束：handlePostChain（闸门拒绝）",
-        "为什么打：style 必须是 tech | oneliner | bullets；其它都按 400 处理。",
+        "调用函数结束：handlePostChain（校验拒绝）",
+        "为什么写这条日志：style 必须是 tech | oneliner | bullets；其它都按 400 处理。",
         {
           返回值: { httpStatus: 400, error: "style 必须是 tech | oneliner | bullets" },
           耗时ms: Date.now() - tHandlerStart,
@@ -122,7 +122,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "││ dispatch-chain",
       "调用循环开始：第 1 轮 / 共 2 轮（chain A）",
-      "为什么打：路由层 hard-code 串行链 A → B；先 await search_doc。",
+      "为什么写这条日志：路由层 hard-code 串行链 A → B；先 await search_doc。",
       {
         第几轮: 1,
         总轮数: 2,
@@ -147,7 +147,7 @@ export function mountChainRoutes(router: Router): void {
         logger.info(
           "││ dispatch-chain",
           "调用循环结束：第 1 轮（失败短路）",
-          "为什么打：第一步失败；短路返回不跑第二步（节省 + 业务正确）。",
+          "为什么写这条日志：第一步失败；短路返回不跑第二步（节省 + 业务正确）。",
           {
             第几轮: 1,
             本轮结果: { ok: false, error: r.error },
@@ -156,7 +156,7 @@ export function mountChainRoutes(router: Router): void {
         logger.error(
           "api.chain",
           "调用函数结束：handlePostChain（step-1 失败）",
-          "为什么打：第一步失败；502 返回前端；记 error + steps 便于排错。",
+          "为什么写这条日志：第一步失败；502 返回前端；记 error + steps 便于排错。",
           {
             返回值: { httpStatus: 502, finalSummary: null },
             耗时ms: Date.now() - tHandlerStart,
@@ -172,7 +172,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "││ dispatch-chain",
       "调用循环结束：第 1 轮",
-      "为什么打：步骤 1 已返；正常路径会拿此 result 当 summarize.content。",
+      "为什么写这条日志：步骤 1 已返；正常路径会拿此 result 当 summarize.content。",
       {
         第几轮: 1,
         本轮结果: { ok: true, hasHits: Boolean((firstResult as { hits?: unknown[] })?.hits) },
@@ -184,7 +184,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "││ dispatch-chain",
       "调用循环开始：第 2 轮 / 共 2 轮（chain B）",
-      "为什么打：依赖链 B：用 A 的 result 当 content 参数。",
+      "为什么写这条日志：依赖链 B：用 A 的 result 当 content 参数。",
       {
         第几轮: 2,
         总轮数: 2,
@@ -209,7 +209,7 @@ export function mountChainRoutes(router: Router): void {
         logger.info(
           "││ dispatch-chain",
           "调用循环结束：第 2 轮（失败短路）",
-          "为什么打：第二步失败；记录错误并短路返回。",
+          "为什么写这条日志：第二步失败；记录错误并短路返回。",
           {
             第几轮: 2,
             本轮结果: { ok: false, error: r.error },
@@ -218,7 +218,7 @@ export function mountChainRoutes(router: Router): void {
         logger.error(
           "api.chain",
           "调用函数结束：handlePostChain（step-2 失败）",
-          "为什么打：第二步失败；502 返回前端；记 error + steps 便于排错。",
+          "为什么写这条日志：第二步失败；502 返回前端；记 error + steps 便于排错。",
           {
             返回值: { httpStatus: 502, finalSummary: null },
             耗时ms: Date.now() - tHandlerStart,
@@ -233,7 +233,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "││ dispatch-chain",
       "调用循环结束：第 2 轮",
-      "为什么打：步骤 2 完成；记录 finalSummary 长度便于核对。",
+      "为什么写这条日志：步骤 2 完成；记录 finalSummary 长度便于核对。",
       {
         第几轮: 2,
         本轮结果: { ok: true, finalLen: (steps[1].result as { summary?: string })?.summary?.length ?? 0 },
@@ -245,7 +245,7 @@ export function mountChainRoutes(router: Router): void {
     logger.info(
       "api.chain",
       "调用函数结束：handlePostChain",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 finalSummary 便于核对。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；含 finalSummary 便于核对。",
       {
         返回值: { status: 200, totalMs, finalLen: finalSummary?.length ?? 0, stepsCount: steps.length },
         耗时ms: Date.now() - tHandlerStart,

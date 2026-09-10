@@ -1,10 +1,10 @@
 /**
  * 职责：POST /api/chat —— 把客户端送来的 messages 数组 + 从 Memory 读出的偏好注入 system，
- *       一起发给模型；返回助手回复；把完整 Context 形状 + 注入的偏好段打到服务端日志（§5.3.16 五件套 + 字段释义）。
+ *       一起发给模型；返回助手回复；把完整 Context 形状 + 注入的偏好段打到服务端日志（§5.3.16 五条日志 + 字段释义）。
  *
  * 数据流：
  *   浏览器 fetch { messages: [{role, content}] }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → 调 getLlm() 拿客户端 + 模型 id
  *         → 调 kvList(USER_ID) 读偏好（step-2 新增）→ 拼到 system 末尾
  *           → openai.chat.completions.create（协议 A · 与本模块学习节奏一致）
@@ -38,7 +38,7 @@ const bodySchema = z.object({
 
 export function mountChatRoutes(router: Router): void {
   router.post("/api/chat", async (ctx: Context) => {
-    // ── ① 入参闸门：防 malformed body ──
+    // ── ① 入参校验：防 malformed body ──
     const parsed = bodySchema.safeParse(ctx.request.body);
     if (!parsed.success) {
       ctx.status = 400;
@@ -87,7 +87,7 @@ export function mountChatRoutes(router: Router): void {
       messages: finalMessages as Array<{ role: "system" | "user" | "assistant"; content: string }>,
     };
 
-    logger.info("chat.handler", "调用函数开始：chat", "为什么打：路由是 Context 进入模型的唯一入口；不打完整 messages 下面就讲不清「Context 是什么」；不打 fromMemory 下面就讲不清「偏好从哪来」。当前：拿到前端 messages + 从 db 读了偏好。", {
+    logger.info("chat.handler", "调用函数开始：chat", "为什么写这条日志：路由是 Context 进入模型的唯一入口；不写完整 messages 下面就讲不清「Context 是什么」；不写 fromMemory 下面就讲不清「偏好从哪来」。当前：拿到前端 messages + 从 db 读了偏好。", {
       入参: { request, totalTokensEstimate, fromMemory: userPrefs },
       字段释义: {
         "request.model": "本轮用的模型 id（来自 apps/.env 顶层 LLM_MODEL 或该家默认）",
@@ -113,7 +113,7 @@ export function mountChatRoutes(router: Router): void {
       const fullMessages = [...finalMessages, { role: "assistant" as const, content: reply }];
       const replyTokens = encode(reply).length;
 
-      logger.info("chat.handler", "调用函数结束：chat", "为什么打：要把完整 messages 留作下一轮 Context 的起点。当前：模型已返回；前端拿 fullMessages 当下轮入参。", {
+      logger.info("chat.handler", "调用函数结束：chat", "为什么写这条日志：要把完整 messages 留作下一轮 Context 的起点。当前：模型已返回；前端拿 fullMessages 当下轮入参。", {
         返回值: { reply, usage: completion.usage ?? null },
         字段释义: {
           "reply": "assistant 这一轮的 content",

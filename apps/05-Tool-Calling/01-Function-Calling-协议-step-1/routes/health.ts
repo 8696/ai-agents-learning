@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel }；
- *   页面加载时打一次，用来填页脚 #env-info。
+ *   页面加载时写一次，用来填页脚 #env-info。
  *
  * step-1 是 sketch：不调 LLM，callsModel: false 告诉页面「主按钮不因缺 Key 而 disabled」（§5.3.9）。
  */
@@ -24,7 +24,7 @@ export function mountHealthRoutes(router: Router): void {
     logger.info(
       "健康检查",
       "GET /health 出站",
-      "页面初始化打一次：填页脚 #env-info，告诉前端 provider/model/hasKey/callsModel；callsModel=false 表示主按钮不因缺 Key disabled",
+      "页面初始化写一次：填页脚 #env-info，告诉前端 provider/model/hasKey/callsModel；callsModel=false 表示主按钮不因缺 Key disabled",
       payload,
     );
     ctx.body = payload;

@@ -4,7 +4,7 @@
  * 为什么单独成文件：协议 B 不像协议 A 在 API 入口拒坏 schema。
  *   这一刀测的是模型守约能力；和协议 A 的 strict-rejected 测的不是一回事。
  *
- * 日志（§5.3.16）：调用函数 五件套（runToolRejected 编排层），子调用 runToolUseForced 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（runToolRejected 编排层），子调用 runToolUseForced 内部已自带五条日志。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -27,7 +27,7 @@ export async function runToolRejected(llm: Llm): Promise<ToolRejectedResult> {
   logger.info(
     "│ 诱导守约-runToolRejected",
     "调用函数开始：runToolRejected",
-    "为什么打：route 只认这一层返回的 ToolRejectedResult；里面 runToolUseForced 是「真活」。当前：教学点——协议 B 不像协议 A 在 API 入口 400 拒坏 schema，这一刀测的是模型守 input_schema / enum 的能力。",
+    "为什么写这条日志：route 只认这一层返回的 ToolRejectedResult；里面 runToolUseForced 是真正干活的那一层。当前：教学点——协议 B 不像协议 A 在 API 入口 400 拒坏 schema，这一刀测的是模型守 input_schema / enum 的能力。",
     {
       入参: { model: llm.modelB, inducingPrompt: INDUCE_UNKNOWN_PROMPT, probeField: "action", probeInduceValue: "unknown", expectedEnum: ["search", "order", "cancel"] },
       __code: `const out = await runToolUseForced(llm, INDUCE_UNKNOWN_PROMPT);\n// violated = !out.parseOk  （Zod 没过的语义就是模型没守 enum）`,
@@ -42,7 +42,7 @@ export async function runToolRejected(llm: Llm): Promise<ToolRejectedResult> {
   logger.info(
     "│ 诱导守约-runToolRejected",
     "调用函数结束：runToolRejected",
-    "为什么打：route 要把 ToolRejectedResult 写进 ctx.body 交给页面 stats 区；记 violated + parseOk 便于核对「prompt 故意诱导下模型守不守 enum」。",
+    "为什么写这条日志：route 要把 ToolRejectedResult 写进 ctx.body 交给页面 stats 区；记 violated + parseOk 便于核对「prompt 故意诱导下模型守不守 enum」。",
     {
       返回值: {
         parseOk: out.parseOk,

@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 body → { ok, port, provider, model, hasKey }；
- *   四个页面加载时都打一次，用来填页脚 #env-info 并决定主按钮是否 disabled。
+ *   四个页面加载时都写一次，用来填页脚 #env-info 并决定主按钮是否 disabled。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";

@@ -5,7 +5,7 @@
  *
  * 数据流：
  *   浏览器 fetch { historyCount, outputBudget, totalBudget, hardLimit, summarizeFrom, keepRecent, strategy }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory(historyCount)
  *       → estimateBudget(system, history, output)
  *       → if beforeBudget.total > hardLimit → 硬路径(emergency):
@@ -128,7 +128,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-对话补全",
     "调用模型开始：对话补全",
-    `为什么打：真出网那一次。当前：${stage}。`,
+    `为什么写这条日志：真正发网络请求那一次。当前：${stage}。`,
     { 入参: request, stage, __code: "const completion = await getLlm().openai.chat.completions.create(request);" },
   );
   const t0 = Date.now();
@@ -138,7 +138,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全",
-      `为什么打：要把完整 completion 打到日志。当前：${stage} 已返回。`,
+      `为什么写这条日志：要把完整 completion 写到日志。当前：${stage} 已返回。`,
       { 返回值: completion, stage, replyTokens: encode(reply).length, 耗时ms: Date.now() - t0 },
     );
     return { reply, completion };
@@ -155,7 +155,7 @@ async function callLlmOnce(
 
 export function mountEmergencyRoutes(router: Router): void {
   router.post("/api/emergency", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -180,7 +180,7 @@ export function mountEmergencyRoutes(router: Router): void {
     const tHandler0 = Date.now();
     const beforeBudget = estimateBudget(SYSTEM_PROMPT, history, outputBudget);
 
-    logger.info("emergency.handler", "调用函数开始：emergency", "为什么打：路由是软硬双层演示的唯一入口。当前：拼好 history + 算裁前预算,即将判定走软还是硬。", {
+    logger.info("emergency.handler", "调用函数开始：emergency", "为什么写这条日志：路由是软硬双层演示的唯一入口。当前：拼好 history + 算裁前预算,即将判定走软还是硬。", {
       入参: { historyCount, outputBudget, totalBudget, hardLimit, summarizeFrom, keepRecent, strategy, modelA },
       beforeBudget,
       字段释义: {
@@ -277,7 +277,7 @@ export function mountEmergencyRoutes(router: Router): void {
         : `软路径：裁前 total=${beforeBudget.total} ≤ hardLimit=${hardLimit},走${strategy === "trim" ? "丢最旧" : "摘要压缩"}策略。`,
     };
 
-    logger.info("emergency.handler", "调用函数结束：emergency", "为什么打：要把本路由完整出参打到日志。当前：模型已返回。", {
+    logger.info("emergency.handler", "调用函数结束：emergency", "为什么写这条日志：要把本路由完整出参写到日志。当前：模型已返回。", {
       返回值: body,
       mode,
       耗时ms: Date.now() - tHandler0,

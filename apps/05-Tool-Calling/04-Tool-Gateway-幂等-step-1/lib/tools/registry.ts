@@ -2,8 +2,8 @@
  * 职责：Tool Registry —— 注册 delete_user + 统一执行入口。
  * 数据流：tool_use { name, input } + tool_use_id + ToolContext → gatewayCheck → schema safeParse → handler → ExecResult。
  *
- * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
- *   registryCheck / getToolsMeta / getToolsForLLM 是工具档——五件套（含 __code）仍要。
+ * 日志（§5.3.16）：executeTool 是主路径——函数体逐步写满五条日志（含 __code + 字段释义）；
+ *   registryCheck / getToolsMeta / getToolsForLLM 是普通函数——五条日志（含 __code）仍要。
  */
 import { z } from "zod";
 import { deleteUserTool } from "./delete-user.js";
@@ -57,7 +57,7 @@ function registryCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-registryCheck",
       "调用函数结束：registryCheck",
-      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      "为什么写这条日志：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -70,7 +70,7 @@ function registryCheck(name: string): { allowed: boolean; reason?: string } {
     logger.debug(
       "│ 网关-registryCheck",
       "调用函数结束：registryCheck（dangerous）",
-      "为什么打：debug 是「细节」等级；工具标 dangerous：真正拦截在 handler 的 Gateway 钩子（鉴权/配额/危险），Registry 留个 warn 标记。",
+      "为什么写这条日志：debug 是「细节」等级；工具标 dangerous：真正拦截在 handler 的 Gateway 钩子（鉴权/配额/危险），Registry 留个 warn 标记。",
       {
         返回值: { allowed: true },
         name,
@@ -82,7 +82,7 @@ function registryCheck(name: string): { allowed: boolean; reason?: string } {
   logger.debug(
     "│ 网关-registryCheck",
     "调用函数结束：registryCheck",
-    "为什么打：debug 是「细节」等级；普通工具放行。",
+    "为什么写这条日志：debug 是「细节」等级；普通工具放行。",
     {
       返回值: { allowed: true },
       name,
@@ -103,7 +103,7 @@ export function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数开始：executeTool",
-    "为什么打：route 只认这一层返回的 ExecResult；里面那次才是出 handler 内部 Gateway 钩子。当前：教学锚点——不是「模型发 tool_use 就执行」，是「executeTool 内部走 Gateway 三钩子」。",
+    "为什么写这条日志：route 只认这一层返回的 ExecResult；里面那次才是出 handler 内部 Gateway 钩子。当前：教学锚点——不是「模型发 tool_use 就执行」，是「executeTool 内部走 Gateway 三钩子」。",
     {
       入参: { name, toolCallId, argsPreview: args, actor: ctx.actor, hasConfirmToken: Boolean(ctx.confirmToken) },
       __code: `const gate = registryCheck(name);\nconst parsed = tool.schema.safeParse(args);\nconst raw = (tool.handler as ...)(parsed.data, ctx);`,
@@ -115,7 +115,7 @@ export function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Registry 拒绝）",
-      "为什么打：未注册工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      "为什么写这条日志：未注册工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "registry rejected" },
         reason: gate.reason,
@@ -132,7 +132,7 @@ export function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Zod 校验失败）",
-      "为什么打：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
+      "为什么写这条日志：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
         issues: JSON.parse(JSON.stringify(issues)),
@@ -155,7 +155,7 @@ export function executeTool(
         logger.info(
           "│ 工具执行-executeTool",
           "调用函数结束：executeTool",
-          "为什么打：Tool 走完 Gateway 三钩子；打 hookTrace 摘要便于核对。",
+          "为什么写这条日志：Tool 走完 Gateway 三钩子；打 hookTrace 摘要便于核对。",
           {
             返回值: { ok: true, tool: name, tool_call_id: toolCallId, hookTrace: r.hookTrace },
             耗时ms: Date.now() - tFuncStart,
@@ -166,7 +166,7 @@ export function executeTool(
       logger.warn(
         "│ 工具执行-executeTool",
         "调用函数结束：executeTool（Gateway 拒绝）",
-        "为什么打：Tool 走到 Gateway 钩子时被拦；打 hookTrace + code + retryAfterMs 便于前端处理。",
+        "为什么写这条日志：Tool 走到 Gateway 钩子时被拦；打 hookTrace + code + retryAfterMs 便于前端处理。",
         {
           返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: r.message ?? "gateway rejected", code: r.code, retryAfterMs: r.retryAfterMs, hookTrace: r.hookTrace },
           耗时ms: Date.now() - tFuncStart,
@@ -177,7 +177,7 @@ export function executeTool(
     logger.info(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool",
-      "为什么打：兼容——handler 返普通对象；Tool 走完。",
+      "为什么写这条日志：兼容——handler 返普通对象；Tool 走完。",
       {
         返回值: { ok: true, tool: name, tool_call_id: toolCallId },
         耗时ms: Date.now() - tFuncStart,
@@ -188,7 +188,7 @@ export function executeTool(
     logger.error(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（失败）",
-      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理。",
+      "为什么写这条日志：handler 内部抛异常；回灌 tool_result 时按失败处理。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
         耗时ms: Date.now() - tFuncStart,
@@ -215,7 +215,7 @@ export function getToolsMeta() {
   logger.debug(
     "│ Registry-getToolsMeta",
     "调用函数结束：getToolsMeta",
-    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
     {
       返回值: { count: meta.length, tools: meta },
       耗时ms: Date.now() - t0,
@@ -255,7 +255,7 @@ export function getToolsForLLM() {
   logger.debug(
     "│ Registry-getToolsForLLM",
     "调用函数结束：getToolsForLLM",
-    "为什么打：debug 是「细节」等级；tools 在 chat.ts 启动时一次性派生，缓存用。",
+    "为什么写这条日志：debug 是「细节」等级；tools 在 chat.ts 启动时一次性派生，缓存用。",
     {
       返回值: { count: tools.length, tools },
       耗时ms: Date.now() - t0,

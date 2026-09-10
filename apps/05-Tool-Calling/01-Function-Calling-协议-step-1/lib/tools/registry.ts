@@ -10,8 +10,8 @@
  *   模型发出 tool_call ≠ 允许执行 —— gatewayCheck 在 execute 前必须跑过；
  *   dangerous 工具 / 未注册工具都被拦下，回灌 tool_result 时返回 { ok:false, error } 让模型能自纠。
  *
- * 日志（§5.3.16）：executeTool 是本条的核心档（Tool Gateway / 幂等 / dangerous 拦截）——函数体逐步打满五件套（含 __code + 字段释义）；
- *   getToolsMeta / getToolNames 是工具档——五件套（含 __code）仍要。
+ * 日志（§5.3.16）：executeTool 是本条的主路径（Tool Gateway / 幂等 / dangerous 拦截）——函数体逐步写满五条日志（含 __code + 字段释义）；
+ *   getToolsMeta / getToolNames 是普通函数——五条日志（含 __code）仍要。
  */
 import { getWeatherTool } from "./get-weather.js";
 import { searchTool } from "./search.js";
@@ -60,7 +60,7 @@ export function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数开始：executeTool",
-    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：教学锚点——模型发出 tool_call ≠ 允许执行，Gateway 必须在 execute 前跑过。",
+    "为什么写这条日志：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：教学锚点——模型发出 tool_call ≠ 允许执行，Gateway 必须在 execute 前跑过。",
     {
       入参: { toolCallId, name, rawArgs: args },
       __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nreturn { ok: true, ..., result: tool.handler(parsed.data) };`,
@@ -73,7 +73,7 @@ export function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（gateway 拒绝）",
-      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。教学锚点：dangerous 工具 ≠ 自动执行。",
+      "为什么写这条日志：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。教学锚点：dangerous 工具 ≠ 自动执行。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
         reason: gate.reason,
@@ -90,7 +90,7 @@ export function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Zod 校验失败）",
-      "为什么打：模型解析错或恶意注入；回 ok:false + Zod issues，方便模型在第二轮修正 tool_call.arguments。",
+      "为什么写这条日志：模型解析错或恶意注入；回 ok:false + Zod issues，方便模型在第二轮修正 tool_call.arguments。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(parsed.error.issues)}` },
         issues: JSON.parse(JSON.stringify(parsed.error.issues)),
@@ -109,7 +109,7 @@ export function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数进行中：executeTool（handler 即将执行）",
-    "为什么打：Gateway + Zod 都过；handler 内部可能调外部 API；这里都是 mock（get-weather / search / calc）。",
+    "为什么写这条日志：Gateway + Zod 都过；handler 内部可能调外部 API；这里都是 mock（get-weather / search / calc）。",
     {
       中间状态: { toolCallId, name, validatedArgs: parsed.data },
       耗时ms: Date.now() - tFuncStart,
@@ -120,7 +120,7 @@ export function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数结束：executeTool",
-    "为什么打：完整打 tool_result：模型第二轮拿到后拼人话回复（buildFinalReply）。",
+    "为什么写这条日志：完整写 tool_result：模型第二轮拿到后拼人话回复（buildFinalReply）。",
     {
       返回值: { ok: true, tool: name, tool_call_id: toolCallId, result: result.result },
       耗时ms: Date.now() - tFuncStart,
@@ -144,7 +144,7 @@ export function getToolsMeta() {
   logger.debug(
     "│ Registry-getToolsMeta",
     "调用函数结束：getToolsMeta",
-    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。当前：只返回 name/description/dangerous 三个声明字段，不返 handler 实现。",
+    "为什么写这条日志：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。当前：只返回 name/description/dangerous 三个声明字段，不返 handler 实现。",
     {
       返回值: { count: meta.length, tools: meta },
       耗时ms: Date.now() - t0,
@@ -159,7 +159,7 @@ export function getToolNames(): ToolName[] {
   logger.debug(
     "│ Registry-getToolNames",
     "调用函数结束：getToolNames",
-    "为什么打：debug 是「细节」等级；本 demo 暂未用到，但保持接口一致便于后续扩展。",
+    "为什么写这条日志：debug 是「细节」等级；本 demo 暂未用到，但保持接口一致便于后续扩展。",
     {
       返回值: { count: names.length, names },
       耗时ms: Date.now() - t0,

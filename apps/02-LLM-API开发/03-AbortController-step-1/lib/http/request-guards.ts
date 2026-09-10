@@ -1,5 +1,5 @@
 /**
- * 职责：三个 SSE 端点进入开流之前的闸门 —— 入参校验、以及「还没开流就失败」时怎么回话。
+ * 职责：三个 SSE 端点进入开流之前的校验 —— 入参校验、以及「还没开流就失败」时怎么回话。
  * 数据流：
  *   ctx.request.body → Zod → { ok:true, message, abortAfterFrames } | { ok:false, reason }
  *   失败 → writeRawJson(res, 400 | 503, { error }) → 普通 JSON（不是 SSE）

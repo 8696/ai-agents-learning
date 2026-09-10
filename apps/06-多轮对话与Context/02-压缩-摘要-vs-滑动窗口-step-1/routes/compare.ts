@@ -4,7 +4,7 @@
  *
  * 数据流：
  *   浏览器 fetch { turnCount, windowSize, keyFactAtTurn }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory() 生成 N 轮假对话：第 K 轮 user 说「自我介绍」含 key fact；最后一轮 user 问「你还记得吗」
  *         → messagesBefore = [system, ...mockHistory]                       ← 完整
  *         → callLlmOnce(messagesBefore + 问句) → beforeReply                 ← 调真模型 #1
@@ -93,7 +93,7 @@ function slidingWindowTrim(
 }
 
 // ── 调一次 LLM（不流式）──
-// 真正出网；五件套打在这里：入参 = 完整 request，返回值 = 完整 completion（§5.3.16 禁止摘要）
+// 真正发网络请求；五条日志打在这里：入参 = 完整 request，返回值 = 完整 completion（§5.3.16 禁止摘要）
 async function callLlmOnce(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   model: string,
@@ -104,7 +104,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-对比补全",
     "调用模型开始：对比补全",
-    `为什么打：这是真出网的那一次，不打完整 messages 就讲不清「滑动窗口丢的 key fact」是不是真的导致模型「忘」。当前：stage=${stage}（${stage === "before" ? "完整历史" : "滑动窗口裁剪后"}）+ 同一问句。`,
+    `为什么写这条日志：这是真正发网络请求的那一次，不写完整 messages 就讲不清「滑动窗口丢的 key fact」是不是真的导致模型「忘」。当前：stage=${stage}（${stage === "before" ? "完整历史" : "滑动窗口裁剪后"}）+ 同一问句。`,
     {
       入参: request,
       tokensEstimate,
@@ -128,7 +128,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-对比补全",
       "调用模型结束：对比补全",
-      `为什么打：要把完整 completion 打到日志，对照 key fact 是否还在。当前：stage=${stage} 已返回。`,
+      `为什么写这条日志：要把完整 completion 写到日志，对照 key fact 是否还在。当前：stage=${stage} 已返回。`,
       {
         返回值: completion,
         stage,
@@ -154,7 +154,7 @@ async function callLlmOnce(
 
 export function mountCompareRoutes(router: Router): void {
   router.post("/api/compare", async (ctx: Context) => {
-    // ── ① 入参闸门：防 malformed body ──
+    // ── ① 入参校验：防 malformed body ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -188,7 +188,7 @@ export function mountCompareRoutes(router: Router): void {
     ];
 
     const tHandler0 = Date.now();
-    logger.info("compare.handler", "调用函数开始：compare", "为什么打：路由是滑动窗口对照实验的唯一入口；不打完整数据流下面就讲不清「滑动窗口到底丢了什么」。当前：假历史已拼好，即将裁剪 + 调两次模型。", {
+    logger.info("compare.handler", "调用函数开始：compare", "为什么写这条日志：路由是滑动窗口对照实验的唯一入口；不写完整数据流下面就讲不清「滑动窗口到底丢了什么」。当前：假历史已拼好，即将裁剪 + 调两次模型。", {
       入参: { turnCount, windowSize, keyFactAtTurn, modelA, messagesBefore },
       字段释义: {
         "turnCount": "生成的假对话轮数（不含系统提示；含 key fact 那一轮）",
@@ -205,14 +205,14 @@ export function mountCompareRoutes(router: Router): void {
       __code: "messagesBefore = [system, ...mockHistory, {role:'user', content:RECALL_QUESTION}];",
     });
 
-    // ── ④ 本地裁剪（不调模型）；真正出网在 callLlmOnce 里 ──
-    logger.info("│ 调用函数-滑动窗口", "调用函数开始：slidingWindowTrim", "为什么打：纯本地裁剪，不调模型；不打完整 messages 就讲不清「裁剪后长什么样」。当前：messagesBefore 已就绪，即将按 K 裁。", {
+    // ── ④ 本地裁剪（不调模型）；真正发网络请求在 callLlmOnce 里 ──
+    logger.info("│ 调用函数-滑动窗口", "调用函数开始：slidingWindowTrim", "为什么写这条日志：纯本地裁剪，不调模型；不写完整 messages 就讲不清「裁剪后长什么样」。当前：messagesBefore 已就绪，即将按 K 裁。", {
       入参: { messages: messagesBefore, windowSize },
       __code: "const messagesAfter = slidingWindowTrim(messagesBefore, windowSize);",
     });
     const tTrim0 = Date.now();
     const messagesAfter = slidingWindowTrim(messagesBefore, windowSize);
-    logger.info("│ 调用函数-滑动窗口", "调用函数结束：slidingWindowTrim", "为什么打：要把裁剪后的完整 messages 打到日志；对照 before 一眼看见丢了哪几条。当前：已返回新数组。", {
+    logger.info("│ 调用函数-滑动窗口", "调用函数结束：slidingWindowTrim", "为什么写这条日志：要把裁剪后的完整 messages 写到日志；对照 before 一眼看见丢了哪几条。当前：已返回新数组。", {
       返回值: messagesAfter,
       dropped: messagesBefore.length - messagesAfter.length,
       keyFactPresent: messagesAfter.some(m => m.content.includes("我叫 Tina")),
@@ -224,7 +224,7 @@ export function mountCompareRoutes(router: Router): void {
       耗时ms: Date.now() - tTrim0,
     });
 
-    // ── ⑤ 调真模型两次：裁剪前 + 裁剪后（五件套在 callLlmOnce 内）──
+    // ── ⑤ 调真模型两次：裁剪前 + 裁剪后（五条日志在 callLlmOnce 内）──
     const results: Array<{ stage: string; reply: string; durationMs: number }> = [];
 
     for (const stage of ["before", "after"] as const) {
@@ -263,7 +263,7 @@ export function mountCompareRoutes(router: Router): void {
       dropped,
     };
 
-    logger.info("compare.handler", "调用函数结束：compare", "为什么打：要把本路由完整出参打到日志；学习者事后翻日志一眼就能验证「before 有 / after 没有」。当前：两次 LLM 都已返回。", {
+    logger.info("compare.handler", "调用函数结束：compare", "为什么写这条日志：要把本路由完整出参写到日志；学习者事后翻日志一眼就能验证「before 有 / after 没有」。当前：两次 LLM 都已返回。", {
       返回值: body,
       字段释义: {
         "messagesBefore / messagesAfter": "裁剪前后完整 messages",

@@ -31,7 +31,7 @@ export interface Logger {
 
 export interface CreateLoggerOptions {
   logDir: string;
-  /** console 输出的最低等级；默认 debug（全打）。文件不受影响（文件 = 全量） */
+  /** console 输出的最低等级；默认 debug（全部输出）。文件不受影响（文件 = 全量） */
   consoleLevel?: LogLevel;
 }
 

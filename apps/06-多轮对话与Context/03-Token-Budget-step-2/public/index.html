@@ -63,7 +63,7 @@
         setErrorKind(null);
         setResult(null);
         inFlightRef.current = true;
-        setStatus({ key: "loading", text: "🔄 请求中（共 3 次出网：1 次摘要 + 2 次问答）" });
+        setStatus({ key: "loading", text: "🔄 请求中（共 3 次真发网络请求：1 次摘要 + 2 次问答）" });
 
         try {
           const resp = await fetch("/api/compare", {
@@ -227,7 +227,7 @@
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
-                <div className="text-xs text-gray-800">「丢字面 vs 留语义」的可观察对照：方法一（直接丢最旧 / trim）会丢字面、模型忘关键事实；方法二（远期摘要 + 近期原文 / summarize）用 1 次额外 LLM 调用把远期浓缩成 1 条 summary 留住语义。代价：summarize 多 1 次出网、摘要本身有损。</div>
+                <div className="text-xs text-gray-800">「丢字面 vs 留语义」的可观察对照：方法一（直接丢最旧 / trim）会丢字面、模型忘关键事实；方法二（远期摘要 + 近期原文 / summarize）用 1 次额外 LLM 调用把远期浓缩成 1 条 summary 留住语义。代价：summarize 多 1 次真发网络请求、摘要本身有损。</div>
                 <div className="text-xs text-gray-600">怎么观察：看「① 两种方法结果对照小结（对比小结）」— 绿色 ✅ = 模型在回答里陈述了关键事实（我叫 Tina / 住上海 / 喜欢吃日料）；红色 ❌ = 忘了 / 用了反例句式（说"未提及"）。一次跑能看到两种策略的差异。</div>
               </div>
             </section>

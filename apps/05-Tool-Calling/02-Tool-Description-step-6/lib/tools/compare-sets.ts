@@ -8,7 +8,7 @@
  *   - schema 已含 step-3 反例 + step-2 别名映射 + step-5 enum —— 验证「综合最优写法跨 Provider 可迁移」
  *   - BASELINE_TOOLS 仅供对照参考（step-6 不使用），保留以复用 CompareSide 类型
  *
- * 不调 LLM、不打日志：纯常量导出。
+ * 不调 LLM、不写日志：纯常量导出。
  */
 import type { ToolSchema } from "../llm/protocol-a.js";
 

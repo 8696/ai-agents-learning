@@ -7,11 +7,11 @@
  *   没 Key → 503（必须在开流之前）
  *   开流 → streamRealToSse → data: chunk… → data: [DONE]
  *
- * 为什么单独成文件：这是本 Demo 唯一会花额度的端点；闸门顺序错了，400/503 会变成一条「成功但空」的流。
+ * 为什么单独成文件：这是本 Demo 唯一会花额度的端点；校验顺序错了，400/503 会变成一条「成功但空」的流。
  *
- * 日志（§5.3.16）：调用函数 五件套（handleReal 封装层）；
- *   闸门挡掉（400 / 503）单独打 info 闸门拒绝——不算调用，不套五件套；
- *   真正出网日志全部在 lib/flow/stream-real.ts。
+ * 日志（§5.3.16）：调用函数 五条日志（handleReal 封装层）；
+ *   校验挡下（400 / 503）单独写 info（校验拒绝）——不算调用，不套五条日志；
+ *   真正发网络请求的日志全部在 lib/flow/stream-real.ts。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -32,8 +32,8 @@ async function handleReal(ctx: Context): Promise<void> {
     if (!parsed.ok) {
       logger.info(
         "api.real",
-        `${ctx.method} /api/real 被入参闸门挡掉`,
-        "为什么打：闸门挡掉没花模型额度也没走到 streamRealToSse；记下 method 便于复盘哪类失败最常见。当前：body 不合法。",
+        `${ctx.method} /api/real 被入参校验挡掉`,
+        "为什么写这条日志：校验挡下没花模型额度也没走到 streamRealToSse；记下 method 便于复盘哪类失败最常见。当前：body 不合法。",
         { method: ctx.method, reason: parsed.reason },
       );
       writeRawJson(ctx.res, 400, { error: `请求体不合法：${parsed.reason}` });
@@ -46,8 +46,8 @@ async function handleReal(ctx: Context): Promise<void> {
   if (!llm) {
     logger.info(
       "api.real",
-      `${ctx.method} /api/real 被无 Key 闸门挡掉`,
-      "为什么打：服务端兜底；页面早就从 /health 看到 hasKey=false 已禁按钮，这里再挡一次防「绕过 UI 直接 curl」。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
+      `${ctx.method} /api/real 被无 Key 校验挡掉`,
+      "为什么写这条日志：服务端兜底；页面早就从 /health 看到 hasKey=false 已禁按钮，这里再挡一次防「绕过 UI 直接 curl」。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
       { method: ctx.method },
     );
     writeRawJson(ctx.res, 503, {
@@ -59,7 +59,7 @@ async function handleReal(ctx: Context): Promise<void> {
   logger.info(
     "api.real",
     "调用函数开始：handleReal",
-    "为什么打：route 只认这一层返回的 stats 形状（frameCount / failed?）；里面 streamRealToSse 是「真活」（看「调用模型开始：对话补全」）。当前：闸门已通过、SSE 头已发出，即将交给 streamRealToSse。",
+    "为什么写这条日志：route 只认这一层返回的 stats 形状（frameCount / failed?）；里面 streamRealToSse 是真正干活的那一层（看「调用模型开始：对话补全」）。当前：校验已通过、SSE 头已发出，即将交给 streamRealToSse。",
     {
       入参: {
         method: ctx.method,
@@ -80,7 +80,7 @@ async function handleReal(ctx: Context): Promise<void> {
     logger.warn(
       "api.real",
       "调用函数结束：handleReal",
-      "为什么打：客户端已收到 SSE error 帧；HTTP 仍 200（流已开），靠帧里的 upstreamStatus / message 排错。当前：streamRealToSse 已返回失败 stats。",
+      "为什么写这条日志：客户端已收到 SSE error 帧；HTTP 仍 200（流已开），靠帧里的 upstreamStatus / message 排错。当前：streamRealToSse 已返回失败 stats。",
       {
         返回值: {
           method: ctx.method,
@@ -96,7 +96,7 @@ async function handleReal(ctx: Context): Promise<void> {
     logger.info(
       "api.real",
       "调用函数结束：handleReal",
-      "为什么打：route 要把 stats 写给客户端（成功路径只打帧数）；耗时是页面 TTFT 对照的另一把尺。当前：streamRealToSse 已返回。",
+      "为什么写这条日志：route 要把 stats 写给客户端（成功路径只打帧数）；耗时是页面 TTFT 对照的另一把尺。当前：streamRealToSse 已返回。",
       {
         返回值: { method: ctx.method, frameCount: stats.frameCount, failed: undefined },
         耗时ms: Date.now() - tHandlerStart,

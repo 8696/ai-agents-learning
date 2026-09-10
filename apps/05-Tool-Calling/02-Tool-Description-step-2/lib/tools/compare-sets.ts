@@ -14,7 +14,7 @@
  *   field 级（参数填什么）。所以这里 Tool 数量缩到 1（query_logistics），去掉 query_order
  *   干扰；user query 也改成「在北京下的订单」—— user 没明确给订单号，故意引诱模型瞎填。
  *
- * 不调 LLM、不打日志：纯常量导出。
+ * 不调 LLM、不写日志：纯常量导出。
  */
 import type { ToolSchema } from "../llm/protocol-a.js";
 
@@ -102,7 +102,7 @@ export type CompareSide = {
   pickedToolName: string | null | undefined;
   /** 模型填的参数 */
   pickedToolArgs: unknown;
-  /** 本次调用耗时（ms），含 LLM 出网 */
+  /** 本次调用耗时（ms），含 LLM 真发网络请求 */
   elapsedMs: number;
 };
 

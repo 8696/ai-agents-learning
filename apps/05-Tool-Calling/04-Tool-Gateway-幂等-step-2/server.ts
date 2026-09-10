@@ -14,7 +14,7 @@
  *   GET  /health              → { ..., callsModel:true, tools:[create_order], orderStats }
  *   POST /api/chat            → { input, items, idempotency_key } → 真调 LLM 协议 B + create_order 幂等
  *
- * 日志（：server.start 由本地 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:05-04-tool-gateway-step-2
  */

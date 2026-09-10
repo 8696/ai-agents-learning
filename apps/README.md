@@ -69,6 +69,7 @@
 | `yarn app:06-03-token-budget-step-2` | `50046` | 模块 06 · 03 · Token Budget step-2：双策略对照 — 方法一「直接丢最旧 / trim」vs 方法二「远期摘要 + 近期原文 / summarize」；同 query 同模型同 history 走两条路径 3 次真发网络请求（1 摘要 + 2 问答）+ KEY_FACT 检测（肯定句式 + 否定标记）；前端 4 卡（对比小结 / 方法一 / 方法二 + summary 原文 / 裁前基线）；覆盖需求 3「滑动窗口 vs 摘要 效果对比」+ 需求 5 |
 | `yarn app:06-03-token-budget-step-3` | `50047` | 模块 06 · 03 · Token Budget step-3：软阈值+硬阈值两层（soft / emergency）· 同 history 走两条路径 — total ≤ hardLimit 走软路径（trim 或 summarize 二选一）；total > hardLimit 走硬路径 = 应急模式（只留 system + history 末轮 + 提示「请用一句话重述」）；覆盖需求 6「50+ 轮长对话不崩」 |
 | `yarn app:06-03-token-budget-step-4` | `50048` | 模块 06 · 03 · Token Budget step-4：选择性注入 — 5 段多话题 history（美食/天气/工作/电影/健身 × 10 轮）+ query 关键词匹配 → 只 top-N 命中段塞进 messages（其他不进）；对照全塞基线；2 次真发网络请求（1 全塞 + 1 选择性）；覆盖需求 4「选择性注入」+ 需求 7「全塞 vs 选择性对比」 |
+| `yarn app:07-01-agent-loop-react-step-1` | `50049` | 模块 07 · 01 · Agent Loop / ReAct step-1：手写 while 跑一整轮 Loop（变体 H 多圈 + D 串行依赖 + J 最终答案）；默认 query 「把逾期购物待办标完成」→ 期望 ≥2 圈（list_todos → complete_todo ×N）→ 最后一圈无 tool_calls → 绿卡最终答案；trajectory 按圈展开 + 完整 messages 可展开；类 A 4xx 空字符串 + 类 B 5xx 演示端点 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

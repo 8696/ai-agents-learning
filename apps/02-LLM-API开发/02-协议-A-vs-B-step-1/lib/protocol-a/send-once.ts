@@ -3,7 +3,7 @@
  * 数据流：DemoCallBody → chat.completions.create(stream:false) → 原样 JSON / ThinkScenario。
  * 本文件禁止 import @anthropic-ai/sdk。
  *
- * 日志（§5.3.16）：调用函数 五件套（sendOnceA / runThinkScenarioA 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（sendOnceA / runThinkScenarioA 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -41,7 +41,7 @@ export async function sendOnceA(
   logger.info(
     "│ 协议A 一次性-sendOnceA",
     "调用函数开始：sendOnceA",
-    "为什么打：runThinkScenarioA 只认这一层返回的 plain；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：即将发一次性请求；system 进 messages[0]、extras 是否带 thinking 是本条对照轴。",
+    "为什么写这条日志：runThinkScenarioA 只认这一层返回的 plain；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：即将发一次性请求；system 进 messages[0]、extras 是否带 thinking 是本条对照轴。",
     {
       入参: { systemLen: (body.system ?? "").length, messageLen: body.message.length, enableThinking },
       __code: `await llm.openai.chat.completions.create(${JSON.stringify(requestPayload, null, 2)})`,
@@ -52,7 +52,7 @@ export async function sendOnceA(
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：本条唯一的协议 A 真出网层；不打就没有 usage / finish_reason。当前：即将发出 stream:false 请求，system 进 messages[0]。",
+    "为什么写这条日志：本条唯一的协议 A 真正发网络请求的那一层；不写就没有 usage / finish_reason。当前：即将发出 stream:false 请求，system 进 messages[0]。",
     {
       入参: {
         model: requestPayload.model,
@@ -69,7 +69,7 @@ export async function sendOnceA(
     logger.info(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全",
-      "为什么打：要拿 choices[0].finish_reason 区分 stop / length / content_filter；usage 是计费的唯一依据。当前：await 已返回。",
+      "为什么写这条日志：要拿 choices[0].finish_reason 区分 stop / length / content_filter；usage 是计费的唯一依据。当前：await 已返回。",
       {
         返回值: {
           id: r.id,
@@ -89,7 +89,7 @@ export async function sendOnceA(
     logger.info(
       "│ 协议A 一次性-sendOnceA",
       "调用函数结束：sendOnceA",
-      "为什么打：summarizeOnceA 要把 plain 转 ThinkScenario；plain 形状丢了就无法对齐对照页。当前：已 plain 化。",
+      "为什么写这条日志：summarizeOnceA 要把 plain 转 ThinkScenario；plain 形状丢了就无法对齐对照页。当前：已 plain 化。",
       {
         返回值: { plainKeys: Object.keys(plain as object).slice(0, 10) },
         耗时ms: Date.now() - tFuncStart,
@@ -100,7 +100,7 @@ export async function sendOnceA(
     logger.error(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create 抛错，runThinkScenarioA 的 catch 会转成 scenarioErrorA。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create 抛错，runThinkScenarioA 的 catch 会转成 scenarioErrorA。",
       {
         返回值: { message: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tModelStart,
@@ -165,7 +165,7 @@ export async function runThinkScenarioA(
   logger.info(
     "│ 单条对照-runThinkScenarioA",
     "调用函数开始：runThinkScenarioA",
-    "为什么打：think-compare 路由要这一层返回 ThinkScenario；里面 sendOnceA 是「真活」。当前：即将发协议 A 一次性调用。",
+    "为什么写这条日志：think-compare 路由要这一层返回 ThinkScenario；里面 sendOnceA 是真正干活的那一层。当前：即将发协议 A 一次性调用。",
     {
       入参: { label, thinkingOn },
       __code: `const plain = await sendOnceA(llm, body, thinkingOn);\nreturn summarizeOnceA(plain, label, thinkingOn);`,
@@ -178,7 +178,7 @@ export async function runThinkScenarioA(
     logger.info(
       "│ 单条对照-runThinkScenarioA",
       "调用函数结束：runThinkScenarioA",
-      "为什么打：think-compare 要把 ThinkScenario 数组写进 ctx.body；打耗时便于和协议 B 对照。当前：summarizeOnceA 已返回。",
+      "为什么写这条日志：think-compare 要把 ThinkScenario 数组写进 ctx.body；写耗时便于和协议 B 对照。当前：summarizeOnceA 已返回。",
       {
         返回值: { scenario: { label: scenario.scenario, protocol: scenario.protocol, error: scenario.error ?? null } },
         耗时ms: Date.now() - tFuncStart,
@@ -195,7 +195,7 @@ export async function runThinkScenarioA(
     logger.error(
       "│ 单条对照-runThinkScenarioA",
       "调用函数结束：runThinkScenarioA（失败）",
-      "为什么打：协议 A 失败也要按 ThinkScenario 形状回收，便于 think-compare 路由并排展示；记 err.message / err 当前：sendOnceA 抛错，已转 scenarioErrorA。",
+      "为什么写这条日志：协议 A 失败也要按 ThinkScenario 形状回收，便于 think-compare 路由并排展示；记 err.message / err 当前：sendOnceA 抛错，已转 scenarioErrorA。",
       {
         返回值: { label, protocol: "A", error: err instanceof Error ? err.message : String(err) },
         耗时ms: Date.now() - tFuncStart,

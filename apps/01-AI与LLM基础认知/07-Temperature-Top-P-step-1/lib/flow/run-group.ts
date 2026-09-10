@@ -4,9 +4,9 @@
  * 为什么单独成文件：这是本 Demo 的最小实验单元。温度扫描、Top-P 扫描、重复稳定性
  *   三个场景的差别只在于「用哪些参数调它几次」，判定口径必须完全一致才有可比性。
  *
- * 日志（§5.3.16）：调用函数 五件套（runGroup 封装层）；
+ * 日志（§5.3.16）：调用函数 五条日志（runGroup 封装层）；
  *   N 次 callOnce 并发属于循环——按 §5.3.16 循环规则，每一圈打「调用循环开始 / 结束」；
- *   子调用 callOnce 内部已自带五件套（scope 多一根 `│`）。
+ *   子调用 callOnce 内部已自带五条日志（scope 多一根 `│`）。
  */
 import type { Llm } from "../../../../llm.js";
 import { logger } from "../logger.js";
@@ -32,7 +32,7 @@ export async function runGroup(input: RunGroupInput): Promise<GroupResult> {
   logger.info(
     "│ 一组-runGroup",
     "调用函数开始：runGroup",
-    "为什么打：本 Demo 的最小实验单元；扫描页 + 重复页都共用这一层；不打就丢了「这一档 N 次跑完的整体判定」。当前：即将并发 N 次 callOnce。",
+    "为什么写这条日志：本 Demo 的最小实验单元；扫描页 + 重复页都共用这一层；不写就丢了「这一档 N 次跑完的整体判定」。当前：即将并发 N 次 callOnce。",
     {
       入参: { label, temperature: params.temperature, topP: params.topP, runs, promptLen: prompt.length },
       __code: `const settled = await Promise.allSettled(Array.from({ length: runs }, (_, i) => callOnce(llm, prompt, params, i + 1)));`,
@@ -48,7 +48,7 @@ export async function runGroup(input: RunGroupInput): Promise<GroupResult> {
       logger.info(
         "││ 调用循环-runGroup",
         `调用循环开始：第 ${round} 轮 / 共 ${runs} 轮`,
-        "为什么打：本组并发跑 N 次（每次打满循环五件套）；事后要从日志把「这一档 N 次里哪几次挂、哪几次正常」数得清。当前：第 N 轮即将 callOnce。",
+        "为什么写这条日志：本组并发跑 N 次（每次写满循环五条日志）；事后要从日志把「这一档 N 次里哪几次挂、哪几次正常」数得清。当前：第 N 轮即将 callOnce。",
         {
           第几轮: round,
           本轮为什么是这些参数: {
@@ -58,12 +58,12 @@ export async function runGroup(input: RunGroupInput): Promise<GroupResult> {
           },
         },
       );
-      // 这里打 wrap-after 让结束日志能拿到结果；callOnce 本身已自带五件套
+      // 这里打 wrap-after 让结束日志能拿到结果；callOnce 本身已自带五条日志
       return callOnce(llm, prompt, params, round).then((result) => {
         logger.info(
           "││ 调用循环-runGroup",
           `调用循环结束：第 ${round} 轮`,
-          "为什么打：每一圈的结果是 judgeRuns 的输入，必须按轮收齐便于事后核对。当前：callOnce 已返回。",
+          "为什么写这条日志：每一圈的结果是 judgeRuns 的输入，必须按轮收齐便于事后核对。当前：callOnce 已返回。",
           {
             第几轮: round,
             本轮结果: { index: result.index, textPreview: result.text.slice(0, 60), error: result.error ?? null },
@@ -91,7 +91,7 @@ export async function runGroup(input: RunGroupInput): Promise<GroupResult> {
   logger.info(
     "│ 一组-runGroup",
     "调用函数结束：runGroup",
-    "为什么打：上层（runRepeat / runLadder）要把 GroupResult 写进 ctx.body 交给页面；不打就丢了 verdict 标签和 distinct 数。当前：判定已完成。",
+    "为什么写这条日志：上层（runRepeat / runLadder）要把 GroupResult 写进 ctx.body 交给页面；不写就丢了 verdict 标签和 distinct 数。当前：判定已完成。",
     {
       返回值: {
         label: group.label,

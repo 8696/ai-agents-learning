@@ -214,18 +214,18 @@
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">本页只演示：<b>Memory 跨会话还记</b>。在下方「记住偏好」写入一条 key/value → 落 SQLite（<code>data/preferences.db</code>）→ 之后每次发送消息，服务端都从 db 读出 → 拼到 system 末尾 → 模型看得到。「清空对话」只清前端 messages，Memory 不动。</p>
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-                <li><b>写偏好</b>：填 key（如 <code>language</code>）+ value（如 <code>zh</code>），点「记住偏好」→ POST /api/memory → SQLite 落盘</li>
+                <li><b>写偏好</b>：填 key（如 <code>language</code>）+ value（如 <code>zh</code>），点「记住偏好」→ POST /api/memory → SQLite 写入磁盘</li>
                 <li><b>看 Memory 注入</b>：下面「已记住的偏好」列表实时刷新；服务端日志 <code>data.fromMemory</code> 能看到本轮从 db 读出的偏好</li>
                 <li><b>验证跨会话</b>：关掉浏览器标签页 → 重新打开 → 再发消息 → 模型仍按偏好回答（如果偏好是「中文」就会用中文）→ 证明 Memory 真生效，不是 Context 在累积</li>
                 <li><b>清掉某条</b>：点偏好列表右边的「删」→ DELETE /api/memory → 下次发送偏好不再注入</li>
                 <li><b>关键对照</b>：「清空对话」清的是 Context（前端 messages 数组），Memory 不动（preferences.db 还在）；「删」清的是 Memory（db 里少一条），Context 不动</li>
-                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参闸门） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
               </ol>
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
                 <div className="text-xs text-gray-800">Memory = 跨会话(跨次请求/跨天/跨用户)持久化的东西,跟 Context 是两件事;本条演示「写入 / 读取注入 / 删除」三个动作 + **变体 1 注入位置 = system 末尾**(把 baseSystem 拼上偏好段作为 system 字段),Memory 体量大时 system 直接爆——是后续第 2/3 条「压缩 / Token Budget」要解决的问题。**「清空对话」只清 Context(messages 数组),Memory 不动(preferences.db 还在)**。</div>
-                <div className="text-xs text-gray-600">怎么观察:① 写偏好 `language=zh` → SQLite 落盘 → 服务端从 db 读出 → 拼到 system 末尾(看 data.fromMemory);② **验证跨会话**:关浏览器标签页 → 重开 → 再发消息,模型仍按偏好回答(中文),证明不是 Context 在累积是 Memory;③ 「清空对话」清的是前端 messages 数组,db 不动;「删」清的是 db 里某条偏好,前端 messages 不动。</div>
+                <div className="text-xs text-gray-600">怎么观察:① 写偏好 `language=zh` → SQLite 写入磁盘 → 服务端从 db 读出 → 拼到 system 末尾(看 data.fromMemory);② **验证跨会话**:关浏览器标签页 → 重开 → 再发消息,模型仍按偏好回答(中文),证明不是 Context 在累积是 Memory;③ 「清空对话」清的是前端 messages 数组,db 不动;「删」清的是 db 里某条偏好,前端 messages 不动。</div>
               </div>
             </section>
 

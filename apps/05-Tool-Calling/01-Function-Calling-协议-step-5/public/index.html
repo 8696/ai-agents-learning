@@ -39,7 +39,7 @@
      * 与 step-4 的区别：step-4 路由层 hard-code A → B 链；step-5 while 循环 + decideNextAction mock。
      *   关键观察：自纠触发 —— query 短 → search_doc 空 hits → 模型扩 query 重试 → 拿到 hits。
      *
-     * 日志：服务端每处可打点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-5/logs/）。
+     * 日志：服务端每处可写日志的点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-5/logs/）。
      */
     const { useState, useEffect } = React;
     const { useEnvInfo, StatusPill, PageIntro, EnvFooter } = window.DemoUI;

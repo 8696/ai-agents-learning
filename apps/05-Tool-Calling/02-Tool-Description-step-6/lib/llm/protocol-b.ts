@@ -10,7 +10,7 @@
  *   - **回灌 tool_result**：用 `role: "user"`, `content: [{ type: "tool_result", tool_use_id, content }]`（不是 `role: "tool"`）
  *   - **响应 content**：数组结构（blocks），不是协议 A 的 `message.content: string | null`
  *
- * 日志（§5.3.16）：调用函数 五件套（callProtocolB 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（callProtocolB 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import { getLlm } from "../../../../llm.js";
 import { logger } from "../logger.js";
@@ -93,7 +93,7 @@ export async function callProtocolB(request: ProtocolBRequest): Promise<Protocol
   logger.info(
     "│ 协议B-callProtocolB",
     "调用函数开始：callProtocolB",
-    "为什么打：route 只认这一层返回的 ProtocolBResponse；里面那次才是出网（看「调用模型开始：协议B-消息创建」）。当前：调 Anthropic 协议 B 发起请求；完整打 request 便于核对 model / messages / tools / max_tokens。",
+    "为什么写这条日志：route 只认这一层返回的 ProtocolBResponse；里面那次才是真发网络请求（看「调用模型开始：协议B-消息创建」）。当前：调 Anthropic 协议 B 发起请求；完整写 request 便于核对 model / messages / tools / max_tokens。",
     {
       入参: { model: request.model, max_tokens: request.max_tokens, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0 },
       __code: `await llm.anthropic.messages.create(${JSON.stringify(request, null, 2)});`,
@@ -104,7 +104,7 @@ export async function callProtocolB(request: ProtocolBRequest): Promise<Protocol
   logger.info(
     "││ 调用模型-协议B 消息创建",
     "调用模型开始：协议B 消息创建",
-    "为什么打：本文件唯一的真出网层；不打就没有 id / content blocks / stop_reason / usage。当前：即将发出 messages.create 请求；max_tokens 是必填字段。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 id / content blocks / stop_reason / usage。当前：即将发出 messages.create 请求；max_tokens 是必填字段。",
     {
       入参: {
         model: request.model,
@@ -121,7 +121,7 @@ export async function callProtocolB(request: ProtocolBRequest): Promise<Protocol
     logger.info(
       "││ 调用模型-协议B 消息创建",
       "调用模型结束：协议B 消息创建",
-      "为什么打：要拿 stop_reason 决定下一步动作（end_turn / max_tokens / tool_use）；usage 是计费依据。当前：await 已返回。",
+      "为什么写这条日志：要拿 stop_reason 决定下一步动作（end_turn / max_tokens / tool_use）；usage 是计费依据。当前：await 已返回。",
       {
         返回值: {
           id: response.id,
@@ -142,7 +142,7 @@ export async function callProtocolB(request: ProtocolBRequest): Promise<Protocol
     logger.info(
       "│ 协议B-callProtocolB",
       "调用函数结束：callProtocolB",
-      "为什么打：route 要把 ProtocolBResponse 写进 ctx.body 交给页面 stats 区；记 id / stopReason 便于核对。",
+      "为什么写这条日志：route 要把 ProtocolBResponse 写进 ctx.body 交给页面 stats 区；记 id / stopReason 便于核对。",
       {
         返回值: { id: response.id, model: response.model, stopReason: response.stop_reason },
         耗时ms: Date.now() - tFuncStart,
@@ -153,7 +153,7 @@ export async function callProtocolB(request: ProtocolBRequest): Promise<Protocol
     logger.error(
       "││ 调用模型-协议B 消息创建",
       "调用模型结束：协议B 消息创建（失败）",
-      "为什么打：拿到 status 才能区分 401/403（Key）、429（限流）、5xx、400（max_tokens 漏填）。当前：create 抛错。",
+      "为什么写这条日志：拿到 status 才能区分 401/403（Key）、429（限流）、5xx、400（max_tokens 漏填）。当前：create 抛错。",
       {
         返回值: { message: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tModelStart,

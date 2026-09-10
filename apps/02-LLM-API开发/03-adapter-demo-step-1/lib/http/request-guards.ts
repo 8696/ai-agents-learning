@@ -1,5 +1,5 @@
 /**
- * 职责：入参闸门 —— 有没有 Key、body 能不能翻成 SendMessageOptions。
+ * 职责：入参校验 —— 有没有 Key、body 能不能翻成 SendMessageOptions。
  * 数据流：koa ctx → 通过则返回 opts；不通过时已写 status/body，返回 null。
  */
 import type { Context } from "koa";

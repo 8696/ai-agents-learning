@@ -5,8 +5,8 @@
  *   flow 层只管「跑几次、怎么判定」，换协议或换 SDK 时也只需要改这一个文件。
  *
  * 日志（§5.3.16）：callOnce 是整个 Demo 唯一的 LLM 触点；
- *   调用函数 五件套（callOnce 封装层），调用模型 五件套（出网层，含 __code + 字段释义）；
- *   单次失败不上抛——catch 里打 error + （失败）说明本组其余跑次不受影响。
+ *   调用函数 五条日志（callOnce 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）；
+ *   单次失败不上抛——catch 里写 error + （失败）说明本组其余跑次不受影响。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -49,7 +49,7 @@ export async function callOnce(
   logger.info(
     "│ 单次采样-callOnce",
     "调用函数开始：callOnce",
-    "为什么打：runGroup 里 N 次跑都共用这一层；不记 index / temperature / top_p，事后无法归因「哪一档参数产生了哪种说法」。当前：第 N 次采样即将发出请求。",
+    "为什么写这条日志：runGroup 里 N 次跑都共用这一层；不记 index / temperature / top_p，事后无法归因「哪一档参数产生了哪种说法」。当前：第 N 次采样即将发出请求。",
     {
       入参: { run: index, temperature: params.temperature, topP: params.topP, promptLen: prompt.length },
       __code: `const completion = await llm.openai.chat.completions.create(requestShape);`,
@@ -60,7 +60,7 @@ export async function callOnce(
   logger.info(
     "││ 调用模型-对话补全",
     "调用模型开始：对话补全",
-    "为什么打：本 Demo 唯一的真出网层；不打就没有 choices[0].finish_reason / usage 字段。当前：第 N 次采样即将发出 stream:false 请求；temperature / top_p 已落到请求体。",
+    "为什么写这条日志：本 Demo 唯一真正发网络请求的那一层；不写就没有 choices[0].finish_reason / usage 字段。当前：第 N 次采样即将发出 stream:false 请求；temperature / top_p 已落到请求体。",
     {
       入参: {
         run: index,
@@ -80,7 +80,7 @@ export async function callOnce(
     logger.info(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全",
-      "为什么打：要拿到 choices[0].finish_reason 区分 stop / length / content_filter，便于判断输出是不是被 max_tokens 截断。当前：await 已返回。",
+      "为什么写这条日志：要拿到 choices[0].finish_reason 区分 stop / length / content_filter，便于判断输出是不是被 max_tokens 截断。当前：await 已返回。",
       {
         返回值: {
           run: index,
@@ -110,7 +110,7 @@ export async function callOnce(
     logger.info(
       "│ 单次采样-callOnce",
       "调用函数结束：callOnce",
-      "为什么打：runGroup 要把 SingleRun 收齐才能去重判稳；这里打返回形状便于核对「一条 = { index, text, durationMs }」。当前：剥思考标记 + 回退已完成。",
+      "为什么写这条日志：runGroup 要把 SingleRun 收齐才能去重判稳；这里打返回形状便于核对「一条 = { index, text, durationMs }」。当前：剥思考标记 + 回退已完成。",
       {
         返回值: { index: run.index, textPreview: run.text.slice(0, 60), durationMs: run.durationMs },
         耗时ms: Date.now() - tFuncStart,
@@ -122,7 +122,7 @@ export async function callOnce(
     logger.error(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create 抛错；callOnce 不上抛所以本组其余跑次不受影响。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create 抛错；callOnce 不上抛所以本组其余跑次不受影响。",
       {
         返回值: {
           run: index,
@@ -138,7 +138,7 @@ export async function callOnce(
     logger.error(
       "│ 单次采样-callOnce",
       "调用函数结束：callOnce（失败）",
-      "为什么打：runGroup 要按 SingleRun 形状回收——失败也要走同一条形状（带 error 字段）。当前：模型抛错，构造 SingleRun{index, text:'', durationMs, error}。",
+      "为什么写这条日志：runGroup 要按 SingleRun 形状回收——失败也要走同一条形状（带 error 字段）。当前：模型抛错，构造 SingleRun{index, text:'', durationMs, error}。",
       {
         返回值: { index, text: "", durationMs: Math.round(performance.now() - startedAt), error: message },
         耗时ms: Date.now() - tFuncStart,

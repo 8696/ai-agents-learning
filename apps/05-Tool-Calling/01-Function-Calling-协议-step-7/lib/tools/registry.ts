@@ -6,8 +6,8 @@
  *   - classifyQuery：根据 query 关键词判定走哪条路径（路径 A 仅 weather / 路径 B weather+硬接 suggest / 路径 C 直接打包被拒→退回）
  *   - decideHybridAction：模拟真实 LLM 在 while 循环里的决策，看 query 路径 + lastResult 决定下一步
  *
- * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
- *   gatewayCheck / getToolsMeta / classifyQuery / decideHybridAction / checkChainConstraint / shouldHardcodeSuggestItems 是工具档——五件套（含 __code）仍要。
+ * 日志（§5.3.16）：executeTool 是主路径——函数体逐步写满五条日志（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / classifyQuery / decideHybridAction / checkChainConstraint / shouldHardcodeSuggestItems 是普通函数——五条日志（含 __code）仍要。
  */
 import { getWeatherTool } from "./hybrid-get-weather.js";
 import { suggestItemsTool } from "./hybrid-suggest-items.js";
@@ -33,7 +33,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck",
-      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      "为什么写这条日志：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -47,7 +47,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck（dangerous）",
-      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      "为什么写这条日志：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -59,7 +59,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   logger.debug(
     "│ 网关-gatewayCheck",
     "调用函数结束：gatewayCheck",
-    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；gateway 放行是高频路径。",
     {
       返回值: { allowed: true },
       name,
@@ -79,7 +79,7 @@ export async function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数开始：executeTool",
-    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。",
+    "为什么写这条日志：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。",
     {
       入参: { toolCallId, name, rawArgs: args },
       __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nreturn { ok: true, ..., result: tool.handler(parsed.data) };`,
@@ -91,7 +91,7 @@ export async function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（gateway 拒绝）",
-      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      "为什么写这条日志：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
         reason: gate.reason,
@@ -108,7 +108,7 @@ export async function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Zod 校验失败）",
-      "为什么打：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
+      "为什么写这条日志：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
         issues: JSON.parse(JSON.stringify(issues)),
@@ -129,7 +129,7 @@ export async function executeTool(
     logger.info(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool",
-      "为什么打：工具实际跑通；只打 result 摘要。",
+      "为什么写这条日志：工具实际跑通；只写 result 摘要。",
       {
         返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
         耗时ms: Date.now() - tFuncStart,
@@ -140,7 +140,7 @@ export async function executeTool(
     logger.error(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（失败）",
-      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      "为什么写这条日志：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
         耗时ms: Date.now() - tFuncStart,
@@ -172,7 +172,7 @@ export function getToolsMeta() {
   logger.debug(
     "│ Registry-getToolsMeta",
     "调用函数结束：getToolsMeta",
-    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
     {
       返回值: { count: meta.length, tools: meta },
       耗时ms: Date.now() - t0,
@@ -194,7 +194,7 @@ export function classifyQuery(originalQuery: string): HybridPath {
   logger.info(
     "│ 分类-classifyQuery",
     "调用函数结束：classifyQuery",
-    "为什么打：route 要把路径写进 ctx.body 交给页面 stats 区；前端页会显示对应徽标。",
+    "为什么写这条日志：route 要把路径写进 ctx.body 交给页面 stats 区；前端页会显示对应徽标。",
     {
       返回值: { path, hasUmbrella, hasWeather },
       originalQuery,
@@ -223,7 +223,7 @@ export function decideHybridAction(
   logger.info(
     "│ mock 决策-decideHybridAction",
     "调用函数开始：decideHybridAction",
-    "为什么打：route 只认这一层返回的 HybridDecision；每轮路由层调用它决定下一步。",
+    "为什么写这条日志：route 只认这一层返回的 HybridDecision；每轮路由层调用它决定下一步。",
     {
       入参: { round, path, weatherCalled, suggestItemsCalled, hasLastResult: Boolean(lastResult) },
       __code: `// path+round+state → HybridDecision`,
@@ -312,7 +312,7 @@ export function decideHybridAction(
   logger.info(
     "│ mock 决策-decideHybridAction",
     "调用函数结束：decideHybridAction",
-    "为什么打：route 要把 HybridDecision 用于推进循环；记 decision.kind + tool 便于核对。",
+    "为什么写这条日志：route 要把 HybridDecision 用于推进循环；记 decision.kind + tool 便于核对。",
     {
       返回值: { decision: { kind: decision.kind, tool: decision.kind === "tool_call" ? decision.tool : undefined, arguments: decision.kind === "tool_call" ? decision.arguments : undefined } },
       耗时ms: Date.now() - t0,
@@ -333,7 +333,7 @@ export function checkChainConstraint(
     logger.warn(
     "│ 约束-checkChainConstraint",
     "调用函数结束：checkChainConstraint",
-    "为什么打：路由层硬约束违反：先 weather 后 suggest_items；让模型看到 error 强制回到 weather。warn 是「业务失败但能走通」的等级。",
+    "为什么写这条日志：路由层硬约束违反：先 weather 后 suggest_items；让模型看到 error 强制回到 weather。warn 是「业务失败但能走通」的等级。",
     {
       返回值: { allowed: false, reason },
       decisionTool,
@@ -346,7 +346,7 @@ export function checkChainConstraint(
   logger.debug(
     "│ 约束-checkChainConstraint",
     "调用函数结束：checkChainConstraint",
-    "为什么打：debug 是「细节」等级；约束命中 ok 时不打 info 免刷屏。",
+    "为什么写这条日志：debug 是「细节」等级；约束命中 ok 时不写 info 免刷屏。",
     {
       返回值: { allowed: true },
       decisionTool,
@@ -368,7 +368,7 @@ export function shouldHardcodeSuggestItems(
   logger.debug(
     "│ 硬接-shouldHardcodeSuggestItems",
     "调用函数结束：shouldHardcodeSuggestItems",
-    "为什么打：debug 是「细节」等级；判定当前是否触发路径 B 硬接。",
+    "为什么写这条日志：debug 是「细节」等级；判定当前是否触发路径 B 硬接。",
     {
       返回值: { shouldHardcode: result },
       path,

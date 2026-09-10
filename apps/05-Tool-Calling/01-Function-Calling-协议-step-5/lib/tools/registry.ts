@@ -11,8 +11,8 @@
  *   - 自纠：search_doc 返空 hits → 模型换 query → 重试 → 拿到 hits → 调 summarize
  *   - MAX_ROUNDS 边界：超 8 轮未收敛 → 业务降级（返 structured error）
  *
- * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
- *   gatewayCheck / getToolsMeta / decideNextAction 是工具档——五件套（含 __code）仍要。
+ * 日志（§5.3.16）：executeTool 是主路径——函数体逐步写满五条日志（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / decideNextAction 是普通函数——五条日志（含 __code）仍要。
  */
 import { searchDocTool } from "./chain-search-doc.js";
 import { summarizeTool } from "./chain-summarize.js";
@@ -38,7 +38,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck",
-      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      "为什么写这条日志：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -52,7 +52,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck（dangerous）",
-      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      "为什么写这条日志：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -64,7 +64,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   logger.debug(
     "│ 网关-gatewayCheck",
     "调用函数结束：gatewayCheck",
-    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；gateway 放行是高频路径。",
     {
       返回值: { allowed: true },
       name,
@@ -84,7 +84,7 @@ export async function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数开始：executeTool",
-    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：handler 是 async → 路由层自己决定 await 还是 Promise.all。",
+    "为什么写这条日志：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：handler 是 async → 路由层自己决定 await 还是 Promise.all。",
     {
       入参: { toolCallId, name, rawArgs: args },
       __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nconst result = await tool.handler(parsed.data);`,
@@ -97,7 +97,7 @@ export async function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（gateway 拒绝）",
-      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      "为什么写这条日志：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
         reason: gate.reason,
@@ -115,7 +115,7 @@ export async function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Zod 校验失败）",
-      "为什么打：工具名合法但参数 schema 不匹配。",
+      "为什么写这条日志：工具名合法但参数 schema 不匹配。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
         issues: JSON.parse(JSON.stringify(issues)),
@@ -137,7 +137,7 @@ export async function executeTool(
     logger.info(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool",
-      "为什么打：工具实际跑通；只打 result 摘要。",
+      "为什么写这条日志：工具实际跑通；只写 result 摘要。",
       {
         返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
         耗时ms: Date.now() - tFuncStart,
@@ -148,7 +148,7 @@ export async function executeTool(
     logger.error(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（失败）",
-      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      "为什么写这条日志：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
         耗时ms: Date.now() - tFuncStart,
@@ -180,7 +180,7 @@ export function getToolsMeta() {
   logger.debug(
     "│ Registry-getToolsMeta",
     "调用函数结束：getToolsMeta",
-    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
     {
       返回值: { count: meta.length, tools: meta },
       耗时ms: Date.now() - t0,
@@ -215,7 +215,7 @@ export function decideNextAction(
   logger.info(
     "│ mock 决策-decideNextAction",
     "调用函数开始：decideNextAction",
-    "为什么打：route 只认这一层返回的 Decision；每轮路由层调用它决定下一步。当前：mock 模型在 while 循环里看上一轮 tool_result 决定下一步。",
+    "为什么写这条日志：route 只认这一层返回的 Decision；每轮路由层调用它决定下一步。当前：mock 模型在 while 循环里看上一轮 tool_result 决定下一步。",
     {
       入参: { round, originalQuery, hasLastResult: Boolean(lastResult) },
       __code: `if (round === 1) return { kind: "tool_call", tool: "search_doc", arguments: { query: originalQuery } };\n// ... 看 lastResult 决定下一步`,
@@ -233,7 +233,7 @@ export function decideNextAction(
     logger.info(
       "│ mock 决策-decideNextAction",
       "调用函数结束：decideNextAction",
-      "为什么打：Round 1 模型第一步：search_doc(originalQuery)。",
+      "为什么写这条日志：Round 1 模型第一步：search_doc(originalQuery)。",
       {
         返回值: { decision: { kind: decision.kind, tool: decision.kind === "tool_call" ? decision.tool : undefined, arguments: decision.kind === "tool_call" ? decision.arguments : undefined } },
         耗时ms: Date.now() - t0,
@@ -252,7 +252,7 @@ export function decideNextAction(
     logger.info(
       "│ mock 决策-decideNextAction",
       "调用函数结束：decideNextAction",
-      "为什么打：模型看到 ok:false / error → 决定不再调，返 error 当 final。",
+      "为什么写这条日志：模型看到 ok:false / error → 决定不再调，返 error 当 final。",
       {
         返回值: { decision: { kind: "final", contentPreview: decision.content.slice(0, 50) } },
         耗时ms: Date.now() - t0,
@@ -277,7 +277,7 @@ export function decideNextAction(
       logger.info(
         "│ mock 决策-decideNextAction",
         "调用函数结束：decideNextAction",
-        "为什么打：模型看到 tool_result.hits=[] → 决定扩 query 重试 search_doc（自纠触发）。",
+        "为什么写这条日志：模型看到 tool_result.hits=[] → 决定扩 query 重试 search_doc（自纠触发）。",
         {
           返回值: { decision: { kind: "tool_call", tool: "search_doc", arguments: decision.arguments }, fromQuery: originalQuery, toQuery: broadened },
           耗时ms: Date.now() - t0,
@@ -298,7 +298,7 @@ export function decideNextAction(
     logger.info(
       "│ mock 决策-decideNextAction",
       "调用函数结束：decideNextAction",
-      "为什么打：模型看到 tool_result.hits 非空 → 决定调 summarize。",
+      "为什么写这条日志：模型看到 tool_result.hits 非空 → 决定调 summarize。",
       {
         返回值: { decision: { kind: "tool_call", tool: "summarize", arguments: { content: "(hits)", style: "tech" } }, hitCount: hits.length },
         耗时ms: Date.now() - t0,
@@ -316,7 +316,7 @@ export function decideNextAction(
   logger.info(
     "│ mock 决策-decideNextAction",
     "调用函数结束：decideNextAction",
-    "为什么打：模型拿到 summary → 决定不再调，返 final。",
+    "为什么写这条日志：模型拿到 summary → 决定不再调，返 final。",
     {
       返回值: { decision: { kind: "final", contentPreview: decision.content.slice(0, 50) } },
       耗时ms: Date.now() - t0,

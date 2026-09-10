@@ -1,8 +1,8 @@
 /**
- * 职责：协议 A 单次补全封装（真正出网在本函数内部的 chat.completions.create）。
+ * 职责：协议 A 单次补全封装（真正发网络请求在本函数内部的 chat.completions.create）。
  * 数据流：messages + tools + tool_choice → OpenAI SDK → 规范化后的 ChoiceRunResult。
  *
- * 日志（§5.3.16）：调用函数 五件套（callWithToolChoice 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（callWithToolChoice 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import type { ChatCompletionMessageParam, ChatCompletionToolChoiceOption } from "openai/resources/chat/completions";
 import type { Llm } from "../../../../llm.js";
@@ -54,7 +54,7 @@ export async function callWithToolChoice(args: {
   logger.info(
     "│ 工具选择-callWithToolChoice",
     "调用函数开始：callWithToolChoice",
-    "为什么打：route 只认这一层返回的 ChoiceRunResult；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：页面选了一档 tool_choice，这里封装一次协议 A 调用；组装 messages/tools/tool_choice。",
+    "为什么写这条日志：route 只认这一层返回的 ChoiceRunResult；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：页面选了一档 tool_choice，这里封装一次协议 A 调用；组装 messages/tools/tool_choice。",
     {
       入参: { query, toolChoice, model: llm.modelA, toolNames: TOOLS.map((t) => (t.type === "function" ? t.function.name : "?")) },
       __code: "await llm.openai.chat.completions.create({ model, messages, tools, tool_choice })",
@@ -65,7 +65,7 @@ export async function callWithToolChoice(args: {
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：本文件唯一的真出网层；不打就没有 finishReason / tool_calls / usage。当前：这是真正出网的那一次；本条教学点是看 tool_choice 如何改变是否出现 tool_calls。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 finishReason / tool_calls / usage。当前：这是真正发网络请求的那一次；本条教学点是看 tool_choice 如何改变是否出现 tool_calls。",
     {
       入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice },
       __code: "const resp = await llm.openai.chat.completions.create(request);",
@@ -79,7 +79,7 @@ export async function callWithToolChoice(args: {
     logger.error(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 500。当前：create 抛错，route 的 catch 会处理。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 500。当前：create 抛错，route 的 catch 会处理。",
       {
         返回值: { message: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tModelStart,
@@ -89,7 +89,7 @@ export async function callWithToolChoice(args: {
     logger.error(
       "│ 工具选择-callWithToolChoice",
       "调用函数结束：callWithToolChoice（失败）",
-      "为什么打：外层封装失败收口；记 err 便于 route 的 catch 区分 400/502。",
+      "为什么写这条日志：外层封装失败收口；记 err 便于 route 的 catch 区分 400/502。",
       {
         返回值: { ok: false, error: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tFuncStart,
@@ -119,7 +119,7 @@ export async function callWithToolChoice(args: {
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型结束：协议A 对话补全",
-    "为什么打：要拿 choices[0].finish_reason + tool_calls 决定下一步；usage 是计费依据。本条教学点——记 hasToolCalls 给 route 区分 required / none。",
+    "为什么写这条日志：要拿 choices[0].finish_reason + tool_calls 决定下一步；usage 是计费依据。本条教学点——记 hasToolCalls 给 route 区分 required / none。",
     {
       返回值: {
         finishReason: result.finishReason,
@@ -138,7 +138,7 @@ export async function callWithToolChoice(args: {
   logger.info(
     "│ 工具选择-callWithToolChoice",
     "调用函数结束：callWithToolChoice",
-    "为什么打：封装收口，把教学字段交给 route。当前：已规范化 tool_calls。",
+    "为什么写这条日志：封装收口，把教学字段交给 route。当前：已规范化 tool_calls。",
     {
       返回值: { toolChoiceSent: result.toolChoiceSent, hasToolCalls: result.hasToolCalls, elapsedMs: result.elapsedMs },
       耗时ms: Date.now() - tFuncStart,

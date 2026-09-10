@@ -16,7 +16,7 @@
  *   GET  /health        → { ok, port, provider, model, hasKey, callsModel:true }
  *   POST /api/compare   → 两次真调 LLM，返回两侧 tool_call + verdict
  *
- * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:05-02-description-step-1
  */

@@ -8,7 +8,7 @@
  *   - dangerous: true 仅作 Registry 闸标记；**真正拦截在 handler 内的 Gateway 三钩子**（教学点：Registry ≠ Gateway）。
  *   - 失败也写 audit：让排查「为什么这次没执行」有依据（actor / args_hash / decision / reason_code 全留痕）。
  *
- * 日志（§5.3.16）：每条审计行 + Gateway 三钩子各打一次（五件套含 __code）。
+ * 日志（§5.3.16）：每条审计行 + Gateway 三钩子各写一次（五条日志含 __code）。
  */
 import { z } from "zod";
 import { checkAuth, checkQuota, checkDanger, type DeleteUserCall } from "../gateway/hooks.js";

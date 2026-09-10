@@ -3,8 +3,8 @@
  * 数据流：无 body → sendViaA / sendViaB → judgeCase3（承认不知道 / 瞎猜）。
  * 分叉只在本文件。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostCase3 封装层）；
- *   Key 缺失单独打 info 闸门拒绝；子调用 sendViaA / sendViaB 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostCase3 封装层）；
+ *   Key 缺失单独写 info（校验拒绝）；子调用 sendViaA / sendViaB 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -24,8 +24,8 @@ export function mountCase3Routes(router: Router): void {
     if (!client) {
       logger.info(
         "api.case3-no-history",
-        "POST /api/case3-no-history 被无 Key 闸门挡掉",
-        "为什么打：服务端兜底；没 Key 就别让上游 SDK 抛一句读不懂的错。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
+        "POST /api/case3-no-history 被无 Key 校验挡掉",
+        "为什么写这条日志：服务端兜底；没 Key 就别让上游 SDK 抛一句读不懂的错。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
         { endpoint: "POST /api/case3-no-history" },
       );
       return;
@@ -33,7 +33,7 @@ export function mountCase3Routes(router: Router): void {
     logger.info(
       "api.case3-no-history",
       "调用函数开始：handlePostCase3",
-      "为什么打：route 只认这一层返回的 CaseResponse；里面 A/B handler 是「真活」。当前：Case 3（2 轮 user / user，故意漏塞中间层 assistant）即将并发跑 A / B。",
+      "为什么写这条日志：route 只认这一层返回的 CaseResponse；里面 A/B handler 是真正干活的那一层。当前：Case 3（2 轮 user / user，故意漏塞中间层 assistant）即将并发跑 A / B。",
       {
         入参: {
           caseName: CASE_NO_HISTORY.caseName,
@@ -54,7 +54,7 @@ export function mountCase3Routes(router: Router): void {
       logger.info(
         "api.case3-no-history",
         "调用函数结束：handlePostCase3",
-        "为什么打：route 要把 CaseResponse 写进 ctx.body；记两边结果状态便于核对「A 承认不知道 vs B 瞎猜」。当前：allSettled 已返回。",
+        "为什么写这条日志：route 要把 CaseResponse 写进 ctx.body；记两边结果状态便于核对「A 承认不知道 vs B 瞎猜」。当前：allSettled 已返回。",
         {
           返回值: {
             caseName: CASE_NO_HISTORY.caseName,
@@ -68,7 +68,7 @@ export function mountCase3Routes(router: Router): void {
       logger.error(
         "api.case3-no-history",
         "调用函数结束：handlePostCase3（失败）",
-        "为什么打：Case 3 整条 handler 抛异常（不是 A/B 单边失败 —— 那是 Promise.allSettled 兜住的）；写 500 给前端，记 error 排错。当前：allSettled 之外的代码抛错。",
+        "为什么写这条日志：Case 3 整条 handler 抛异常（不是 A/B 单边失败 —— 那是 Promise.allSettled 兜住的）；写 500 给前端，记 error 排错。当前：allSettled 之外的代码抛错。",
         {
           返回值: { error: err instanceof Error ? err.message : String(err) },
           耗时ms: Date.now() - tHandlerStart,

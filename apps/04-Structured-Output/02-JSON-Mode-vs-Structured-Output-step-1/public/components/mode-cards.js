@@ -1,5 +1,5 @@
 /**
- * 职责：输出区卡片 —— 一次闸门调用的 raw / parsed / analysis 徽标。
+ * 职责：输出区卡片 —— 一次调用的 raw / parsed / analysis 徽标。
  *
  * 颜色按 §5.3.10：
  *   用户 prompt 灰底；模型 raw 绿底（终态字符串）；协议事件（Zod / fence / extraKeys）用徽标。

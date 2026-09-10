@@ -3,8 +3,8 @@
  * 数据流：messages.stream → on("text") → content_block_delta → message_stop → [DONE]。
  * 本文件禁止 import openai。给 curl /api/b 用；页面看完整事件走 send-stream-raw。
  *
- * 日志（§5.3.16）：调用函数 五件套（streamOnceBText 封装层），调用模型 五件套（出网层）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 text delta 打 debug。
+ * 日志（§5.3.16）：调用函数 五条日志（streamOnceBText 封装层），调用模型 五条日志（真正发网络请求的那一层）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 text delta 写 debug。
  */
 import { performance } from "node:perf_hooks";
 import type { ServerResponse } from "node:http";
@@ -22,7 +22,7 @@ export async function streamOnceBText(
   logger.info(
     "│ 协议B 流式-text",
     "调用函数开始：streamOnceBText",
-    "为什么打：route 只认这一层把 B 文本增量写到 res；里面那次才是出网（看「调用模型开始：协议B-消息流」）。当前：即将发 stream，无 thinking。",
+    "为什么写这条日志：route 只认这一层把 B 文本增量写到 res；里面那次才是真发网络请求（看「调用模型开始：协议B-消息流」）。当前：即将发 stream，无 thinking。",
     {
       入参: { systemLen: (body.system ?? "").length, messageLen: body.message.length },
       __code: `const stream = llm.anthropic.messages.stream({ ... });\nstream.on("text", textDelta => { ... });\nawait stream.finalMessage();`,
@@ -33,7 +33,7 @@ export async function streamOnceBText(
   logger.info(
     "││ 调用模型-协议B 消息流",
     "调用模型开始：协议B 消息流",
-    "为什么打：本文件唯一的真出网层；不打就没有 textFrameCount / usage / stop_reason。当前：即将发出 messages.stream，system 在顶层、不开 thinking。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 textFrameCount / usage / stop_reason。当前：即将发出 messages.stream，system 在顶层、不开 thinking。",
     {
       入参: {
         model: llm.modelB,
@@ -77,11 +77,11 @@ export async function streamOnceBText(
   });
 
   const finalMessage = await stream.finalMessage();
-  // 流式规则（§5.3.16）：只在收尾打一次完整返回值。
+  // 流式规则（§5.3.16）：只在收尾写一次完整返回值。
   logger.info(
     "││ 调用模型-协议B 消息流",
     "调用模型结束：协议B 消息流",
-    "为什么打：流式场景只在收尾打一次完整返回值（stop_reason / usage / 累计文本长度），便于和 A 的 usage 字段对照（input/output tokens 位置差异）。当前：finalMessage 已返回。",
+    "为什么写这条日志：流式场景只在收尾写一次完整返回值（stop_reason / usage / 累计文本长度），便于和 A 的 usage 字段对照（input/output tokens 位置差异）。当前：finalMessage 已返回。",
     {
       返回值: {
         textFrameCount,
@@ -100,7 +100,7 @@ export async function streamOnceBText(
   logger.info(
     "│ 协议B 流式-text",
     "调用函数结束：streamOnceBText",
-    "为什么打：route 已经把 message_stop + [DONE] 写出，连接关闭；打耗时便于和 A 流式对照。当前：stream 已消费完。",
+    "为什么写这条日志：route 已经把 message_stop + [DONE] 写出，连接关闭；写耗时便于和 A 流式对照。当前：stream 已消费完。",
     {
       返回值: { textFrameCount, accumulatedLength: accumulatedText.length },
       耗时ms: Date.now() - tFuncStart,

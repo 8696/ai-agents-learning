@@ -94,7 +94,7 @@
             {explain.notes ? <li className="text-gray-600">{explain.notes}</li> : null}
           </ul>
         ) : (
-          <p className="text-sm text-gray-500">发出请求后，这里会写开启方式和返回位置。</p>
+          <p className="text-sm text-gray-500">发出请求后，这里会显示开启方式和返回位置。</p>
         )}
         <JsonBlock title="这次请求里真正打开 / 关闭思考的字段" value={side.switchSnippet} />
         {side.skipped ? null : (

@@ -1,10 +1,10 @@
 /**
  * 职责：POST /api/billing-compare —— 连跑两次固定 preset，产出并排的两张账单 + 结论。
- * 数据流：无 body → 闸门（只查 Key）→ compareInputVsOutput → { cases, verdict }。
+ * 数据流：无 body → 校验（只查 Key）→ compareInputVsOutput → { cases, verdict }。
  * 本页教学点在 public/pages/compare.html：同样的 Token 总量，落在输出侧更贵。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostBillingCompare 封装层）；
- *   Key 缺失单独打 info 闸门拒绝；失败用 error + （失败）；
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostBillingCompare 封装层）；
+ *   Key 缺失单独写 info（校验拒绝）；失败用 error + （失败）；
  *   真正循环日志全部在 lib/flow/compare-input-output.ts。
  */
 import type { Context } from "koa";
@@ -22,8 +22,8 @@ export function mountBillingCompareRoutes(router: Router): void {
     if (!client) {
       logger.info(
         "api.billing-compare",
-        "POST /api/billing-compare 被无 Key 闸门挡掉",
-        "为什么打：闸门挡掉没花模型额度也没走到「调用模型」，但客户端要知道「为什么 503」。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
+        "POST /api/billing-compare 被无 Key 校验挡掉",
+        "为什么写这条日志：校验挡下没花模型额度也没走到「调用模型」，但客户端要知道「为什么 503」。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
         { endpoint: "POST /api/billing-compare" },
       );
       return;
@@ -33,7 +33,7 @@ export function mountBillingCompareRoutes(router: Router): void {
     logger.info(
       "api.billing-compare",
       "调用函数开始：handlePostBillingCompare",
-      "为什么打：route 只认这一层返回的 CompareResult；里面那个 for 循环是出网调用的循环（看「调用循环开始：compareInputVsOutput」）。当前：即将交给 compareInputVsOutput。",
+      "为什么写这条日志：route 只认这一层返回的 CompareResult；里面那个 for 循环是真发网络请求调用的循环（看「调用循环开始：compareInputVsOutput」）。当前：即将交给 compareInputVsOutput。",
       {
         入参: {
           llmProvider: client.provider,
@@ -50,7 +50,7 @@ export function mountBillingCompareRoutes(router: Router): void {
       logger.info(
         "api.billing-compare",
         "调用函数结束：handlePostBillingCompare",
-        "为什么打：route 要把 CompareResult（cases + verdict）写进 ctx.body 交给页面。当前：两次调用都跑完，verdict 已算。",
+        "为什么写这条日志：route 要把 CompareResult（cases + verdict）写进 ctx.body 交给页面。当前：两次调用都跑完，verdict 已算。",
         {
           返回值: {
             casesCount: result.cases.length,
@@ -64,7 +64,7 @@ export function mountBillingCompareRoutes(router: Router): void {
       logger.error(
         "api.billing-compare",
         "调用函数结束：handlePostBillingCompare（失败）",
-        "为什么打：第二次失败时前面那次的钱已经花掉了，错误里要说明「可能只跑成了一次」。当前：compareInputVsOutput 在第 N 轮抛错（cases 可能不完整），交给 writeMeasurementError 写统一错误响应。",
+        "为什么写这条日志：第二次失败时前面那次的钱已经花掉了，错误里要说明「可能只跑成了一次」。当前：compareInputVsOutput 在第 N 轮抛错（cases 可能不完整），交给 writeMeasurementError 写统一错误响应。",
         {
           返回值: {
             mode: "compare",

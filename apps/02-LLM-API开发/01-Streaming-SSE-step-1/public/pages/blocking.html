@@ -30,7 +30,7 @@
       "点「对照跑一次」→ 同时打 GET /api/stream 和 GET /api/blocking",
       "流式：第一帧立刻上屏，TTFT 很小；后面每 200ms 补字，总耗时约 2.2s",
       "一次性：服务端攒齐同样 2.2s 才返回整句，所以 TTFT = 总耗时",
-      "也可以只打一次性：绿卡片会空白等 2.2s 再一次出现整句",
+      "也可以只请求一次：绿卡片会空白等 2.2s 再一次出现整句",
     ];
 
     window.DemoUtils.waitDemoUI(
@@ -184,7 +184,7 @@
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runCompare}>对照跑一次</button>
-                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runBlockingOnly}>只打一次性</button>
+                    <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runBlockingOnly}>只请求一次</button>
                     <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={run400}>故意 400</button>
                     <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={busy} onClick={runNetwork}>模拟网络失败</button>
                   </div>

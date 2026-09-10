@@ -9,11 +9,11 @@
  *   上游失败 → writer.frame({ error, upstreamStatus }) → writer.done()
  *
  * 为什么单独成文件：
- *   routes/real.ts 只该做「闸门 + 开流」；把 for await 抄进 route，教学点会被 HTTP 细节淹没。
+ *   routes/real.ts 只该做「校验 + 开流」；把 for await 抄进 route，教学点会被 HTTP 细节淹没。
  *   这里完全不碰 koa 的 ctx。
  *
- * 日志（§5.3.16）：调用函数 五件套（streamRealToSse 封装层），调用模型 五件套（出网层，含 __code + 字段释义）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 chunk 不套五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（streamRealToSse 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 chunk 不套五条日志。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -27,7 +27,7 @@ export const DEFAULT_REAL_PROMPT = "用一句话介绍你自己，30 字以内�
 /**
  * 原样转发上游流。
  * ① SDK 返回的 chunk 是 zod 类实例，直接 JSON.stringify 会丢字段，必须先 plain 化
- * ② 控制台打完整 chunk：让终端窗口和浏览器看到同一份协议原文
+ * ② 控制台写完整 chunk：让终端窗口和浏览器看到同一份协议原文
  * ③ 浏览器已断开就停：继续拉上游只是白烧 Token
  */
 export async function streamRealToSse(params: {
@@ -45,7 +45,7 @@ export async function streamRealToSse(params: {
   logger.info(
     "│ 真实流式-streamRealToSse",
     "调用函数开始：streamRealToSse",
-    "为什么打：route 只认这一层返回的 { frameCount, failed? }；里面那次才是出网（看「调用模型开始：对话补全」）。当前：即将拼请求体并发出流式 create。",
+    "为什么写这条日志：route 只认这一层返回的 { frameCount, failed? }；里面那次才是真发网络请求（看「调用模型开始：对话补全」）。当前：即将拼请求体并发出流式 create。",
     {
       入参: { provider: llm.provider, model: llm.modelA, baseURL: llm.baseUrlA, promptLen: prompt.length },
       __code: `const stream = await llm.openai.chat.completions.create(requestPayload);`,
@@ -63,7 +63,7 @@ export async function streamRealToSse(params: {
   logger.info(
     "││ 调用模型-对话补全",
     "调用模型开始：对话补全",
-    "为什么打：真正出网的那一次；不打就没有 frameCount / usage。当前：在 streamRealToSse 里即将发出 stream:true 请求。",
+    "为什么写这条日志：真正发网络请求的那一次；不写就没有 frameCount / usage。当前：在 streamRealToSse 里即将发出 stream:true 请求。",
     {
       入参: {
         provider: llm.provider,
@@ -92,7 +92,7 @@ export async function streamRealToSse(params: {
       console.log(
         `[${(performance.now() / 1000).toFixed(2)}s] /api/real 真实 chunk #${frameIdx}: ${JSON.stringify(plain)}`,
       );
-      // 流式规则（§5.3.16）：中间 chunk 不套五件套——最多 debug 一句；这里打 info 是教学档要逐帧可见
+      // 流式规则（§5.3.16）：中间 chunk 不套五条日志——最多 debug 一句；这里写 info 是教学档要逐帧可见
       logger.info(
         "││ 调用模型-对话补全",
         `← 真实 chunk #${frameIdx}（流式逐帧）`,
@@ -105,11 +105,11 @@ export async function streamRealToSse(params: {
       writer.writeRaw(JSON.stringify(plain));
     }
 
-    // 流式规则（§5.3.16）：只在收尾打一次完整返回值（和最终给页面的那份一致）。
+    // 流式规则（§5.3.16）：只在收尾写一次完整返回值（和最终给页面的那份一致）。
     logger.info(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全",
-      "为什么打：流式场景只在收尾打一次完整返回值，便于核对 final usage / frameCount。当前：for await 已退出，下一步 writer.done()。",
+      "为什么写这条日志：流式场景只在收尾写一次完整返回值，便于核对 final usage / frameCount。当前：for await 已退出，下一步 writer.done()。",
       {
         返回值: {
           frameCount: frameIdx,
@@ -140,7 +140,7 @@ export async function streamRealToSse(params: {
     logger.info(
       "│ 真实流式-streamRealToSse",
       "调用函数结束：streamRealToSse",
-      "为什么打：route 要把 stats 写给客户端（成功路径只打帧数）；耗时是页面 TTFT 对照的另一把尺。当前：stream 已消费完，writer 已 done。",
+      "为什么写这条日志：route 要把 stats 写给客户端（成功路径只打帧数）；耗时是页面 TTFT 对照的另一把尺。当前：stream 已消费完，writer 已 done。",
       {
         返回值: { frameCount: result.frameCount, failed: undefined },
         耗时ms: Date.now() - tFuncStart,
@@ -156,7 +156,7 @@ export async function streamRealToSse(params: {
     logger.error(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create 抛错，SSE 头已发完只能以错误帧回页面。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create 抛错，SSE 头已发完只能以错误帧回页面。",
       {
         返回值: failed,
         耗时ms: Date.now() - tModelStart,
@@ -166,7 +166,7 @@ export async function streamRealToSse(params: {
     logger.error(
       "│ 真实流式-streamRealToSse",
       "调用函数结束：streamRealToSse（失败）",
-      "为什么打：route 要把 failed stats 交给客户端，靠 error 帧里的 upstreamStatus 排错。当前：writer 已写 error 帧 + done。",
+      "为什么写这条日志：route 要把 failed stats 交给客户端，靠 error 帧里的 upstreamStatus 排错。当前：writer 已写 error 帧 + done。",
       {
         返回值: { frameCount: 0, failed },
         耗时ms: Date.now() - tFuncStart,

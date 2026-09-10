@@ -1,6 +1,6 @@
 /**
  * 职责：POST /api/a —— 协议 A 流式（openai chunk 原样 SSE，给 curl 用）。
- * 数据流：闸门 → streamOnceARawChunks → data: {choices...} → [DONE]。
+ * 数据流：校验 → streamOnceARawChunks → data: {choices...} → [DONE]。
  * 本文件只调 protocol-a，禁止 import protocol-b。
  */
 import type { Context } from "koa";

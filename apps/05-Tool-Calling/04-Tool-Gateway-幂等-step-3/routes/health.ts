@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 → → { ok, port, provider, model, hasKey, callsModel, tools, oauthUsers }；
- *   页面加载时打一次，用来填页脚 #env-info + Tools 面板。
+ *   页面加载时写一次，用来填页脚 #env-info + Tools 面板。
  *
  * step-3 真调 LLM（协议 B）：callsModel: true。
  */

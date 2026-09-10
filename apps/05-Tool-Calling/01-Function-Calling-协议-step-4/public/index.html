@@ -36,7 +36,7 @@
      * 与 step-3 的区别：step-3 走 Promise.all 并发 3 个独立 Tool；本步是 await chain 串 2 个依赖 Tool。
      *   B 需要 A 的输出当参数 → 串行；不能 Promise.all（否则 B 的 content 是 undefined）。
      *
-     * 日志：服务端每处可打点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-4/logs/）。
+     * 日志：服务端每处可写日志的点都写文件（apps/05-Tool-Calling/01-Function-Calling-协议-step-4/logs/）。
      */
     const { useState, useEffect } = React;
     const { useEnvInfo, StatusPill, PageIntro, EnvFooter } = window.DemoUI;

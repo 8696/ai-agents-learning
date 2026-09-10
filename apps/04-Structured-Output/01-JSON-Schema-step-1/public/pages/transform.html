@@ -30,7 +30,7 @@
       "默认 { query: 咖啡 }，点「跑 transform」→ POST /api/transform { raw }",
       "服务端先走 Intent 校验（补 default），再加 repaired / when",
       "缺 query 的对象会 400（transform 前的校验没过）",
-      "空 raw 同样 400，错误文案要能看出是闸门而不是 Zod",
+      "空 raw 同样 400，错误文案要能看出是校验而不是 Zod",
     ];
 
     window.DemoUtils.waitDemoUI(

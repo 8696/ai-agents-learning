@@ -3,7 +3,7 @@
  *
  * 数据流：
  *   无 body → runtime-ctx 的 llm / PORT → { ok, port, provider, model, hasKey }
- *   → 每个页面加载时都会打一次，填页脚 #env-info（§5.3.9）
+ *   → 每个页面加载时都会写一次，填页脚 #env-info（§5.3.9）
  *
  * 为什么单独成文件：它是唯一「不碰模型、也不推 SSE」的端点，写法（ctx.body）和流式路由完全不同。
  */

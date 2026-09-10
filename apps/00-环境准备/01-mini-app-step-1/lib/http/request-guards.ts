@@ -1,5 +1,5 @@
 /**
- * 职责：POST /api/chat 进入 SSE 之前的两道闸门 —— 入参校验、以及「还没开流就失败」时怎么回话。
+ * 职责：POST /api/chat 进入 SSE 之前的两道校验 —— 入参校验、以及「还没开流就失败」时怎么回话。
  *
  * 数据流：
  *   ctx.request.body → Zod → { ok: true, message } | { ok: false, reason }

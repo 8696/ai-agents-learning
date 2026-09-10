@@ -1,5 +1,5 @@
 /**
- * 职责：POST /api/stream 的入参闸门（Zod + 最后一轮必须是 user + 该家有 Key）。
+ * 职责：POST /api/stream 的入参校验（Zod + 最后一轮必须是 user + 该家有 Key）。
  * 数据流：ctx.request.body → StreamBody；失败则已写 status/body，返回 null。
  * 为什么：route 只做分叉，校验口径必须两家共用，否则 A 过、B 不过会让对照失真。
  */

@@ -2,8 +2,8 @@
  * 职责：POST /api/switch —— 产品开关 → tool_choice → 单次补全。
  * 数据流：body Zod → resolveSwitch → callWithMappedChoice → 协议判定。
  *
- * 日志（§5.3.16）：调用函数 五件套（handleSwitch 封装层）；
- *   闸门挡掉（400/503）单独打 warn；thinking × required/object 边界单独打 warn；上游异常 502 单独打 error。
+ * 日志（§5.3.16）：调用函数 五条日志（handleSwitch 封装层）；
+ *   校验挡下（400/503）单独写 warn；thinking × required/object 边界单独写 warn；上游异常 502 单独写 error。
  */
 import type Router from "@koa/router";
 import type { Context, Next } from "koa";
@@ -27,7 +27,7 @@ export function mountSwitchRoutes(router: Router): void {
     logger.info(
       "api.switch",
       "调用函数开始：handleSwitch",
-      "为什么打：route 只认这一层返回的结果包；里面 callWithMappedChoice 是「真活」。当前：用户点了设置页开关，要映射成 tool_choice 再调模型。",
+      "为什么写这条日志：route 只认这一层返回的结果包；里面 callWithMappedChoice 是真正干活的那一层。当前：用户点了设置页开关，要映射成 tool_choice 再调模型。",
       {
         入参: { body: ctx.request.body, bodyKeys: Object.keys((ctx.request.body ?? {}) as object) },
         __code: "BodySchema.safeParse + resolveSwitch",
@@ -40,8 +40,8 @@ export function mountSwitchRoutes(router: Router): void {
       ctx.body = { ok: false, error: "入参不合法", detail: parsed.error.flatten() };
       logger.warn(
         "api.switch",
-        "调用函数结束：handleSwitch（闸门拒绝）",
-        "为什么打：400 入参错误；未出网。",
+        "调用函数结束：handleSwitch（校验拒绝）",
+        "为什么写这条日志：400 入参错误；未真发网络请求。",
         {
           返回值: { httpStatus: 400, error: "入参不合法" },
           耗时ms: Date.now() - t0,
@@ -60,8 +60,8 @@ export function mountSwitchRoutes(router: Router): void {
       };
       logger.warn(
         "api.switch",
-        "调用函数结束：handleSwitch（闸门拒绝）",
-        "为什么打：503 缺 Key。",
+        "调用函数结束：handleSwitch（校验拒绝）",
+        "为什么写这条日志：503 缺 Key。",
         {
           返回值: { httpStatus: 503, error: "未配置 LLM Key" },
           耗时ms: Date.now() - t0,
@@ -140,7 +140,7 @@ export function mountSwitchRoutes(router: Router): void {
       logger.info(
         "api.switch",
         "调用函数结束：handleSwitch",
-        "为什么打：开关映射跑完，前端按开关 id 常驻槽位。",
+        "为什么写这条日志：开关映射跑完，前端按开关 id 常驻槽位。",
         {
           返回值: { switchId: sw.id, httpStatus: 200, hasToolCalls: result.hasToolCalls, protocolOk },
           耗时ms: Date.now() - t0,
@@ -172,7 +172,7 @@ export function mountSwitchRoutes(router: Router): void {
         logger.warn(
           "api.switch",
           "调用函数结束：handleSwitch（失败）",
-          "为什么打：产品开关撞上 thinking 边界。",
+          "为什么写这条日志：产品开关撞上 thinking 边界。",
           {
             返回值: { httpStatus: 400, code: "thinking_x_forced_choice" },
             耗时ms: Date.now() - t0,
@@ -186,7 +186,7 @@ export function mountSwitchRoutes(router: Router): void {
       logger.error(
         "api.switch",
         "调用函数结束：handleSwitch（失败）",
-        "为什么打：502 上游失败。",
+        "为什么写这条日志：502 上游失败。",
         {
           返回值: { httpStatus: 502, error: message },
           耗时ms: Date.now() - t0,

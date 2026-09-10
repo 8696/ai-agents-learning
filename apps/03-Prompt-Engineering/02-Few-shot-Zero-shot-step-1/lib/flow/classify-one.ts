@@ -1,10 +1,10 @@
 /**
- * 职责：用某一种 shot 模式打一次协议 A，再把原文交给 judge 判格式。
+ * 职责：用某一种 shot 模式写一次协议 A，再把原文交给 judge 判格式。
  * 数据流：{ llm, mode, text } → chat.completions.create → judgeFormat → ClassifyRow。
  * ① 拼 messages 时 Zero 绝不能带教案、Few 必须带 4 对假对话，顺序不能换。
  * ② temperature 固定 0：本条比的是「有没有样例」，不是采样随机性。
  *
- * 日志（§5.3.16）：调用函数 五件套（classifyOne 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（classifyOne 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import type { Llm } from "../../../../llm.js";
 import type OpenAI from "openai";
@@ -59,7 +59,7 @@ export async function classifyOne(input: {
   logger.info(
     "│ 单条分类-classifyOne",
     "调用函数开始：classifyOne",
-    "为什么打：classifyModes 只认这一层返回的 ClassifyRow；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：即将按 mode 拼 messages；Zero 不带教案 / Few 带 4 对假对话。",
+    "为什么写这条日志：classifyModes 只认这一层返回的 ClassifyRow；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：即将按 mode 拼 messages；Zero 不带教案 / Few 带 4 对假对话。",
     {
       入参: { mode: input.mode, textPreview: input.text.slice(0, 50), textLen: input.text.length, fewShotCount, messagesCount: messages.length },
       __code: `const request = { model: llm.modelA, temperature: 0, max_tokens: 200, messages };\nconst completion = await llm.openai.chat.completions.create(request);`,
@@ -77,7 +77,7 @@ export async function classifyOne(input: {
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：本文件唯一的真出网层；不打就没有 choices[0].message.content / usage。当前：即将发出请求；mode 决定是否拼 few-shot 教案；temperature=0 排除采样随机性只比「有没有样例」。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 choices[0].message.content / usage。当前：即将发出请求；mode 决定是否拼 few-shot 教案；temperature=0 排除采样随机性只比「有没有样例」。",
     {
       入参: {
         model: request.model,
@@ -97,7 +97,7 @@ export async function classifyOne(input: {
     logger.info(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全",
-      "为什么打：要拿 choices[0].message.content / usage（计费依据），下游还要过 judgeFormat 判格式。当前：await 已返回。",
+      "为什么写这条日志：要拿 choices[0].message.content / usage（计费依据），下游还要过 judgeFormat 判格式。当前：await 已返回。",
       {
         返回值: {
           id: completion.id,
@@ -117,7 +117,7 @@ export async function classifyOne(input: {
     logger.info(
       "│ 单条分类-classifyOne",
       "调用函数结束：classifyOne",
-      "为什么打：classifyModes 要把 ClassifyRow 收齐后并排对照；打 judge 结果便于事后核对「Zero vs Few 谁更 valid」。当前：judgeFormat 已返回。",
+      "为什么写这条日志：classifyModes 要把 ClassifyRow 收齐后并排对照；打 judge 结果便于事后核对「Zero vs Few 谁更 valid」。当前：judgeFormat 已返回。",
       {
         返回值: {
           mode: input.mode,
@@ -140,7 +140,7 @@ export async function classifyOne(input: {
     logger.error(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全（失败）",
-      "为什么打：拿到 mappedStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 502。当前：create 抛错，classifyModes 的 allSettled 会兜住。",
+      "为什么写这条日志：拿到 mappedStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 502。当前：create 抛错，classifyModes 的 allSettled 会兜住。",
       {
         返回值: { mappedStatus: mapped.status, message: mapped.message },
         耗时ms: Date.now() - tModelStart,
@@ -150,7 +150,7 @@ export async function classifyOne(input: {
     logger.error(
       "│ 单条分类-classifyOne",
       "调用函数结束：classifyOne（失败）",
-      "为什么打：失败也要按 ClassifyRow 形状回收，便于 classifyModes 并排展示。当前：模型抛错，已转 { ok:false, status, error }。",
+      "为什么写这条日志：失败也要按 ClassifyRow 形状回收，便于 classifyModes 并排展示。当前：模型抛错，已转 { ok:false, status, error }。",
       {
         返回值: { mode: input.mode, ok: false, status: mapped.status, error: mapped.message },
         耗时ms: Date.now() - tFuncStart,

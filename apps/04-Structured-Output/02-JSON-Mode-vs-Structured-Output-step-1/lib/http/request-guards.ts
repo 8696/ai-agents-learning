@@ -1,7 +1,7 @@
 /**
- * 职责：业务路由共用的入参闸门（有 Key？prompt 非空？）。
+ * 职责：业务路由共用的入参校验（有 Key？prompt 非空？）。
  * 数据流：ctx → 通过则返回值；失败则已写好 status/body，返回 null，route 直接 return。
- * 为什么单独成文件：json-mode 与 structured-output 的闸门必须同一口径，
+ * 为什么单独成文件：json-mode 与 structured-output 的校验必须同一口径，
  *   否则「空 prompt」一个端点 400、另一个端点把空字符串发给模型，对照就失真。
  */
 import type { Context } from "koa";

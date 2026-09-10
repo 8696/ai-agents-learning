@@ -58,7 +58,7 @@
                   steps={INTRO_STEPS}
                   takeaway={{
                     point: "SSE = 给 chunked 流规定的最简单文本协议壳(`Content-Type: text/event-stream` + 一帧 `field: value\\n\\n` + 结束帧 `data: [DONE]\\n\\n`);**流式不替你 parse**——浏览器拿到的还是 SSE 文本,业务要按 `\\n\\n` 切帧 + 去 `data: ` 前缀 + 先判断 `[DONE]`(它不是 JSON)。流式 vs 一次性的核心差在 TTFT(首 token 时间):流式第一口 ~200ms,一次性要等模型攒齐整段才能给。",
-                    observe: "怎么观察:① /api/stream(本地模拟)→ 每 200ms 一帧,首帧立即到;② /api/blocking(本地模拟)→ 攒齐 2.2s 才整段给,前 2.2s 用户啥也看不见;③ /api/real(真模型)→ 看 SSE 帧原文——`data: {\"choices\":[{\"delta\":{\"content\":\"你\"}}]}\\n\\n` 形式,业务按帧解析后累加到 textarea;④ 空 prompt → 400,没 Key → 503,证明闸门在前。",
+                    observe: "怎么观察:① /api/stream(本地模拟)→ 每 200ms 一帧,首帧立即到;② /api/blocking(本地模拟)→ 攒齐 2.2s 才整段给,前 2.2s 用户啥也看不见;③ /api/real(真模型)→ 看 SSE 帧原文——`data: {\"choices\":[{\"delta\":{\"content\":\"你\"}}]}\\n\\n` 形式,业务按帧解析后累加到 textarea;④ 空 prompt → 400,没 Key → 503,证明校验在前。",
                   }}
                   extra={
                     <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded text-xs text-gray-700">
@@ -85,7 +85,7 @@ token / frame / content 三层不要混
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
                   <PageNav />
                   <p className="text-sm text-gray-600">
-                    总览页不发起模型请求，也不打模拟流。选一个场景进去跑。页脚的 Key 状态来自 GET /health。
+                    总览页不发起模型请求，也不跑模拟流。选一个场景进去跑。页脚的 Key 状态来自 GET /health。
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <a href="/pages/simulated.html" className="border border-gray-300 hover:border-blue-500 rounded p-3 text-left">

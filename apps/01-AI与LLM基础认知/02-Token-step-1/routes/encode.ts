@@ -1,10 +1,10 @@
 /**
  * 职责：两个 encode 端点 —— 自定义一段 / 固定中英对照。
- * 数据流：闸门 → encodeText → ctx.body。全程本地，不调 LLM。
+ * 数据流：校验 → encodeText → ctx.body。全程本地，不调 LLM。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostEncode / handlePostCompare 封装层）；
- *   闸门挡掉（Zod 失败 / 空串）已在 lib/http/request-guards.ts 写 warn；
- *   本文件只补 entry / exit 的 info 横幅 + 子调用五件套在 lib/tokenize/encode-text.ts。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostEncode / handlePostCompare 封装层）；
+ *   校验挡下（Zod 失败 / 空串）已在 lib/http/request-guards.ts 写 warn；
+ *   本文件只补 entry / exit 的 info 横幅 + 子调用五条日志在 lib/tokenize/encode-text.ts。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -19,7 +19,7 @@ export function mountEncodeRoutes(router: Router): void {
     logger.info(
       "api.encode",
       "调用函数开始：handlePostEncode",
-      "为什么打：route 只认这一层返回的 EncodeResult；里面那次才是「Token 化」的真活（看「调用函数开始：encodeText」）。当前：POST /api/encode 收到请求，即将跑 readEncodeBody → encodeText。",
+      "为什么写这条日志：route 只认这一层返回的 EncodeResult；里面那次才是「Token 化」真正干活的部分（看「调用函数开始：encodeText」）。当前：POST /api/encode 收到请求，即将跑 readEncodeBody → encodeText。",
       {
         入参: {
           textLen: (ctx.request.body as { text?: string } | undefined)?.text?.length ?? 0,
@@ -33,7 +33,7 @@ export function mountEncodeRoutes(router: Router): void {
       logger.info(
         "api.encode",
         "调用函数结束：handlePostEncode",
-        "为什么打：闸门已回 400，route 不用再算 EncodeResult。当前：readEncodeBody 已返回 null（闸门在内部写过 warn），route 直接 return。",
+        "为什么写这条日志：校验已回 400，route 不用再算 EncodeResult。当前：readEncodeBody 已返回 null（校验在内部写过 warn），route 直接 return。",
         {
           返回值: { httpStatus: 400, encodeResult: null },
           耗时ms: Date.now() - tHandlerStart,
@@ -47,7 +47,7 @@ export function mountEncodeRoutes(router: Router): void {
     logger.info(
       "api.encode",
       "调用函数结束：handlePostEncode",
-      "为什么打：route 要把 EncodeResult 写进 ctx.body 交给页面 stats 区，和 encodeText 的结束 log 互为对照。当前：EncodeResult 已落 ctx.body。",
+      "为什么写这条日志：route 要把 EncodeResult 写进 ctx.body 交给页面 stats 区，和 encodeText 的结束 log 互为对照。当前：EncodeResult 已落 ctx.body。",
       {
         返回值: {
           charCount: result.charCount,
@@ -66,7 +66,7 @@ export function mountEncodeRoutes(router: Router): void {
     logger.info(
       "api.compare",
       "调用函数开始：handlePostCompare",
-      "为什么打：route 只认这一层返回的对照结构；里面那两次 encodeText 是「Token 化」的真活（看「调用函数开始：encodeText」）。当前：POST /api/compare 收到请求，样本来自 presets（不在请求体里）。",
+      "为什么写这条日志：route 只认这一层返回的对照结构；里面那两次 encodeText 是「Token 化」真正干活的部分（看「调用函数开始：encodeText」）。当前：POST /api/compare 收到请求，样本来自 presets（不在请求体里）。",
       {
         入参: {
           englishLen: ENGLISH.length,
@@ -89,7 +89,7 @@ export function mountEncodeRoutes(router: Router): void {
     logger.info(
       "api.compare",
       "调用函数结束：handlePostCompare",
-      "为什么打：route 要把对照结果（en/zh/takeaway）写进 ctx.body 交给页面。当前：两次 encodeText 都已返回，delta 已算。",
+      "为什么写这条日志：route 要把对照结果（en/zh/takeaway）写进 ctx.body 交给页面。当前：两次 encodeText 都已返回，delta 已算。",
       {
         返回值: {
           en_tokens: english.tokenCount,

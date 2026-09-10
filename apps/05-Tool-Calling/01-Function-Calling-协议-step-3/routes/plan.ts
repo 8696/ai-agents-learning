@@ -17,8 +17,8 @@
  *
  * 教学锚点（覆盖 MD 需求 1）：模型一次返回 3 个 tool_call → Promise.all 并发 → 时序图 3 个 bar 同时起步。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostPlan 封装层）；
- *   闸门挡掉单独打 warn；子调用 executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostPlan 封装层）；
+ *   校验挡下单独写 warn；子调用 executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -50,7 +50,7 @@ export function mountPlanRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数开始：handleGetTools",
-      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      "为什么写这条日志：route 只认这一层返回的 { tools }；里面 getToolsMeta 是真正干活的那一层。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
       {
         入参: { endpoint: "GET /api/tools" },
         __code: `ctx.body = { tools: getToolsMeta() };`,
@@ -60,7 +60,7 @@ export function mountPlanRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数结束：handleGetTools",
-      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
+      "为什么写这条日志：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
       {
         返回值: { count: meta.length },
         耗时ms: Date.now() - tHandlerStart,
@@ -77,19 +77,19 @@ export function mountPlanRoutes(router: Router): void {
     logger.info(
       "api.plan",
       "调用函数开始：handlePostPlan",
-      "为什么打：route 只认这一层返回的响应包；里面 planToolCalls + executeTool 是「真活」。当前：前端发来单跑请求；记 scenario + mode 决定走 Promise.all 还是 for await。",
+      "为什么写这条日志：route 只认这一层返回的响应包；里面 planToolCalls + executeTool 是真正干活的那一层。当前：前端发来单跑请求；记 scenario + mode 决定走 Promise.all 还是 for await。",
       {
         入参: { scenario, mode, bodyKeys: Object.keys(body) },
         __code: `const calls = planToolCalls(scenario);\n// mode==parallel: Promise.all; mode==serial: for await`,
       },
     );
 
-    // §5.3.12 入参闸门：scenario/mode 非法 → 400（不抛异常）
+    // §5.3.12 入参校验：scenario/mode 非法 → 400（不抛异常）
     if (scenario !== "tokyo-may-7days") {
       logger.warn(
         "api.plan",
-        "调用函数结束：handlePostPlan（闸门拒绝）",
-        "为什么打：scenario 必须是 tokyo-may-7days；其它都按 400 处理。warn 是「业务失败但能走通」的等级。",
+        "调用函数结束：handlePostPlan（校验拒绝）",
+        "为什么写这条日志：scenario 必须是 tokyo-may-7days；其它都按 400 处理。warn 是「业务失败但能走通」的等级。",
         {
           返回值: { httpStatus: 400, error: "scenario 必须是 tokyo-may-7days" },
           耗时ms: Date.now() - tHandlerStart,
@@ -102,8 +102,8 @@ export function mountPlanRoutes(router: Router): void {
     if (mode !== "parallel" && mode !== "serial") {
       logger.warn(
         "api.plan",
-        "调用函数结束：handlePostPlan（闸门拒绝）",
-        "为什么打：mode 必须是 parallel | serial；其它都按 400 处理。",
+        "调用函数结束：handlePostPlan（校验拒绝）",
+        "为什么写这条日志：mode 必须是 parallel | serial；其它都按 400 处理。",
         {
           返回值: { httpStatus: 400, error: "mode 必须是 parallel | serial" },
           耗时ms: Date.now() - tHandlerStart,
@@ -129,7 +129,7 @@ export function mountPlanRoutes(router: Router): void {
       logger.info(
         "││ dispatch-plan",
         "调用循环开始：并行 dispatch（Promise.all）",
-        "为什么打：Promise.all 让 3 个 handler 真的同时跑；3 个 sleep 同时倒数；gantt 时序图能看到 3 个 bar 的 startMs 几乎相同。",
+        "为什么写这条日志：Promise.all 让 3 个 handler 真的同时跑；3 个 sleep 同时倒数；gantt 时序图能看到 3 个 bar 的 startMs 几乎相同。",
         {
           第几轮: 1,
           总轮数: 1,
@@ -163,7 +163,7 @@ export function mountPlanRoutes(router: Router): void {
       logger.info(
         "││ dispatch-plan",
         "调用循环开始：串行 dispatch（for await）",
-        "为什么打：串行 dispatch；上一个 handler 完成才跑下一个；总耗时 = sum。",
+        "为什么写这条日志：串行 dispatch；上一个 handler 完成才跑下一个；总耗时 = sum。",
         {
           第几轮: 1,
           总轮数: 1,
@@ -195,7 +195,7 @@ export function mountPlanRoutes(router: Router): void {
     logger.info(
       "││ dispatch-plan",
       "调用循环结束：dispatch 收尾",
-      "为什么打：整批 tool_call 跑完；记 totalMs 便于和 gantt 视觉对账。",
+      "为什么写这条日志：整批 tool_call 跑完；记 totalMs 便于和 gantt 视觉对账。",
       {
         第几轮: 1,
         本轮结果: { mode, totalMs, okCount: results.filter((r) => r.ok).length },
@@ -214,7 +214,7 @@ export function mountPlanRoutes(router: Router): void {
     logger.info(
       "api.plan",
       "调用函数结束：handlePostPlan",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 mockReply 便于前端展示 + 编造检测。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；含 mockReply 便于前端展示 + 编造检测。",
       {
         返回值: { status: 200, resultsCount: results.length, timelineCount: timeline.length, mode, mockReply },
         耗时ms: Date.now() - tHandlerStart,

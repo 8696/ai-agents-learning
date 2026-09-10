@@ -31,7 +31,7 @@ const router = new Router();
 
 // ── 中间件顺序（§5.3.5 实测踩坑，三行不能换位置）──
 // bodyParser 必须在 router 之前：否则 route 里 ctx.request.body 是 undefined，
-// 入参闸门会把每个请求都判成 400。
+// 入参校验会把每个请求都判成 400。
 app.use(bodyParser());
 
 // 每个 mountXxx 只往 router 上挂自己那一组端点，彼此不知道对方存在

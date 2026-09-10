@@ -5,9 +5,9 @@
  *   共用 runLadder 才能保证「两页看到的判定口径、耗时统计完全一致」；
  *   同层的两个入口函数放同一文件，比拆成两个各十行的文件更好读。
  *
- * 日志（§5.3.16）：调用函数 五件套（runLadder / runTemperatureSweep / runTopPSweep 封装层）；
+ * 日志（§5.3.16）：调用函数 五条日志（runLadder / runTemperatureSweep / runTopPSweep 封装层）；
  *   三档并发跑属于外层循环——按 §5.3.16 循环规则，每一圈打「调用循环开始 / 结束」；
- *   子调用 runGroup 内部已自带五件套（scope 多一根 `│`）。
+ *   子调用 runGroup 内部已自带五条日志（scope 多一根 `│`）。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -36,7 +36,7 @@ export async function runTemperatureSweep(input: SweepInput): Promise<SweepRespo
   logger.info(
     "│ 扫描-runTemperatureSweep",
     "调用函数开始：runTemperatureSweep",
-    "为什么打：route 只认这一层返回的 SweepResponse；里面 runLadder 是「真活」。当前：扫温度即将开始；Top-P 固定为 1（不过滤候选）。",
+    "为什么写这条日志：route 只认这一层返回的 SweepResponse；里面 runLadder 是真正干活的那一层。当前：扫温度即将开始；Top-P 固定为 1（不过滤候选）。",
     {
       入参: { ...input, fixedTopP: FIXED_TOP_P, ladderLen: TEMPERATURE_LADDER.length },
       __code: `return runLadder({ ...input, axis: "temperature", ladder: TEMPERATURE_LADDER, fixedValue: FIXED_TOP_P });`,
@@ -51,7 +51,7 @@ export async function runTemperatureSweep(input: SweepInput): Promise<SweepRespo
   logger.info(
     "│ 扫描-runTemperatureSweep",
     "调用函数结束：runTemperatureSweep",
-    "为什么打：route 要把 SweepResponse 写进 ctx.body 交给页面；打 verdict 三档便于一眼核对温度效果。当前：runLadder 已返回。",
+    "为什么写这条日志：route 要把 SweepResponse 写进 ctx.body 交给页面；打 verdict 三档便于一眼核对温度效果。当前：runLadder 已返回。",
     {
       返回值: {
         axis: result.axis,
@@ -75,7 +75,7 @@ export async function runTopPSweep(
   logger.info(
     "│ 扫描-runTopPSweep",
     "调用函数开始：runTopPSweep",
-    "为什么打：route 只认这一层返回的 SweepResponse；里面 runLadder 是「真活」。当前：扫 Top-P 即将开始；温度由调用方给（默认 1；选 0 验证贪心解码下 Top-P 不起作用）。",
+    "为什么写这条日志：route 只认这一层返回的 SweepResponse；里面 runLadder 是真正干活的那一层。当前：扫 Top-P 即将开始；温度由调用方给（默认 1；选 0 验证贪心解码下 Top-P 不起作用）。",
     {
       入参: { ...input, ladderLen: TOP_P_LADDER.length },
       __code: `return runLadder({ llm: input.llm, prompt: input.prompt, runs: input.runs, axis: "top_p", ladder: TOP_P_LADDER, fixedValue: input.temperature });`,
@@ -92,7 +92,7 @@ export async function runTopPSweep(
   logger.info(
     "│ 扫描-runTopPSweep",
     "调用函数结束：runTopPSweep",
-    "为什么打：route 要把 SweepResponse 写进 ctx.body 交给页面；打 verdict 三档便于一眼核对 Top-P 效果（temperature=0 时三档应当一致）。当前：runLadder 已返回。",
+    "为什么写这条日志：route 要把 SweepResponse 写进 ctx.body 交给页面；打 verdict 三档便于一眼核对 Top-P 效果（temperature=0 时三档应当一致）。当前：runLadder 已返回。",
     {
       返回值: {
         axis: result.axis,
@@ -120,7 +120,7 @@ async function runLadder(input: LadderInput): Promise<SweepResponse> {
   logger.info(
     "│ 梯子-runLadder",
     "调用函数开始：runLadder",
-    "为什么打：扫描页与重复页都共用这一层；不打就丢了「三档 × N 次」的整体耗时统计。当前：三档即将并发。",
+    "为什么写这条日志：扫描页与重复页都共用这一层；不写就丢了「三档 × N 次」的整体耗时统计。当前：三档即将并发。",
     {
       入参: { axis, fixedValue, ladder, runsPerGroup: runs },
       __code: `const groups = await Promise.all(ladder.map(value => runGroup({ llm, prompt, runs, params: buildParams(axis, value, fixedValue), label: ... })));`,
@@ -135,7 +135,7 @@ async function runLadder(input: LadderInput): Promise<SweepResponse> {
       logger.info(
         "││ 调用循环-runLadder",
         `调用循环开始：第 ${round} 轮 / 共 ${ladder.length} 轮`,
-        "为什么打：梯子上每档要打满循环五件套，便于核对「三档确实是并发跑的、不是串行」。当前：第 N 档即将 runGroup。",
+        "为什么写这条日志：梯子上每档要写满循环五条日志，便于核对「三档确实是并发跑的、不是串行」。当前：第 N 档即将 runGroup。",
         {
           第几轮: round,
           本轮为什么是这些参数: {
@@ -157,7 +157,7 @@ async function runLadder(input: LadderInput): Promise<SweepResponse> {
         logger.info(
           "││ 调用循环-runLadder",
           `调用循环结束：第 ${round} 轮`,
-          "为什么打：每一档的 verdict 是页面上并排三张卡片的判稳依据。当前：runGroup 已返回。",
+          "为什么写这条日志：每一档的 verdict 是页面上并排三张卡片的判稳依据。当前：runGroup 已返回。",
           {
             第几轮: round,
             本轮结果: { label: group.label, verdict: group.verdict, distinctCount: group.distinctCount },
@@ -184,7 +184,7 @@ async function runLadder(input: LadderInput): Promise<SweepResponse> {
   logger.info(
     "│ 梯子-runLadder",
     "调用函数结束：runLadder",
-    "为什么打：上层的 runTemperatureSweep / runTopPSweep 要把 SweepResponse 写进 ctx.body；打三档 verdict 一目了然。当前：梯子跑完，durationMs 已算。",
+    "为什么写这条日志：上层的 runTemperatureSweep / runTopPSweep 要把 SweepResponse 写进 ctx.body；打三档 verdict 一目了然。当前：梯子跑完，durationMs 已算。",
     {
       返回值: {
         axis: response.axis,

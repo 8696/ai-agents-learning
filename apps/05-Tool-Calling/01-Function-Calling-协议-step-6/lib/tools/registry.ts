@@ -12,8 +12,8 @@
  *   - 真 LLM 调完拿到 tool_calls → executeTool 拿真 tool_result → 回灌 Round 2 → 模型生成 final_reply
  *   - 路由层 detectHallucination 自动扫 reply 数字 vs tool_result 数字差异
  *
- * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
- *   gatewayCheck / getToolsMeta / getToolsForLLM 是工具档——五件套（含 __code）仍要。
+ * 日志（§5.3.16）：executeTool 是主路径——函数体逐步写满五条日志（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / getToolsForLLM 是普通函数——五条日志（含 __code）仍要。
  */
 import { z } from "zod";
 import { getWeatherTool } from "./get-weather.js";
@@ -42,7 +42,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck",
-      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单；不能让未注册的工具被执行。warn 是「业务失败但能走通」的等级。",
+      "为什么写这条日志：未注册工具被拦；LLM 想调的工具不在白名单；不能让未注册的工具被执行。warn 是「业务失败但能走通」的等级。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -57,7 +57,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck（dangerous）",
-      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      "为什么写这条日志：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -69,7 +69,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   logger.debug(
     "│ 网关-gatewayCheck",
     "调用函数结束：gatewayCheck",
-    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；gateway 放行是高频路径。",
     {
       返回值: { allowed: true },
       name,
@@ -89,7 +89,7 @@ export function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数开始：executeTool",
-    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。",
+    "为什么写这条日志：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。",
     {
       入参: { toolCallId, name, rawArgs: args },
       __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nreturn { ok: true, ..., result: tool.handler(parsed.data) };`,
@@ -101,7 +101,7 @@ export function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（gateway 拒绝）",
-      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      "为什么写这条日志：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
         reason: gate.reason,
@@ -118,7 +118,7 @@ export function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Zod 校验失败）",
-      "为什么打：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
+      "为什么写这条日志：工具名合法但参数 schema 不匹配；记 issues 便于排错。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
         issues: JSON.parse(JSON.stringify(issues)),
@@ -139,7 +139,7 @@ export function executeTool(
     logger.info(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool",
-      "为什么打：工具实际跑通；只打 result 摘要。",
+      "为什么写这条日志：工具实际跑通；只写 result 摘要。",
       {
         返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
         耗时ms: Date.now() - tFuncStart,
@@ -150,7 +150,7 @@ export function executeTool(
     logger.error(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（失败）",
-      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      "为什么写这条日志：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
         耗时ms: Date.now() - tFuncStart,
@@ -182,7 +182,7 @@ export function getToolsMeta() {
   logger.debug(
     "│ Registry-getToolsMeta",
     "调用函数结束：getToolsMeta",
-    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
     {
       返回值: { count: meta.length, tools: meta },
       耗时ms: Date.now() - t0,
@@ -221,7 +221,7 @@ export function getToolsForLLM() {
   logger.debug(
     "│ Registry-getToolsForLLM",
     "调用函数结束：getToolsForLLM",
-    "为什么打：debug 是「细节」等级；tools 在 chat.ts 启动时一次性派生，缓存用。",
+    "为什么写这条日志：debug 是「细节」等级；tools 在 chat.ts 启动时一次性派生，缓存用。",
     {
       返回值: { count: tools.length, tools },
       耗时ms: Date.now() - t0,

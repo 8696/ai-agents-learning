@@ -15,8 +15,8 @@
  *   - summarize 是链 B（下游）→ 它的 content 参数**必须**是 search_doc 的结果，不是用户输入
  *   - 路由层 hard-code：await search_doc → await summarize(search_doc.result)；**不**用 Promise.all
  *
- * 日志（§5.3.16）：executeTool 是核心档——函数体逐步打满五件套（含 __code + 字段释义）；
- *   gatewayCheck / getToolsMeta / chainFirstCall / chainSecondCall 是工具档——五件套（含 __code）仍要。
+ * 日志（§5.3.16）：executeTool 是主路径——函数体逐步写满五条日志（含 __code + 字段释义）；
+ *   gatewayCheck / getToolsMeta / chainFirstCall / chainSecondCall 是普通函数——五条日志（含 __code）仍要。
  */
 import { searchDocTool } from "./chain-search-doc.js";
 import { summarizeTool } from "./chain-summarize.js";
@@ -42,7 +42,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck",
-      "为什么打：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
+      "为什么写这条日志：未注册工具被拦；LLM 想调的工具不在白名单。warn 是「业务失败但能走通」的等级。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -56,7 +56,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
     logger.warn(
       "│ 网关-gatewayCheck",
       "调用函数结束：gatewayCheck（dangerous）",
-      "为什么打：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
+      "为什么写这条日志：工具被标 dangerous；即使 LLM 提到也直接拦掉。",
       {
         返回值: { allowed: false, reason },
         name,
@@ -68,7 +68,7 @@ function gatewayCheck(name: string): { allowed: boolean; reason?: string } {
   logger.debug(
     "│ 网关-gatewayCheck",
     "调用函数结束：gatewayCheck",
-    "为什么打：debug 是「细节」等级；gateway 放行是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；gateway 放行是高频路径。",
     {
       返回值: { allowed: true },
       name,
@@ -88,7 +88,7 @@ export async function executeTool(
   logger.info(
     "│ 工具执行-executeTool",
     "调用函数开始：executeTool",
-    "为什么打：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：handler 是 async → 路由层自己决定 await 还是 Promise.all。",
+    "为什么写这条日志：route 只认这一层返回的 ExecResult；所有 Tool 共用同一道 Gateway。当前：handler 是 async → 路由层自己决定 await 还是 Promise.all。",
     {
       入参: { toolCallId, name, rawArgs: args },
       __code: `const gate = gatewayCheck(name);\nconst parsed = tool.schema.safeParse(args);\nconst result = await tool.handler(parsed.data);`,
@@ -101,7 +101,7 @@ export async function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（gateway 拒绝）",
-      "为什么打：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
+      "为什么写这条日志：未注册工具或 dangerous 工具被拦；回灌 tool_result 时返回 ok:false 让模型能自纠。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: gate.reason ?? "gateway rejected" },
         reason: gate.reason,
@@ -119,7 +119,7 @@ export async function executeTool(
     logger.warn(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（Zod 校验失败）",
-      "为什么打：工具名合法但参数 schema 不匹配。",
+      "为什么写这条日志：工具名合法但参数 schema 不匹配。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: `Zod parse failed: ${JSON.stringify(issues)}` },
         issues: JSON.parse(JSON.stringify(issues)),
@@ -141,7 +141,7 @@ export async function executeTool(
     logger.info(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool",
-      "为什么打：工具实际跑通；只打 result 摘要。",
+      "为什么写这条日志：工具实际跑通；只写 result 摘要。",
       {
         返回值: { ok: true, tool: name, tool_call_id: toolCallId, resultPreview: summarize(result) },
         耗时ms: Date.now() - tFuncStart,
@@ -152,7 +152,7 @@ export async function executeTool(
     logger.error(
       "│ 工具执行-executeTool",
       "调用函数结束：executeTool（失败）",
-      "为什么打：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
+      "为什么写这条日志：handler 内部抛异常；回灌 tool_result 时按失败处理，不让外层断片。",
       {
         返回值: { ok: false, tool: name, tool_call_id: toolCallId, error: err instanceof Error ? err.message : String(err) },
         耗时ms: Date.now() - tFuncStart,
@@ -184,7 +184,7 @@ export function getToolsMeta() {
   logger.debug(
     "│ Registry-getToolsMeta",
     "调用函数结束：getToolsMeta",
-    "为什么打：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
+    "为什么写这条日志：debug 是「细节」等级；前端 Tool Registry 面板拉一次是高频路径。",
     {
       返回值: { count: meta.length, tools: meta },
       耗时ms: Date.now() - t0,
@@ -206,7 +206,7 @@ export function chainFirstCall(query: string): MockToolCall[] {
   logger.info(
     "│ mock chain-chainFirstCall",
     "调用函数结束：chainFirstCall",
-    "为什么打：route 只认这一层返回的 MockToolCall[]；step-4 chain 第一步是 search_doc(query)。",
+    "为什么写这条日志：route 只认这一层返回的 MockToolCall[]；step-4 chain 第一步是 search_doc(query)。",
     {
       返回值: { count: 1, calls: [{ id: "call_1", name: "search_doc", arguments: { query } }] },
       耗时ms: Date.now() - t0,
@@ -224,7 +224,7 @@ export function chainSecondCall(firstResult: unknown, style: string): MockToolCa
   logger.info(
     "│ mock chain-chainSecondCall",
     "调用函数结束：chainSecondCall",
-    "为什么打：route 只认这一层返回的 MockToolCall[]；step-4 chain 第二步 summarize.content = 上一步 search_doc 的 result。",
+    "为什么写这条日志：route 只认这一层返回的 MockToolCall[]；step-4 chain 第二步 summarize.content = 上一步 search_doc 的 result。",
     {
       返回值: { count: 1, calls: [{ id: "call_2", name: "summarize", arguments: { content: firstResult, style } }] },
       contentIsFirstResult: firstResult === undefined ? "undefined（反例路径）" : "已传值（正例路径）",

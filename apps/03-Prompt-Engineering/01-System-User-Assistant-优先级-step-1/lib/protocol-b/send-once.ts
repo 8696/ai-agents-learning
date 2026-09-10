@@ -3,7 +3,7 @@
  * 数据流：system + turns → messages.create → 拼 text block → CallResult。
  * 本文件禁止 import openai。
  *
- * 日志（§5.3.16）：调用函数 五件套（sendViaB 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（sendViaB 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -28,7 +28,7 @@ export async function sendViaB(
   logger.info(
     "│ 协议B-sendViaB",
     "调用函数开始：sendViaB",
-    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用模型开始：协议B-消息创建」）。当前：即将拼请求体；system 是顶层字段（不是 messages 一条）。",
+    "为什么写这条日志：route 只认这一层返回的 CallResult；里面那次才是真发网络请求（看「调用模型开始：协议B-消息创建」）。当前：即将拼请求体；system 是顶层字段（不是 messages 一条）。",
     {
       入参: {
         model: llm.modelB,
@@ -45,7 +45,7 @@ export async function sendViaB(
   logger.info(
     "││ 调用模型-协议B 消息创建",
     "调用模型开始：协议B 消息创建",
-    "为什么打：本文件唯一的真出网层；不打就没有 content[] / usage。当前：即将发出 messages.create；system 在顶层、turns 只放 user/assistant。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 content[] / usage。当前：即将发出 messages.create；system 在顶层、turns 只放 user/assistant。",
     {
       入参: {
         provider: "anthropic",
@@ -64,7 +64,7 @@ export async function sendViaB(
     logger.info(
       "││ 调用模型-协议B 消息创建",
       "调用模型结束：协议B 消息创建",
-      "为什么打：要拿 content[].text / usage.input_tokens / output_tokens / stop_reason。当前：await 已返回。",
+      "为什么写这条日志：要拿 content[].text / usage.input_tokens / output_tokens / stop_reason。当前：await 已返回。",
       {
         返回值: {
           id: r.id,
@@ -102,7 +102,7 @@ export async function sendViaB(
     logger.info(
       "│ 协议B-sendViaB",
       "调用函数结束：sendViaB",
-      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区，和 sendViaA 并排对照。当前：text block 拼好 + usage 归一化已完成。",
+      "为什么写这条日志：route 要把 CallResult 写进 ctx.body 交给页面 stats 区，和 sendViaA 并排对照。当前：text block 拼好 + usage 归一化已完成。",
       {
         返回值: {
           textPreview: result.text.slice(0, 100),
@@ -118,7 +118,7 @@ export async function sendViaB(
     logger.error(
       "││ 调用模型-协议B 消息创建",
       "调用模型结束：协议B 消息创建（失败）",
-      "为什么打：拿到 status 才能区分 401/403（Key）、429（限流）、5xx、400（max_tokens 等常见坑）。当前：messages.create 抛错，route 的 allSettled 会兜住。",
+      "为什么写这条日志：拿到 status 才能区分 401/403（Key）、429（限流）、5xx、400（max_tokens 等常见坑）。当前：messages.create 抛错，route 的 allSettled 会兜住。",
       {
         返回值: { message: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tModelStart,

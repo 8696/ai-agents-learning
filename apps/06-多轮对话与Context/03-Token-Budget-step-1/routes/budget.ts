@@ -3,7 +3,7 @@
  *
  * 数据流：
  *   浏览器 fetch { systemText, historyCount, userText, outputBudget, totalBudget }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → estimateBudget() 算 system / history / output 三块 token 数（gpt-tokenizer 估算）
  *       → 判断 total > totalBudget → 触发裁剪：丢最旧非 system 消息直到 ≤ totalBudget
  *       → 拼装 messages：[system, ...historyAfterTrim, userText]
@@ -90,7 +90,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-对话补全",
     "调用模型开始：对话补全",
-    "为什么打：这是真出网的那一次；不打完整 messages 就讲不清「拼装前打印的预算到底对不对」。当前：messages 已按预算裁好，即将发请求。",
+    "为什么写这条日志：这是真正发网络请求的那一次；不写完整 messages 就讲不清「拼装前打印的预算到底对不对」。当前：messages 已按预算裁好，即将发请求。",
     {
       入参: request,
       字段释义: {
@@ -107,7 +107,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全",
-      "为什么打：要把完整 completion 打到日志；学习者翻日志能看见输出用了多少 token。当前：await 已返回。",
+      "为什么写这条日志：要把完整 completion 写到日志；学习者翻日志能看见输出用了多少 token。当前：await 已返回。",
       {
         返回值: completion,
         replyTokens: encode(reply).length,
@@ -132,7 +132,7 @@ async function callLlmOnce(
 
 export function mountBudgetRoutes(router: Router): void {
   router.post("/api/budget", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -160,7 +160,7 @@ export function mountBudgetRoutes(router: Router): void {
     // ── ③ 拼装 history + 算三块预算（裁前）──
     const history = buildMockHistory(historyCount);
     const tHandler0 = Date.now();
-    logger.info("budget.handler", "调用函数开始：budget", "为什么打：路由是 Token Budget 演示的唯一入口；不打完整数据流下面就讲不清「三块预算怎么算、超了怎么裁」。当前：假历史已拼好，即将算账 + 决定是否裁。", {
+    logger.info("budget.handler", "调用函数开始：budget", "为什么写这条日志：路由是 Token Budget 演示的唯一入口；不写完整数据流下面就讲不清「三块预算怎么算、超了怎么裁」。当前：假历史已拼好，即将算账 + 决定是否裁。", {
       入参: { systemText, historyCount, userText, outputBudget, totalBudget, modelA },
       字段释义: {
         "systemText": "系统提示原文",
@@ -179,7 +179,7 @@ export function mountBudgetRoutes(router: Router): void {
     const { trimmed, dropped } = trimToBudget(history, systemText, outputBudget, totalBudget);
     const afterBudget = estimateBudget(systemText, trimmed, outputBudget);
 
-    logger.info("budget.trim", "调用函数结束：trimToBudget", "为什么打：要把裁剪前后的 token 数都打到日志；学习者一眼看见「超了 → 丢最旧 → total ≤ budget」。当前：已返回新 history。", {
+    logger.info("budget.trim", "调用函数结束：trimToBudget", "为什么写这条日志：要把裁剪前后的 token 数都写到日志；学习者一眼看见「超了 → 丢最旧 → total ≤ budget」。当前：已返回新 history。", {
       入参: { systemText, historyCount, outputBudget, totalBudget },
       返回值: { trimmed, dropped, beforeBudget, afterBudget },
       字段释义: {
@@ -225,7 +225,7 @@ export function mountBudgetRoutes(router: Router): void {
         : `未超预算：total=${beforeBudget.total} ≤ ${totalBudget}，没触发裁剪。`,
     };
 
-    logger.info("budget.handler", "调用函数结束：budget", "为什么打：要把本路由完整出参打到日志；学习者翻日志一眼看见「预算算账 → 是否裁 → 真调模型」。当前：模型已返回。", {
+    logger.info("budget.handler", "调用函数结束：budget", "为什么写这条日志：要把本路由完整出参写到日志；学习者翻日志一眼看见「预算算账 → 是否裁 → 真调模型」。当前：模型已返回。", {
       返回值: body,
       字段释义: {
         "beforeBudget / afterBudget": "裁前/裁后三块预算分账",

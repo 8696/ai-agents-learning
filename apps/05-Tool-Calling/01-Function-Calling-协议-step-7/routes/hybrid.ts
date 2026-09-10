@@ -11,8 +11,8 @@
  *     }
  *     返 { path, trace, finalReply, totalMs, rounds, maxRoundsTriggered }
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostHybrid 封装层）；
- *   闸门挡掉单独打 warn；子调用 decideHybridAction / executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostHybrid 封装层）；
+ *   校验挡下单独写 warn；子调用 decideHybridAction / executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -50,7 +50,7 @@ export function mountHybridRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数开始：handleGetTools",
-      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      "为什么写这条日志：route 只认这一层返回的 { tools }；里面 getToolsMeta 是真正干活的那一层。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
       {
         入参: { endpoint: "GET /api/tools" },
         __code: `ctx.body = { tools: getToolsMeta() };`,
@@ -60,7 +60,7 @@ export function mountHybridRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数结束：handleGetTools",
-      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
+      "为什么写这条日志：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
       {
         返回值: { count: meta.length },
         耗时ms: Date.now() - tHandlerStart,
@@ -76,7 +76,7 @@ export function mountHybridRoutes(router: Router): void {
     logger.info(
       "api.hybrid",
       "调用函数开始：handlePostHybrid",
-      "为什么打：route 只认这一层返回的 trace + finalReply；里面 while + decideHybridAction + executeTool 是「真活」。当前：前端发来混合编排请求；记 query 便于核对。",
+      "为什么写这条日志：route 只认这一层返回的 trace + finalReply；里面 while + decideHybridAction + executeTool 是真正干活的那一层。当前：前端发来混合编排请求；记 query 便于核对。",
       {
         入参: { queryPreview: query.slice(0, 60), queryLen: query.length, bodyKeys: Object.keys(body) },
         __code: `// while 循环 + 路由层 hard-code 两条约束`,
@@ -86,8 +86,8 @@ export function mountHybridRoutes(router: Router): void {
     if (!query) {
       logger.warn(
         "api.hybrid",
-        "调用函数结束：handlePostHybrid（闸门拒绝）",
-        "为什么打：query 不能为空；走 400 不让 while 浪费工具调用。",
+        "调用函数结束：handlePostHybrid（校验拒绝）",
+        "为什么写这条日志：query 不能为空；走 400 不让 while 浪费工具调用。",
         {
           返回值: { httpStatus: 400, error: "query 不能为空" },
           耗时ms: Date.now() - tHandlerStart,
@@ -113,7 +113,7 @@ export function mountHybridRoutes(router: Router): void {
     logger.info(
       "││ loop-hybrid",
       "调用循环开始：while 循环骨架 + 路由层 hard-code 两条约束",
-      "为什么打：MAX_ROUNDS=" + MAX_ROUNDS + "；每轮由 decideHybridAction 决定下一步；路由层会拒绝越权 + 硬接路径 B。",
+      "为什么写这条日志：MAX_ROUNDS=" + MAX_ROUNDS + "；每轮由 decideHybridAction 决定下一步；路由层会拒绝越权 + 硬接路径 B。",
       {
         maxRounds: MAX_ROUNDS,
         path,
@@ -137,7 +137,7 @@ export function mountHybridRoutes(router: Router): void {
             logger.warn(
               "││ loop-hybrid",
               "调用循环进行中：路径 B 硬接 suggest_items",
-              "为什么打：路由层 hard-code：用户问带不带伞，模型调 weather 后决定 final → 路由层自动跑 suggest_items（用 weather.rain_prob）。",
+              "为什么写这条日志：路由层 hard-code：用户问带不带伞，模型调 weather 后决定 final → 路由层自动跑 suggest_items（用 weather.rain_prob）。",
               {
                 中间状态: { rain_prob: weatherData.rain_prob, path },
               },
@@ -166,7 +166,7 @@ export function mountHybridRoutes(router: Router): void {
               logger.info(
                 "││ loop-hybrid",
                 `调用循环 · 第 ${rounds} 轮 · 综合 final（路由层硬接后）`,
-                "为什么打：模型拿到 suggest_items 结果 → 综合 final。",
+                "为什么写这条日志：模型拿到 suggest_items 结果 → 综合 final。",
                 {
                   中间状态: { finalPreview: finalReply.slice(0, 50) },
                 },
@@ -188,7 +188,7 @@ export function mountHybridRoutes(router: Router): void {
         logger.info(
           "││ loop-hybrid",
           `调用循环结束：第 ${rounds} 轮（final）`,
-          "为什么打：模型看完 tool_result 决定不再调；退出循环。",
+          "为什么写这条日志：模型看完 tool_result 决定不再调；退出循环。",
           {
             第几轮: rounds,
             本轮结果: { finalPreview: finalReply.slice(0, 50) },
@@ -223,7 +223,7 @@ export function mountHybridRoutes(router: Router): void {
         logger.info(
           "││ loop-hybrid",
           `调用循环 · 第 ${rounds} 轮 · 拒绝越权`,
-          "为什么打：路由层拒绝越权调用 suggest_items；把 error 当 tool_result 反馈给下一轮模型（类似 step-5 失败回灌模式）。",
+          "为什么写这条日志：路由层拒绝越权调用 suggest_items；把 error 当 tool_result 反馈给下一轮模型（类似 step-5 失败回灌模式）。",
           {
             第几轮: rounds,
             本轮为什么是这些参数: { tool: decision.tool, reason: constraint.reason },
@@ -252,7 +252,7 @@ export function mountHybridRoutes(router: Router): void {
       logger.info(
         "││ loop-hybrid",
         `调用循环 · 第 ${rounds} 轮 · tool_call 子执行`,
-        "为什么打：模型决定调工具；记 tool + ok 便于回看。",
+        "为什么写这条日志：模型决定调工具；记 tool + ok 便于回看。",
         {
           第几轮: rounds,
           本轮结果: { tool: decision.tool, ok: r.ok, error: r.ok ? undefined : r.error },
@@ -266,7 +266,7 @@ export function mountHybridRoutes(router: Router): void {
       logger.warn(
         "││ loop-hybrid",
         "调用循环结束：MAX_ROUNDS 触发",
-        "为什么打：while 退出但未 final；业务降级；记 maxRounds + rounds 便于复盘。",
+        "为什么写这条日志：while 退出但未 final；业务降级；记 maxRounds + rounds 便于复盘。",
         {
           第几轮: rounds,
           本轮结果: { maxRounds: MAX_ROUNDS, maxRoundsTriggered: true },
@@ -278,7 +278,7 @@ export function mountHybridRoutes(router: Router): void {
     logger.info(
       "││ loop-hybrid",
       "调用循环结束：循环收尾",
-      "为什么打：记 totalMs + rounds + path + 路由层硬接 / 拒绝次数 便于核对。",
+      "为什么写这条日志：记 totalMs + rounds + path + 路由层硬接 / 拒绝次数 便于核对。",
       {
         本轮结果: {
           totalMs,
@@ -293,7 +293,7 @@ export function mountHybridRoutes(router: Router): void {
     logger.info(
       "api.hybrid",
       "调用函数结束：handlePostHybrid",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 path / trace / finalReply / totalMs / rounds。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；含 path / trace / finalReply / totalMs / rounds。",
       {
         返回值: { status: 200, totalMs, rounds, path, traceCount: trace.length, finalLen: finalReply?.length ?? 0 },
         耗时ms: Date.now() - tHandlerStart,

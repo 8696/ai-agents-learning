@@ -2,8 +2,8 @@
  * 职责：按请求里的 modes 并行打 v1 / v2，聚合成对照结果。
  * 数据流：{ llm, text, modes, prompts } → Promise.all(runOne) → 带 versions 元信息的包。
  *
- * 日志（§5.3.16）：调用函数 五件套（compareVersions 编排层封装）；
- *   循环里每圈打「调用循环」便于核对「每版都跑完」；子调用 runOne 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（compareVersions 编排层封装）；
+ *   循环里每圈打「调用循环」便于核对「每版都跑完」；子调用 runOne 内部已自带五条日志。
  */
 import type { Llm } from "../../../../llm.js";
 import { VERSION_NAMES, type Mode } from "../version/presets.js";
@@ -30,7 +30,7 @@ export async function compareVersions(input: {
   logger.info(
     "│ 对照-compareVersions",
     "调用函数开始：compareVersions",
-    "为什么打：route 只认这一层返回的对照包；里面 N 路 runOne 是「真活」。当前：即将并发跑 uniqueModes；前端请求 modes 决定跑几版。",
+    "为什么写这条日志：route 只认这一层返回的对照包；里面 N 路 runOne 是真正干活的那一层。当前：即将并发跑 uniqueModes；前端请求 modes 决定跑几版。",
     {
       入参: { uniqueModes, textPreview: input.text.slice(0, 50), textLen: input.text.length, v1SuffixLen: input.prompts.v1.length, v2SuffixLen: input.prompts.v2.length },
       __code: `const results = await Promise.all(uniqueModes.map(mode => runOne({ llm, mode, text, promptSuffix: prompts[mode] })));`,
@@ -44,7 +44,7 @@ export async function compareVersions(input: {
       logger.info(
         "││ 调用循环-compareVersions",
         `调用循环开始：第 ${round} 轮 / 共 ${uniqueModes.length} 轮`,
-        "为什么打：本条对照实验，每版要独立打满循环五件套，便于核对「两版确实是并发跑的、不是串行」。当前：第 N 版即将 runOne。",
+        "为什么写这条日志：本条对照实验，每版要独立写满循环五条日志，便于核对「两版确实是并发跑的、不是串行」。当前：第 N 版即将 runOne。",
         {
           第几轮: round,
           本轮为什么是这些参数: {
@@ -63,7 +63,7 @@ export async function compareVersions(input: {
         logger.info(
           "││ 调用循环-compareVersions",
           `调用循环结束：第 ${round} 轮`,
-          "为什么打：每一版的 preview / hasReasoning 是页面上并排两卡片的判稳依据。当前：runOne 已返回。",
+          "为什么写这条日志：每一版的 preview / hasReasoning 是页面上并排两卡片的判稳依据。当前：runOne 已返回。",
           {
             第几轮: round,
             本轮结果: { mode: row.mode, ok: row.ok, textLen: row.ok ? row.textLen : 0, hasReasoning: row.ok ? row.hasReasoning : false },
@@ -82,7 +82,7 @@ export async function compareVersions(input: {
   logger.info(
     "│ 对照-compareVersions",
     "调用函数结束：compareVersions",
-    "为什么打：route 要把对照包（input / versions / results / allFailed）写进 ctx.body 交给页面 stats 区；打聚合结果便于核对「v1 vs v2 谁挂了」。当前：Promise.all 已返回。",
+    "为什么写这条日志：route 要把对照包（input / versions / results / allFailed）写进 ctx.body 交给页面 stats 区；打聚合结果便于核对「v1 vs v2 谁挂了」。当前：Promise.all 已返回。",
     {
       返回值: {
         resultsCount: results.length,

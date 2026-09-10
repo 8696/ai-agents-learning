@@ -50,7 +50,7 @@
         fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
       }, []);
 
-      // 闸门：summarizeFrom + keepRecent 不能 > turnCount
+      // 校验：summarizeFrom + keepRecent 不能 > turnCount
       const paramValid = summarizeFrom + keepRecent <= turnCount;
 
       async function runCompare() {

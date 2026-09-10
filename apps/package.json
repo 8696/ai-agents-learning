@@ -60,7 +60,8 @@
     "app:06-03-token-budget-step-1": "PORT=50045 tsx 06-多轮对话与Context/03-Token-Budget-step-1/server.ts",
     "app:06-03-token-budget-step-2": "PORT=50046 tsx 06-多轮对话与Context/03-Token-Budget-step-2/server.ts",
     "app:06-03-token-budget-step-3": "PORT=50047 tsx 06-多轮对话与Context/03-Token-Budget-step-3/server.ts",
-    "app:06-03-token-budget-step-4": "PORT=50048 tsx 06-多轮对话与Context/03-Token-Budget-step-4/server.ts"
+    "app:06-03-token-budget-step-4": "PORT=50048 tsx 06-多轮对话与Context/03-Token-Budget-step-4/server.ts",
+    "app:07-01-agent-loop-react-step-1": "PORT=50049 tsx 07-手写Agent/01-Agent-Loop-ReAct-step-1/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

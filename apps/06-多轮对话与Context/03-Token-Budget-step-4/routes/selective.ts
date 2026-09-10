@@ -4,7 +4,7 @@
  *
  * 数据流：
  *   浏览器 fetch { query, keywords(逗号分隔), selectN, fullHistory, userText }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → 多话题 history = 5 段(天气/美食/工作/电影/健身)× 10 轮,共 50 段 user+assistant
  *       → 算每段命中关键词数 → 取 top-N 命中段
  *       → 路径 A(全塞基线):messages = [system, ...全 50 段 history, userText] → 调真模型 → fullReply
@@ -115,7 +115,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-对话补全",
     "调用模型开始：对话补全",
-    `为什么打：真出网那一次。当前：${stage}。`,
+    `为什么写这条日志：真正发网络请求那一次。当前：${stage}。`,
     { 入参: request, stage, __code: "const completion = await getLlm().openai.chat.completions.create(request);" },
   );
   const t0 = Date.now();
@@ -125,7 +125,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全",
-      `为什么打：要把完整 completion 打到日志。当前：${stage} 已返回。`,
+      `为什么写这条日志：要把完整 completion 写到日志。当前：${stage} 已返回。`,
       { 返回值: completion, stage, replyTokens: encode(reply).length, 耗时ms: Date.now() - t0 },
     );
     return { reply, completion };
@@ -142,7 +142,7 @@ async function callLlmOnce(
 
 export function mountSelectiveRoutes(router: Router): void {
   router.post("/api/selective", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -182,7 +182,7 @@ export function mountSelectiveRoutes(router: Router): void {
     const allTurns = topicGroups.flatMap(g => g.turns).sort((a, b) => b.score - a.score);
     const picked = allTurns.slice(0, selectN);
 
-    logger.info("selective.handler", "调用函数开始：selective", "为什么打：路由是选择性注入演示的唯一入口。当前：多话题 history + 关键词匹配算出命中段 + 取 topN,即将调两次真模型。", {
+    logger.info("selective.handler", "调用函数开始：selective", "为什么写这条日志：路由是选择性注入演示的唯一入口。当前：多话题 history + 关键词匹配算出命中段 + 取 topN,即将调两次真模型。", {
       入参: { query, keywords, kwList, selectN, userText, modelA, historyLength: history.length, topicGroups },
       字段释义: {
         "query": "用户当前问的问题(决定「相关」)",
@@ -255,7 +255,7 @@ export function mountSelectiveRoutes(router: Router): void {
       触发说明: `query 关键词(${kwList.join(" / ")})在 ${history.length} 段多话题 history 中命中 ${picked.length} 段 → 只把这 ${picked.length} 段塞进 messages,其他 ${history.length - pickedHistory(picked, history)} 段不进 messages。`,
     };
 
-    logger.info("selective.handler", "调用函数结束：selective", "为什么打：要把完整出参打到日志;学习者翻日志能复盘「全塞 vs 选择性」的 token 差。", {
+    logger.info("selective.handler", "调用函数结束：selective", "为什么写这条日志：要把完整出参写到日志;学习者翻日志能复盘「全塞 vs 选择性」的 token 差。", {
       返回值: { fullInputTokens: fullBudget, selectiveInputTokens: selectiveBudget, fullReplyTokens, selectiveReplyTokens, saved: fullBudget - selectiveBudget },
       字段释义: {
         "fullInputTokens": "全塞路径的输入 token(50 段 history + system + query)",

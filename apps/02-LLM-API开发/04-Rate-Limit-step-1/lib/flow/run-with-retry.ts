@@ -198,7 +198,7 @@ export async function callOpenAI(
   try {
     const resp = await realClient.chat.completions.create(requestBody, { signal });
     const content = resp.choices[0]?.message?.content ?? "";
-    logger.info(`llm.response.${attempt}`, "← got response", "完整打响应便于核对 SDK 自带字段（id / model / choices / usage）；attempt 落在 scope 上便于串 retry 时间线", resp);
+    logger.info(`llm.response.${attempt}`, "← got response", "完整写响应便于核对 SDK 自带字段（id / model / choices / usage）；attempt 落在 scope 上便于串 retry 时间线", resp);
     return { status: 200, body: content, headers: new Headers() };
   } catch (err) {
     const apiErr = err as {

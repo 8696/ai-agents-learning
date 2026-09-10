@@ -18,7 +18,7 @@
  *   POST /api/summarize     → 跑对照实验：调真模型 3 次（before + 摘要 + after）+ 返回对照
  *   POST /api/summarize-force-error → 教学演示 5xx 通道（无 LLM 调用，立刻回 502）
  *
- * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:06-02-compress-vs-window-step-2
  */

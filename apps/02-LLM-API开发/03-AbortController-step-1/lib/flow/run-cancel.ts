@@ -7,8 +7,8 @@
  *     → AbortError → 发 aborted 帧（reason / frameIdx / usage）
  * 为什么单独成文件：这是唯一「signal 真生效」的路径；和 no-signal 对照才能讲清「客户端停 ≠ 服务端停」。
  *
- * 日志（§5.3.16）：调用函数 五件套（runCancelAfterFrames 封装层）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 abort 触发点单条 warn（不套五件套）。
+ * 日志（§5.3.16）：调用函数 五条日志（runCancelAfterFrames 封装层）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 abort 触发点单条 warn（不套五条日志）。
  */
 import type { IncomingMessage } from "node:http";
 import { performance } from "node:perf_hooks";
@@ -78,7 +78,7 @@ export async function runCancelAfterFrames(params: {
   logger.info(
     "│ cancel-runCancelAfterFrames",
     "调用函数开始：runCancelAfterFrames",
-    "为什么打：route 只认这一层返回的 RunCancelStats；里面 createChatStream 是「真活」（看「调用模型开始：对话补全」）。当前：带 signal 的 cancel 即将开始；abortAfterFrames 控制「收几帧才 abort」。",
+    "为什么写这条日志：route 只认这一层返回的 RunCancelStats；里面 createChatStream 是真正干活的那一层（看「调用模型开始：对话补全」）。当前：带 signal 的 cancel 即将开始；abortAfterFrames 控制「收几帧才 abort」。",
     {
       入参: { model: llm.modelA, messagePreview: message.slice(0, 80), messageLen: message.length, targetFrames, hasReq: true },
       __code: `const controller = new AbortController();\nreq.on("close", () => controller.abort());\nconst stream = await createChatStream(llm, message, controller.signal);`,
@@ -122,7 +122,7 @@ export async function runCancelAfterFrames(params: {
     logger.info(
       "│ cancel-runCancelAfterFrames",
       "调用函数结束：runCancelAfterFrames",
-      "为什么打：route 要把 RunCancelStats 写进 ctx.body（或日志）便于和基线对照帧数 / abort 状态。当前：流跑完、N 太大没触发 abort（或 abort 后 SDK 仍把剩余 chunk 吐完）。",
+      "为什么写这条日志：route 要把 RunCancelStats 写进 ctx.body（或日志）便于和基线对照帧数 / abort 状态。当前：流跑完、N 太大没触发 abort（或 abort 后 SDK 仍把剩余 chunk 吐完）。",
       {
         返回值: {
           frameIdx,
@@ -147,7 +147,7 @@ export async function runCancelAfterFrames(params: {
       logger.info(
         "│ cancel-runCancelAfterFrames",
         "调用函数结束：runCancelAfterFrames",
-        "为什么打：AbortError 不算错误而是教学结果；记 abortReason + 收了 N 帧 + usage 拿到没拿到。当前：abort() 真的传到 SDK 了，已发 aborted 帧。",
+        "为什么写这条日志：AbortError 不算错误而是教学结果；记 abortReason + 收了 N 帧 + usage 拿到没拿到。当前：abort() 真的传到 SDK 了，已发 aborted 帧。",
         {
           返回值: {
             frameIdx,
@@ -178,7 +178,7 @@ export async function runCancelAfterFrames(params: {
     logger.error(
       "│ cancel-runCancelAfterFrames",
       "调用函数结束：runCancelAfterFrames（失败）",
-      "为什么打：非 abort 类的上游失败（401 / 429 / 5xx / 网络断）；记 upstreamStatus + message 让排错时知道是 abort 路径还是真挂了。当前：抛非 AbortError，已发 error 帧。",
+      "为什么写这条日志：非 abort 类的上游失败（401 / 429 / 5xx / 网络断）；记 upstreamStatus + message 让排错时知道是 abort 路径还是真挂了。当前：抛非 AbortError，已发 error 帧。",
       {
         返回值: {
           frameIdx,

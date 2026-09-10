@@ -10,7 +10,7 @@
  * 不调云端 API；只关心 HTTP 行为 → 与同目录 mock server 配套使用
  * （也可以接到真 LLM 客户端外面套一层）。
  *
- * 日志（§5.3.16）：retry 是本条的核心档——函数体逐步打满（start / 每次循环 start / decide / non-retryable / network-error / success / exhausted），每个教学分支都打满便于回讲。
+ * 日志（§5.3.16）：retry 是本条的主路径——函数体逐步写满（start / 每次循环 start / decide / non-retryable / network-error / success / exhausted），每个教学分支都打满便于回讲。
  */
 
 import { performance } from "node:perf_hooks";
@@ -122,7 +122,7 @@ export async function retryWithBackoff(
   logger.info(
     "│ retry-retryWithBackoff",
     "调用函数开始：retryWithBackoff",
-    "为什么打：本 Demo 唯一的 retry 入口；外层一次完整重试循环开始。记 maxAttempts / 上限便于事后核对为什么到 N 次就停。当前：即将进入 for 循环。",
+    "为什么写这条日志：本 Demo 唯一的 retry 入口；外层一次完整重试循环开始。记 maxAttempts / 上限便于事后核对为什么到 N 次就停。当前：即将进入 for 循环。",
     {
       入参: {
         maxAttempts: opts.maxAttempts,
@@ -144,7 +144,7 @@ export async function retryWithBackoff(
       logger.warn(
         "││ retry-循环",
         `总耗时上限已达，不再开始第 ${attemptNo} 轮 attempt`,
-        "为什么打：maxTotalTimeMs 用来防双卡——这里提前抛 Error 让上层立刻收 attempts 不再 sleep。warn 是「业务失败但能走通」的等级。",
+        "为什么写这条日志：maxTotalTimeMs 用来防双卡——这里提前抛 Error 让上层立刻收 attempts 不再 sleep。warn 是「业务失败但能走通」的等级。",
         {
           第几轮: attemptNo,
           elapsedMs: Math.round(elapsed),
@@ -167,7 +167,7 @@ export async function retryWithBackoff(
     logger.info(
       "││ retry-循环",
       `调用循环开始：第 ${attemptNo} 轮 / 共 ${opts.maxAttempts} 轮`,
-      "为什么打：retry 是 for 循环，每一轮打满便于核对 attempts 时间线。当前：即将发请求。",
+      "为什么写这条日志：retry 是 for 循环，每一轮打满便于核对 attempts 时间线。当前：即将发请求。",
       {
         第几轮: attemptNo,
         本轮为什么是这些参数: {
@@ -204,7 +204,7 @@ export async function retryWithBackoff(
         logger.warn(
           "││ retry-循环",
           `attempt ${attemptNo} 命中不可重试状态码 → 直接抛`,
-          "为什么打：NON_RETRYABLE_STATUS（400/401/403/404/422）重试只会得到同样的错，所以立刻停手——记录 status 与 body 摘要便于核对此处为何提前终止。",
+          "为什么写这条日志：NON_RETRYABLE_STATUS（400/401/403/404/422）重试只会得到同样的错，所以立刻停手——记录 status 与 body 摘要便于核对此处为何提前终止。",
           {
             第几轮: attemptNo,
             status: resp.status,
@@ -227,7 +227,7 @@ export async function retryWithBackoff(
       logger.warn(
         "││ retry-循环",
         `attempt ${attemptNo} 网络层抛错 → 视作可重试`,
-        "为什么打：fetch / SDK 抛 AbortError / ECONNRESET 等没有 status；落 status=network 让前端时间线统一渲染。",
+        "为什么写这条日志：fetch / SDK 抛 AbortError / ECONNRESET 等没有 status；落 status=network 让前端时间线统一渲染。",
         {
           第几轮: attemptNo,
           err: errorMessage,
@@ -251,7 +251,7 @@ export async function retryWithBackoff(
       logger.info(
         "││ retry-循环",
         `调用循环结束：第 ${attemptNo} 轮（成功）`,
-        "为什么打：本轮拿到 2xx 响应，整 attempts 时间线交还上层；记 status + duration 便于事后算 retry 总耗时。",
+        "为什么写这条日志：本轮拿到 2xx 响应，整 attempts 时间线交还上层；记 status + duration 便于事后算 retry 总耗时。",
         {
           第几轮: attemptNo,
           本轮结果: { status, bodyPreview: successBody.slice(0, 80) },
@@ -261,7 +261,7 @@ export async function retryWithBackoff(
       logger.info(
         "│ retry-retryWithBackoff",
         "调用函数结束：retryWithBackoff（成功）",
-        "为什么打：把整 attempts 时间线交还上层；打返回便于核对「这次一共跑了 N 轮、最后一次拿到了 2xx」。当前：第 N 轮成功。",
+        "为什么写这条日志：把整 attempts 时间线交还上层；打返回便于核对「这次一共跑了 N 轮、最后一次拿到了 2xx」。当前：第 N 轮成功。",
         {
           返回值: {
             attemptsTotal: attempts.length,
@@ -279,7 +279,7 @@ export async function retryWithBackoff(
       logger.warn(
         "││ retry-循环",
         `调用循环结束：第 ${attemptNo} 轮（最后一把失败）`,
-        "为什么打：maxAttempts 含首次——最后一次失败后不再 sleep 直接抛 RetryExhaustedError；attempts 已含全部时间线。",
+        "为什么写这条日志：maxAttempts 含首次——最后一次失败后不再 sleep 直接抛 RetryExhaustedError；attempts 已含全部时间线。",
         {
           第几轮: attemptNo,
           lastStatus: status,
@@ -289,7 +289,7 @@ export async function retryWithBackoff(
       logger.warn(
         "│ retry-retryWithBackoff",
         "调用函数结束：retryWithBackoff（重试耗尽）",
-        "为什么打：本 Demo 最大的教学点——maxAttempts 把每次都打满仍失败时抛 RetryExhaustedError 让上层收 attempts 时间线。当前：所有 attempt 都失败。",
+        "为什么写这条日志：本 Demo 最大的教学点——maxAttempts 把每次都打满仍失败时抛 RetryExhaustedError 让上层收 attempts 时间线。当前：所有 attempt 都失败。",
         {
           返回值: { attemptsTotal: attempts.length, lastStatus: status },
           耗时ms: Date.now() - tFuncStart,
@@ -312,7 +312,7 @@ export async function retryWithBackoff(
     logger.info(
       "││ retry-循环",
       `attempt ${attemptNo} 失败 → 决定 sleep ${Math.round(waitMs)}ms 后重试（第 ${attemptNo + 1} 轮）`,
-      "为什么打：本节点是 rate limit / 5xx 教学的关键：算下次等待 = max(exponential+jitter, Retry-After)，记下来便于讲清「服务端给的不能抖、自己算的可以抖」。",
+      "为什么写这条日志：本节点是 rate limit / 5xx 教学的关键：算下次等待 = max(exponential+jitter, Retry-After)，记下来便于讲清「服务端给的不能抖、自己算的可以抖」。",
       {
         第几轮: attemptNo,
         thisStatus: status,
@@ -336,7 +336,7 @@ export async function retryWithBackoff(
       logger.warn(
         "││ retry-循环",
         "下一次 sleep 会撞总耗时 → 提前抛 Error",
-        "为什么打：如果硬 sleep 会让总耗时超 maxTotalTimeMs；这里提前抛避免浪费一次 sleep 周期。",
+        "为什么写这条日志：如果硬 sleep 会让总耗时超 maxTotalTimeMs；这里提前抛避免浪费一次 sleep 周期。",
         {
           第几轮: attemptNo,
           elapsedMs: Math.round(performance.now() - start),

@@ -12,7 +12,7 @@
  *   step-2 这里换成真模型调 LLM —— 拿到的是不确定的、模型自己决定的 tool_calls。
  *   这就是"模型决定 ≠ 已执行"在协议层的真实物理形态。
  *
- * 日志（§5.3.16）：调用函数 五件套（callProtocolA 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（callProtocolA 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import { getLlm } from "../../../../llm.js";
 import { logger } from "../logger.js";
@@ -103,7 +103,7 @@ export async function callProtocolA(request: ProtocolARequest): Promise<Protocol
   logger.info(
     "│ 协议A-callProtocolA",
     "调用函数开始：callProtocolA",
-    "为什么打：route 只认这一层返回的 ProtocolAResponse；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：调 OpenAI 协议 A 发起请求；完整打 request 便于核对 model / messages / tools 字段是否齐。",
+    "为什么写这条日志：route 只认这一层返回的 ProtocolAResponse；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：调 OpenAI 协议 A 发起请求；完整写 request 便于核对 model / messages / tools 字段是否齐。",
     {
       入参: { model: request.model, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, tool_choice: request.tool_choice },
       __code: `await llm.openai.chat.completions.create(${JSON.stringify(request, null, 2)});`,
@@ -114,7 +114,7 @@ export async function callProtocolA(request: ProtocolARequest): Promise<Protocol
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：本文件唯一的真出网层；不打就没有 id / choices / usage / finish_reason。当前：即将发出 chat.completions.create 请求。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 id / choices / usage / finish_reason。当前：即将发出 chat.completions.create 请求。",
     {
       入参: {
         model: request.model,
@@ -132,7 +132,7 @@ export async function callProtocolA(request: ProtocolARequest): Promise<Protocol
     logger.info(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全",
-      "为什么打：要拿 choices[0].finish_reason 决定下一步动作（stop / tool_calls / length / content_filter）；usage 是计费依据。当前：await 已返回。",
+      "为什么写这条日志：要拿 choices[0].finish_reason 决定下一步动作（stop / tool_calls / length / content_filter）；usage 是计费依据。当前：await 已返回。",
       {
         返回值: {
           id: response.id,
@@ -151,7 +151,7 @@ export async function callProtocolA(request: ProtocolARequest): Promise<Protocol
     logger.info(
       "│ 协议A-callProtocolA",
       "调用函数结束：callProtocolA",
-      "为什么打：route 要把 ProtocolAResponse 写进 ctx.body 交给页面 stats 区；记 id / model / finishReason 便于核对。",
+      "为什么写这条日志：route 要把 ProtocolAResponse 写进 ctx.body 交给页面 stats 区；记 id / model / finishReason 便于核对。",
       {
         返回值: { id: response.id, model: response.model, finishReason: response.choices?.[0]?.finish_reason },
         耗时ms: Date.now() - tFuncStart,
@@ -162,7 +162,7 @@ export async function callProtocolA(request: ProtocolARequest): Promise<Protocol
     logger.error(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 500。当前：create 抛错，route 的 catch 会处理。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 500。当前：create 抛错，route 的 catch 会处理。",
       {
         返回值: { message: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tModelStart,

@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 → → { ok, port, provider, model, hasKey, callsModel, tools, orderStats }；
- *   页面加载时打一次，用来填页脚 #env-info + 订单 DB 状态。
+ *   页面加载时写一次，用来填页脚 #env-info + 订单 DB 状态。
  *
  * step-2 真调 LLM（协议 B）：callsModel: true；主按钮因缺 Key 而 disabled（§5.3.9）。
  */

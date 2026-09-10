@@ -2,7 +2,7 @@
  * 职责：GET /health —— 只读环境 + 玩具表，不调模型、不算余弦。
  * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel: false, tables }。
  *
- * 日志（§5.3.16）：本端点不调 LLM、不出网——单条 info 入站横幅 + 出站摘要；
+ * 日志（§5.3.16）：本端点不调 LLM、不发网络请求——单条 info 入站横幅 + 出站摘要；
  *   玩具表大小、词表大小、查询默认便于一眼核对。
  */
 import type { Context } from "koa";

@@ -60,7 +60,7 @@
         setErrorKind(null);
         setResult(null);
         inFlightRef.current = true;
-        setStatus({ key: "loading", text: "🔄 请求中（2 次出网：1 全塞基线 + 1 选择性）" });
+        setStatus({ key: "loading", text: "🔄 请求中（2 次真发网络请求：1 全塞基线 + 1 选择性）" });
 
         try {
           const resp = await fetch("/api/selective", {

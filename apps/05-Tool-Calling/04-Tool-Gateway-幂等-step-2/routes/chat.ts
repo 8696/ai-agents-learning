@@ -12,8 +12,8 @@
  *   - 模型发 create_order tool_use → executeTool → 走幂等 cache + 内存 DB
  *   - 协议 B 字段层形态：content blocks、tool_use.input 是 对象、必填 max_tokens、回灌用 role:"user"
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostChat 封装层）；
- *   闸门挡掉（400/429）单独打 warn；子调用 callLlmOnce / executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostChat 封装层）；
+ *   校验挡下（400/429）单独写 warn；子调用 callLlmOnce / executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -57,7 +57,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
       logger.error(
         "│ chat-callLlmOnce",
         "调用函数结束：callLlmOnce（失败）",
-        "为什么打：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
+        "为什么写这条日志：apps/.env 没配当前 provider 的 Key；这是阻塞性错误必须立刻告诉用户怎么修。",
         {
           返回值: { ok: false, error: "未配置 LLM Key", upstreamStatus: undefined },
           err: err instanceof Error ? err.message : String(err),
@@ -83,7 +83,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
   logger.info(
     "│ chat-callLlmOnce",
     "调用函数开始：callLlmOnce",
-    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用函数开始：callProtocolB」）。当前：即将调 callProtocolB，model / max_tokens / messagesCount / toolsCount 都要打。",
+    "为什么写这条日志：route 只认这一层返回的 CallResult；里面那次才是真发网络请求（看「调用函数开始：callProtocolB」）。当前：即将调 callProtocolB，model / max_tokens / messagesCount / toolsCount 都要写。",
     {
       入参: { model: request.model, max_tokens: request.max_tokens, messagesCount: request.messages.length, toolsCount: request.tools?.length ?? 0, hasSystem: Boolean(system) },
       __code: `await callProtocolB(${JSON.stringify(request, null, 2)});`,
@@ -95,7 +95,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
     logger.info(
       "│ chat-callLlmOnce",
       "调用函数结束：callLlmOnce",
-      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 stopReason / toolUseCount 便于核对。",
+      "为什么写这条日志：route 要把 CallResult 写进 ctx.body 交给页面 stats 区；记 stopReason / toolUseCount 便于核对。",
       {
         返回值: {
           ok: true,
@@ -115,7 +115,7 @@ async function callLlmOnce(messages: AnthropicChatMsg[], system?: string): Promi
     logger.error(
       "│ chat-callLlmOnce",
       "调用函数结束：callLlmOnce（失败）",
-      "为什么打：协议 B 抛异常；记 upstreamStatus + 错误信息便于排错。",
+      "为什么写这条日志：协议 B 抛异常；记 upstreamStatus + 错误信息便于排错。",
       {
         返回值: { ok: false, error: msg, upstreamStatus },
         耗时ms: Date.now() - tFuncStart,
@@ -164,7 +164,7 @@ export function mountChatRoutes(router: Router): void {
       logger.warn(
         "api.chat",
         "调用函数结束：handlePostChat（频率限流）",
-        "为什么打：★ #24 教学点——限流 ≠ 幂等；这是频率维度，retryAfterMs 让前端/模型知道等多久。",
+        "为什么写这条日志：★ #24 教学点——限流 ≠ 幂等；这是频率维度，retryAfterMs 让前端/模型知道等多久。",
         {
           返回值: { httpStatus: 429, code: "FREQ_LIMITED", retryAfterMs: freq.retryAfterMs },
           耗时ms: Date.now() - tHandlerStart,
@@ -184,7 +184,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数开始：handlePostChat",
-      "为什么打：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是「真活」。当前：step-2 演示「模型发 create_order → 走幂等」。",
+      "为什么写这条日志：route 只认这一层返回的响应包；里面两轮 callLlmOnce + executeTool 是真正干活的那一层。当前：step-2 演示「模型发 create_order → 走幂等」。",
       {
         入参: { inputPreview: input.slice(0, 60), inputLen: input.length, itemCount: items.length, hasIdempotencyKey: Boolean(idempotencyKey), actor: actorUserId },
         __code: `// 强提示 → callLlmOnce → executeTool(create_order) → callLlmOnce(回灌) → final_reply`,
@@ -194,8 +194,8 @@ export function mountChatRoutes(router: Router): void {
     if (!input) {
       logger.warn(
         "api.chat",
-        "调用函数结束：handlePostChat（闸门拒绝）",
-        "为什么打：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
+        "调用函数结束：handlePostChat（校验拒绝）",
+        "为什么写这条日志：用户输入是空字符串；走 400 不让 round-1 浪费 token。",
         {
           返回值: { httpStatus: 400, error: "input 不能为空" },
           耗时ms: Date.now() - tHandlerStart,
@@ -213,7 +213,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "api.chat",
         "调用函数结束：handlePostChat（round-1 失败）",
-        "为什么打：Round 1 调模型失败；502 返回前端。",
+        "为什么写这条日志：Round 1 调模型失败；502 返回前端。",
         {
           返回值: { httpStatus: 502, error: r1.error, upstream_status: r1.upstreamStatus },
           耗时ms: Date.now() - tHandlerStart,
@@ -231,7 +231,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "││ chat-handlePostChat",
       "调用循环进行中：round-1 OK",
-      "为什么打：Round 1 模型决定；记 stopReason + toolNames 便于核对协议 B 物理形态。",
+      "为什么写这条日志：Round 1 模型决定；记 stopReason + toolNames 便于核对协议 B 物理形态。",
       {
         中间状态: { stopReason: r1.response.stop_reason, toolUseCount: toolUsesFromLLM.length, toolNames: toolUsesFromLLM.map((tu) => tu.name) },
       },
@@ -248,7 +248,7 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "││ chat-handlePostChat",
         `tool_result（${tu.name}）`,
-        "为什么打：create_order 走完 Registry + 幂等；记 ok + cacheHit + dbInserted 摘要。",
+        "为什么写这条日志：create_order 走完 Registry + 幂等；记 ok + cacheHit + dbInserted 摘要。",
         {
           中间状态: {
             toolUseId: tu.id,
@@ -270,7 +270,7 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "api.chat",
         "调用函数结束：handlePostChat（no-tool-call）",
-        "为什么打：模型没调 create_order；可能是 query 不够触发。",
+        "为什么写这条日志：模型没调 create_order；可能是 query 不够触发。",
         {
           返回值: { httpStatus: 200, finalLen: directReply.length, contentPreview: directReply.slice(0, 80) },
           耗时ms: Date.now() - tHandlerStart,
@@ -309,7 +309,7 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "api.chat",
         "调用函数结束：handlePostChat（round-2 失败）",
-        "为什么打：Round 2 失败；502 返回前端。",
+        "为什么写这条日志：Round 2 失败；502 返回前端。",
         {
           返回值: { httpStatus: 502, error: r2.error, upstream_status: r2.upstreamStatus },
           耗时ms: Date.now() - tHandlerStart,
@@ -334,7 +334,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "││ chat-handlePostChat",
       "调用循环进行中：round-2 OK",
-      "为什么打：Round 2 成功；拿到 final reply 准备返回。",
+      "为什么写这条日志：Round 2 成功；拿到 final reply 准备返回。",
       {
         中间状态: { stopReason: r2.response.stop_reason, finalLen: finalText.length },
       },
@@ -343,7 +343,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "api.chat",
       "调用函数结束：handlePostChat",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 4 张数据卡 + 钩子判定链。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；含 4 张数据卡 + 钩子判定链。",
       {
         返回值: { status: 200, finalLen: finalText.length, toolResultCount: toolResults.length, okCount: toolResults.filter(r => r.ok).length },
         耗时ms: Date.now() - tHandlerStart,

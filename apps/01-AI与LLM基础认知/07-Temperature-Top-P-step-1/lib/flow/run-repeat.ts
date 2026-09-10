@@ -4,8 +4,8 @@
  * 为什么单独成文件：扫描页问的是「换参数会怎样」，本页问的是「同一组参数重复会怎样」——
  *   两个问题的响应形状不同（一张卡片 vs 三张），混在 run-sweep 里会逼出一堆可选字段。
  *
- * 日志（§5.3.16）：调用函数 五件套（runRepeat 封装层）；
- *   子调用 runGroup 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（runRepeat 封装层）；
+ *   子调用 runGroup 内部已自带五条日志。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -28,7 +28,7 @@ export async function runRepeat(input: RepeatInput): Promise<RepeatResponse> {
   logger.info(
     "│ 重复-runRepeat",
     "调用函数开始：runRepeat",
-    "为什么打：route 只认这一层返回的 RepeatResponse；里面 runGroup 是「真活」（一次跑 N 次）。当前：即将复用 runGroup。",
+    "为什么写这条日志：route 只认这一层返回的 RepeatResponse；里面 runGroup 是真正干活的那一层（一次跑 N 次）。当前：即将复用 runGroup。",
     {
       入参: { temperature: params.temperature, topP: params.topP, runs, promptLen: prompt.length },
       __code: `const group = await runGroup({ llm, prompt, params, runs, label: "T = ${params.temperature} · top_p = ${params.topP}" });`,
@@ -58,7 +58,7 @@ export async function runRepeat(input: RepeatInput): Promise<RepeatResponse> {
   logger.info(
     "│ 重复-runRepeat",
     "调用函数结束：runRepeat",
-    "为什么打：route 要把 RepeatResponse 写进 ctx.body 交给页面；打 verdict + distinctCount 一目了然。当前：runGroup 已返回。",
+    "为什么写这条日志：route 要把 RepeatResponse 写进 ctx.body 交给页面；打 verdict + distinctCount 一目了然。当前：runGroup 已返回。",
     {
       返回值: {
         verdict: group.verdict,

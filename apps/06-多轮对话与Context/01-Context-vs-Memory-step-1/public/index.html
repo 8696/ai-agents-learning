@@ -59,7 +59,7 @@
       );
 
       async function send() {
-        // 不再前端拦截空字符串 —— 让它真走到后端 Zod 闸门 → 400，让学习者看到「入参闸门」是后端做的事
+        // 不再前端拦截空字符串 —— 让它真走到后端 Zod 校验 → 400，让学习者看到「入参校验」是后端做的事
         if (inFlightRef.current) return;
         if (health && !health.hasKey) {
           setErrorMsg("apps/.env 没配当前 LLM_PROVIDER 的 Key（看页脚 Key ❌）");
@@ -140,7 +140,7 @@
         setStatus({ key: "idle", text: "⏸ 待连接" });
       }
 
-      // 不再前置 disable；空输入让服务端 400 演示「入参闸门」
+      // 不再前置 disable；空输入让服务端 400 演示「入参校验」
       const sendDisabled = inFlightRef.current || (health && !health.hasKey);
 
       // ── id 命名（§5.3.4 强制）──
@@ -163,10 +163,10 @@
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
                 <li>在输入框写一句用户消息，点「发送」</li>
                 <li>客户端把当前 messages 数组（即 Context）发给 /api/chat</li>
-                <li>服务端原样发给模型，并把完整 messages + token 估算打到日志（看 console / logs/）</li>
+                <li>服务端原样发给模型，并把完整 messages + token 估算写到日志（看 console / logs/）</li>
                 <li>助手回复合回 messages；下一次发送时把它一并带走 —— 这就是「Context 在累积」</li>
                 <li>点「清空对话」→ messages 归零 → 下次发送时模型就看不到任何历史（Context 没了）</li>
-                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参闸门） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
               </ol>
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">

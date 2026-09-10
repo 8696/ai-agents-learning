@@ -1,5 +1,5 @@
 /**
- * 职责：三条业务端点共用的 HTTP 闸门 —— 故意 400、没 Key 的 503、POST /api/real 的 prompt。
+ * 职责：三条业务端点共用的 HTTP 校验 —— 故意 400、没 Key 的 503、POST /api/real 的 prompt。
  *
  * 数据流：
  *   query.fail=1 → writeRawJson(400)（模拟流 / 一次性对照页用来演示 HTTP 错误，不花额度）

@@ -1,5 +1,5 @@
 /**
- * 职责：业务 route 共用的入参闸门（有没有 Key、prompt 合不合法）。
+ * 职责：业务 route 共用的入参校验（有没有 Key、prompt 合不合法）。
  * 数据流：koa ctx → 通过则返回解析后的值；不通过时已写好 status/body，返回 null 让 route 直接 return。
  * 为什么单独成文件：两个计费 route 要用同一套判定，判定口径散在 route 里就会一个 400 一个 500。
  */

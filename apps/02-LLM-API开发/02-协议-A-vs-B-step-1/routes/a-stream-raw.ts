@@ -1,6 +1,6 @@
 /**
  * 职责：POST /api/a-stream-raw —— 协议 A 流式 + kind 分类（页面三栏着色）。
- * 数据流：闸门 → streamOnceAClassified → { type:"openai_chunk", kind, chunk }。
+ * 数据流：校验 → streamOnceAClassified → { type:"openai_chunk", kind, chunk }。
  * 本文件只调 protocol-a，禁止 import protocol-b。
  */
 import type { Context } from "koa";

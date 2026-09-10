@@ -2,8 +2,8 @@
  * 职责：POST /api/force —— required vs 指定 name；结果按档位常驻对照。
  * 数据流：body Zod → callWithForcedChoice → 钉死判定（force 时 name 必须相等）。
  *
- * 日志（§5.3.16）：调用函数 五件套（handleForce 封装层）；
- *   闸门挡掉（400/503）单独打 warn；thinking × required/object 边界单独打 warn；上游异常 502 单独打 error。
+ * 日志（§5.3.16）：调用函数 五条日志（handleForce 封装层）；
+ *   校验挡下（400/503）单独写 warn；thinking × required/object 边界单独写 warn；上游异常 502 单独写 error。
  */
 import type Router from "@koa/router";
 import type { Context, Next } from "koa";
@@ -45,7 +45,7 @@ export function mountForceRoutes(router: Router): void {
     logger.info(
       "api.force",
       "调用函数开始：handleForce",
-      "为什么打：route 只认这一层返回的结果包；里面 callWithForcedChoice 是「真活」。当前：前端选了 required 或钉死某个 Tool。",
+      "为什么写这条日志：route 只认这一层返回的结果包；里面 callWithForcedChoice 是真正干活的那一层。当前：前端选了 required 或钉死某个 Tool。",
       {
         入参: { body: ctx.request.body, bodyKeys: Object.keys((ctx.request.body ?? {}) as object) },
         __code: "BodySchema.safeParse(ctx.request.body)",
@@ -58,8 +58,8 @@ export function mountForceRoutes(router: Router): void {
       ctx.body = { ok: false, error: "入参不合法", detail: parsed.error.flatten() };
       logger.warn(
         "api.force",
-        "调用函数结束：handleForce（闸门拒绝）",
-        "为什么打：空 query / 缺 forcedName 是第一类错误（400）；未出网。",
+        "调用函数结束：handleForce（校验拒绝）",
+        "为什么写这条日志：空 query / 缺 forcedName 是第一类错误（400）；未真发网络请求。",
         {
           返回值: { httpStatus: 400, error: "入参不合法" },
           耗时ms: Date.now() - t0,
@@ -78,8 +78,8 @@ export function mountForceRoutes(router: Router): void {
       };
       logger.warn(
         "api.force",
-        "调用函数结束：handleForce（闸门拒绝）",
-        "为什么打：缺 Key（503）与 400 分开。",
+        "调用函数结束：handleForce（校验拒绝）",
+        "为什么写这条日志：缺 Key（503）与 400 分开。",
         {
           返回值: { httpStatus: 503, error: "未配置 LLM Key" },
           耗时ms: Date.now() - t0,
@@ -164,7 +164,7 @@ export function mountForceRoutes(router: Router): void {
       logger.info(
         "api.force",
         "调用函数结束：handleForce",
-        "为什么打：本档跑完，前端按 slotKey 常驻对照。",
+        "为什么写这条日志：本档跑完，前端按 slotKey 常驻对照。",
         {
           返回值: { slotKey, httpStatus: 200, hasToolCalls: result.hasToolCalls, firstToolName: result.firstToolName, protocolOk },
           耗时ms: Date.now() - t0,
@@ -201,7 +201,7 @@ export function mountForceRoutes(router: Router): void {
         logger.warn(
           "api.force",
           "调用函数结束：handleForce（失败）",
-          "为什么打：thinking×object/required 是本条可观察边界。",
+          "为什么写这条日志：thinking×object/required 是本条可观察边界。",
           {
             返回值: { httpStatus: 400, code: "thinking_x_forced_choice" },
             耗时ms: Date.now() - t0,
@@ -215,7 +215,7 @@ export function mountForceRoutes(router: Router): void {
       logger.error(
         "api.force",
         "调用函数结束：handleForce（失败）",
-        "为什么打：上游失败走 502。",
+        "为什么写这条日志：上游失败走 502。",
         {
           返回值: { httpStatus: 502, error: message },
           耗时ms: Date.now() - t0,

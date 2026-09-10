@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息，不调模型。
  * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel, tools, gatewayHooks }；
- *   页面加载时打一次，用来填页脚 #env-info + Tools 面板。
+ *   页面加载时写一次，用来填页脚 #env-info + Tools 面板。
  *
  * step-1 真调 LLM（协议 B）：callsModel: true；主按钮因缺 Key 而 disabled（§5.3.9）。
  *   本条还把 Gateway 钩子清单 + 工具名放进 /health，让页脚 / 教学区可见。

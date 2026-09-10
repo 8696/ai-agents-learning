@@ -7,7 +7,7 @@ import { logger } from "../lib/logger.js";
 
 export function mountErrorDemoRoutes(router: Router): void {
   router.post("/api/selective-force-error", async (ctx: Context) => {
-    logger.warn("selective.error_demo", "调用函数结束：selective-force-error", "为什么打：教学演示 5xx 通道", {
+    logger.warn("selective.error_demo", "调用函数结束：selective-force-error", "为什么写这条日志：教学演示 5xx 通道", {
       返回值: { status: 502, error: "upstream_failed", message: "演示：模拟上游失败" },
     });
     ctx.status = 502;

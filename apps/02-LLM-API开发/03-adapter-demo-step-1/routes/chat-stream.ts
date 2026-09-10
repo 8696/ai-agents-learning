@@ -1,5 +1,5 @@
 /**
- * 职责：POST /api/chat-stream —— SSE 推 UnifiedDelta（薄：闸门 → 开流 → adapter）。
+ * 职责：POST /api/chat-stream —— SSE 推 UnifiedDelta（薄：校验 → 开流 → adapter）。
  * 数据流：opts → sendMessageStream → data: {type:thinking|content|usage|done} → [DONE]。
  */
 import type { Context } from "koa";

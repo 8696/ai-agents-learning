@@ -1,10 +1,10 @@
 /**
- * 职责：某一版 Prompt 打一次协议 A，并算出长度 / 推理标记 / preview。
+ * 职责：某一版 Prompt 写一次协议 A，并算出长度 / 推理标记 / preview。
  * 数据流：{ llm, mode, text, promptSuffix } → chat.completions.create → CompareRow。
  * ① User = promptSuffix + "\n\n问题：" + text，两版只换 suffix。
  * ② temperature 固定 0：本条比的是 Prompt 文本，不是采样随机性。
  *
- * 日志（§5.3.16）：调用函数 五件套（runOne 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（runOne 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import type { Llm } from "../../../../llm.js";
 import { SYSTEM_PROMPT } from "../version/presets.js";
@@ -74,7 +74,7 @@ export async function runOne(input: {
   logger.info(
     "│ 单版-runOne",
     "调用函数开始：runOne",
-    "为什么打：compareVersions 只认这一层返回的 CompareRow；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：即将按 mode 拼 messages；同一题只换 promptSuffix。",
+    "为什么写这条日志：compareVersions 只认这一层返回的 CompareRow；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：即将按 mode 拼 messages；同一题只换 promptSuffix。",
     {
       入参: { mode: input.mode, promptSuffixPreview: input.promptSuffix.slice(0, 60), promptSuffixLen: input.promptSuffix.length, textLen: input.text.length },
       __code: `const request = { model: input.llm.modelA, temperature: 0, max_tokens: 500, messages: [...] };\nconst completion = await input.llm.openai.chat.completions.create(request);`,
@@ -85,7 +85,7 @@ export async function runOne(input: {
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    `为什么打：本文件唯一的真出网层；不打就没有 choices[0].message.content / usage。当前：即将发出请求；mode 决定 suffix；temperature=0 排除采样随机性只比「Prompt 文本」。`,
+    `为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 choices[0].message.content / usage。当前：即将发出请求；mode 决定 suffix；temperature=0 排除采样随机性只比「Prompt 文本」。`,
     {
       入参: {
         mode: input.mode,
@@ -106,7 +106,7 @@ export async function runOne(input: {
     logger.info(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全",
-      "为什么打：要拿 choices[0].message.content / usage（计费依据），下游还要 detectReasoning + previewLine。当前：await 已返回。",
+      "为什么写这条日志：要拿 choices[0].message.content / usage（计费依据），下游还要 detectReasoning + previewLine。当前：await 已返回。",
       {
         返回值: {
           id: completion.id,
@@ -133,7 +133,7 @@ export async function runOne(input: {
     logger.info(
       "│ 单版-runOne",
       "调用函数结束：runOne",
-      "为什么打：compareVersions 要把 CompareRow 收齐后并排对照；打 preview / hasReasoning 一眼看出 v1 vs v2 的差异。当前：detectReasoning + previewLine 已算。",
+      "为什么写这条日志：compareVersions 要把 CompareRow 收齐后并排对照；打 preview / hasReasoning 一眼看出 v1 vs v2 的差异。当前：detectReasoning + previewLine 已算。",
       {
         返回值: {
           mode: input.mode,
@@ -155,7 +155,7 @@ export async function runOne(input: {
     logger.error(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全（失败）",
-      "为什么打：拿到 mappedStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 502。当前：create 抛错，compareVersions 的 Promise.all 会兜住另一版。",
+      "为什么写这条日志：拿到 mappedStatus 才能区分 401/403（Key）、429（限流）、5xx；未识别 → 502。当前：create 抛错，compareVersions 的 Promise.all 会兜住另一版。",
       {
         返回值: { mappedStatus: mapped.status, message: mapped.message },
         耗时ms: Date.now() - tModelStart,
@@ -165,7 +165,7 @@ export async function runOne(input: {
     logger.error(
       "│ 单版-runOne",
       "调用函数结束：runOne（失败）",
-      "为什么打：失败也要按 CompareRow 形状回收，便于 compareVersions 并排展示；记 mode 便于看是不是单版本问题。当前：模型抛错，已转 CompareFail。",
+      "为什么写这条日志：失败也要按 CompareRow 形状回收，便于 compareVersions 并排展示；记 mode 便于看是不是单版本问题。当前：模型抛错，已转 CompareFail。",
       {
         返回值: { mode: input.mode, ok: false, status: mapped.status, error: mapped.message },
         耗时ms: Date.now() - tFuncStart,

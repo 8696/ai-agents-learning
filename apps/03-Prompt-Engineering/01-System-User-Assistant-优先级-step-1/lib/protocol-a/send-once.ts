@@ -3,7 +3,7 @@
  * 数据流：system + turns → chat.completions.create(stream:false) → CallResult。
  * 本文件禁止 import @anthropic-ai/sdk。
  *
- * 日志（§5.3.16）：调用函数 五件套（sendViaA 封装层），调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（sendViaA 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -31,7 +31,7 @@ export async function sendViaA(
   logger.info(
     "│ 协议A-sendViaA",
     "调用函数开始：sendViaA",
-    "为什么打：route 只认这一层返回的 CallResult；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：即将拼请求体；system 进 messages[0] 是 A 的硬约束。",
+    "为什么写这条日志：route 只认这一层返回的 CallResult；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：即将拼请求体；system 进 messages[0] 是 A 的硬约束。",
     {
       入参: {
         model: llm.modelA,
@@ -47,7 +47,7 @@ export async function sendViaA(
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：本文件唯一的真出网层；不打就没有 choices[0].message.content / usage。当前：即将发出 stream:false 请求；system 在 messages[0]。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 choices[0].message.content / usage。当前：即将发出 stream:false 请求；system 在 messages[0]。",
     {
       入参: {
         provider: "openai",
@@ -73,7 +73,7 @@ export async function sendViaA(
     logger.info(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全",
-      "为什么打：要拿 choices[0].message.content 和 usage（计费依据）。当前：await 已返回。",
+      "为什么写这条日志：要拿 choices[0].message.content 和 usage（计费依据）。当前：await 已返回。",
       {
         返回值: {
           id: r.id,
@@ -84,7 +84,7 @@ export async function sendViaA(
         },
         耗时ms: Date.now() - tModelStart,
         字段释义: {
-          "choices[0].message.content": "模型返回的正文（打完 system 约束后给出的最终答复）",
+          "choices[0].message.content": "模型返回的正文（写完 system 约束后给出的最终答复）",
           usage: "OpenAI 标准 usage 三字段（计费依据）",
         },
       },
@@ -106,7 +106,7 @@ export async function sendViaA(
     logger.info(
       "│ 协议A-sendViaA",
       "调用函数结束：sendViaA",
-      "为什么打：route 要把 CallResult 写进 ctx.body 交给页面 stats 区，和 sendViaB 并排对照。当前：plain 化 + usage 归一化已完成。",
+      "为什么写这条日志：route 要把 CallResult 写进 ctx.body 交给页面 stats 区，和 sendViaB 并排对照。当前：plain 化 + usage 归一化已完成。",
       {
         返回值: {
           textPreview: result.text.slice(0, 100),
@@ -122,7 +122,7 @@ export async function sendViaA(
     logger.error(
       "││ 调用模型-协议A 对话补全",
       "调用模型结束：协议A 对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx。当前：create 抛错，route 的 allSettled 会兜住。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx。当前：create 抛错，route 的 allSettled 会兜住。",
       {
         返回值: { message: error instanceof Error ? error.message : String(error) },
         耗时ms: Date.now() - tModelStart,

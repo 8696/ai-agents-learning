@@ -4,7 +4,7 @@
  *
  * 数据流：
  *   浏览器 fetch { historyCount, outputBudget, totalBudget, summarizeFrom, keepRecent }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory(historyCount) 生成 N 轮假 user/assistant
  *         → 第 1 轮 user 放 KEY_FACT（自我介绍）
  *       → estimateBudget(...) → beforeBudget
@@ -205,7 +205,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-双策略对照",
     `调用模型开始：双策略对照-${stage}`,
-    `为什么打：双策略对照的关键证据——同 query 同模型，唯一变量是裁剪策略。当前：${stage} 路径即将发请求。`,
+    `为什么写这条日志：双策略对照的关键证据——同 query 同模型，唯一变量是裁剪策略。当前：${stage} 路径即将发请求。`,
     {
       入参: request,
       stage,
@@ -219,7 +219,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-双策略对照",
       `调用模型结束：双策略对照-${stage}`,
-      `为什么打：要把完整 completion 打到日志，对照 key fact 是否还在。当前：${stage} 已返回。`,
+      `为什么写这条日志：要把完整 completion 写到日志，对照 key fact 是否还在。当前：${stage} 已返回。`,
       {
         返回值: completion,
         stage,
@@ -241,7 +241,7 @@ async function callLlmOnce(
 
 export function mountCompareRoutes(router: Router): void {
   router.post("/api/compare", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -269,7 +269,7 @@ export function mountCompareRoutes(router: Router): void {
     // ── ③ 拼装 history + 算三块预算（裁前）──
     const history = buildMockHistory(historyCount);
     const tHandler0 = Date.now();
-    logger.info("compare.handler", "调用函数开始：compare", "为什么打：路由是双策略对照实验的唯一入口；不打完整数据流就讲不清「同 query 同模型、唯一变量是裁剪策略」。当前：假历史已拼好，即将算预算 + 走两条路径。", {
+    logger.info("compare.handler", "调用函数开始：compare", "为什么写这条日志：路由是双策略对照实验的唯一入口；不写完整数据流就讲不清「同 query 同模型、唯一变量是裁剪策略」。当前：假历史已拼好，即将算预算 + 走两条路径。", {
       入参: { historyCount, outputBudget, totalBudget, summarizeFrom, keepRecent, modelA },
       字段释义: {
         "historyCount": "生成的假对话轮数（第 1 轮是 key fact）",
@@ -299,13 +299,13 @@ export function mountCompareRoutes(router: Router): void {
 
     let summary = "";
     try {
-      logger.info("││ 调用模型-对话摘要", "调用函数开始：summarizeOld", "为什么打：summarize 路径的代价 = 多 1 次 LLM 调用；不打就讲不清「为什么摘要压缩比丢最旧贵」。", {
+      logger.info("││ 调用模型-对话摘要", "调用函数开始：summarizeOld", "为什么写这条日志：summarize 路径的代价 = 多 1 次 LLM 调用；不写就讲不清「为什么摘要压缩比丢最旧贵」。", {
         入参: { summarizeFrom, oldMsgsCount: oldForSummary.length, modelA },
         __code: "const summary = await summarizeOld(oldForSummary, modelA);",
       });
       const tSum0 = Date.now();
       summary = await summarizeOld(oldForSummary, modelA);
-      logger.info("││ 调用模型-对话摘要", "调用函数结束：summarizeOld", "为什么打：要把 summary 原文打到日志；学习者能直接看到「summary 写进去什么」。", {
+      logger.info("││ 调用模型-对话摘要", "调用函数结束：summarizeOld", "为什么写这条日志：要把 summary 原文写到日志；学习者能直接看到「summary 写进去什么」。", {
         返回值: { summary, summaryTokens: encode(summary).length },
         耗时ms: Date.now() - tSum0,
       });
@@ -398,7 +398,7 @@ export function mountCompareRoutes(router: Router): void {
         `这就是「丢字面 vs 留语义」的可观察对照。`,
     };
 
-    logger.info("compare.handler", "调用函数结束：compare", "为什么打：要把双策略判定 + 三块预算 + messages 完整结果打到日志；学习者翻日志一眼看见「丢字面 vs 留语义」。当前：3 次 LLM 都已返回（1 次摘要 + 2 次问答）。", {
+    logger.info("compare.handler", "调用函数结束：compare", "为什么写这条日志：要把双策略判定 + 三块预算 + messages 完整结果写到日志；学习者翻日志一眼看见「丢字面 vs 留语义」。当前：3 次 LLM 都已返回（1 次摘要 + 2 次问答）。", {
       返回值: body,
       字段释义: {
         "beforeBudget": "裁前三块预算分账（system + history + output 预留）",

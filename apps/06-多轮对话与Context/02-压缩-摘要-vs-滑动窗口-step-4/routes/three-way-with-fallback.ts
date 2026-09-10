@@ -5,7 +5,7 @@
  *
  * 数据流：
  *   浏览器 fetch { turnCount, slidingWindowSize, summarizeFrom, keepRecent, keyFactAtTurn, simulateSummarizeFail? }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory + slidingWindowTrim
  *         → callLlmOnce(messagesFull) → fullReply                                 ← ① 完整（基线）
  *         → callLlmOnce(messagesSliding) → slidingReply                          ← ② 滑动窗口
@@ -148,7 +148,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-三方对照（含兜底）",
     `调用模型开始：${stage}`,
-    `为什么打：三方对照的关键证据——唯一变量是 messages 裁剪策略 + 兜底降级。当前：${stage}。`,
+    `为什么写这条日志：三方对照的关键证据——唯一变量是 messages 裁剪策略 + 兜底降级。当前：${stage}。`,
     {
       入参: request,
       tokensEstimate,
@@ -163,7 +163,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-三方对照（含兜底）",
       `调用模型结束：${stage}`,
-      `为什么打：要把完整 completion 打到日志，对照是否含 key fact。当前：${stage} 已返回。`,
+      `为什么写这条日志：要把完整 completion 写到日志，对照是否含 key fact。当前：${stage} 已返回。`,
       {
         返回值: completion,
         stage,
@@ -185,7 +185,7 @@ async function callLlmOnce(
 
 export function mountThreeWayWithFallbackRoutes(router: Router): void {
   router.post("/api/three-way-with-fallback", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -221,7 +221,7 @@ export function mountThreeWayWithFallbackRoutes(router: Router): void {
     const oldForSummary = mockHistory.slice(0, summarizeFrom);
     const recentOriginal = mockHistory.slice(summarizeFrom);
 
-    logger.info("three-way.handler", "调用函数开始：three-way-with-fallback", "为什么打：失败兜底降级是本条核心交付物（需求 5「摘要失败兜底降级」）。不打完整数据流就讲不清「摘要失败时服务仍 200」的体验差异。当前：拼装完成 + 即将跑（完整 + 滑动 + 摘要 ± 兜底）。", {
+    logger.info("three-way.handler", "调用函数开始：three-way-with-fallback", "为什么写这条日志：失败兜底降级是本条核心交付物（需求 5「摘要失败兜底降级」）。不写完整数据流就讲不清「摘要失败时服务仍 200」的体验差异。当前：拼装完成 + 即将跑（完整 + 滑动 + 摘要 ± 兜底）。", {
       入参: { turnCount, slidingWindowSize, summarizeFrom, keepRecent, keyFactAtTurn, simulateSummarizeFail, modelA },
       字段释义: {
         "simulateSummarizeFail": "true = 模拟摘要 LLM 失败（教学注入）；false = 正常跑",
@@ -250,12 +250,12 @@ export function mountThreeWayWithFallbackRoutes(router: Router): void {
 
     if (simulateSummarizeFail) {
       // 模拟失败：直接 throw，触发兜底
-      logger.warn("││ 调用函数-摘要兜底", "调用函数开始：摘要模拟失败", "为什么打：教学演示注入摘要失败；让学习者看见「摘要失败 → 自动降级到滑动窗口」的完整流程。当前：模拟超时即将 throw。", {
+      logger.warn("││ 调用函数-摘要兜底", "调用函数开始：摘要模拟失败", "为什么写这条日志：教学演示注入摘要失败；让学习者看见「摘要失败 → 自动降级到滑动窗口」的完整流程。当前：模拟超时即将 throw。", {
         入参: { simulateSummarizeFail: true, summarizeFrom },
         __code: "throw new Error('摘要 LLM 模拟超时（教学演示）');",
       });
       const err = new Error("摘要 LLM 模拟超时（教学演示）");
-      logger.warn("││ 调用函数-摘要兜底", "调用函数结束：摘要兜底降级", "为什么打：摘要失败 → 自动降级到滑动窗口；不打 warn 事后排查不到「为什么这次用的是滑动窗口而不是摘要」。当前：catch 已捕获，fallback 标记 used=true。", {
+      logger.warn("││ 调用函数-摘要兜底", "调用函数结束：摘要兜底降级", "为什么写这条日志：摘要失败 → 自动降级到滑动窗口；不写 warn 事后排查不到「为什么这次用的是滑动窗口而不是摘要」。当前：catch 已捕获，fallback 标记 used=true。", {
         fallbackUsed: true,
         fallbackReason: err.message,
         fallbackMessagesLen: messagesSliding.length,
@@ -285,7 +285,7 @@ export function mountThreeWayWithFallbackRoutes(router: Router): void {
         summarizeReply = await callLlmOnce(messagesSummarize, modelA, "摘要压缩");
       } catch (err: unknown) {
         // 真实失败（不模拟）→ 同样兜底
-        logger.warn("││ 调用函数-摘要兜底", "调用函数结束：摘要兜底降级", "为什么打：摘要失败 → 自动降级到滑动窗口；不打 warn 事后排查不到「为什么这次用的是滑动窗口」。当前：catch 已捕获，fallback 标记 used=true。", {
+        logger.warn("││ 调用函数-摘要兜底", "调用函数结束：摘要兜底降级", "为什么写这条日志：摘要失败 → 自动降级到滑动窗口；不写 warn 事后排查不到「为什么这次用的是滑动窗口」。当前：catch 已捕获，fallback 标记 used=true。", {
           fallbackUsed: true,
           fallbackReason: (err as Error).message,
           fallbackMessagesLen: messagesSliding.length,
@@ -309,7 +309,7 @@ export function mountThreeWayWithFallbackRoutes(router: Router): void {
     const slidingHas = hasKey(slidingReply);
     const summarizeHas = hasKey(summarizeReply);
 
-    logger.info("three-way.handler", "调用函数结束：three-way-with-fallback", "为什么打：要把兜底标记 + 三方判定打到日志；学习者事后翻日志一眼能看到「这次走了 fallback 路径」。", {
+    logger.info("three-way.handler", "调用函数结束：three-way-with-fallback", "为什么写这条日志：要把兜底标记 + 三方判定写到日志；学习者事后翻日志一眼能看到「这次走了 fallback 路径」。", {
       返回值: {
         fullHasKeyFact: fullHas,
         slidingHasKeyFact: slidingHas,

@@ -64,7 +64,7 @@
         setErrorKind(null);
         setResult(null);
         inFlightRef.current = true;
-        setStatus({ key: "loading", text: "🔄 请求中（2~3 次出网：1 软路径问答 / +1 摘要 / +1 应急问答）" });
+        setStatus({ key: "loading", text: "🔄 请求中（2~3 次真发网络请求：1 软路径问答 / +1 摘要 / +1 应急问答）" });
 
         try {
           const resp = await fetch("/api/emergency", {

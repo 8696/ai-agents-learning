@@ -1,7 +1,7 @@
 /**
  * 职责：GET /health —— 只读环境信息 + 本 Demo 的教学档位，不调模型。
  * 数据流：无 body → { ok, port, provider, model, hasKey, ladders, defaults }；
- *   四个页面加载时都打一次，用来填页脚 #env-info 并决定主按钮是否 disabled。
+ *   四个页面加载时都写一次，用来填页脚 #env-info 并决定主按钮是否 disabled。
  * 为什么把档位也回出去：页面不写死梯子，改 presets.ts 时前后端一起变。
  */
 import type { Context } from "koa";

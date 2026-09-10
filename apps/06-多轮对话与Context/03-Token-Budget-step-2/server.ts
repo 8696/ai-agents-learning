@@ -17,7 +17,7 @@
  *   POST /api/compare       → 跑双策略对照：调真模型 3 次 + 返回双卡数据
  *   POST /api/compare-force-error → 教学演示 5xx 通道
  *
- * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:06-03-token-budget-step-2
  */

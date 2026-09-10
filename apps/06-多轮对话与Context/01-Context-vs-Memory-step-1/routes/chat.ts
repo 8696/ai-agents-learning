@@ -1,10 +1,10 @@
 /**
  * 职责：POST /api/chat —— 把客户端送来的 messages 数组（即「本轮 Context」）原样发给模型，
- *       返回助手回复；把完整 Context 形状打到服务端日志（§5.3.16 五件套 + 字段释义）。
+ *       返回助手回复；把完整 Context 形状打到服务端日志（§5.3.16 五条日志 + 字段释义）。
  *
  * 数据流：
  *   浏览器 fetch { messages: [{role, content}] }
- *     → Zod 闸门（messages 必须是数组 / 每条 role + content 必填）
+ *     → Zod 校验（messages 必须是数组 / 每条 role + content 必填）
  *       → 调 getLlm() 拿客户端 + 模型 id
  *         → openai.chat.completions.create（协议 A · 与本模块学习节奏一致）
  *           → 打日志：完整 messages + token 估算 + 模型返回值 + 耗时
@@ -12,7 +12,7 @@
  *
  * 教学锚点（本条「Context vs Memory」step-1 最小可观察）：
  *   - 客户端送上来什么 messages，服务端就发什么给模型；前端 messages 数组就是 Context
- *   - 服务端日志把每一次请求的 messages 完整打出来 —— 学习者亲眼看见「这就是 Context 的形状」
+ *   - 服务端日志把每一次请求的 messages 完整写出来 —— 学习者亲眼看见「这就是 Context 的形状」
  *   - 用 gpt-tokenizer（与模块 01-02 一致）估 token 数，让学习者看见 Context 的体积
  *   - Memory 不在本 step-1 —— 下一次刷新页面，messages 就没了（Context 跟一次会话绑定）
  */
@@ -36,7 +36,7 @@ const bodySchema = z.object({
 
 export function mountChatRoutes(router: Router): void {
   router.post("/api/chat", async (ctx: Context) => {
-    // ── ① 入参闸门：防 malformed body ──
+    // ── ① 入参校验：防 malformed body ──
     const parsed = bodySchema.safeParse(ctx.request.body);
     if (!parsed.success) {
       ctx.status = 400;
@@ -72,7 +72,7 @@ export function mountChatRoutes(router: Router): void {
       messages: messages as Array<{ role: "system" | "user" | "assistant"; content: string }>,
     };
 
-    logger.info("chat.handler", "调用函数开始：chat", "为什么打：路由是 Context 进入模型的唯一入口；不打完整 messages 下面就讲不清「Context 是什么」。当前：刚拿到前端 messages。", {
+    logger.info("chat.handler", "调用函数开始：chat", "为什么写这条日志：路由是 Context 进入模型的唯一入口；不写完整 messages 下面就讲不清「Context 是什么」。当前：刚拿到前端 messages。", {
       入参: { request, totalTokensEstimate },
       字段释义: {
         "request.model": "本轮用的模型 id（来自 apps/.env 顶层 LLM_MODEL 或该家默认）",
@@ -95,7 +95,7 @@ export function mountChatRoutes(router: Router): void {
       const fullMessages = [...messages, { role: "assistant" as const, content: reply }];
       const replyTokens = encode(reply).length;
 
-      logger.info("chat.handler", "调用函数结束：chat", "为什么打：要把完整 messages 留作下一轮 Context 的起点。当前：模型已返回；前端拿 fullMessages 当下轮入参。", {
+      logger.info("chat.handler", "调用函数结束：chat", "为什么写这条日志：要把完整 messages 留作下一轮 Context 的起点。当前：模型已返回；前端拿 fullMessages 当下轮入参。", {
         返回值: { reply, usage: completion.usage ?? null },
         字段释义: {
           "reply": "assistant 这一轮的 content",

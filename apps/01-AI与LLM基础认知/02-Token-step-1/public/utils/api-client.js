@@ -24,7 +24,7 @@
 
   window.DemoUtils.describeFailure = function describeFailure(status, data) {
     const base = (data && data.error) || "HTTP " + status;
-    if (status === 400) return "参数被服务端闸门拦下：" + base;
+    if (status === 400) return "参数被服务端校验拦下：" + base;
     return "HTTP " + status + " · " + base;
   };
 

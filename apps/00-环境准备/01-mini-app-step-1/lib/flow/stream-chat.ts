@@ -12,7 +12,7 @@
  *   routes/chat.ts 只该做「校验 + 开流 + 交给谁」；把 for await 循环抄进 route，
  *   以后换成多轮对话或加重试，route 就会滚成一大坨。这里也完全不碰 koa 的 ctx。
  *
- * 日志（§5.3.16）：调用函数 五件套（流式封装层）；调用模型 五件套（出网层，含 __code + 字段释义）。
+ * 日志（§5.3.16）：调用函数 五条日志（流式封装层）；调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。
  */
 import OpenAI from "openai";
 import type { Llm } from "../../../../llm.js";
@@ -102,7 +102,7 @@ export async function streamChatToSse(params: {
   logger.info(
     "│ 流式对话-streamChatToSse",
     "调用函数开始：streamChatToSse",
-    "为什么打：路由只认这一层 stats 形状（frameCount / usage / failed），里面那次才是出网（看「调用模型开始：对话补全」）。当前：即将拼请求体 → 创流 → 推帧 → writer.done()。",
+    "为什么写这条日志：路由只认这一层 stats 形状（frameCount / usage / failed），里面那次才是真发网络请求（看「调用模型开始：对话补全」）。当前：即将拼请求体 → 创流 → 推帧 → writer.done()。",
     {
       入参: {
         llmProvider: llm.provider,
@@ -120,7 +120,7 @@ export async function streamChatToSse(params: {
   logger.info(
     "││ 调用模型-对话补全",
     "调用模型开始：对话补全",
-    "为什么打：真正出网的那一次；不打就没有 frameCount / usage。当前：在 streamChatToSse 里即将发出流式请求；这是 §5.3.16 流式规则的「唯一一次」开始，中间 chunk 不再套五件套。",
+    "为什么写这条日志：真正发网络请求的那一次；不写就没有 frameCount / usage。当前：在 streamChatToSse 里即将发出流式请求；这是 §5.3.16 流式规则的「唯一一次」开始，中间 chunk 不再套五条日志。",
     {
       入参: req,
       __code: `const stream = await llm.openai.chat.completions.create(req);`,
@@ -135,7 +135,7 @@ export async function streamChatToSse(params: {
     logger.info(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全",
-      "为什么打：流式场景只在收尾打一次完整返回值（§5.3.16 流式规则），便于核对 final usage / frameCount。当前：pumpChunksToSse 已返回，下一步 writer.done()。",
+      "为什么写这条日志：流式场景只在收尾写一次完整返回值（§5.3.16 流式规则），便于核对 final usage / frameCount。当前：pumpChunksToSse 已返回，下一步 writer.done()。",
       {
         返回值: { frameCount, usage },
         耗时ms: Date.now() - tModelStart,
@@ -153,7 +153,7 @@ export async function streamChatToSse(params: {
     logger.error(
       "││ 调用模型-对话补全",
       "调用模型结束：对话补全（失败）",
-      "为什么打：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create / pump 抛错，SSE 头已发完只能以错误帧回页面。",
+      "为什么写这条日志：拿到 upstreamStatus 才能区分 401/403（Key）、429（限流）、5xx（对方挂了）。当前：create / pump 抛错，SSE 头已发完只能以错误帧回页面。",
       {
         返回值: failed,
         耗时ms: Date.now() - tModelStart,
@@ -169,7 +169,7 @@ export async function streamChatToSse(params: {
   logger.info(
     "│ 流式对话-streamChatToSse",
     "调用函数结束：streamChatToSse",
-    "为什么打：路由要把 stats 交给页面 stats 区，和 route 的「调用函数结束：handlePostChat」互为对照。当前：返回 stats（含 frameCount / usage 或 failed）。",
+    "为什么写这条日志：路由要把 stats 交给页面 stats 区，和 route 的「调用函数结束：handlePostChat」互为对照。当前：返回 stats（含 frameCount / usage 或 failed）。",
     {
       返回值: stats,
       耗时ms: Date.now() - tFuncStart,

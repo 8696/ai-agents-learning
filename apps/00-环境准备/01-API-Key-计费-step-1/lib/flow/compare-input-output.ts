@@ -4,8 +4,8 @@
  * 为什么单独成文件：preset 文案 + 结论算法只服务对照这一个场景，
  *   混进 measure-one-call.ts 会让「量一次」这件事看起来很复杂。
  *
- * 日志（§5.3.16）：循环里每圈打满（调用循环开始 / 本轮参数 / 子调用五件套 / 调用循环结束 + 耗时ms）；
- *   子调用 measureOneCall 内部已自带五件套（scope 多一根 `│`）。
+ * 日志（§5.3.16）：循环里每圈打满（调用循环开始 / 本轮参数 / 子调用五条日志 / 调用循环结束 + 耗时ms）；
+ *   子调用 measureOneCall 内部已自带五条日志（scope 多一根 `│`）。
  */
 import type { Llm } from "../../../../llm.js";
 import { measureOneCall, logMeasurement } from "./measure-one-call.js";
@@ -69,7 +69,7 @@ export async function compareInputVsOutput(llm: Llm): Promise<CompareResult> {
     logger.info(
       "│ 调用循环-compareInputVsOutput",
       `调用循环开始：第 ${round} 轮 / 共 ${totalRounds} 轮`,
-      "为什么打：本条是对照实验，每轮条件必须独立打，便于核对「两次确实只差输入/输出那一段」。当前：第 N 轮即将用固定 preset 调 measureOneCall。",
+      "为什么写这条日志：本条是对照实验，每轮条件必须独立打，便于核对「两次确实只差输入/输出那一段」。当前：第 N 轮即将用固定 preset 调 measureOneCall。",
       {
         第几轮: round,
         本轮为什么是这些参数: {
@@ -93,7 +93,7 @@ export async function compareInputVsOutput(llm: Llm): Promise<CompareResult> {
     logger.info(
       "│ 调用循环-compareInputVsOutput",
       `调用循环结束：第 ${round} 轮`,
-      "为什么打：本条教学点是「Token 总量 ≠ 账单」——每轮单独的 total_tokens / cost 是 verdict 计算的原料，必须按轮收齐。当前：measureOneCall + logMeasurement 都已返回。",
+      "为什么写这条日志：本条教学点是「Token 总量 ≠ 账单」——每轮单独的 total_tokens / cost 是 verdict 计算的原料，必须按轮收齐。当前：measureOneCall + logMeasurement 都已返回。",
       {
         第几轮: round,
         本轮结果: {

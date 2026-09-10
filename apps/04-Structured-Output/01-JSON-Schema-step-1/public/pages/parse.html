@@ -30,7 +30,7 @@
       "把 JSON 贴进框，点「跑 parse」→ POST /api/parse { raw }",
       "合法：绿卡是 typed 对象；灰卡是 { success: true, data }",
       "非法：不会 500，灰卡是 { success: false, issues }，没有 data",
-      "空 raw 或非法 JSON 字符串才是 HTTP 400（闸门），和 schema 校验失败要分开看",
+      "空 raw 或非法 JSON 字符串才是 HTTP 400（校验），和 schema 校验失败要分开看",
     ];
 
     window.DemoUtils.waitDemoUI(

@@ -5,7 +5,7 @@
  *
  * 数据流：
  *   浏览器 fetch { turnCount, slidingTokenBudget, summarizeTokenBudget, keepRecent, keyFactAtTurn }
- *     → Zod 闸门
+ *     → Zod 校验
  *       → buildMockHistory + encode 每条 token 数
  *       → messagesFull      = [system, ...mockHistory, 问句]
  *       → messagesSliding   = tokenWindowTrim(messagesFull, slidingTokenBudget)   ← 从最新往旧累加 ≤ budget
@@ -162,7 +162,7 @@ async function callLlmOnce(
   logger.info(
     "││ 调用模型-按 token 对照",
     `调用模型开始：${stageZh}`,
-    `为什么打：变体 2 的关键证据——窗口控制从「条数」换成「token」。当前：${stageZh}（messages 长度 ${messages.length}）。`,
+    `为什么写这条日志：变体 2 的关键证据——窗口控制从「条数」换成「token」。当前：${stageZh}（messages 长度 ${messages.length}）。`,
     {
       入参: request,
       tokensEstimate,
@@ -177,7 +177,7 @@ async function callLlmOnce(
     logger.info(
       "││ 调用模型-按 token 对照",
       `调用模型结束：${stageZh}`,
-      `为什么打：要把完整 completion 打到日志，对照是否含 key fact。`,
+      `为什么写这条日志：要把完整 completion 写到日志，对照是否含 key fact。`,
       {
         返回值: completion,
         stage,
@@ -199,7 +199,7 @@ async function callLlmOnce(
 
 export function mountTokenBudgetRoutes(router: Router): void {
   router.post("/api/token-budget", async (ctx: Context) => {
-    // ── ① 入参闸门 ──
+    // ── ① 入参校验 ──
     const parsed = bodySchema.safeParse(ctx.request.body ?? {});
     if (!parsed.success) {
       ctx.status = 400;
@@ -240,7 +240,7 @@ export function mountTokenBudgetRoutes(router: Router): void {
     const oldSummaryTokens = oldForSummary.reduce((s, m) => s + encode(m.content).length, 0);
     const recentOriginal = mockHistory.slice(slidingBoundary);
 
-    logger.info("token-budget.handler", "调用函数开始：token-budget", "为什么打：变体 2「按 token 算窗口」的对照实验。打完数据流才讲得清「按 token vs 按条数」的差别。", {
+    logger.info("token-budget.handler", "调用函数开始：token-budget", "为什么写这条日志：变体 2「按 token 算窗口」的对照实验。写完数据流才讲得清「按 token vs 按条数」的差别。", {
       入参: { turnCount, slidingTokenBudget, summarizeTokenBudget, keepRecent, keyFactAtTurn, modelA },
       字段释义: {
         "slidingTokenBudget": "滑动窗口保留的 token 上限（gpt-tokenizer 估算）",
@@ -257,7 +257,7 @@ export function mountTokenBudgetRoutes(router: Router): void {
       __code: "tokenWindowTrim + summarizeOld + 三次 callLlmOnce；详见 routes/token-budget.ts",
     });
 
-    // ── ④ 摘要触发闸门（缺口 3 修复 · 2026-09-09）──
+    // ── ④ 摘要触发校验（缺口 3 修复 · 2026-09-09）──
     // 规则：远期 token > summarizeTokenBudget 才调摘要 LLM；否则 messagesSummarize 直接复用 messagesSliding（零额外调用，「全部留原文」语义）
     // 这是易混 7「触发阈值 vs 滑动窗口 budget = 两条独立的线」的代码体现
     const triggerSummarize = oldSummaryTokens > summarizeTokenBudget;
@@ -279,7 +279,7 @@ export function mountTokenBudgetRoutes(router: Router): void {
         { role: "user", content: RECALL_QUESTION },
       ];
     } else {
-      logger.info("││ 调用函数-摘要触发闸门", "调用函数结束：摘要触发未命中", "为什么打：远期 token ≤ summarizeTokenBudget → 不调摘要 LLM（节省 1 次出网）；messagesSummarize 直接复用 messagesSliding = 「全部留原文」语义。", {
+      logger.info("││ 调用函数-摘要触发校验", "调用函数结束：摘要触发未命中", "为什么写这条日志：远期 token ≤ summarizeTokenBudget → 不调摘要 LLM（节省 1 次真发网络请求）；messagesSummarize 直接复用 messagesSliding = 「全部留原文」语义。", {
         oldSummaryTokens,
         summarizeTokenBudget,
         fallbackTo: "messagesSliding（与 ② 滑动窗口同源）",
@@ -307,7 +307,7 @@ export function mountTokenBudgetRoutes(router: Router): void {
     const hasKey = (s: string) => s.includes("Tina") || s.includes("上海") || s.includes("日料");
 
     // ── ⑥ 出参 ──
-    logger.info("token-budget.handler", "调用函数结束：token-budget", "为什么打：把「按 token vs 按条数」对照的关键数据打到日志。", {
+    logger.info("token-budget.handler", "调用函数结束：token-budget", "为什么写这条日志：把「按 token vs 按条数」对照的关键数据写到日志。", {
       返回值: {
         fullLen: messagesFull.length,
         slidingLen: messagesSliding.length,

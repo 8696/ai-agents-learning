@@ -16,7 +16,7 @@
  *   GET  /api/tools    → Registry 元信息
  *   POST /api/plan     → { scenario, mode } 跑串/并行 → 返 totalMs + timeline
  *
- * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:05-01-fc-protocol-step-3
  */

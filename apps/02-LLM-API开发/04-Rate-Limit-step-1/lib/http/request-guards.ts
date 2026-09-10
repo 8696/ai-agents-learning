@@ -1,5 +1,5 @@
 /**
- * 职责：业务路由共用的入参闸门（有 Key？proxy target 合法？burst 并发数？）。
+ * 职责：业务路由共用的入参校验（有 Key？proxy target 合法？burst 并发数？）。
  * 数据流：ctx → 通过则返回值；失败则已写好 status/body，返回 null，route 直接 return。
  * 为什么单独成文件：mock 与 real 两套 route 都要同一套口径，散在 handler 里会漂成两套错法。
  */

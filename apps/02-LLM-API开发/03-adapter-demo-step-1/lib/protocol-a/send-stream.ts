@@ -3,8 +3,8 @@
  * 数据流：stream:true + include_usage → splitProtocolADelta → yield thinking/content/usage/done。
  * 本文件禁止 import @anthropic-ai/sdk。
  *
- * 日志（§5.3.16）：调用函数 五件套（sendViaAStream 封装层），调用模型 五件套（出网层）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 chunk 不套五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（sendViaAStream 封装层），调用模型 五条日志（真正发网络请求的那一层）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 chunk 不套五条日志。
  */
 import type { Llm } from "../../../../llm.js";
 import type { SendMessageOptions, UnifiedDelta } from "../adapter/types.js";
@@ -36,7 +36,7 @@ export async function* sendViaAStream(
   logger.info(
     "│ 协议A 流式-sendViaAStream",
     "调用函数开始：sendViaAStream",
-    "为什么打：sendMessageStream 只认这一层 yield 出的 UnifiedDelta；里面那次才是出网（看「调用模型开始：协议A-对话补全」）。当前：即将发协议 A 流式调用。",
+    "为什么写这条日志：sendMessageStream 只认这一层 yield 出的 UnifiedDelta；里面那次才是真发网络请求（看「调用模型开始：协议A-对话补全」）。当前：即将发协议 A 流式调用。",
     {
       入参: { protocol: "A", mode: "stream", sdk: "openai", systemLen: (opts.system ?? "").length, messageLen: opts.message.length, thinkingEnabled: thinkingEnabled(opts) },
       __code: `const stream = await llm.openai.chat.completions.create(${JSON.stringify(requestBody, null, 2)});\nfor await (const chunk of stream) { ... yield unified delta ... }`,
@@ -47,7 +47,7 @@ export async function* sendViaAStream(
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么打：本文件唯一的真出网层；不打就没有 usage / chunk 流。当前：即将发出 stream:true + include_usage 请求；adapter 已分叉到协议 A 流式。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 usage / chunk 流。当前：即将发出 stream:true + include_usage 请求；adapter 已分叉到协议 A 流式。",
     {
       入参: {
         model: requestBody.model,
@@ -84,11 +84,11 @@ export async function* sendViaAStream(
     if (split.content) yield { type: "content", text: split.content };
   }
 
-  // 流式规则（§5.3.16）：只在收尾打一次完整返回值。
+  // 流式规则（§5.3.16）：只在收尾写一次完整返回值。
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型结束：协议A 对话补全",
-    "为什么打：流式场景只在收尾打一次完整返回值（末尾 usage 块 + stopReason）；便于核对 final usage / 总帧数。当前：for await 已退出，下一步 yield usage + done。",
+    "为什么写这条日志：流式场景只在收尾写一次完整返回值（末尾 usage 块 + stopReason）；便于核对 final usage / 总帧数。当前：for await 已退出，下一步 yield usage + done。",
     {
       返回值: { usage, stopReason },
       耗时ms: Date.now() - tModelStart,
@@ -121,7 +121,7 @@ export async function* sendViaAStream(
   logger.info(
     "│ 协议A 流式-sendViaAStream",
     "调用函数结束：sendViaAStream",
-    "为什么打：sendMessageStream 已经把 UnifiedDelta 都 yield 出去；打耗时便于和协议 B 流式对照。当前：done 已 yield。",
+    "为什么写这条日志：sendMessageStream 已经把 UnifiedDelta 都 yield 出去；写耗时便于和协议 B 流式对照。当前：done 已 yield。",
     {
       返回值: { protocol: "A", mode: "stream", hasUsage: Boolean(usage) },
       耗时ms: Date.now() - tFuncStart,

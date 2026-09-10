@@ -18,8 +18,8 @@
  * 与 routes/chain.ts 的关系：本路由服务"反例"页面（pages/chain-bad.html）；
  *   chain 页面（pages/chain.html）走 routes/chain.ts。**页与接口 1:1**（§5.3.8）。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostChainBad 封装层）；
- *   闸门挡掉单独打 warn；子调用 executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostChainBad 封装层）；
+ *   校验挡下单独写 warn；子调用 executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -52,7 +52,7 @@ export function mountChainBadRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数开始：handleGetTools",
-      "为什么打：route 只认这一层返回的 { tools }；里面 getToolsMeta 是「真活」。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
+      "为什么写这条日志：route 只认这一层返回的 { tools }；里面 getToolsMeta 是真正干活的那一层。当前：前端 Tool Registry 面板拉一次；记 count 便于核对前后端 tool schema 是否一致。",
       {
         入参: { endpoint: "GET /api/tools" },
         __code: `ctx.body = { tools: getToolsMeta() };`,
@@ -62,7 +62,7 @@ export function mountChainBadRoutes(router: Router): void {
     logger.info(
       "api.tools",
       "调用函数结束：handleGetTools",
-      "为什么打：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
+      "为什么写这条日志：route 要把 { tools } 写进 ctx.body 交给前端 Registry 面板。",
       {
         返回值: { count: meta.length },
         耗时ms: Date.now() - tHandlerStart,
@@ -79,19 +79,19 @@ export function mountChainBadRoutes(router: Router): void {
     logger.info(
       "api.chain-bad",
       "调用函数开始：handlePostChainBad",
-      "为什么打：route 只认这一层返回的反例响应包；里面两个 executeTool 是「真活」。当前：前端发来反例请求；记 query + style。注意：本路由故意把 summarize.content 写 undefined，演示 Promise.all 拿不到上游输出的踩坑。",
+      "为什么写这条日志：route 只认这一层返回的反例响应包；里面两个 executeTool 是真正干活的那一层。当前：前端发来反例请求；记 query + style。注意：本路由故意把 summarize.content 写 undefined，演示 Promise.all 拿不到上游输出的踩坑。",
       {
         入参: { queryPreview: query.slice(0, 60), queryLen: query.length, style, bodyKeys: Object.keys(body) },
         __code: `// 反例：summarize.content = undefined（不依赖 search_doc.result）`,
       },
     );
 
-    // §5.3.12 入参闸门
+    // §5.3.12 入参校验
     if (!query) {
       logger.warn(
         "api.chain-bad",
-        "调用函数结束：handlePostChainBad（闸门拒绝）",
-        "为什么打：query 不能为空；走 400 不让 round-1 浪费 token。",
+        "调用函数结束：handlePostChainBad（校验拒绝）",
+        "为什么写这条日志：query 不能为空；走 400 不让 round-1 浪费 token。",
         {
           返回值: { httpStatus: 400, error: "query 不能为空" },
           耗时ms: Date.now() - tHandlerStart,
@@ -104,8 +104,8 @@ export function mountChainBadRoutes(router: Router): void {
     if (style !== "tech" && style !== "oneliner" && style !== "bullets") {
       logger.warn(
         "api.chain-bad",
-        "调用函数结束：handlePostChainBad（闸门拒绝）",
-        "为什么打：style 必须是 tech | oneliner | bullets；其它都按 400 处理。",
+        "调用函数结束：handlePostChainBad（校验拒绝）",
+        "为什么写这条日志：style 必须是 tech | oneliner | bullets；其它都按 400 处理。",
         {
           返回值: { httpStatus: 400, error: "style 必须是 tech | oneliner | bullets" },
           耗时ms: Date.now() - tHandlerStart,
@@ -126,7 +126,7 @@ export function mountChainBadRoutes(router: Router): void {
     logger.warn(
       "││ dispatch-chain-bad",
       "调用循环开始：反例 · Promise.all 并发 2 个 tool_call",
-      "为什么打：❌ 反例模式——B 不等 A 完成就启动；summarize.content=undefined；演示「有依赖链用 Promise.all → B 拿 undefined」的踩坑。",
+      "为什么写这条日志：❌ 反例模式——B 不等 A 完成就启动；summarize.content=undefined；演示「有依赖链用 Promise.all → B 拿 undefined」的踩坑。",
       {
         第几轮: 1,
         总轮数: 1,
@@ -153,7 +153,7 @@ export function mountChainBadRoutes(router: Router): void {
         logger.info(
           "││ dispatch-chain-bad",
           "调用循环 · 子执行 · search_doc 完成",
-          "为什么打：步骤 1 已返；正常路径会拿此 result 当 summarize.content，但本反例路径已提前把 summarize.content 写成 undefined。",
+          "为什么写这条日志：步骤 1 已返；正常路径会拿此 result 当 summarize.content，但本反例路径已提前把 summarize.content 写成 undefined。",
           {
             中间状态: { tool: r.tool, ok: r.ok, hasHits: r.ok ? Boolean((r.result as { hits?: unknown[] })?.hits) : false },
           },
@@ -179,7 +179,7 @@ export function mountChainBadRoutes(router: Router): void {
         logger.info(
           "││ dispatch-chain-bad",
           "调用循环 · 子执行 · summarize 完成（反例）",
-          "为什么打：步骤 2 完成；但 content=undefined → summary 缺数据（hits=0 / query='未知 query'）。",
+          "为什么写这条日志：步骤 2 完成；但 content=undefined → summary 缺数据（hits=0 / query='未知 query'）。",
           {
             中间状态: {
               tool: r.tool,
@@ -197,7 +197,7 @@ export function mountChainBadRoutes(router: Router): void {
     logger.info(
       "││ dispatch-chain-bad",
       "调用循环结束：反例 dispatch 收尾",
-      "为什么打：Promise.all 并发 ≈ max(handler sleeps)；与正例串行对比，记 totalMs 便于核对。",
+      "为什么写这条日志：Promise.all 并发 ≈ max(handler sleeps)；与正例串行对比，记 totalMs 便于核对。",
       {
         本轮结果: { totalMs: Date.now() - dispatchStart, hasSearchDoc: settled.some((r) => r.tool === "search_doc"), hasSummarize: settled.some((r) => r.tool === "summarize") },
       },
@@ -211,7 +211,7 @@ export function mountChainBadRoutes(router: Router): void {
     logger.info(
       "api.chain-bad",
       "调用函数结束：handlePostChainBad",
-      "为什么打：route 要把响应包写进 ctx.body 交给页面 stats 区；含 antiPattern: true + summaryNote 便于前端渲染 ❌ 警告。",
+      "为什么写这条日志：route 要把响应包写进 ctx.body 交给页面 stats 区；含 antiPattern: true + summaryNote 便于前端渲染 ❌ 警告。",
       {
         返回值: { status: 200, totalMs, hasSummary: Boolean(finalSummary) },
         耗时ms: Date.now() - tHandlerStart,

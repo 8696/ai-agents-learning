@@ -3,8 +3,8 @@
  * 数据流：messages.stream → streamEvent 队列 → thinking_delta / text_delta / usage / done。
  * 本文件禁止 import openai。
  *
- * 日志（§5.3.16）：调用函数 五件套（sendViaBStream 封装层），调用模型 五件套（出网层）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 event 不套五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（sendViaBStream 封装层），调用模型 五条日志（真正发网络请求的那一层）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 event 不套五条日志。
  */
 import type { Llm } from "../../../../llm.js";
 import type { SendMessageOptions, UnifiedDelta } from "../adapter/types.js";
@@ -33,7 +33,7 @@ export async function* sendViaBStream(
   logger.info(
     "│ 协议B 流式-sendViaBStream",
     "调用函数开始：sendViaBStream",
-    "为什么打：sendMessageStream 只认这一层 yield 出的 UnifiedDelta；里面那次才是出网（看「调用模型开始：协议B-消息流」）。当前：即将发协议 B 流式；adapter 已分叉到协议 B 流式。",
+    "为什么写这条日志：sendMessageStream 只认这一层 yield 出的 UnifiedDelta；里面那次才是真发网络请求（看「调用模型开始：协议B-消息流」）。当前：即将发协议 B 流式；adapter 已分叉到协议 B 流式。",
     {
       入参: { protocol: "B", mode: "stream", sdk: "anthropic", hasSystem: Boolean(opts.system), messageLen: opts.message.length, thinkingEnabled: thinkingOn, maxTokens },
       __code: `const stream = llm.anthropic.messages.stream(${JSON.stringify(requestBody, null, 2)});\n... streamEvent 队列 ... yield unified delta ...`,
@@ -44,7 +44,7 @@ export async function* sendViaBStream(
   logger.info(
     "││ 调用模型-协议B 消息流",
     "调用模型开始：协议B 消息流",
-    "为什么打：本文件唯一的真出网层；不打就没有 event 序列 / final usage。当前：即将发出 messages.stream，EventStream 句柄需要 on('streamEvent') 桥接。",
+    "为什么写这条日志：本文件唯一真正发网络请求的那一层；不写就没有 event 序列 / final usage。当前：即将发出 messages.stream，EventStream 句柄需要 on('streamEvent') 桥接。",
     {
       入参: {
         model: requestBody.model,
@@ -129,11 +129,11 @@ export async function* sendViaBStream(
 
   await stream.finalMessage().catch(() => undefined);
 
-  // 流式规则（§5.3.16）：只在收尾打一次完整返回值。
+  // 流式规则（§5.3.16）：只在收尾写一次完整返回值。
   logger.info(
     "││ 调用模型-协议B 消息流",
     "调用模型结束：协议B 消息流",
-    "为什么打：流式场景只在收尾打一次完整返回值（汇总自 message_start / message_delta 的最终 usage）。当前：finalMessage 已返回，下一步 yield usage + done。",
+    "为什么写这条日志：流式场景只在收尾写一次完整返回值（汇总自 message_start / message_delta 的最终 usage）。当前：finalMessage 已返回，下一步 yield usage + done。",
     {
       返回值: { usage, stopReason },
       耗时ms: Date.now() - tModelStart,
@@ -167,7 +167,7 @@ export async function* sendViaBStream(
   logger.info(
     "│ 协议B 流式-sendViaBStream",
     "调用函数结束：sendViaBStream",
-    "为什么打：sendMessageStream 已经把 UnifiedDelta 都 yield 出去；打耗时便于和协议 A 流式对照。当前：done 已 yield。",
+    "为什么写这条日志：sendMessageStream 已经把 UnifiedDelta 都 yield 出去；写耗时便于和协议 A 流式对照。当前：done 已 yield。",
     {
       返回值: { protocol: "B", mode: "stream", hasUsage: Boolean(usage) },
       耗时ms: Date.now() - tFuncStart,

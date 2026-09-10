@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Loop / ReAct · step-1</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function App() {
+      const [query, setQuery] = useState("把逾期购物待办标完成");
+      const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
+      const [health, setHealth] = useState(null);
+      const [errorMsg, setErrorMsg] = useState("");
+      const [errorKind, setErrorKind] = useState(null); // null | "4xx" | "5xx"
+      // 后端返回的整轮 Loop 产物：trajectory / finalAnswer / stoppedReason / finalMessages
+      const [result, setResult] = useState(null);
+      const inFlightRef = useRef(false);
+
+      // ── 页脚 /health 加载 ──
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
+      }, []);
+
+      async function runAgent() {
+        if (inFlightRef.current) return;
+        if (health && !health.hasKey) {
+          setErrorMsg("apps/.env 没配当前 LLM_PROVIDER 的 Key（看页脚 Key ❌）");
+          setErrorKind("5xx");
+          return;
+        }
+        setErrorMsg("");
+        setErrorKind(null);
+        setResult(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 Loop 跑中" });
+
+        try {
+          const resp = await fetch("/api/agent-run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            const kind = resp.status >= 500 ? "5xx" : "4xx";
+            setErrorKind(kind);
+            const detail = data.issues
+              ? ` · ${data.issues.map(i => i.message || JSON.stringify(i)).join("；")}`
+              : "";
+            setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}${detail}`.trim());
+            setStatus({ key: "error", text: "❌ 错误" });
+            return;
+          }
+          setResult(data);
+          setStatus({ key: "done", text: "✅ Loop 已停 · " + (data.stoppedReason === "final_answer" ? "最终答案" : "达到最大轮次") });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      async function simulateUpstreamError() {
+        if (inFlightRef.current) return;
+        setErrorMsg("");
+        setErrorKind(null);
+        setResult(null);
+        inFlightRef.current = true;
+        setStatus({ key: "loading", text: "🔄 请求中" });
+        try {
+          const resp = await fetch("/api/agent-force-error", { method: "POST" });
+          const data = await resp.json();
+          setErrorKind("5xx");
+          setErrorMsg(`${resp.status} · ${data.error || ""} ${data.message || ""}`.trim());
+          setStatus({ key: "error", text: "❌ 错误" });
+        } catch (err) {
+          setErrorKind("5xx");
+          setErrorMsg(`网络错误：${(err && err.message) || err}`);
+          setStatus({ key: "error", text: "❌ 错误" });
+        } finally {
+          inFlightRef.current = false;
+        }
+      }
+
+      const runDisabled = inFlightRef.current || (health && !health.hasKey);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Agent Loop / ReAct（手写 Agent 循环） · 第一步（step-1） · 看到 loop 在转
+            </h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status.key === "loading" ? "bg-yellow-200" :
+               status.key === "done"    ? "bg-green-200" :
+               status.key === "error"   ? "bg-red-200" :
+                                          "bg-gray-200")
+            }>{status.text}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>手写 while 跑一整轮 Agent Loop，按圈展开 trajectory（执行轨迹），看到 Reason → Act → Observe → Reason → 最终答案</b>。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>输入框写一句自然语言任务（默认「把逾期购物待办标完成」），点「跑 Agent」</li>
+                <li>客户端把 query 写到 /api/agent-run；服务端组装 [system, user] 当入参，跑 runAgentLoop</li>
+                <li>Loop 第一圈 Reason：调真模型 → 模型要 list_todos；Act 查内存数据 → Observe 写回 messages</li>
+                <li>Loop 第二~N 圈：每圈模型决定还要不要 complete_todo；Act + Observe 累积进 messages</li>
+                <li>Loop 终止：本圈 tool_calls 空 → 最终答案（变体 J）→ stoppedReason=final_answer</li>
+                <li>轨迹区按圈展示每圈的 assistant 摘要 / tool_calls / tool_results / 耗时；最后一圈额外「最终答案」绿卡</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+              </ol>
+              {/* 核心教学点卡片（§5.3.11.b 强制） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  Agent Loop = 你自己写的一段控制流（<code className="bg-white px-1 rounded">while</code>）—— 反复「调 LLM → 若它要工具就执行并把结果塞回 messages → 再调 LLM」，直到碰上停止条件。
+                  本 step 只演示一种停止条件：<b>变体 J 最终答案</b>（本圈没有 tool_calls，正文就是答案）。
+                  trajectory（执行轨迹）就是 messages 在跑什么阶段 —— 一圈一个 reason/act/observe，每圈都看得见。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：跑一次 → 期望看到至少 2 圈（list_todos 看清楚 → complete_todo 逐条完成）→ 最后一圈无 tool_calls → 绿卡最终答案 → stoppedReason=final_answer。
+                  想看其它停止条件（K 最大轮次 / L 超时 / M 用户取消）→ step-2+ 加；想看并行（变体 E）/ 失败 Observe（变体 G）→ 也 step-2+ 加。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">给模型一句话任务（默认演示「把逾期购物待办标完成」）：</div>
+              <textarea
+                id="user-input"
+                className="w-full border border-gray-300 rounded p-2 text-sm"
+                rows="2"
+                placeholder="比如：把逾期购物待办标完成"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  id="btn-run-agent"
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                  onClick={runAgent}
+                  disabled={runDisabled}
+                >跑 Agent（点了真调 LLM 跑一整轮 Loop · 期望看到 ≥2 圈）</button>
+                <button
+                  id="btn-simulate-error"
+                  className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
+                  onClick={simulateUpstreamError}
+                >演示上游失败（5xx · 类 B 错误）</button>
+              </div>
+              {errorMsg ? (
+                <div
+                  id="error-box"
+                  className={
+                    "text-xs px-3 py-2 rounded border " +
+                    (errorKind === "5xx"
+                      ? "border-red-300 bg-red-50 text-red-700"
+                      : "border-yellow-300 bg-yellow-50 text-yellow-800")
+                  }
+                >
+                  <div className="font-semibold">
+                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                  </div>
+                  <div className="mt-1">{errorMsg}</div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!result ? (
+                <div className="text-xs text-gray-400">
+                  （还没跑 · 点「跑 Agent」会真发请求到模型，按圈展开 trajectory）
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="text-gray-700">
+                      <b>轨迹（trajectory · Loop 一圈一张卡）</b> · 共 <b>{result.rounds}</b> 圈 · 停止原因：
+                      <span className={
+                        "ml-1 px-2 py-0.5 rounded text-xs " +
+                        (result.stoppedReason === "final_answer"
+                          ? "bg-green-50 border border-green-300 text-green-800"
+                          : "bg-yellow-50 border border-yellow-300 text-yellow-800")
+                      }>
+                        {result.stoppedReason === "final_answer" ? "最终答案（变体 J）" : "达到最大轮次（兜底 · 不指望触发）"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">任务：<b>{result.query}</b></div>
+                  </div>
+
+                  {result.trajectory.map((step, idx) => (
+                    <div key={idx} className="border border-gray-300 rounded p-3 space-y-2 bg-white">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="font-semibold text-gray-800">
+                          第 <b>{step.round}</b> 圈
+                        </div>
+                        <div className="text-xs text-gray-500">≈ {step.elapsedMs} ms</div>
+                      </div>
+
+                      {/* Reason 阶段 */}
+                      <div className="bg-gray-50 border border-gray-300 rounded p-2 text-xs">
+                        <div className="font-semibold text-gray-700 mb-1">Reason（调模型）</div>
+                        {step.assistant.content ? (
+                          <div className="whitespace-pre-wrap mb-1">{step.assistant.content}</div>
+                        ) : (
+                          <div className="text-gray-400 italic mb-1">（assistant.content 为空 · 模型本圈纯调工具）</div>
+                        )}
+                        {step.assistant.tc.length === 0 ? (
+                          <div className="text-green-700">
+                            → <b>tool_calls 为空 · 最终答案</b>（变体 J · Loop 在本圈 break）
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="text-gray-600">→ 要调 {step.assistant.tc.length} 个工具：</div>
+                            {step.assistant.tc.map((tc, i) => (
+                              <div key={tc.id} className="bg-white border border-gray-200 rounded p-1 text-gray-700">
+                                <span className="text-gray-500">#{i + 1}</span>{" "}
+                                <b>{tc.function.name}</b>(
+                                <span className="font-mono text-gray-600">{tc.function.arguments}</span>
+                                ) · id={tc.id}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Act + Observe 阶段：每圈可能 0~N 个 tool_result */}
+                      {step.toolResults.length > 0 && (
+                        <div className="border border-green-300 bg-green-50 rounded p-2 text-xs">
+                          <div className="font-semibold text-green-800 mb-1">
+                            Act + Observe（执行工具 → tool_result 塞回 messages）
+                          </div>
+                          <div className="space-y-2">
+                            {step.toolResults.map((tr, i) => {
+                              let parsed = null;
+                              try { parsed = JSON.parse(tr.content); } catch {}
+                              const isErr = parsed && parsed.ok === false;
+                              return (
+                                <div
+                                  key={tr.tool_call_id}
+                                  className={
+                                    "rounded p-2 border " +
+                                    (isErr
+                                      ? "bg-red-50 border-red-300 text-red-800"
+                                      : "bg-white border-green-300 text-gray-800")
+                                  }
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div>
+                                      <span className="text-gray-500">#{i + 1}</span>{" "}
+                                      <b>{tr.name}</b>(
+                                      <span className="font-mono">{JSON.stringify(tr.arguments)}</span>)
+                                    </div>
+                                    <span className={"text-xs px-2 py-0.5 rounded " + (isErr ? "bg-red-200" : "bg-green-200")}>
+                                      {isErr ? "失败" : "成功"}
+                                    </span>
+                                  </div>
+                                  <pre className="whitespace-pre-wrap text-gray-700 max-h-32 overflow-auto">
+                                    {tr.content}
+                                  </pre>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* 最终答案：绿卡 */}
+                  {result.stoppedReason === "final_answer" && (
+                    <div className="border border-green-300 bg-green-50 rounded p-3 space-y-1">
+                      <div className="text-sm font-semibold text-green-900">
+                        最终答案（变体 J · assistant 正文即答案 · 下一圈不会再来）
+                      </div>
+                      <div className="whitespace-pre-wrap text-sm text-green-900">
+                        {result.finalAnswer || "（模型本圈无正文 · 罕见）"}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 跑完 messages 形状：让学习者直观感受「messages 在跑什么阶段」 */}
+                  <details className="border border-gray-300 rounded p-3 bg-gray-50">
+                    <summary className="text-sm font-semibold text-gray-700 cursor-pointer">
+                      跑完后完整 messages（点击展开 · 看 Loop 一圈一圈往里追加了什么）
+                    </summary>
+                    <pre className="mt-2 text-xs whitespace-pre-wrap max-h-96 overflow-auto bg-white border border-gray-200 rounded p-2">
+                      {JSON.stringify(result.finalMessages, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 50049 · 协议 A（openai Chat Completions） · 模型服务商 {health?.provider ?? "(待连接)"} · 模型 {health?.model ?? "(待连接)"} · 密钥 {health?.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

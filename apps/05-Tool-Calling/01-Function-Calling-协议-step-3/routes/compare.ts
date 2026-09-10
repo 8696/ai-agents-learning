@@ -13,8 +13,8 @@
  *
  * 教学锚点（覆盖 MD 需求 2）：串行 vs 并行 · 对比按钮 · 总耗时 + 加速比 = serial / parallel ≈ 2×。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostCompare 封装层）；
- *   闸门挡掉单独打 warn；子调用 executeTool 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostCompare 封装层）；
+ *   校验挡下单独写 warn；子调用 executeTool 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -118,7 +118,7 @@ async function runOnce(
   logger.info(
     `│ 对照-runOnce[${mode}]`,
     "调用函数开始：runOnce",
-    "为什么打：handlePostCompare 要把两份 SubRun 写进 ctx.body 交给页面 stats 区；每一份 SubRun 都从 runOnce 拿。当前：mode 决定走 Promise.all 还是 for await；记 dispatchStart 用于相对时间。",
+    "为什么写这条日志：handlePostCompare 要把两份 SubRun 写进 ctx.body 交给页面 stats 区；每一份 SubRun 都从 runOnce 拿。当前：mode 决定走 Promise.all 还是 for await；记 dispatchStart 用于相对时间。",
     {
       入参: { mode, count: calls.length, toolCallIds: calls.map((c) => c.id) },
       __code: `// mode=parallel: Promise.all; mode=serial: for await`,
@@ -172,7 +172,7 @@ async function runOnce(
   logger.info(
     `│ 对照-runOnce[${mode}]`,
     "调用函数结束：runOnce",
-    "为什么打：route 要把 SubRun 写进 ctx.body 交给页面 stats 区；记 totalMs + okCount 便于加速比与编造检测。",
+    "为什么写这条日志：route 要把 SubRun 写进 ctx.body 交给页面 stats 区；记 totalMs + okCount 便于加速比与编造检测。",
     {
       返回值: { mode: result.mode, totalMs: result.totalMs, okCount: result.results.filter(r => r.ok).length },
       耗时ms: Date.now() - tFuncStart,
@@ -191,19 +191,19 @@ export function mountCompareRoutes(router: Router): void {
     logger.info(
       "api.compare",
       "调用函数开始：handlePostCompare",
-      "为什么打：route 只认这一层返回的对比包；里面两个 runOnce 是「真活」。当前：前端发来对比请求；服务端并发跑 parallel + serial 两次 sub-dispatch。",
+      "为什么写这条日志：route 只认这一层返回的对比包；里面两个 runOnce 是真正干活的那一层。当前：前端发来对比请求；服务端并发跑 parallel + serial 两次 sub-dispatch。",
       {
         入参: { scenario, bodyKeys: Object.keys(body) },
         __code: `const [parallelRun, serialRun] = await Promise.all([\n  runOnce(calls, "parallel", parallelStart),\n  runOnce(calls, "serial", serialStart),\n]);`,
       },
     );
 
-    // §5.3.12 入参闸门
+    // §5.3.12 入参校验
     if (scenario !== "tokyo-may-7days") {
       logger.warn(
         "api.compare",
-        "调用函数结束：handlePostCompare（闸门拒绝）",
-        "为什么打：scenario 必须是 tokyo-may-7days；其它都按 400 处理。",
+        "调用函数结束：handlePostCompare（校验拒绝）",
+        "为什么写这条日志：scenario 必须是 tokyo-may-7days；其它都按 400 处理。",
         {
           返回值: { httpStatus: 400, error: "scenario 必须是 tokyo-may-7days" },
           耗时ms: Date.now() - tHandlerStart,
@@ -224,7 +224,7 @@ export function mountCompareRoutes(router: Router): void {
     logger.info(
       "││ dispatch-compare",
       "调用循环开始：服务端并发两个 sub-dispatch",
-      "为什么打：parallelStart + serialStart 各自起；结果后续聚合 speedup。",
+      "为什么写这条日志：parallelStart + serialStart 各自起；结果后续聚合 speedup。",
       {
         第几轮: 1,
         总轮数: 2,
@@ -238,7 +238,7 @@ export function mountCompareRoutes(router: Router): void {
     logger.info(
       "││ dispatch-compare",
       "调用循环结束：两路跑完",
-      "为什么打：记 speedup 与各自 totalMs + 编造检测结果便于核对。",
+      "为什么写这条日志：记 speedup 与各自 totalMs + 编造检测结果便于核对。",
       {
         第几轮: 1,
         本轮结果: {
@@ -255,7 +255,7 @@ export function mountCompareRoutes(router: Router): void {
     logger.info(
       "api.compare",
       "调用函数结束：handlePostCompare",
-      "为什么打：route 要把对比包写进 ctx.body 交给页面 stats 区；含 parallelRun + serialRun + speedup + parallelHallucination + serialHallucination 五段。",
+      "为什么写这条日志：route 要把对比包写进 ctx.body 交给页面 stats 区；含 parallelRun + serialRun + speedup + parallelHallucination + serialHallucination 五段。",
       {
         返回值: {
           parallelMs: parallelRun.totalMs,

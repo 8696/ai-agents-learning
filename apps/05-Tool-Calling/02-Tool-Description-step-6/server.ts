@@ -17,7 +17,7 @@
  *   POST /api/compare-baseline  → 真调协议 A（OpenAI），返回 tool_call + 结果
  *   POST /api/compare-improved  → 真调协议 B（Anthropic），返回 tool_use + 结果
  *
- * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由顶层 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:05-02-description-step-6
  */

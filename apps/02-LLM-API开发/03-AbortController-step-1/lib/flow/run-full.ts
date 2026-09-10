@@ -3,8 +3,8 @@
  * 数据流：{ llm, message, writer } → 上游 stream:true（无 signal）→ delta 帧 → usage 帧 → [DONE]。
  * 为什么单独成文件：这是另外两个场景的对照尺。cancel / no-signal 改行为时不该碰这条「什么都不做」的路径。
  *
- * 日志（§5.3.16）：调用函数 五件套（runFull 封装层）；
- *   流式规则（§5.3.16）：只在收尾打一次完整返回值，中间 chunk 不套五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（runFull 封装层）；
+ *   流式规则（§5.3.16）：只在收尾写一次完整返回值，中间 chunk 不套五条日志。
  */
 import { performance } from "node:perf_hooks";
 import type { Llm } from "../../../../llm.js";
@@ -42,7 +42,7 @@ export async function runFull(params: {
   logger.info(
     "│ 基线-runFull",
     "调用函数开始：runFull",
-    "为什么打：route 只认这一层返回的 RunFullStats；里面 createChatStream 是「真活」（看「调用模型开始：对话补全」）。当前：即将发不传 signal 的对照基线调用。",
+    "为什么写这条日志：route 只认这一层返回的 RunFullStats；里面 createChatStream 是真正干活的那一层（看「调用模型开始：对话补全」）。当前：即将发不传 signal 的对照基线调用。",
     {
       入参: { model: llm.modelA, messagePreview: message.slice(0, 80), messageLen: message.length },
       __code: `const stream = await createChatStream(llm, message);\nfor await (const chunk of stream) { writer.frame({ event: "delta", frameIdx, content: ... }); }`,
@@ -69,7 +69,7 @@ export async function runFull(params: {
     logger.info(
     "│ 基线-runFull",
     "调用函数结束：runFull",
-    "为什么打：route 要把 RunFullStats 写进 ctx.body（或日志）便于和 cancel/no-signal 对照帧数 / usage。当前：流跑完、usage 已拿到。",
+    "为什么写这条日志：route 要把 RunFullStats 写进 ctx.body（或日志）便于和 cancel/no-signal 对照帧数 / usage。当前：流跑完、usage 已拿到。",
     {
       返回值: {
         frameIdx,
@@ -98,7 +98,7 @@ export async function runFull(params: {
     logger.error(
       "│ 基线-runFull",
       "调用函数结束：runFull（失败）",
-      "为什么打：基线路径也不该 100% 成功；记 upstreamStatus + message 让排错时知道是哪条上游挂了。当前：createChatStream 抛错（非 abort 类），已发 error 帧。",
+      "为什么写这条日志：基线路径也不该 100% 成功；记 upstreamStatus + message 让排错时知道是哪条上游挂了。当前：createChatStream 抛错（非 abort 类），已发 error 帧。",
       {
         返回值: {
           frameIdx,

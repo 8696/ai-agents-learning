@@ -3,8 +3,8 @@
  * 数据流：{ prompt } → runTextNoTools → { mode: text_no_tools, raw, parsed, analysis }。
  * 本页教学点在 pages/text.html。
  *
- * 日志（§5.3.16）：调用函数 五件套（handlePostText 封装层）；
- *   Key 缺失单独打 info 闸门拒绝；子调用 runTextNoTools 内部已自带五件套。
+ * 日志（§5.3.16）：调用函数 五条日志（handlePostText 封装层）；
+ *   Key 缺失单独写 info（校验拒绝）；子调用 runTextNoTools 内部已自带五条日志。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -20,8 +20,8 @@ export function mountTextRoutes(router: Router): void {
     if (!client) {
       logger.info(
         "api.text",
-        "POST /api/text 被无 Key 闸门挡掉",
-        "为什么打：服务端兜底；没 Key 就别让上游 SDK 抛一句读不懂的错。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
+        "POST /api/text 被无 Key 校验挡掉",
+        "为什么写这条日志：服务端兜底；没 Key 就别让上游 SDK 抛一句读不懂的错。当前：apps/.env 当前 LLM_PROVIDER 无 Key。",
         { endpoint: "POST /api/text" },
       );
       return;
@@ -30,8 +30,8 @@ export function mountTextRoutes(router: Router): void {
     if (!prompt) {
       logger.info(
         "api.text",
-        "POST /api/text 被入参闸门挡掉",
-        "为什么打：闸门挡掉没花模型额度也没走到 runTextNoTools；记 reason 便于复盘。当前：body 不合法。",
+        "POST /api/text 被入参校验挡掉",
+        "为什么写这条日志：校验挡下没花模型额度也没走到 runTextNoTools；记 reason 便于复盘。当前：body 不合法。",
         { endpoint: "POST /api/text" },
       );
       return;
@@ -44,7 +44,7 @@ export function mountTextRoutes(router: Router): void {
     logger.info(
       "api.text",
       "调用函数开始：handlePostText",
-      "为什么打：route 只认这一层返回的 ModeCallResult；里面 runTextNoTools 是「真活」（协议 B 无 tools 路径）。当前：prompt 是协议 B 无 tools 路径的唯一素材——没有 tools / input_schema / response_format 三个开关，全靠 prompt 强约束。",
+      "为什么写这条日志：route 只认这一层返回的 ModeCallResult；里面 runTextNoTools 是真正干活的那一层（协议 B 无 tools 路径）。当前：prompt 是协议 B 无 tools 路径的唯一素材——没有 tools / input_schema / response_format 三个开关，全靠 prompt 强约束。",
       {
         入参: { provider: client.provider, model: client.modelB, promptPreview: prompt.slice(0, 60), promptLen: prompt.length },
         __code: `ctx.body = await runTextNoTools(client, prompt);`,
@@ -56,7 +56,7 @@ export function mountTextRoutes(router: Router): void {
       logger.info(
         "api.text",
         "调用函数结束：handlePostText",
-        "为什么打：route 要把 ModeCallResult 写进 ctx.body 交给页面 stats 区；记 parseOk 便于和 tool-use 对照。",
+        "为什么写这条日志：route 要把 ModeCallResult 写进 ctx.body 交给页面 stats 区；记 parseOk 便于和 tool-use 对照。",
         {
           返回值: { mode: (ctx.body as { mode: string }).mode, parseOk: (ctx.body as { parseOk: boolean }).parseOk, elapsedMs: (ctx.body as { elapsedMs: number }).elapsedMs },
           耗时ms: Date.now() - tHandlerStart,
@@ -69,7 +69,7 @@ export function mountTextRoutes(router: Router): void {
       logger.error(
         "api.text",
         "调用函数结束：handlePostText（失败）",
-        "为什么打：把上游 SDK 抛的错原样打出来，便于按 status / message 排错（401=Key、429=限流、5xx=网关）。",
+        "为什么写这条日志：把上游 SDK 抛的错原样写出来，便于按 status / message 排错（401=Key、429=限流、5xx=网关）。",
         {
           返回值: { mode: "text_no_tools", error: err instanceof Error ? err.message : String(err) },
           耗时ms: Date.now() - tHandlerStart,

@@ -14,7 +14,7 @@
  *   GET  /health              → { ok, port, provider, modelB, hasKey, callsModel:true, maxTokensB, tools, gatewayHooks }
  *   POST /api/chat            → { input, actor, confirmToken? } → 真调 LLM 协议 B + delete_user Gateway → 4 张数据卡 + 钩子判定链
  *
- * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:05-04-tool-gateway-step-1
  */

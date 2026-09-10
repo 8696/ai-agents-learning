@@ -20,7 +20,7 @@
  *   DELETE /api/memory  → { key } → 删除某条偏好（O4；端点保留，UI step-3 再上「忘掉所有」按钮）
  *   POST /api/chat-force-error → 教学用 502 演示端点
  *
- * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可打点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
  *
  * 入口：cd apps && yarn app:06-01-context-vs-memory-step-2
  */
