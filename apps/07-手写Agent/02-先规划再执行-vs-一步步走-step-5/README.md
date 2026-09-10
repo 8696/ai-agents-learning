@@ -28,37 +28,21 @@ cd apps && yarn app:07-02-plan-vs-step-step-5
 ## 数据流
 
 ```text
-浏览器点「跑对照」
+浏览器点「跑左栏」或「跑右栏」或「同时对照」
+  │
+  ├─ GET /api/step-by-step     → runStepByStep
+  └─ GET /api/plan-and-execute → runPlanAndExecute
+        ├─ resetFailCounters()（每次右栏请求从 0 计，保证第 1 次 write_copy 失败）
+        ├─ doPlan(1) + 执行 + shouldReplan（不看 ok=false）
+        └─ FAIL_ON_CALL.write_copy=1 命中 → {ok:false} → 标黄变体 E，不重规划
   │
   ▼
-GET /api/compare
-  │
-  ▼
-mountCompareRoutes → 并行跑 2 组轨迹
-  │
-  ├─ A 路径 = runStepByStep（不变）
-  │
-  └─ B 路径 = runPlanAndExecute
-        ├─ doPlan(1)：真规划器吐 v1
-        │     └─ v1 通常包含：query_stock ×3 + write_copy ×2 + notify_ops
-        ├─ 执行阶段 while
-        │     ├─ 调 query_stock(SKU-88) → ok=true {available: 12}
-        │     ├─ 调 query_stock(SKU-89) → ok=true {available: 7}
-        │     ├─ 调 query_stock(SKU-90) → ok=true {available: 0}
-        │     ├─ shouldReplan 触发（变体 C 数据变化）→ doPlan(2) 出 v2
-        │     ├─ v2 跳过 SKU-90：write_copy(SKU-88) ← ── FAIL_ON_CALL["write_copy"]=1 命中 → {ok:false, error: 'mock 系统挂了'}
-        │     │     ↑ shouldReplan 不看 ok=false → 不重规划 → 按 v2 清单继续
-        │     ├─ write_copy(SKU-89) → ok=true
-        │     └─ notify_ops(...) → ok=true「文案已完成」（假数据，SKU-88 文案其实没写）
-        └─ plans = [v1 已废灰卡, v2 当前执行绿卡]
-  │
-  ▼
-返回 { task, stepByStep, planAndExecute, comparison: { ..., toolFailures, variantETriggered } }
+两侧各自返回 JSON；对照数字（含 toolFailures / variantETriggered）由浏览器现场算
 ```
 
 ## 当前能做什么
 
-- 同一任务「春季上新...」跑两遍：A 路径真模型循环 / B 路径真规划器 + 重规划（变体 C）+ 变体 E 工具失败演示
+- 点「跑左栏 / 跑右栏 / 同时对照」→ 两侧各发各的请求
 - 顶部对照卡 5 行（含变体 E）
 - 右栏执行卡：变体 C 触发时（query_stock 0 库存）重规划 → plans v1 → v2；变体 E 触发时（write_copy 失败）工具失败步变橙 + 顶部黄标「未重规划」
 - 最终答案：notify_ops 的 message 内容是「文案已完成」（假数据，SKU-88 实际失败）

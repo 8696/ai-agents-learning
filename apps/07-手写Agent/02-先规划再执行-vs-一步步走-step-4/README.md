@@ -22,7 +22,7 @@ cd apps && yarn app:07-02-plan-vs-step-step-4
 | 工具 | 三件套（query_stock / write_copy / notify_ops）| **四件套**：加 `complete_todo(todo_id)` |
 | A 路径 | 真模型循环（只用 query_stock/write_copy/notify_ops）| **真模型循环（工具通用化）**：model 自选 4 个工具之一；短任务 1 圈调 complete_todo 停 |
 | B 路径 | 真规划器 + 重规划（针对长任务）| 短任务 B：规划 1 步 + 执行 1 步 / 长任务 B：保留 step-3 重规划逻辑 |
-| 接口 | `GET /api/compare → { task, stepByStep, planAndExecute, comparison }` | `GET /api/compare → { shortTask, longTask, shortA, shortB, longA, longB, comparison }` |
+| 接口 | `GET /api/compare → { task, stepByStep, planAndExecute, comparison }` | `GET /api/step-by-step?task=short\|long` + `GET /api/plan-and-execute?task=short\|long`（四组各自请求） |
 | 顶部对照 | 4 个对照卡（单任务对照）| **短 vs 长 × A vs B 数字对照 + 值得判断卡** |
 | 输出 | 2 栏（双路径对照）| **2x2 网格（4 栏对照）**：短 A / 短 B / 长 A / 长 B |
 | 端口 | 50055 | **50056** |
@@ -30,32 +30,18 @@ cd apps && yarn app:07-02-plan-vs-step-step-4
 ## 数据流
 
 ```text
-浏览器点「跑对照」
+浏览器点「跑短对照」/「跑长对照」/「四组一起」
+  │
+  ├─ GET /api/step-by-step?task=short     → runStepByStep("把 todo-001 标完成")
+  ├─ GET /api/plan-and-execute?task=short → runPlanAndExecute("把 todo-001 标完成")
+  ├─ GET /api/step-by-step?task=long      → runStepByStep("春季上新...")
+  └─ GET /api/plan-and-execute?task=long  → runPlanAndExecute("春季上新...")
   │
   ▼
-GET /api/compare
+四组各自返回 JSON；对照数字由浏览器用对应那一次请求的结果现场算
   │
   ▼
-mountCompareRoutes → Promise.all 跑 4 组轨迹
-  │
-  ├─ 短 A = runStepByStep("把 todo-001 标完成")
-  │     └─ 真模型循环 1 圈 → complete_todo(todo_id) → tool_result → 最终答案
-  │
-  ├─ 短 B = runPlanAndExecute("把 todo-001 标完成")
-  │     └─ 真规划器 1 次 → plan 1 步（complete_todo） → execute 1 步 → 最终答案
-  │        （通常不会触发重规划 —— complete_todo 不会返回 0）
-  │
-  ├─ 长 A = runStepByStep("春季上新...")
-  │     └─ 真模型循环 N 圈（每圈自选调啥）
-  │
-  └─ 长 B = runPlanAndExecute("春季上新...")
-        └─ 真规划器 1+ 次 + 重规划（query_stock 0 库存触发）→ plans[] + executeTrace
-  │
-  ▼
-返回 { shortTask, longTask, shortA, shortB, longA, longB, comparison }
-  │
-  ▼
-React 渲染：4 栏 2x2 网格 + 短 vs 长任务数字对照卡 + 值得判断
+React 渲染：2x2 网格 + 短 vs 长「值不值得规划」判断
 ```
 
 ## 当前能做什么
@@ -63,7 +49,7 @@ React 渲染：4 栏 2x2 网格 + 短 vs 长任务数字对照卡 + 值得判断
 - 两个任务自动跑：
   - 短任务「把 todo-001 标完成」= 1 步（complete_todo）
   - 长任务「春季上新...」= 多步（query_stock / write_copy / notify_ops）
-- 点「跑对照」→ 4 组轨迹并行
+- 点「跑短对照 / 跑长对照 / 四组一起」→ 每组自己的请求（四组一起 = 浏览器并发四次，不是服务端打包）
 - 顶部对照卡：短 / 长 × A / B 数字（模型调用次数 / 步数 / 总耗时 ms）+ 值得判断
 - 4 栏对照（2x2）：
   - 短 A：trajectory 1 圈（complete_todo + 最终答案）

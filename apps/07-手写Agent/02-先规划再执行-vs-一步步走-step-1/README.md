@@ -17,13 +17,10 @@ cd apps && yarn app:07-02-plan-vs-step-step-1
 ## 数据流
 
 ```text
-浏览器点「跑对照」
+浏览器点「跑左栏」或「跑右栏」或「同时对照」
   │
-  ▼
-GET /api/compare
-  │
-  ▼
-routes/compare.ts → 并行跑 runStepByStep + runPlanAndExecute
+  ├─ GET /api/step-by-step     → routes/step-by-step.ts → runStepByStep
+  └─ GET /api/plan-and-execute → routes/plan-and-execute.ts → runPlanAndExecute
   │
   ├─ runStepByStep（变体 A · ReAct · mock 模型固定 7 圈）
   │     ├─ 第 1 圈 Reason → query_stock(SKU-88) → 12
@@ -39,7 +36,7 @@ routes/compare.ts → 并行跑 runStepByStep + runPlanAndExecute
         └─ execute 顺序按清单调 6 次工具 → 拼最终答案
   │
   ▼
-返回 { task, stepByStep, planAndExecute, comparison }
+两侧各自返回 JSON；对照数字由浏览器用两次结果现场算
   │
   ▼
 React 渲染：顶部 3 个对照卡 + 左栏 7 圈轨迹 + 右栏 1 张计划卡 + 6 张执行卡 + 双栏最终答案绿卡
@@ -50,7 +47,7 @@ React 渲染：顶部 3 个对照卡 + 左栏 7 圈轨迹 + 右栏 1 张计划�
 ## 当前能做什么
 
 - 固定任务：「春季上新：拉库存、给有货 SKU 写文案、通知运营」（mock 库存 SKU-88=12 / SKU-89=7 / SKU-90=0）
-- 点「跑对照」→ 双栏同时渲染
+- 点「跑左栏 / 跑右栏 / 同时对照」→ 两侧各发各的请求（同时对照 = 浏览器并发两次，不是服务端打包）
   - 左栏一步步走 7 圈：每圈「想法 + tool_call + tool_result + 耗时」白卡；最后一圈 `tool_calls 为空 → 最终答案`
   - 右栏先规划：蓝绿色「计划 v1」卡（**位置就在执行卡之前**，就是「第一次 Act 之前」）→ 6 张执行白卡 → 最终答案绿卡
 - 顶部 3 个对照数字卡：

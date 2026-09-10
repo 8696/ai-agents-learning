@@ -3,7 +3,7 @@
  * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel }；
  *   页面加载时写一次，用来填页脚 #env-info。
  *
- * step-2 真调 LLM（B 路径规划器调真模型，A 路径继续 mock）：callsModel: true；
+ * step-3 真调 LLM（A 路径真 ReAct + B 路径真规划器 + 重规划）：callsModel: true；
  *   hasKey=false 时主按钮 disabled（§5.3.9）。
  */
 import type { Context } from "koa";

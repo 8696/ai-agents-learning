@@ -11,7 +11,7 @@
 
 ## Demo 子节进度
 
-step-1 已建（🔄 打磨中 · 学习者主动决定何时锁）。表行只写已建 step；禁止预判未来。
+step-1～4 已建并锁定。表行只写已建 step；禁止预判未来。
 
 | 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
 |------|------|------|------|--------------|
@@ -19,9 +19,6 @@ step-1 已建（🔄 打磨中 · 学习者主动决定何时锁）。表行只�
 | ✅ | step-2 | `yarn app:07-01-agent-loop-react-step-2` | `50050` | **变体 E 并行 Act**：从 step-1 复制全量 + Act 阶段 `for await` → `Promise.all(toolCalls.map(...))` 并行；handler 加 50~250ms 模拟延时让差异肉眼可见；query 改「一次性」逼模型同圈并行；前端「并行对照卡片」展示 max vs sum + 节省 ms。2026-09-10 学习者主动锁定。 |
 | ✅ | step-3 | `yarn app:07-01-agent-loop-react-step-3` | `50051` | **变体 G 失败 Observe 后继续**：复制 step-2 + query 改「把 todo-999 标完成」故意触发 handler 返回 `{ok:false, error:"not_found"}`；SYSTEM_PROMPT 强「失败 Observe 后下一圈改参」；前端「失败 Observe 后改参」卡片（failedCount + 首末失败 round）；实测 failedCount=1 · stoppedReason=final_answer · 模型正确决策「不瞎标」。2026-09-10 学习者主动锁定。 |
 | ✅ | step-4 | `yarn app:07-01-agent-loop-react-step-4` | `50052` | **变体 M 用户取消**：复制 step-3 + POST /api/agent-run 立刻返 202 + runId（**不阻塞**）→ 前端轮询 GET 拿结果（800ms 一次）+ 「🚫 取消」按钮触发 POST /api/cancel/:runId → 后端 AbortController.abort() → 下一次 LLM 调用透传 signal 抛 AbortError → while 检测 signal.aborted → break + stoppedReason="cancelled"；前端「🚫 用户取消（变体 M）」紫卡 + 状态徽标三态 ✅/⚠/🚫；trajectory 完整保留（被取消那一圈边框标紫 + 标「🚫 用户取消」）；变体 M 妥协 = 已发出 tool handler 不感知 signal · 让那一圈 Act 跑完。2026-09-10 学习者主动锁定。 |
-
-| 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
-|------|------|------|------|--------------|
 
 ## 是什么
 
@@ -306,7 +303,7 @@ query「把 todo-999 标完成」跑 **step-3**（复制 step-2 + query 改 + SY
 | A1 页面能画出 Reason→Act→Observe 再转回 Reason 的多圈轨迹 | 已实现 | step-1 `public/index.html` trajectory 区按圈渲染 `step.assistant.content` / `step.assistant.tc` / `step.toolResults` + 圈耗时；后端 `lib/flow/loop.ts:runAgentLoop` 真实写 `trajectory.push({round, assistant, toolResults, elapsedMs})` |
 | A2 能观察到至少一种「最终答案」停（无 `tool_calls` 出正文） | 已实现 | step-1 实测：3 圈后第 3 圈 `tool_calls=[]` → 走 `break` → `stoppedReason="final_answer"` → 前端 `#status-pill` = "✅ Loop 已停 · 最终答案" + 绿卡「最终答案（变体 J）」展示 `finalAnswer` |
 | A3 能在 UI/响应里区分至少一种防护停（最大轮次；超时/取消可后步） | 已实现（兜底级） | loop 里有 `maxRounds=6` 保护 + `stoppedReason="max_rounds"` 状态；前端 UI 按 `stoppedReason` 切两种文案（绿 / 黄）。**当主教学点的 K + 真正时 L + M 留 step-2+** |
-| A4 副作用可见（before / after / diff 三栏） | 已实现 | step-1 后端 `routes/agent.ts:diffTodos(before, after)` + 响应 `todosBefore/todosAfter/diff`；前端 trajectory 区下方「数据前后对照」三栏并排，diff 只列 changed 行 + summary（`completedCount` / `otherChanges`）。实测：`completedCount=4`（todo-001/002/005/011 全部 done false→true） |
+| A4 副作用可见（before / after / diff 三栏） | 已实现 | step-1 后端 `lib/tools/todo-data.ts:snapshotTodos()` + `routes/agent.ts:diffTodos(before, after)` + 响应 `todosBefore/todosAfter/diff`；前端 trajectory 区下方「数据前后对照」三栏并排，diff 只列 changed 行 + summary（`completedCount` / `otherChanges`）。实测：`completedCount=4`（todo-001/002/005/011 全部 done false→true） |
 | A5 变体 E 并行 Act（step-2） | 已实现 | step-2 `lib/flow/loop.ts` Act 阶段 `Promise.all(toolCalls.map(...))` 并行 + 模拟延时；前端「并行对照卡片」显示 `parallelMaxToolMs ≈ 150` · `parallelSumToolMs ≈ 400` · `savedMs ≈ 250`。实测 round 2 = 4 个 complete_todo 同圈并行 |
 | A6 变体 G 失败 Observe 后继续（step-3） | 已实现 | step-3 复制 step-2 + query 改「把 todo-999 标完成」+ SYSTEM_PROMPT 强「失败 Observe 后下一圈改参」；handler 返回 `{ok:false, error:"not_found"}` 结构化错误进 messages；下一圈模型改参 list_todos → 最终答案。**实测 `failedCount=1` · `stoppedReason=final_answer` · 模型正确决策「不瞎标」`diff.completedCount=0`**。前端「失败 Observe 后改参」卡片展示 failedCount + 首末失败 round + throw vs 结构化错误对照 |
 | **A7 变体 M 用户取消（step-4）** | **已实现** | step-4 复制 step-3 + POST /api/agent-run 立刻返 202 + runId（**不阻塞**）→ 前端轮询 GET /api/agent-run/:runId（800ms 一次）+ 「🚫 取消」按钮触发 POST /api/cancel/:runId → 后端 `AbortController.abort("user_cancelled")` → 下一次 LLM 调用透传 signal 抛 AbortError → while 检测 `signal.aborted` → break + `stoppedReason="cancelled"`；trajectory 完整保留（被取消那一圈边框标紫 + 标「🚫 用户取消」）；状态徽标三态 ✅/⚠/🚫（紫 = cancelled）。**关键设计**：POST 立刻返 202 + 独立 cancel 端点 → 取消是独立请求而非断开主连接。**变体 M 妥协**：已发出 tool handler 不感知 signal · 让那一圈 Act 跑完（MD 例子 5） |
@@ -324,7 +321,7 @@ query「把 todo-999 标完成」跑 **step-3**（复制 step-2 + query 改 + SY
 | 需求 5 打到 MAX_ROUNDS 停 | 已实现（兜底） | loop `maxRounds=6` 兜底 + `stoppedReason="max_rounds"` 分支；不指望触发 |
 | 需求 6 用户取消 | **已实现（step-4）** | POST /api/cancel/:runId → `cancelRun()` → `controller.abort("user_cancelled")` → 下一次 LLM 调用透传 signal 抛 AbortError → while 检测 `signal.aborted` → break + `stoppedReason="cancelled"`；前端状态徽标变紫 🚫 + 「🚫 用户取消（变体 M）」紫卡 + trajectory 被取消那一圈边框标紫 + 标「🚫 用户取消」。**关键对照**：取消 = `stoppedReason="cancelled"` + `status="cancelled"`；错误（5xx）= `errorRun()` 让前端轮询拿 502；超时（L，留 step-5+）= 跟取消同物理位置但触发条件是墙钟到点 |
 | 需求 7 墙钟超时 | 未实现 | 变体 L 留 step-5+（Promise.race + AbortController） |
-| 需求 8 数据前后对照（副作用可见） | 已实现 | `routes/agent.ts:snapshotTodos()` × 2 + `diffTodos()` + 前端三栏并排（before 灰 / after 绿 / diff 黄） |
+| 需求 8 数据前后对照（副作用可见） | 已实现 | `lib/tools/todo-data.ts:snapshotTodos()` × 2 + `routes/agent.ts:diffTodos()` + 前端三栏并排（before 灰 / after 绿 / diff 黄） |
 | 需求 9 变体 E 并行 Act（step-2） | 已实现 | `apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/lib/flow/loop.ts` Act 阶段 `Promise.all(toolCalls.map(...))` 并行；`todo-tools.ts:completeTodoHandler` 加 50~250ms 模拟延时；前端「并行对照卡片」展示 `parallelMaxToolMs` / `parallelSumToolMs` / `savedMs`；SYSTEM_PROMPT 强 prompt「一次性完成 → 同圈并行 N 个 complete_todo」 |
 | 易混：代码 Promise.all vs 业务串行依赖 | 已实现（step-2） | step-2 loop 代码仍只 `Promise.all` 当前圈；串行依赖由模型「这一圈只返 1 个 + 下一圈再返下一个」呈现（不是代码 await 串的）。front-end trajectory 卡片按圈渲染，看不出「代码判断」 —— 模型自己挑 |
 | 易混：假循环 vs 真 Loop | 已实现 | `lib/flow/loop.ts` while 真循环；非「调一次工具就 return」 |

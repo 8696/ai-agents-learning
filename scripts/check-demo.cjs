@@ -7,6 +7,7 @@
  *   node scripts/check-demo.cjs apps/01-…/02-Token      # 只查一条
  *
  * JSX 语法检查用 apps/ 的 @babel/parser（yarn install 即有，不另下 2.8MB vendor）。
+ * 2026-09-10 起拦业务 route / HTML / lib / components 行数上限，以及一个业务 URL 一个 route 文件（§5.3.8）。
  */
 const fs = require("node:fs");
 const path = require("node:path");
@@ -26,6 +27,127 @@ function loadParser() {
 }
 
 const parser = loadParser();
+
+/** §5.3.8 文件行数上限（2026-09-10）。新落 / 新 step 强制；下方名单只豁免当时已超限的具体文件。 */
+const LINE_LIMIT = {
+  route: 280,
+  html: 400,
+  lib: 280,
+  component: 250,
+};
+
+const LINE_LIMIT_GRANDFATHER = new Set([
+  "02-LLM-API开发/02-协议-A-vs-B-step-1/public/components/compare-cards.js",
+  "02-LLM-API开发/04-Rate-Limit-step-1/lib/flow/run-with-retry.ts",
+  "02-LLM-API开发/04-Rate-Limit-step-1/lib/retry/retry.ts",
+  "02-LLM-API开发/05-思考-step-1/lib/dialect/thinking-dialect.ts",
+  "02-LLM-API开发/05-思考-step-1/lib/protocol-a/send-stream.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-2/public/index.html",
+  "05-Tool-Calling/01-Function-Calling-协议-step-2/routes/chat.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-5/lib/tools/registry.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-6/routes/chat.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-7/lib/tools/registry.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-7/routes/hybrid.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-8/routes/chat.ts",
+  "05-Tool-Calling/02-Tool-Description-step-1/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-2/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-3/public/index.html",
+  "05-Tool-Calling/02-Tool-Description-step-3/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-4/public/index.html",
+  "05-Tool-Calling/02-Tool-Description-step-4/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-5/public/index.html",
+  "05-Tool-Calling/02-Tool-Description-step-5/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-6/public/index.html",
+  "05-Tool-Calling/02-Tool-Description-step-6/routes/compare.ts",
+  "05-Tool-Calling/03-Tool-Choice-step-1/public/index.html",
+  "05-Tool-Calling/04-Tool-Gateway-幂等-step-1/routes/chat.ts",
+  "05-Tool-Calling/04-Tool-Gateway-幂等-step-2/routes/chat.ts",
+  "05-Tool-Calling/04-Tool-Gateway-幂等-step-3/routes/chat.ts",
+  "05-Tool-Calling/04-Tool-Gateway-幂等-step-4/routes/chat.ts",
+  "06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/routes/summarize.ts",
+  "06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/routes/three-way.ts",
+  "06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/public/index.html",
+  "06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/routes/three-way-with-fallback.ts",
+  "06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/routes/token-budget.ts",
+  "06-多轮对话与Context/03-Token-Budget-step-2/routes/compare.ts",
+  "06-多轮对话与Context/03-Token-Budget-step-3/public/index.html",
+  "06-多轮对话与Context/03-Token-Budget-step-3/routes/emergency.ts",
+]);
+
+/** 2026-09-10 前已在一个文件里挂多条业务路径的旧文件。新文件 / 新 step 不准再这样。 */
+const ONE_URL_GRANDFATHER = new Set([
+  "01-AI与LLM基础认知/02-Token-step-1/routes/encode.ts",
+  "02-LLM-API开发/04-Rate-Limit-step-1/routes/mock.ts",
+  "02-LLM-API开发/04-Rate-Limit-step-1/routes/real.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-1/routes/chat.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-2/routes/chat.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-3/routes/plan.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-4/routes/chain-bad.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-4/routes/chain.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-5/routes/self-correct.ts",
+  "05-Tool-Calling/01-Function-Calling-协议-step-7/routes/hybrid.ts",
+  "05-Tool-Calling/02-Tool-Description-step-1/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-2/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-3/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-4/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-5/routes/compare.ts",
+  "05-Tool-Calling/02-Tool-Description-step-6/routes/compare.ts",
+]);
+
+function posixRel(from, to) {
+  return path.relative(from, to).split(path.sep).join("/");
+}
+
+function checkLineLimit(root, abs, limit, kind, fail, ok) {
+  if (!fs.existsSync(abs)) return;
+  const lines = fs.readFileSync(abs, "utf8").split("\n").length;
+  const relApps = posixRel(APPS, abs);
+  const relDemo = posixRel(root, abs);
+  if (lines <= limit) {
+    ok(`${kind} ${relDemo} ${lines} 行（≤${limit}）`);
+    return;
+  }
+  if (LINE_LIMIT_GRANDFATHER.has(relApps)) {
+    ok(`${kind} ${relDemo} ${lines} 行（2026-09-10 前已超限，豁免；新文件 / 新 step 不准再超）`);
+    return;
+  }
+  fail(
+    `${kind} ${relDemo} ${lines} 行，超出 ${limit}（§5.3.8：先拆文件；对照两侧分请求；复制旧 step 做下一步时豁免不跟过去）`,
+  );
+}
+
+/** 同一路径族：/api/foo 与 /api/foo/:id 算一条；/api/a 与 /api/b 算两条。 */
+function routePathFamily(urlPath) {
+  const noParam = String(urlPath).replace(/\/:[^/]+/g, "");
+  const parts = noParam.split("/").filter(Boolean);
+  if (parts[0] === "api" && parts[1]) return "/api/" + parts[1];
+  return noParam || urlPath;
+}
+
+function checkOneUrlPerRouteFile(root, abs, fail, ok) {
+  const src = fs.readFileSync(abs, "utf8");
+  const re = /router\.(get|post|put|patch|delete)\s*\(\s*["'`]([^"'`]+)/g;
+  const fams = new Set();
+  let m;
+  while ((m = re.exec(src))) {
+    if (m[2].includes("${")) continue;
+    fams.add(routePathFamily(m[2]));
+  }
+  if (fams.size <= 1) {
+    if (fams.size === 1) ok(`一路由 ${posixRel(root, abs)} → ${[...fams][0]}`);
+    return;
+  }
+  const relApps = posixRel(APPS, abs);
+  const relDemo = posixRel(root, abs);
+  const list = [...fams].join(" · ");
+  if (ONE_URL_GRANDFATHER.has(relApps)) {
+    ok(`一路由 ${relDemo} 多路径（${list}；2026-09-10 前已如此，豁免；新文件 / 新 step 不准再挂多条）`);
+    return;
+  }
+  fail(
+    `一路由 ${relDemo} 挂了多条业务路径：${list}（§5.3.8：一个业务 URL 一个文件；对照两侧拆两个文件）`,
+  );
+}
 
 function walk(dir) {
   const out = [];
@@ -278,6 +400,27 @@ function checkOne(root) {
 
   const htmlFiles = walk(publicDir).filter((f) => f.endsWith(".html"));
   htmlFiles.length > 0 ? ok(`public/ ${htmlFiles.length} 个页面`) : fail("public/ 无 HTML");
+
+  // §5.3.8 文件行数（2026-09-10）：新文件强制；豁免名单不跟到新 step 文件夹
+  for (const f of routeFiles) {
+    const base = path.basename(f);
+    if (base === "health.ts" || base === "error-demo.ts") continue;
+    checkLineLimit(root, f, LINE_LIMIT.route, "业务 route", fail, ok);
+    checkOneUrlPerRouteFile(root, f, fail, ok);
+  }
+  if (fs.existsSync(libDir)) {
+    for (const f of walk(libDir).filter((p) => p.endsWith(".ts"))) {
+      const base = path.basename(f);
+      if (base === "logger.ts" || base === "runtime-ctx.ts") continue;
+      checkLineLimit(root, f, LINE_LIMIT.lib, "lib 业务", fail, ok);
+    }
+  }
+  for (const f of htmlFiles) {
+    checkLineLimit(root, f, LINE_LIMIT.html, "HTML 页", fail, ok);
+  }
+  for (const f of walk(componentsDir).filter((p) => p.endsWith(".js"))) {
+    checkLineLimit(root, f, LINE_LIMIT.component, "components", fail, ok);
+  }
 
   const REQUIRED_CDN = [
     ["@tailwindcss/browser@4.3.3", "Tailwind 4.3.3"],

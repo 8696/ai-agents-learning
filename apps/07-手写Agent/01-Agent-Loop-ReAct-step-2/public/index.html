@@ -5,83 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agent Loop / ReAct · step-2 · 并行 Act</title>
 
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 
-  <!-- §5.3.4 强制：JSX 块内不允许 TypeScript 语法 -->
+  <script src="/utils/fmt-due.js"></script>
+  <script type="text/babel" src="/components/todo-row.js"></script>
+  <script type="text/babel" src="/components/trajectory.js"></script>
+  <script type="text/babel" src="/components/side-effect.js"></script>
+  <script type="text/babel" src="/components/parallel-card.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
-
-    function fmtDue(due) {
-      // "今天"/"明天"/"昨天" 标注更直观；只对 YYYY-MM-DD 形式做处理
-      const today = new Date().toISOString().slice(0, 10);
-      if (due === today) return "今天";
-      const t = new Date(today).getTime();
-      const d = new Date(due).getTime();
-      const diff = Math.round((d - t) / (1000 * 60 * 60 * 24));
-      if (diff === -1) return "昨天";
-      if (diff === 1) return "明天";
-      if (diff < 0) return `${-diff} 天前`;
-      if (diff > 0) return `${diff} 天后`;
-      return due;
-    }
-
-    function TodoRow({ todo, dueClass, showDone }) {
-      return (
-        <li className={
-          "border rounded p-2 text-sm flex items-center justify-between gap-2 " +
-          (todo.done
-            ? (showDone ? "bg-green-50 border-green-300" : "bg-white border-gray-200")
-            : (dueClass || "bg-white border-gray-300"))
-        }>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="font-mono text-gray-400">{todo.id}</span>
-              <span className="px-1.5 py-0.5 rounded bg-gray-100">{todo.tag}</span>
-              <span>{fmtDue(todo.dueDate)} · {todo.dueDate}</span>
-            </div>
-            <div className={"mt-1 whitespace-pre-wrap " + (todo.done ? "line-through text-gray-400" : "")}>
-              {todo.title}
-            </div>
-          </div>
-          <span className={
-            "text-xs px-2 py-0.5 rounded " +
-            (todo.done
-              ? "bg-green-200 text-green-800"
-              : (dueClass === "bg-yellow-50 border-yellow-300" ? "bg-yellow-200 text-yellow-800" : "bg-gray-200 text-gray-700"))
-          }>
-            {todo.done ? "已完成" : "未完成"}
-          </span>
-        </li>
-      );
-    }
+    const { TodoRow, Trajectory, SideEffect, ParallelCard } = window.DemoUI;
+    const { dueClass } = window.DemoUtils;
 
     function App() {
       const [query, setQuery] = useState("一次性把逾期购物待办都标完成");
       const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
       const [health, setHealth] = useState(null);
       const [errorMsg, setErrorMsg] = useState("");
-      const [errorKind, setErrorKind] = useState(null); // null | "4xx" | "5xx"
-      // 初始数据快照（页面加载时 fetch /api/todos 拿到）
+      const [errorKind, setErrorKind] = useState(null);
       const [todos, setTodos] = useState(null);
-      // 后端返回的整轮 Loop 产物：trajectory / finalAnswer / stoppedReason / finalMessages
       const [result, setResult] = useState(null);
       const inFlightRef = useRef(false);
 
-      // ── 页脚 /health 加载 + 初始数据加载 ──
       useEffect(() => {
         fetch("/health").then(r => r.json()).then(setHealth).catch(() => setHealth(null));
         fetch("/api/todos").then(r => r.json()).then(d => setTodos(d.todos)).catch(() => setTodos([]));
@@ -119,7 +73,6 @@
           }
           setResult(data);
           setStatus({ key: "done", text: "✅ Loop 已停 · " + (data.stoppedReason === "final_answer" ? "最终答案" : "达到最大轮次") });
-          // 把当前 todo 列表也刷新成 after —— 让「初始数据区」与「跑后数据」连续可对比
           if (data.todosAfter) setTodos(data.todosAfter);
         } catch (err) {
           setErrorKind("5xx");
@@ -154,13 +107,6 @@
 
       const runDisabled = inFlightRef.current || (health && !health.hasKey);
 
-      // ── 当前快照「过期？」判断：今天 < dueDate → 未到期；今天 > dueDate 且 !done → 逾期 ──
-      function dueClass(todo) {
-        const today = new Date().toISOString().slice(0, 10);
-        if (todo.dueDate < today && !todo.done) return "bg-yellow-50 border-yellow-300";
-        return "";
-      }
-
       return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
@@ -189,7 +135,6 @@
                 <li><b>数据前后对照</b>：跑完 Agent 后下方「数据前后对照」三栏（before / after / diff） —— Loop 在内存里真改了哪些 todo 一目了然</li>
                 <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
               </ol>
-              {/* 核心教学点卡片（§5.3.11.b 强制） */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
                 <div className="text-xs text-gray-800">
@@ -206,7 +151,6 @@
               </div>
             </section>
 
-            {/* ── 初始数据区（页面加载时 + 跑完 Agent 后都会刷新）── */}
             <section id="todos-initial" className="bg-white shadow rounded p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-700">
@@ -277,239 +221,13 @@
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="text-gray-700">
-                      <b>轨迹（trajectory · Loop 一圈一张卡）</b> · 共 <b>{result.rounds}</b> 圈 · 停止原因：
-                      <span className={
-                        "ml-1 px-2 py-0.5 rounded text-xs " +
-                        (result.stoppedReason === "final_answer"
-                          ? "bg-green-50 border border-green-300 text-green-800"
-                          : "bg-yellow-50 border border-yellow-300 text-yellow-800")
-                      }>
-                        {result.stoppedReason === "final_answer" ? "最终答案（变体 J）" : "达到最大轮次（兜底 · 不指望触发）"}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500">任务：<b>{result.query}</b></div>
-                  </div>
-
-                  {result.trajectory.map((step, idx) => (
-                    <div key={idx} className="border border-gray-300 rounded p-3 space-y-2 bg-white">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="font-semibold text-gray-800">
-                          第 <b>{step.round}</b> 圈
-                        </div>
-                        <div className="text-xs text-gray-500">≈ {step.elapsedMs} ms</div>
-                      </div>
-
-                      {/* Reason 阶段 */}
-                      <div className="bg-gray-50 border border-gray-300 rounded p-2 text-xs">
-                        <div className="font-semibold text-gray-700 mb-1">Reason（调模型）</div>
-                        {step.assistant.content ? (
-                          <div className="whitespace-pre-wrap mb-1">{step.assistant.content}</div>
-                        ) : (
-                          <div className="text-gray-400 italic mb-1">（assistant.content 为空 · 模型本圈纯调工具）</div>
-                        )}
-                        {step.assistant.tc.length === 0 ? (
-                          <div className="text-green-700">
-                            → <b>tool_calls 为空 · 最终答案</b>（变体 J · Loop 在本圈 break）
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="text-gray-600">→ 要调 {step.assistant.tc.length} 个工具：</div>
-                            {step.assistant.tc.map((tc, i) => (
-                              <div key={tc.id} className="bg-white border border-gray-200 rounded p-1 text-gray-700">
-                                <span className="text-gray-500">#{i + 1}</span>{" "}
-                                <b>{tc.function.name}</b>(
-                                <span className="font-mono text-gray-600">{tc.function.arguments}</span>
-                                ) · id={tc.id}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Act + Observe 阶段：每圈可能 0~N 个 tool_result */}
-                      {step.toolResults.length > 0 && (
-                        <div className="border border-green-300 bg-green-50 rounded p-2 text-xs">
-                          <div className="font-semibold text-green-800 mb-1">
-                            Act + Observe（执行工具 → tool_result 塞回 messages）
-                          </div>
-                          <div className="space-y-2">
-                            {step.toolResults.map((tr, i) => {
-                              let parsed = null;
-                              try { parsed = JSON.parse(tr.content); } catch {}
-                              const isErr = parsed && parsed.ok === false;
-                              return (
-                                <div
-                                  key={tr.tool_call_id}
-                                  className={
-                                    "rounded p-2 border " +
-                                    (isErr
-                                      ? "bg-red-50 border-red-300 text-red-800"
-                                      : "bg-white border-green-300 text-gray-800")
-                                  }
-                                >
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div>
-                                      <span className="text-gray-500">#{i + 1}</span>{" "}
-                                      <b>{tr.name}</b>(
-                                      <span className="font-mono">{JSON.stringify(tr.arguments)}</span>)
-                                    </div>
-                                    <span className={"text-xs px-2 py-0.5 rounded " + (isErr ? "bg-red-200" : "bg-green-200")}>
-                                      {isErr ? "失败" : "成功"}
-                                    </span>
-                                  </div>
-                                  <pre className="whitespace-pre-wrap text-gray-700 max-h-32 overflow-auto bg-gray-50 rounded p-1">
-                                    {parsed ? JSON.stringify(parsed, null, 2) : tr.content}
-                                  </pre>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* 最终答案：绿卡 */}
-                  {result.stoppedReason === "final_answer" && (
-                    <div className="border border-green-300 bg-green-50 rounded p-3 space-y-1">
-                      <div className="text-sm font-semibold text-green-900">
-                        最终答案（变体 J · assistant 正文即答案 · 下一圈不会再来）
-                      </div>
-                      <div className="whitespace-pre-wrap text-sm text-green-900">
-                        {result.finalAnswer || "（模型本圈无正文 · 罕见）"}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── 并行对照卡片：变体 E 关键观察（任一圈 toolResults >= 2 才出现）── */}
-                  {result.trajectory.some(s => s.toolResults.length >= 2) && (() => {
-                    // 取所有「并行圈」中 toolResults 最多的那圈作展示
-                    const peakRound = result.trajectory
-                      .filter(s => s.toolResults.length >= 2)
-                      .reduce((max, s) => s.toolResults.length > max.toolResults.length ? s : max, { toolResults: [] });
-                    const peakMs = peakRound.toolResults.map(tr => {
-                      // tr.content 是 JSON 字符串（协议要求）；先 parse 拿 simulatedDelayMs；失败 fallback 0
-                      try {
-                        const obj = JSON.parse(tr.content);
-                        return obj.simulatedDelayMs ?? 0;
-                      } catch { return 0; }
-                    });
-                    const sumMs = peakMs.reduce((s, x) => s + x, 0);
-                    const maxMs = Math.max(...peakMs, 0);
-                    const saved = sumMs - maxMs;
-                    return (
-                      <div className="border border-blue-300 bg-blue-50 rounded p-3 space-y-2">
-                        <div className="text-sm font-semibold text-blue-900">
-                          并行对照（变体 E · 一圈多个 Act · Promise.all）
-                        </div>
-                        <div className="text-xs text-gray-700">
-                          第 <b>{peakRound.round}</b> 圈同一时间调了 <b>{peakRound.toolResults.length}</b> 个 complete_todo，
-                          每个 handler 模拟外部 API 真实耗时（id 末位种子，50~250ms）。
-                          下方对照「真并行耗时」= <b>max(各 tool_call)</b> vs 「若串行总耗时」= <b>sum(各 tool_call)</b>。
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                          <div className="bg-white border border-blue-300 rounded p-2">
-                            <div className="text-gray-500">各 tool_call 耗时</div>
-                            <ul className="font-mono">
-                              {peakRound.toolResults.map((tr, i) => {
-                                // tr.arguments 已是对象（后端 safeParseArgs 解析过）；不要再 JSON.parse
-                                const argsObj = tr.arguments && typeof tr.arguments === 'object'
-                                  ? tr.arguments
-                                  : (() => { try { return JSON.parse(tr.arguments || '{}'); } catch { return {}; } })();
-                                return (
-                                  <li key={tr.tool_call_id}>
-                                    #{i + 1} {tr.name}({argsObj.id || '?'}): <b>{peakMs[i]}</b> ms
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                          <div className="bg-white border border-blue-300 rounded p-2">
-                            <div className="text-gray-500">真并行（Promise.all）耗时</div>
-                            <div className="text-2xl font-bold text-blue-700"><b>{maxMs}</b> ms</div>
-                            <div className="text-gray-500">= 最慢那一个（不是相加）</div>
-                          </div>
-                          <div className="bg-white border border-blue-300 rounded p-2">
-                            <div className="text-gray-500">若串行（step-1 的 for await）耗时</div>
-                            <div className="text-2xl font-bold text-gray-700"><b>{sumMs}</b> ms</div>
-                            <div className="text-gray-500">= 各 tool_call 相加</div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-green-700">
-                          并行 <b>省了 {saved} ms</b>（{saved > 0 ? "串行 vs 并行差异肉眼可见" : "差异太小看不出并行价值"}）。
-                          {saved <= 0 ? " 实际生产里 handler 越耗时差距越明显 —— 网络/DB/API 调用 100ms+ 是常态。" : ""}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* ── 数据前后对照：before / after / diff 三栏 ── */}
-                  <div className="border border-gray-300 rounded p-3 space-y-2 bg-white">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="font-semibold text-gray-800">
-                        数据前后对照（Loop 在内存里真改了什么）
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        diff 改了 <b>{result.diff.changed.length}</b> 条 ·{" "}
-                        其中 <b className="text-green-700">{result.diff.summary.completedCount}</b> 条 done false → true
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="bg-gray-50 border border-gray-300 rounded p-2">
-                        <div className="text-xs font-semibold text-gray-700 mb-1">
-                          Before（跑 Agent 之前 · {result.todosBefore.length} 条）
-                        </div>
-                        <ul className="space-y-1">
-                          {result.todosBefore.map(t => (
-                            <TodoRow key={t.id} todo={t} dueClass={dueClass(t)} showDone={false} />
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="bg-green-50 border border-green-300 rounded p-2">
-                        <div className="text-xs font-semibold text-green-800 mb-1">
-                          After（跑完 · {result.todosAfter.length} 条）
-                        </div>
-                        <ul className="space-y-1">
-                          {result.todosAfter.map(t => (
-                            <TodoRow key={t.id} todo={t} dueClass={""} showDone={true} />
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="bg-yellow-50 border border-yellow-300 rounded p-2">
-                        <div className="text-xs font-semibold text-yellow-900 mb-1">
-                          Diff（只列被改的行 · {result.diff.changed.length} 条）
-                        </div>
-                        {result.diff.changed.length === 0 ? (
-                          <div className="text-xs text-gray-500">（无改动 · Loop 没动数据）</div>
-                        ) : (
-                          <ul className="space-y-1">
-                            {result.diff.changed.map(c => (
-                              <li key={c.id} className="border border-yellow-300 bg-white rounded p-2 text-xs">
-                                <div className="flex items-center justify-between mb-1">
-                                  <div>
-                                    <span className="font-mono text-gray-400">{c.id}</span>{" "}
-                                    <span className="px-1.5 py-0.5 rounded bg-gray-100">{c.tag}</span>
-                                  </div>
-                                  <span className="text-green-700 text-xs font-semibold">
-                                    {c.from.done ? "未改动字段但 JSON 变了（罕见）" : "done: false → true"}
-                                  </span>
-                                </div>
-                                <div className="text-gray-700">{c.title}</div>
-                                <div className="mt-1 text-gray-500 text-xs">
-                                  {fmtDue(c.from.dueDate)} ({c.from.dueDate}) → {fmtDue(c.to.dueDate)} ({c.to.dueDate})
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 跑完 messages 形状：让学习者直观感受「messages 在跑什么阶段」 */}
+                  <Trajectory result={result} />
+                  <ParallelCard result={result} />
+                  <SideEffect
+                    result={result}
+                    afterTitle={"After（跑完 · " + result.todosAfter.length + " 条）"}
+                    emptyText="（无改动 · Loop 没动数据）"
+                  />
                   <details className="border border-gray-300 rounded p-3 bg-gray-50">
                     <summary className="text-sm font-semibold text-gray-700 cursor-pointer">
                       跑完后完整 messages（点击展开 · 看 Loop 一圈一圈往里追加了什么）

@@ -29,31 +29,25 @@ cd apps && yarn app:07-02-plan-vs-step-step-2
 ## 数据流
 
 ```text
-浏览器点「跑对照」
+浏览器点「跑左栏」或「跑右栏」或「同时对照」
   │
-  ▼
-GET /api/compare
+  ├─ GET /api/step-by-step     → routes/step-by-step.ts → runStepByStep
+  └─ GET /api/plan-and-execute → routes/plan-and-execute.ts → runPlanAndExecute
   │
-  ▼
-routes/compare.ts → 并行跑 runStepByStep (真模型循环) + runPlanAndExecute (真规划器)
+  ├─ runStepByStep（变体 A · 真模型 ReAct）
+  │     └─ 每圈 openai.chat.completions.create + tools → invokeTool → 最多 MAX_ROUNDS=8
   │
-  ├─ runStepByStep（同 step-1，不变）
-  │     └─ 7 圈 mock Reason → mock 工具
-  │
-  └─ runPlanAndExecute（step-2 增量核心）
+  └─ runPlanAndExecute（变体 B · 真规划器）
         ├─ planWithLlm(task)  真调一次模型
         │    ├─ system prompt：让模型吐「步骤 N：tool(args) · 理由」自然语言列表
         │    ├─ openai.chat.completions.create({ messages })
-        │    ├─ logger.info 五条日志：调用模型开始/结束 + 完整 messages + 完整 response + __code + 耗时
-        │    └─ 按行正则解析 → plan 数组
+        │    ├─ 五条日志：调用模型开始/结束 + 完整 messages + 完整 response + __code + 耗时
+        │    └─ 剥 think 块 + 按行正则解析 → plan 数组
         ├─ 解析失败 → 回退 FALLBACK_PLAN + plannerFallback=true
         └─ 顺序按 plan 调 mock 工具 → executeTrace + 最终答案
   │
   ▼
-返回 { task, stepByStep, planAndExecute: { plan, plannerRawText, plannerFallback, ... }, comparison }
-  │
-  ▼
-React 渲染：右栏计划卡多「✅ 真模型规划」/「⚠ 兜底 mock」标签 + 「模型原话」可展开
+两侧各自返回 JSON；对照数字由浏览器用两次结果现场算
 ```
 
 服务端日志（`logs/YYYY-MM-DD.log`）B 路径每次写：调用模型开始/结束（完整 messages + 完整 response + 字段释义 + 耗时）+ planner 解析失败 warn（如果）+ 解析后 plan + 执行每步五条日志。
@@ -61,7 +55,8 @@ React 渲染：右栏计划卡多「✅ 真模型规划」/「⚠ 兜底 mock」
 ## 当前能做什么
 
 - 固定任务：「春季上新：拉库存、给有货 SKU 写文案、通知运营」
-- 点「跑对照」→ B 路径真调一次模型
+- 点「跑左栏 / 跑右栏 / 同时对照」→ 两侧各发各的请求（同时对照 = 浏览器并发两次，不是服务端打包）
+- 点「跑右栏」→ B 路径真调一次模型
   - 计划卡右上角标签：「✅ 真模型规划」/「⚠ 兜底 mock」（取决于模型吐的东西能不能解析）
   - 「模型原话」可展开 `<details>`：看模型真吐的自然语言步骤列表
   - 每行解析成 plan 数组 → 渲染成可执行的 6 步

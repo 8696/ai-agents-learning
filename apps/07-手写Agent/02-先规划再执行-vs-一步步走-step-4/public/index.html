@@ -5,134 +5,118 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>先规划再执行 vs 一步步走 · 第四步（短任务对照）</title>
 
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="/utils/compare-metrics.js"></script>
+  <script type="text/babel" src="/components/round-card.js"></script>
+  <script type="text/babel" src="/components/plan-panel.js"></script>
+  <script type="text/babel" src="/components/metrics-strip.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState, useEffect } = React;
-
-    // ── 与服务端约定的端口（§5.3.3 端口三处一致：runtime-ctx / package.json / 页脚 fallback）──
+    const { RoundCard, PlanPanel, MetricsStrip } = window.DemoUI;
     const FALLBACK_PORT = 50056;
 
     function App() {
-      const [status, setStatus] = useState("idle"); // idle | loading | ok | err
-      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: false });
-      const [data, setData] = useState(null);   // /api/compare 返回
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: true });
+      const [shortA, setShortA] = useState(null);
+      const [shortB, setShortB] = useState(null);
+      const [longA, setLongA] = useState(null);
+      const [longB, setLongB] = useState(null);
+      const [busy, setBusy] = useState(false);
       const [errMsg, setErrMsg] = useState("");
 
-      // ── 加载时打一次 /health 填 #env-info ──
+      const noKey = env.callsModel && !env.hasKey;
+      const any = shortA || shortB || longA || longB;
+      const pillStatus = busy ? "loading" : (errMsg ? "err" : (any ? "ok" : "idle"));
+
       useEffect(() => {
-        fetch("/health").then(r => r.json()).then(j => {
+        fetch("/health").then((r) => r.json()).then((j) => {
           setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
-        }).catch(() => { /* 静默；fallback 仍可用 */ });
+        }).catch(() => {});
       }, []);
 
-      async function runCompare() {
-        setStatus("loading");
-        setErrMsg("");
-        try {
-          const res = await fetch("/api/compare");
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const j = await res.json();
-          setData(j);
-          setStatus("ok");
-        } catch (e) {
-          setErrMsg(String(e?.message ?? e));
-          setStatus("err");
-        }
+      async function fetchJson(url) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
       }
 
-      // ── 共享：渲染一个轨迹组（A 或 B）──
-      function renderA(label, trajectory) {
+      async function runShort() {
+        setBusy(true); setErrMsg("");
+        try {
+          const [a, b] = await Promise.all([
+            fetchJson("/api/step-by-step?task=short"),
+            fetchJson("/api/plan-and-execute?task=short"),
+          ]);
+          setShortA(a); setShortB(b);
+        } catch (e) {
+          setErrMsg(String(e && e.message ? e.message : e));
+        } finally { setBusy(false); }
+      }
+
+      async function runLong() {
+        setBusy(true); setErrMsg("");
+        try {
+          const [a, b] = await Promise.all([
+            fetchJson("/api/step-by-step?task=long"),
+            fetchJson("/api/plan-and-execute?task=long"),
+          ]);
+          setLongA(a); setLongB(b);
+        } catch (e) {
+          setErrMsg(String(e && e.message ? e.message : e));
+        } finally { setBusy(false); }
+      }
+
+      async function runAll() {
+        setBusy(true); setErrMsg("");
+        try {
+          const [sa, sb, la, lb] = await Promise.all([
+            fetchJson("/api/step-by-step?task=short"),
+            fetchJson("/api/plan-and-execute?task=short"),
+            fetchJson("/api/step-by-step?task=long"),
+            fetchJson("/api/plan-and-execute?task=long"),
+          ]);
+          setShortA(sa); setShortB(sb); setLongA(la); setLongB(lb);
+        } catch (e) {
+          setErrMsg(String(e && e.message ? e.message : e));
+        } finally { setBusy(false); }
+      }
+
+      const comparison = window.DemoUtils.buildComparison(shortA, shortB, longA, longB);
+
+      function colA(title, data) {
         return (
-          <div className="border border-gray-200 rounded p-3 space-y-2">
-            <div className="flex items-baseline justify-between">
-              <div className="text-sm font-semibold text-gray-800">{label}</div>
-              <div className="text-xs text-gray-500">{trajectory.length} 圈 · 模型 {trajectory.length} 次</div>
-            </div>
-            {trajectory.map((round) => (
-              <div key={round.index} className="border border-gray-300 bg-white rounded p-2 space-y-1">
-                <div className="flex items-baseline justify-between">
-                  <div className="text-xs font-semibold text-gray-700">第 {round.index} 圈</div>
-                  <div className="text-xs text-gray-500">{round.costMs} ms</div>
-                </div>
-                <div className="text-xs text-gray-700 bg-gray-50 rounded p-1">{round.reason.thought || "(无想法)"}</div>
-                {round.act.length > 0 ? (
-                  round.act.map((a, i) => (
-                    <div key={i} className={"text-xs rounded p-1 border " + (a.ok ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50")}>
-                      <span className="font-mono">{a.tool}({JSON.stringify(a.args)})</span>
-                      <span className="text-gray-600 ml-1">→ {JSON.stringify(a.result.result)}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-xs text-green-700 bg-green-50 border border-green-300 rounded p-1">tool_calls 空 → 最终答案</div>
-                )}
+          <div className="border border-gray-200 rounded p-3 space-y-3">
+            <div className="text-sm font-semibold text-gray-800">{title}</div>
+            {!data ? <div className="text-xs text-gray-400">还没跑这一组</div> : (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500">{data.trajectory.length} 圈 · 模型 {data.summary.modelCalls} 次</div>
+                {data.trajectory.map((round) => <RoundCard key={round.index} round={round} />)}
+                <div className="text-xs text-green-900 bg-green-50 border border-green-300 rounded p-2">最终答案：{data.finalAnswer}</div>
               </div>
-            ))}
-            <div className="text-xs text-green-900 bg-green-50 border border-green-300 rounded p-2">
-              最终答案：{trajectory[trajectory.length - 1]?.reason?.thought || "(无)"} {trajectory[trajectory.length - 1]?.act?.length === 0 ? "" : ""}
-            </div>
+            )}
           </div>
         );
       }
 
-      function renderB(label, plans, executeTrace, finalAnswer) {
+      function colB(title, data) {
         return (
-          <div className="border border-gray-200 rounded p-3 space-y-2">
-            <div className="flex items-baseline justify-between">
-              <div className="text-sm font-semibold text-gray-800">{label}</div>
-              <div className="text-xs text-gray-500">
-                {plans.length} 个 plan 版本 · {executeTrace.length} 步执行 · 规划器 {plans.length} 次
+          <div className="border border-gray-200 rounded p-3 space-y-3">
+            <div className="text-sm font-semibold text-gray-800">{title}</div>
+            {!data ? <div className="text-xs text-gray-400">还没跑这一组</div> : (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500">{data.plannerIterations} 个 plan · {data.executeTrace.length} 步</div>
+                <PlanPanel data={data} />
+                <div className="text-xs text-green-900 bg-green-50 border border-green-300 rounded p-2">最终答案：{data.finalAnswer}</div>
               </div>
-            </div>
-            {plans.map((p) => {
-              const isActive = p.version === plans[plans.length - 1].version;
-              const borderColor = p.fallback ? "border-orange-400" : (isActive ? "border-blue-400" : "border-gray-400");
-              const bgColor = p.fallback ? "bg-orange-50" : (isActive ? "bg-blue-50" : "bg-gray-100");
-              return (
-                <div key={p.version} className={"border-2 rounded p-2 space-y-1 " + borderColor + " " + bgColor}>
-                  <div className="text-xs font-semibold text-gray-900">
-                    计划 v{p.version}{isActive ? "（当前执行）" : "（已废）"}{p.reason ? ` · ${p.reason}` : ""}
-                  </div>
-                  <ol className="text-xs space-y-0.5">
-                    {p.steps.map((s) => (
-                      <li key={s.index} className="font-mono text-gray-900">
-                        {s.index}. {s.tool}({JSON.stringify(s.args)})
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              );
-            })}
-            {executeTrace.map((step) => (
-              <div key={`v${step.planVersion}-${step.index}`} className="border border-gray-300 bg-white rounded p-2 space-y-1">
-                <div className="flex items-baseline justify-between">
-                  <div className="text-xs font-semibold text-gray-700">
-                    执行第 {step.index} 步
-                    <span className="text-xs text-blue-700 ml-2">v{step.planVersion}</span>
-                  </div>
-                  <div className="text-xs text-gray-500">{step.costMs} ms</div>
-                </div>
-                <div className="text-xs text-gray-700 bg-gray-50 rounded p-1 font-mono">
-                  {step.step.tool}({JSON.stringify(step.step.args)}) → {JSON.stringify(step.result.result)}
-                </div>
-              </div>
-            ))}
-            <div className="text-xs text-green-900 bg-green-50 border border-green-300 rounded p-2">
-              最终答案：{finalAnswer}
-            </div>
+            )}
           </div>
         );
       }
@@ -141,162 +125,64 @@
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              先规划再执行 vs 一步步走（Plan-and-Execute vs ReAct） · 第四步（step-4） · 短任务 vs 长任务对照
+              先规划再执行 vs 一步步走 · 第四步（step-4） · 短任务 vs 长任务对照
             </h1>
             <span id="status-pill" className={
               "text-xs px-2 py-1 rounded " +
-              (status === "loading" ? "bg-blue-100 text-blue-800" :
-               status === "ok"      ? "bg-green-100 text-green-800" :
-               status === "err"     ? "bg-red-100 text-red-800" :
-                                      "bg-gray-200 text-gray-700")
+              (pillStatus === "loading" ? "bg-blue-100 text-blue-800" :
+               pillStatus === "ok" ? "bg-green-100 text-green-800" :
+               pillStatus === "err" ? "bg-red-100 text-red-800" : "bg-gray-200 text-gray-700")
             }>
-              {status === "loading" ? "🔄 请求中" :
-               status === "ok"      ? "✅ 完成" :
-               status === "err"     ? "❌ 错误" :
-                                      "⏸ 待连接"}
+              {pillStatus === "loading" ? "🔄 请求中" : pillStatus === "ok" ? "✅ 完成" : pillStatus === "err" ? "❌ 错误" : "⏸ 待连接"}
             </span>
           </header>
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
-
-            {/* ── #problem-card：先把实际场景 + 核心问题抛出来（让学习者带着问题看 demo）── */}
             <section id="problem-card" className="bg-orange-50 border-2 border-orange-400 rounded p-4 space-y-2">
-              <div className="flex items-baseline justify-between">
-                <div className="text-sm font-bold text-orange-900">❓ 实际场景 + 核心问题（先看这个）</div>
-                <span className="text-xs text-orange-700">点完「跑对照」看 demo 自己回答</span>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-gray-700">
-                  <b className="text-orange-900">实际场景 1（短任务）：</b>你刚下班路上接到一条微信：「<i>把 todo-001 标完成</i>」。 30 秒就能点一下搞定的事。
-                </div>
-                <div className="text-xs text-gray-700">
-                  <b className="text-orange-900">实际场景 2（多步任务）：</b>运营说「<i>春季上新：拉库存、给有货 SKU 写文案、通知运营</i>」。3 步要走完，错了还得到处补。
-                </div>
-                <div className="text-xs text-gray-700">
-                  <b className="text-orange-900">实际场景 3（短任务浪费的反例）：</b>改一个 CSS 颜色 → 你开了 8 步设计文档；回家路上买瓶水 → 你写了三页购物计划。
-                </div>
-                <div className="text-sm text-orange-900 mt-2 font-semibold">
-                  → 核心问题：<b>「什么时候值得先规划，什么时候直接干？」</b> 哪种策略花钱更少、等得最短、还能办成事？
-                </div>
-              </div>
+              <div className="text-sm font-bold text-orange-900">❓ 实际场景 + 核心问题（先看这个）</div>
+              <div className="text-xs text-gray-700">短任务：下班路上「把 todo-001 标完成」—— 30 秒能点一下。</div>
+              <div className="text-xs text-gray-700">长任务：春季上新要拉库存、写文案、通知运营 —— 错了得到处补。</div>
+              <div className="text-sm text-orange-900 mt-2 font-semibold">→ 核心问题：什么时候值得先规划，什么时候直接干？</div>
             </section>
 
-            {/* ── #page-intro ── */}
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">
-                本页只演示：step-4 <b>短任务 vs 长任务对照</b>——同一句任务跑两遍（A 路径 / B 路径），分别用<b>短任务「把 todo-001 标完成」（1 步）</b>和<b>长任务「春季上新」（多步）</b>对照「什么时候不值得先规划」。
+                本页只演示：短任务「把 todo-001 标完成」vs 长任务「春季上新」。四组各自请求，对照数字在浏览器算。
               </p>
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-                <li>点「跑对照」 → GET /api/compare → 后端跑 4 组轨迹并行（短 A / 短 B / 长 A / 长 B）</li>
-                <li>短任务：A 路径模型调 1 次 complete_todo / B 路径规划器调 1 次 + 执行 1 步</li>
-                <li>长任务：A 路径多圈（含重规划检查不变）/ B 路径真规划器 + 变体 C 重规划</li>
-                <li>对照卡 4 个数字 + 「值得 vs 不值得」判断</li>
+                <li>点「跑短对照」→ GET /api/step-by-step?task=short 和 GET /api/plan-and-execute?task=short（两次 fetch）</li>
+                <li>点「跑长对照」→ 同上，task=long（两次 fetch）</li>
+                <li>点「四组一起」→ 浏览器并发四次 fetch，不是服务端一个接口打包</li>
               </ol>
-
-              {/* §5.3.11.b 核心教学点卡片 */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
                 <div className="text-xs text-gray-800">
-                  <b>「什么时候不值得先规划」</b>：步骤结构事先能说清 + 任务 1-2 步 + 用户急着看第一个动作 → 一步步走更值。先规划的多付一次规划调用，第一次行动还更晚。
-                </div>
-                <div className="text-xs text-gray-600">
-                  怎么观察：对照卡右下「短任务值得规划？」= ❌ NO（短 A 调 1 圈模型；短 B 多付 1 次规划反而多 1 次调用）；「长任务值得规划？」= ✅ YES（长 A 调 N 圈模型；长 B 只 1-2 次规划）。
+                  <b>什么时候不值得先规划</b>：任务只要 1-2 步、用户急着看第一个动作 → 一步步走更值。先规划多付一次规划调用，第一次行动还更晚。
                 </div>
               </div>
             </section>
 
-            {/* ── #controls ── */}
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <div className="text-sm text-gray-500">Demo 控制（1 个按钮）</div>
+              <div className="text-sm text-gray-500">四组各自请求 · 可以只跑短、只跑长，或四组一起</div>
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  id="run-compare"
-                  onClick={runCompare}
-                  disabled={status === "loading" || (env.callsModel && !env.hasKey)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
-                >
-                  跑对照（短任务 + 长任务 × A 路径 + B 路径）
-                </button>
-                <span className="text-xs text-gray-500">
-                  短任务：把 todo-001 标完成（1 步）/ 长任务：春季上新（多步 · 见 query ?task=）
-                </span>
+                <button id="run-short" onClick={runShort} disabled={busy || noKey} className="bg-gray-700 text-white px-4 py-2 rounded text-sm disabled:opacity-50">跑短对照（两次 fetch）</button>
+                <button id="run-long" onClick={runLong} disabled={busy || noKey} className="bg-blue-700 text-white px-4 py-2 rounded text-sm disabled:opacity-50">跑长对照（两次 fetch）</button>
+                <button id="run-all" onClick={runAll} disabled={busy || noKey} className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50">四组一起（四次 fetch）</button>
               </div>
-              {status === "err" && (
-                <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">
-                  错误：{errMsg}
-                </div>
-              )}
+              {errMsg ? <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">错误：{errMsg}</div> : null}
             </section>
 
-            {/* ── 对照数字卡（横跨顶部 · 短 vs 长 × A vs B）── */}
-            {data && (
-              <section id="comparison-grid" className="bg-white shadow rounded p-4 space-y-2">
-                <div className="text-sm font-semibold text-gray-800">关键对照（短任务 vs 长任务 · A 路径 vs B 路径）</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* 短任务 */}
-                  <div className={"rounded p-3 border " + (data.comparison.shortWorthReplan ? "bg-green-50 border-green-300" : "bg-yellow-50 border-yellow-300")}>
-                    <div className="text-xs text-gray-600">短任务「{data.comparison.short.task}」</div>
-                    <div className="mt-1 text-sm">
-                      <span className="text-gray-700">A 一步步走：</span>
-                      <b>{data.comparison.short.a.modelCalls}</b> 圈 · {data.comparison.short.a.stepCount} 步 · {data.comparison.short.a.totalMs} ms
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-gray-700">B 先规划：</span>
-                      <b>{data.comparison.short.b.plans}</b> 规划 · {data.comparison.short.b.stepCount} 步 · {data.comparison.short.b.totalMs} ms
-                    </div>
-                    <div className="mt-2 text-sm font-semibold">
-                      短任务值得规划？<b className={data.comparison.shortWorthReplan ? "text-green-700" : "text-yellow-900"}>
-                        {data.comparison.shortWorthReplan ? "✅ 是（B 更省模型）" : "❌ NO（B 多付一次）"}
-                      </b>
-                    </div>
-                  </div>
-                  {/* 长任务 */}
-                  <div className={"rounded p-3 border " + (data.comparison.longWorthReplan ? "bg-green-50 border-green-300" : "bg-yellow-50 border-yellow-300")}>
-                    <div className="text-xs text-gray-600">长任务「{data.comparison.long.task}」</div>
-                    <div className="mt-1 text-sm">
-                      <span className="text-gray-700">A 一步步走：</span>
-                      <b>{data.comparison.long.a.modelCalls}</b> 圈 · {data.comparison.long.a.stepCount} 步 · {data.comparison.long.a.totalMs} ms
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-gray-700">B 先规划：</span>
-                      <b>{data.comparison.long.b.plans}</b> 规划 · {data.comparison.long.b.stepCount} 步 · {data.comparison.long.b.totalMs} ms
-                    </div>
-                    <div className="mt-2 text-sm font-semibold">
-                      长任务值得规划？<b className={data.comparison.longWorthReplan ? "text-green-700" : "text-yellow-900"}>
-                        {data.comparison.longWorthReplan ? "✅ 是（B 更省模型）" : "❌ NO（B 多付一次）"}
-                      </b>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
+            <MetricsStrip comparison={comparison} />
 
-            {/* ── #output：4 栏对照（2x2 网格）── */}
             <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
-              {!data && (
-                <div className="text-sm text-gray-500">
-                  空态：还没点「跑对照」。点了之后这里会出现 4 栏（2x2）：左上「短 A 一步步走」（trajectory 1 圈）/ 右上「短 B 先规划」（plan 1 步 + execute 1 步）/ 左下「长 A 一步步走」（trajectory N 圈）/ 右下「长 B 先规划」（plan v1+v2 + executeTrace）。看每栏的轨迹形状 + 模型调用次数 = 判断值得不值得。
-                </div>
-              )}
-
-              {data && (
+              {!any ? (
+                <div className="text-sm text-gray-500">空态：还没点按钮。会出现 2x2：短 A / 短 B / 长 A / 长 B。</div>
+              ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* 左上：短 A */}
-                  <div id="col-short-a">
-                    {renderA("短任务 · A 一步步走（1 圈调 complete_todo）", data.shortA.trajectory)}
-                  </div>
-                  {/* 右上：短 B */}
-                  <div id="col-short-b">
-                    {renderB("短任务 · B 先规划（plan 1 步 + execute 1 步）", data.shortB.plans, data.shortB.executeTrace, data.shortB.finalAnswer)}
-                  </div>
-                  {/* 左下：长 A */}
-                  <div id="col-long-a">
-                    {renderA("长任务 · A 一步步走（N 圈自选调啥）", data.longA.trajectory)}
-                  </div>
-                  {/* 右下：长 B */}
-                  <div id="col-long-b">
-                    {renderB("长任务 · B 先规划（plan v1+v2 重规划 + executeTrace）", data.longB.plans, data.longB.executeTrace, data.longB.finalAnswer)}
-                  </div>
+                  <div id="col-short-a">{colA("短任务 · A 一步步走", shortA)}</div>
+                  <div id="col-short-b">{colB("短任务 · B 先规划", shortB)}</div>
+                  <div id="col-long-a">{colA("长任务 · A 一步步走", longA)}</div>
+                  <div id="col-long-b">{colB("长任务 · B 先规划", longB)}</div>
                 </div>
               )}
             </section>

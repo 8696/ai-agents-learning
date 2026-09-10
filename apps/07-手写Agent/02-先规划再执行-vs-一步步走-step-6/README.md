@@ -18,7 +18,7 @@ cd apps && yarn app:07-02-plan-vs-step-step-6
 
 | 维度 | step-5 | step-6 |
 | ---- | ------ | ------ |
-| 服务端 | 一次性 GET /api/compare → 完整轨迹 | **两阶段**：GET /api/compare（只 plan）+ POST /api/confirm-plan（人点头才执行）|
+| 服务端 | 一次性 GET /api/compare → 完整轨迹 | **两阶段**：GET /api/plan（只 plan）+ POST /api/confirm-plan（人点头才执行）；左栏独立 GET /api/step-by-step |
 | sessions Map | 不需要 | **按 sessionId 存 plans**（pending 状态的 plan 等用户确认后跑）|
 | 状态机 | 无 | `idle → planned → executed`（UI 状态机显式展示）|
 | UI 按钮 | 单「跑对照」按钮 | 「开始规划」+ 「✅ 确认执行」两个按钮 |
@@ -30,48 +30,29 @@ cd apps && yarn app:07-02-plan-vs-step-step-6
 ## 数据流
 
 ```text
-浏览器点「开始规划」
-  │
-  ▼
-GET /api/compare
-  │
-  ▼
-mountCompareRoutes 阶段 1
-  ├─ planOnly(task) → 调真规划器 1 次
-  ├─ sessions.set(sessionId, { task, initialSteps, rawText, fallback })
-  └─ 返回 { sessionId, task, plans: [v1], status: 'pending' }
-  │
-  ▼
-UI 状态：planStage='planned'
-  ├─ 右栏显示「⏸ 待确认 · 等你点头」+ plan 卡
-  ├─ 显示「✅ 确认执行」按钮
-  └─ 执行卡 / 对照卡 不显示
-  │
-  ▼
-点「✅ 确认执行」
-  │
-  ▼
-POST /api/confirm-plan { sessionId }
-  │
-  ▼
-mountCompareRoutes 阶段 2
-  ├─ sessions.get(sessionId) → 拿 plans
-  ├─ executeFromPlan(task, plans) → 跑执行循环（含 shouldReplan + 变体 E）
-  ├─ sessions.delete(sessionId)
-  └─ 返回 { plans, executeTrace, plannerIterations, status: 'executed', comparison }
-  │
-  ▼
-UI 状态：planStage='executed'
-  ├─ 右栏显示完整 plans + executeTrace + 最终答案
-  ├─ plan 卡变「✅ 已确认 + 已执行」
-  └─ 顶部对照卡 5 行显示
+左栏（独立，和右栏确认互不绑定）
+  └─ GET /api/step-by-step → runStepByStep → 轨迹
+
+右栏阶段 1：点「开始规划」
+  └─ GET /api/plan
+        ├─ planOnly(task) → 调真规划器 1 次（不 invokeTool）
+        ├─ sessions.set(sessionId, { task, initialSteps, rawText, fallback })
+        └─ 返回 { sessionId, task, plans: [v1], status: 'pending' }
+
+右栏阶段 2：点「确认执行」
+  └─ POST /api/confirm-plan { sessionId }
+        ├─ sessions.get(sessionId) → 拿 plans
+        ├─ executeFromPlan(...) → 只执行已保存的计划（禁止再跑 A 路径）
+        ├─ sessions.delete(sessionId)
+        └─ 返回 { plans, executeTrace, status: 'executed' }
 ```
 
 ## 当前能做什么
 
-- 固定任务：「春季上新：拉库存、给有货 SKU 文案、通知运营」
-- 阶段 1：点「开始规划」→ 看到 plan v1 + 状态机「⏸ 待确认」+ 「✅ 确认执行」按钮
-- 阶段 2：点「✅ 确认执行」→ 看到 plans（含重规划）+ executeTrace + notify_ops 的 message + 最终答案 + 顶部对照卡
+- 左栏：点「跑一步步走」→ GET /api/step-by-step（和右栏确认互不绑定）
+- 右栏阶段 1：点「开始规划」→ GET /api/plan → 看到 plan v1 + 「待确认」+ 「确认执行」按钮（确认前无执行卡）
+- 右栏阶段 2：点「确认执行」→ POST /api/confirm-plan → 看到 executeTrace + 最终答案
+  - 确认请求**不会**再跑一步步走
 
 ## step-6 教学点
 

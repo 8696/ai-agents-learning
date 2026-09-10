@@ -29,13 +29,10 @@ cd apps && yarn app:07-02-plan-vs-step-step-3
 ## 数据流
 
 ```text
-浏览器点「跑对照」
+浏览器点「跑左栏」或「跑右栏」或「同时对照」
   │
-  ▼
-GET /api/compare
-  │
-  ▼
-routes/compare.ts → 并行跑 runStepByStep (真模型循环) + runPlanAndExecute (真规划器 + 重规划)
+  ├─ GET /api/step-by-step     → routes/step-by-step.ts → runStepByStep
+  └─ GET /api/plan-and-execute → routes/plan-and-execute.ts → runPlanAndExecute
   │
   ├─ runStepByStep（同 step-2，不变）
   │     └─ 真模型每圈调，tool_calls 空 → 最终答案 / MAX_ROUNDS=8 兜底
@@ -45,16 +42,18 @@ routes/compare.ts → 并行跑 runStepByStep (真模型循环) + runPlanAndExec
         ├─ 执行阶段 while 循环（双层）
         │     ├─ 调 plan 当前步 → invokeTool（mock）
         │     ├─ 累积 observations
-        │     ├─ shouldReplan(observations) 检测
+        │     ├─ shouldReplan(observations) 检测（lib/flow/replan.ts）
         │     │     └─ 触发 → doPlan(2, observations, reason) 出 v2 → curPlan = v2, curPlanIdx = 0
+        │     │           observations 清零（新版本从 0 开始，避免无限循环）
         │     └─ 不触发 → curPlanIdx++
+        │     保险：MAX_PLAN_VERSIONS=3
         └─ plans.length = plannerIterations
   │
   ▼
-返回 { task, stepByStep, planAndExecute: { plans, plannerIterations, executeTrace[].planVersion, ... }, comparison }
+两侧各自返回 JSON；对照数字由浏览器用两次结果现场算
   │
   ▼
-React 渲染：右栏 plans.map() 渲染 v1（已废折叠灰卡）+ v2（当前执行绿卡）；执行卡每步显示 planVersion 标签
+React 渲染：右栏 plans.map() 渲染 v1（已废灰卡）+ v2（当前执行绿卡）；执行卡每步显示 planVersion
 ```
 
 服务端日志（`logs/YYYY-MM-DD.log`）：
@@ -68,6 +67,7 @@ React 渲染：右栏 plans.map() 渲染 v1（已废折叠灰卡）+ v2（当前
 
 - 固定任务：「春季上新：拉库存、给有货 SKU 写文案、通知运营」
 - 任务在 step-3 实际能触发重规划：模型调 query_stock 后发现 SKU 都是 0 → shouldReplan 返回 true → 再调 planWithLlm 出 v2
+- 点「跑左栏 / 跑右栏 / 同时对照」→ 两侧各发各的请求（同时对照 = 浏览器并发两次，不是服务端打包）
 - 点「跑对照」 → 双栏 + 4 个对照卡
   - 顶部对照卡新增「重规划触发」+「计划版本数」（变体 C 可观察锚点）
   - 右栏计划卡：v1（已废折叠灰卡「step-3 重规划后」）/ v2（当前执行绿卡「新计划」） + 「触发原因」标注
