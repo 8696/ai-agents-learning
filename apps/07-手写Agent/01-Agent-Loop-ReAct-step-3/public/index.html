@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Agent Loop / ReAct · step-1</title>
+  <title>Agent Loop / ReAct · step-3 · 失败 Observe 后继续</title>
 
   <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
@@ -70,7 +70,7 @@
     }
 
     function App() {
-      const [query, setQuery] = useState("把逾期购物待办标完成");
+      const [query, setQuery] = useState("把 todo-999 标完成");
       const [status, setStatus] = useState({ key: "idle", text: "⏸ 待连接" });
       const [health, setHealth] = useState(null);
       const [errorMsg, setErrorMsg] = useState("");
@@ -165,7 +165,7 @@
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              Agent Loop / ReAct（手写 Agent 循环） · 第一步（step-1） · 看到 loop 在转 + 数据真改了
+              Agent Loop / ReAct（手写 Agent 循环） · 第三步（step-3） · 失败 Observe 后下一圈改参（变体 G 闭环）
             </h1>
             <span id="status-pill" className={
               "text-xs px-2 py-1 rounded " +
@@ -383,6 +383,102 @@
                     </div>
                   )}
 
+                  {/* ── 并行对照卡片：变体 E 关键观察（任一圈 toolResults >= 2 才出现）── */}
+                  {result.trajectory.some(s => s.toolResults.length >= 2) && (() => {
+                    // 取所有「并行圈」中 toolResults 最多的那圈作展示
+                    const peakRound = result.trajectory
+                      .filter(s => s.toolResults.length >= 2)
+                      .reduce((max, s) => s.toolResults.length > max.toolResults.length ? s : max, { toolResults: [] });
+                    const peakMs = peakRound.toolResults.map(tr => {
+                      // tr.content 是 JSON 字符串（协议要求）；先 parse 拿 simulatedDelayMs；失败 fallback 0
+                      try {
+                        const obj = JSON.parse(tr.content);
+                        return obj.simulatedDelayMs ?? 0;
+                      } catch { return 0; }
+                    });
+                    const sumMs = peakMs.reduce((s, x) => s + x, 0);
+                    const maxMs = Math.max(...peakMs, 0);
+                    const saved = sumMs - maxMs;
+                    return (
+                      <div className="border border-blue-300 bg-blue-50 rounded p-3 space-y-2">
+                        <div className="text-sm font-semibold text-blue-900">
+                          并行对照（变体 E · 一圈多个 Act · Promise.all）
+                        </div>
+                        <div className="text-xs text-gray-700">
+                          第 <b>{peakRound.round}</b> 圈同一时间调了 <b>{peakRound.toolResults.length}</b> 个 complete_todo，
+                          每个 handler 模拟外部 API 真实耗时（id 末位种子，50~250ms）。
+                          下方对照「真并行耗时」= <b>max(各 tool_call)</b> vs 「若串行总耗时」= <b>sum(各 tool_call)</b>。
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                          <div className="bg-white border border-blue-300 rounded p-2">
+                            <div className="text-gray-500">各 tool_call 耗时</div>
+                            <ul className="font-mono">
+                              {peakRound.toolResults.map((tr, i) => {
+                                // tr.arguments 已是对象（后端 safeParseArgs 解析过）；不要再 JSON.parse
+                                const argsObj = tr.arguments && typeof tr.arguments === 'object'
+                                  ? tr.arguments
+                                  : (() => { try { return JSON.parse(tr.arguments || '{}'); } catch { return {}; } })();
+                                return (
+                                  <li key={tr.tool_call_id}>
+                                    #{i + 1} {tr.name}({argsObj.id || '?'}): <b>{peakMs[i]}</b> ms
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                          <div className="bg-white border border-blue-300 rounded p-2">
+                            <div className="text-gray-500">真并行（Promise.all）耗时</div>
+                            <div className="text-2xl font-bold text-blue-700"><b>{maxMs}</b> ms</div>
+                            <div className="text-gray-500">= 最慢那一个（不是相加）</div>
+                          </div>
+                          <div className="bg-white border border-blue-300 rounded p-2">
+                            <div className="text-gray-500">若串行（step-1 的 for await）耗时</div>
+                            <div className="text-2xl font-bold text-gray-700"><b>{sumMs}</b> ms</div>
+                            <div className="text-gray-500">= 各 tool_call 相加</div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-green-700">
+                          并行 <b>省了 {saved} ms</b>（{saved > 0 ? "串行 vs 并行差异肉眼可见" : "差异太小看不出并行价值"}）。
+                          {saved <= 0 ? " 实际生产里 handler 越耗时差距越明显 —— 网络/DB/API 调用 100ms+ 是常态。" : ""}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── 失败 Observe 后改参卡片：变体 G 闭环（任一圈有失败 toolResult 才出现）── */}
+                  {(() => {
+                    let failedCount = 0;
+                    let firstFailRound = -1;
+                    let lastFailRound = -1;
+                    result.trajectory.forEach((s, idx) => {
+                      const fails = s.toolResults.filter(tr => {
+                        try { return JSON.parse(tr.content).ok === false; } catch { return false; }
+                      });
+                      if (fails.length > 0) {
+                        failedCount += fails.length;
+                        if (firstFailRound === -1) firstFailRound = s.round;
+                        lastFailRound = s.round;
+                      }
+                    });
+                    if (failedCount === 0) return null;
+                    return (
+                      <div className="border border-red-300 bg-red-50 rounded p-3 space-y-2">
+                        <div className="text-sm font-semibold text-red-900">
+                          失败 Observe 后改参（变体 G · Loop 自纠闭环）
+                        </div>
+                        <div className="text-xs text-gray-700">
+                          故意触发 <b>{failedCount}</b> 次失败（首圈 round <b>{firstFailRound}</b>，末次 round <b>{lastFailRound}</b>），
+                          handler 把错误结构化成 <code className="bg-white px-1 rounded">{"{ok:false, error:'not_found', id:'todo-999'}"}</code> 塞回 messages，
+                          下一圈模型看见后改参 → 成功 → 最终答案。**关键点**：如果 handler <b>throw</b>，整个 Loop 500 中断，模型没机会自纠；
+                          只有 <b>返回结构化错误</b> 当 tool_result 写进 messages，Loop 才不死。
+                        </div>
+                        <div className="text-xs text-green-700">
+                          验证「变体 G 闭环」= failedCount ≥ 1（故意触发）+ stoppedReason = <code className="bg-white px-1 rounded">final_answer</code>（自纠成功）+ diff 改了真实存在的那条 todo。
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* ── 数据前后对照：before / after / diff 三栏 ── */}
                   <div className="border border-gray-300 rounded p-3 space-y-2 bg-white">
                     <div className="flex items-center justify-between text-sm">
@@ -463,7 +559,7 @@
 
           <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
             <span id="env-info">
-              端口 50049 · 协议 A（openai Chat Completions） · 模型服务商 {health?.provider ?? "(待连接)"} · 模型 {health?.model ?? "(待连接)"} · 密钥 {health?.hasKey ? "✅" : "❌"}
+              端口 50051 · 协议 A（openai Chat Completions） · 模型服务商 {health?.provider ?? "(待连接)"} · 模型 {health?.model ?? "(待连接)"} · 密钥 {health?.hasKey ? "✅" : "❌"}
             </span>
           </footer>
         </div>

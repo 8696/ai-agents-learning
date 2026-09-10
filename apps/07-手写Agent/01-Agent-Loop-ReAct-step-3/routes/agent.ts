@@ -55,7 +55,7 @@ function diffTodos(before: Todo[], after: Todo[]): {
 
 const SYSTEM_PROMPT =
   "你是一个待办助手。可以调 list_todos（看列表 / 按 tag 过滤 / 仅逾期）和 complete_todo（标记完成）。" +
-  "用户的任务往往要分多步：先 list 看清楚，再 complete 每一条。" +
+  "**重要：tool 返回错误时（如 not_found），你必须从错误信息学 —— 下一圈用 list_todos 查正确 id 再调 complete_todo，不要重复同样的错。**" +
   "当所有该标的都标完了，正文给出最终答案（不再调工具）。";
 
 export function mountAgentRoutes(router: Router): void {

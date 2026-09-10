@@ -1,25 +1,25 @@
 /**
- * 模块 07 · 01 · Agent Loop / ReAct · step-1 最小可观察 · Demo 入口（只做装配）。
+ * 模块 07 · 01 · Agent Loop / ReAct · step-3 失败 Observe 后继续 · Demo 入口（只做装配）。
  *
  * 职责：PORT + bodyParser + 挂 routes + serve public + listen。不写业务。
  * 数据流：浏览器 → koa（bodyParser → router → static）→ routes/* → runAgentLoop → 真 LLM（协议 A）。
  *
- * 教学锚点（step-1 「看见 Loop 在转」最小闭环）：
- *   - 输入框写一句任务 → POST /api/agent-run { query }
- *   - 路由组装 [system, user] → runAgentLoop → 完整 trajectory 按圈展开在 #output
- *   - 服务端日志写每一圈的入参完整 messages / 返回值完整 / __code / 耗时 → 翻 logs/ 看得见
- *   - 期望至少 2 圈：第 1 圈 list_todos（变体 D 串行依赖起点） → 第 2~N 圈 complete_todo
- *   - 最后一圈 tool_calls 空 → 最终答案（变体 J） → stoppedReason = final_answer
+ * 教学锚点（step-3 「变体 G 失败 Observe 后继续」）：
+ *   - 复制 step-2 全量代码（已经会 Promise.all 并行 Act）
+ *   - query 改成「把 todo-999 标完成」（故意触发 handler 返回 `{ok:false, error:"not_found"}`）
+ *   - 期望看到：第 1 圈 complete_todo(id="todo-999") → handler 返回失败 → 错误进 messages → 下一圈模型改参
+ *     （list_todos 找真 id 或换正确 id）→ 成功 → 最终答案
+ *   - 关键点：handler **throw 会让 Loop 死**；handler 返回结构化错误（`{ok:false,...}`）才让 Loop 自纠
+ *   - 这是「Act 不死 = Observe 进 messages = 下一圈 Reason 能看见」的完整闭环
  *
  * 浏览器：
  *   GET  /              → public/index.html
  *   GET  /health        → { ok, port, provider, model, hasKey, callsModel:true }
- *   POST /api/agent-run → { query } → runAgentLoop → 返回 { trajectory, finalAnswer, stoppedReason, rounds, finalMessages }
- *   POST /api/agent-force-error → 502（§5.3.2 #2 类 B 教学演示）
+ *   POST /api/agent-run → { query } → runAgentLoop → 返回 trajectory + 失败观察卡片
  *
- * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可打日志的点都在 lib/ 与 routes/ 里。
  *
- * 入口：cd apps && yarn app:07-01-agent-loop-react-step-1
+ * 入口：cd apps && yarn app:07-01-agent-loop-react-step-3
  */
 import Koa from "koa";
 import Router from "@koa/router";
@@ -50,7 +50,7 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "服务起好了；step-1 最小可观察：跑一整轮 Loop 看到 trajectory 在转（变体 H 多圈 + D 串行依赖 + J 最终答案）", {
+  logger.info("server.start", "listening", "服务起好了；step-3 教学点：失败 Observe 进 messages 后下一圈改参（变体 G 闭环）", {
     url: `http://127.0.0.1:${PORT}/`,
     protocol: "A",
   });

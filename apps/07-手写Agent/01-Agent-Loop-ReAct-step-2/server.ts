@@ -1,25 +1,24 @@
 /**
- * 模块 07 · 01 · Agent Loop / ReAct · step-1 最小可观察 · Demo 入口（只做装配）。
+ * 模块 07 · 01 · Agent Loop / ReAct · step-2 并行 Act · Demo 入口（只做装配）。
  *
  * 职责：PORT + bodyParser + 挂 routes + serve public + listen。不写业务。
  * 数据流：浏览器 → koa（bodyParser → router → static）→ routes/* → runAgentLoop → 真 LLM（协议 A）。
  *
- * 教学锚点（step-1 「看见 Loop 在转」最小闭环）：
- *   - 输入框写一句任务 → POST /api/agent-run { query }
- *   - 路由组装 [system, user] → runAgentLoop → 完整 trajectory 按圈展开在 #output
- *   - 服务端日志写每一圈的入参完整 messages / 返回值完整 / __code / 耗时 → 翻 logs/ 看得见
- *   - 期望至少 2 圈：第 1 圈 list_todos（变体 D 串行依赖起点） → 第 2~N 圈 complete_todo
- *   - 最后一圈 tool_calls 空 → 最终答案（变体 J） → stoppedReason = final_answer
+ * 教学锚点（step-2 「变体 E 并行 Act」）：
+ *   - 复制 step-1 全量代码 + Act 阶段从 `for (const call of toolCalls)` 串行 → `Promise.all` 并行
+ *   - query 改成「请一次性把 4 条逾期购物待办都标完成」（明确要求模型一轮内并行）
+ *   - 期望看到：第 1 圈 list_todos → 第 2 圈 assistant.tool_calls 长度 = 4（并行 Act）→
+ *     Promise.all 4 个 complete_todo 同时执行 → 同一圈耗时 ≈ 最慢那个（不是相加）
+ *   - 变体 E 与变体 D 的对照：变体 D 一圈一个；变体 E 一圈多个互不依赖
  *
  * 浏览器：
  *   GET  /              → public/index.html
  *   GET  /health        → { ok, port, provider, model, hasKey, callsModel:true }
- *   POST /api/agent-run → { query } → runAgentLoop → 返回 { trajectory, finalAnswer, stoppedReason, rounds, finalMessages }
- *   POST /api/agent-force-error → 502（§5.3.2 #2 类 B 教学演示）
+ *   POST /api/agent-run → { query } → runAgentLoop → 返回 trajectory + 并行对照数据
  *
- * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可写日志的点都在 lib/ 与 routes/ 里。
+ * 日志（§5.3.16）：server.start 由本地 logger 写文件 + console；业务代码每个可打日志的点都在 lib/ 与 routes/ 里。
  *
- * 入口：cd apps && yarn app:07-01-agent-loop-react-step-1
+ * 入口：cd apps && yarn app:07-01-agent-loop-react-step-2
  */
 import Koa from "koa";
 import Router from "@koa/router";
@@ -50,7 +49,7 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "服务起好了；step-1 最小可观察：跑一整轮 Loop 看到 trajectory 在转（变体 H 多圈 + D 串行依赖 + J 最终答案）", {
+  logger.info("server.start", "listening", "服务起好了；step-2 教学点：Act 阶段 Promise.all 并行执行同一圈的 tool_calls（变体 E 一圈多个 Act）", {
     url: `http://127.0.0.1:${PORT}/`,
     protocol: "A",
   });
