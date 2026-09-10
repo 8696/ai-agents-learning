@@ -1,0 +1,25 @@
+/**
+ * 职责：GET /health —— 只读环境信息，不调模型。
+ * 数据流：无 body → { ok, port, provider, model, hasKey, callsModel }；
+ *   页面加载时写一次，用来填页脚 #env-info。
+ *
+ * 本条走 §5.3.0 例外「纯协议形状 / UI 渲染层演示」：callsModel: false；
+ *   /health 仍回 provider / model / hasKey，页脚写「本地计算 · 不调 LLM」。
+ *   hasKey 决定页面是否禁用主按钮——本条不调 LLM，所以 **不**因 hasKey 禁用主按钮。
+ */
+import type { Context } from "koa";
+import type Router from "@koa/router";
+import { llm, PORT } from "../lib/http/runtime-ctx.js";
+
+export function mountHealthRoutes(router: Router): void {
+  router.get("/health", (ctx: Context) => {
+    ctx.body = {
+      ok: true,
+      port: PORT,
+      provider: llm?.provider ?? null,
+      model: llm?.modelA ?? null,
+      hasKey: Boolean(llm),
+      callsModel: false,
+    };
+  });
+}

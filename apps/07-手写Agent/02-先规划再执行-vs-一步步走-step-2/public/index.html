@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>先规划再执行 vs 一步步走 · 第二步（全真模型）</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ── 与服务端约定的端口（§5.3.3 端口三处一致：runtime-ctx / package.json / 页脚 fallback）──
+    const FALLBACK_PORT = 50054;
+
+    function App() {
+      const [status, setStatus] = useState("idle"); // idle | loading | ok | err
+      const [env, setEnv] = useState({ port: FALLBACK_PORT, provider: null, model: null, hasKey: false, callsModel: false });
+      const [data, setData] = useState(null);   // /api/compare 返回
+      const [errMsg, setErrMsg] = useState("");
+
+      // ── 加载时打一次 /health 填 #env-info ──
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(j => {
+          setEnv({ port: j.port, provider: j.provider, model: j.model, hasKey: j.hasKey, callsModel: j.callsModel });
+        }).catch(() => { /* 静默；fallback 仍可用 */ });
+      }, []);
+
+      async function runCompare() {
+        setStatus("loading");
+        setErrMsg("");
+        try {
+          const res = await fetch("/api/compare");
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const j = await res.json();
+          setData(j);
+          setStatus("ok");
+        } catch (e) {
+          setErrMsg(String(e?.message ?? e));
+          setStatus("err");
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              先规划再执行 vs 一步步走（Plan-and-Execute vs ReAct） · 第二步（step-2） · 全真模型双路径对照
+            </h1>
+            <span id="status-pill" className={
+              "text-xs px-2 py-1 rounded " +
+              (status === "loading" ? "bg-blue-100 text-blue-800" :
+               status === "ok"      ? "bg-green-100 text-green-800" :
+               status === "err"     ? "bg-red-100 text-red-800" :
+                                      "bg-gray-200 text-gray-700")
+            }>
+              {status === "loading" ? "🔄 请求中" :
+               status === "ok"      ? "✅ 完成" :
+               status === "err"     ? "❌ 错误" :
+                                      "⏸ 待连接"}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+
+            {/* ── #problem-card：先把实际场景 + 核心问题抛出来（让学习者带着问题看 demo）── */}
+            <section id="problem-card" className="bg-orange-50 border-2 border-orange-400 rounded p-4 space-y-2">
+              <div className="flex items-baseline justify-between">
+                <div className="text-sm font-bold text-orange-900">❓ 实际场景 + 核心问题（先看这个）</div>
+                <span className="text-xs text-orange-700">点完「跑对照」看 demo 自己回答</span>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-700">
+                  <b className="text-orange-900">实际场景 1（mock 的局限）：</b>step-1 用 mock 模型固定 7 圈 / 固定 6 步清单 —— 你看到的形状差异是真的，但**模型的真实行为**你看不出来。模型遇到缺信息会不会自己停？规划 5 步还是 7 步？每次一样还是每次不一样？
+                </div>
+                <div className="text-xs text-gray-700">
+                  <b className="text-orange-900">实际场景 2（A B 公平对照）：</b>上 step 的对照里「A 模型 7 次 vs B 模型 1 次」是真的差距，还是「A mock 写死 7 vs B mock 写死 1」的差距？两条路径用同一档真模型，节奏差异才是节奏差异，不是模型能力的差异。
+                </div>
+                <div className="text-xs text-gray-700">
+                  <b className="text-orange-900">实际场景 3（真模型行为透明）：</b>A 路径模型可能 1 圈就停给最终答案，也可能 2 圈（先 notify_ops 要 SKU）；B 路径模型可能规划 3 步也可能规划 7 步 —— **这些是 mock 永远看不到的差异**。
+                </div>
+                <div className="text-sm text-orange-900 mt-2 font-semibold">
+                  → 核心问题：<b>「两条路径都用真模型，行为差异才公平 —— 真模型自己会怎么决策？」</b>
+                </div>
+              </div>
+            </section>
+
+            {/* ── #page-intro ── */}
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：step-2 在 step-1 基础上把<b>两条路径都换成真模型</b>——A 路径「一步步走」每圈真调一次模型（openai.chat.completions.create + OpenAI 协议 A 格式的 tools）；B 路径「先规划」真规划器一次吐清单。A B 用同一档模型，公平对照节奏差异。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「跑对照」按钮 → GET /api/compare → A 路径循环调真模型（每圈最多 MAX_ROUNDS=8 圈）/ B 路径调真规划器 1 次 + 按清单执行</li>
+                <li>左栏「一步步走」A 路径真模型每圈自选调啥；右栏「先规划」B 路径真模型吐自然语言步骤 → 代码按行正则解析成 plan</li>
+                <li>对照卡 3 行：模型调用次数（A=N 圈真调 vs B=1 次真规划）/ 第一次 Act 前等待 / 计划作为对象（A ❌ / B ✅）；plannerFallback 标记只在 B 解析失败时才亮</li>
+              </ol>
+
+              {/* §5.3.11.b 核心教学点卡片 */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  step-2 重点：<b>「先规划」的价值在真模型吐的那份清单</b>。看差异仍盯一个动作：「计划作为对象在第一次 Act 之前是否已存在」—— 这次 plan 是真模型吐的，不再是 mock 固定清单（每次点按钮 plan 可能不一样）。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：右栏「计划 v1」卡如果显示了「真模型规划 / 模型原话展开」标签 = 这次是真规划；标了「⚠ 兜底」= 模型吐的东西没解析出来，回退了 mock。
+                </div>
+              </div>
+            </section>
+
+            {/* ── #controls ── */}
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">Demo 控制（1 个按钮 · 1 个任务输入框）</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  id="run-compare"
+                  onClick={runCompare}
+                  disabled={status === "loading" || (env.callsModel && !env.hasKey)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  跑对照（双路径都调真模型 · A 每圈自选 / B 一次规划）
+                </button>
+                <span className="text-xs text-gray-500">
+                  点按钮：A 路径每圈调一次真模型（最多 MAX_ROUNDS=8 圈，工具用 OpenAI 协议 A 格式）/ B 路径调一次真规划器 + 按清单执行
+                </span>
+              </div>
+              {status === "err" && (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">
+                  错误：{errMsg}
+                </div>
+              )}
+            </section>
+
+            {/* ── 对照卡（横跨顶部 · 三个关键数字）── */}
+            {data && (
+              <section id="comparison-strip" className="bg-white shadow rounded p-4 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">关键对照（看差异就看这三行）</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="bg-gray-50 border border-gray-300 rounded p-3">
+                    <div className="text-xs text-gray-600">模型调用次数（model calls）</div>
+                    <div className="mt-1 text-sm">
+                      <span className="text-gray-700">一步步走 A：</span>
+                      <b className="text-red-700">{data.comparison.modelCallsA}</b>
+                      <span className="text-gray-400">（每圈 Reason 都调）</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-700">先规划 B：</span>
+                      <b className="text-green-700">{data.comparison.modelCallsB}</b>
+                      <span className="text-gray-400">（只规划器 1 次 + 执行 0 次）</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-300 rounded p-3">
+                    <div className="text-xs text-gray-600">第一次 Act 前等待（pre-Act steps）</div>
+                    <div className="mt-1 text-sm">
+                      <span className="text-gray-700">一步步走 A：</span>
+                      <b className="text-red-700">{data.comparison.preActStepsA}</b>
+                      <span className="text-gray-400"> 步</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-700">先规划 B：</span>
+                      <b className="text-blue-700">{data.comparison.preActStepsB}</b>
+                      <span className="text-gray-400"> 步（先规划）</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-300 rounded p-3">
+                    <div className="text-xs text-gray-600">计划作为对象在第一次 Act 前（plan object）</div>
+                    <div className="mt-1 text-sm">
+                      <span className="text-gray-700">一步步走 A：</span>
+                      <b className="text-red-700">不存在</b>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-700">先规划 B：</span>
+                      <b className="text-green-700">存在</b>
+                      <span className="text-gray-400">（一次性清单）</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ── #output：双栏对照 ── */}
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!data && (
+                <div className="text-sm text-gray-500">
+                  空态：还没点「跑对照」。点了之后这里会出现左右两栏 —— 左栏一步步走 N 圈真模型轨迹（每圈模型自选调啥，1 ~ MAX_ROUNDS 圈都可能），右栏先规划真模型吐的 plan + N 张执行卡 + 最终答案。A 路径有 stoppedReason 字段（final_answer = 模型主动停 / max_rounds = 圈数上限被兜底停）。
+                </div>
+              )}
+
+              {data && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* ── 左栏：一步步走（变体 A · ReAct）── */}
+                  <div id="col-step-by-step" className="border border-gray-200 rounded p-3 space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <div className="text-sm font-semibold text-gray-800">
+                        左栏 · 一步步走（ReAct）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {data.stepByStep.trajectory.length} 圈 · 模型调用 {data.stepByStep.summary.modelCalls} 次
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      每圈 Reason 后才决定此刻调啥；下一个动作不能预先写死。
+                    </div>
+
+                    {data.stepByStep.trajectory.map((round) => (
+                      <div key={round.index} className="border border-gray-300 bg-white rounded p-3 space-y-2">
+                        <div className="flex items-baseline justify-between">
+                          <div className="text-xs font-semibold text-gray-700">第 {round.index} 圈 · Reason</div>
+                          <div className="text-xs text-gray-500">耗时 {round.costMs} ms</div>
+                        </div>
+                        <div className="text-xs text-gray-700 bg-gray-50 rounded p-2">
+                          <span className="text-gray-500">想法：</span>{round.reason.thought}
+                        </div>
+                        {round.reason.tool_calls.length > 0 ? (
+                          <div className="space-y-1">
+                            <div className="text-xs text-gray-500">tool_calls（这一步调啥）</div>
+                            {round.act.map((a, i) => (
+                              <div key={i} className={
+                                "text-xs rounded p-2 border " +
+                                (a.ok ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50")
+                              }>
+                                <div className="font-mono">{a.tool}({JSON.stringify(a.args)})</div>
+                                <div className="text-gray-600 mt-1">
+                                  tool_result：<span className="font-mono">{JSON.stringify(a.result)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-green-700 bg-green-50 border border-green-300 rounded p-2">
+                            tool_calls 为空 → 最终答案
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="text-xs text-green-900 bg-green-50 border border-green-300 rounded p-2">
+                      最终答案（绿卡 · 模型输出）：{data.stepByStep.finalAnswer}
+                    </div>
+                  </div>
+
+                  {/* ── 右栏：先规划再执行（变体 B）── */}
+                  <div id="col-plan-and-execute" className="border border-gray-200 rounded p-3 space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <div className="text-sm font-semibold text-gray-800">
+                        右栏 · 先规划再执行（Plan-and-Execute）
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        规划 1 次（{data.planAndExecute.plannerFallback ? "⚠ 兜底 mock" : "✅ 真模型"}） + 执行 {data.planAndExecute.executeTrace.length} 步 · 模型调用 {data.planAndExecute.summary.planCalls} 次
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      step-2 全真模型：A 路径每圈调真模型（最多 MAX_ROUNDS=8）/ B 路径真规划器一次吐清单；plannerFallback=true 时 B 解析失败回退 mock plan + 标 ⚠ 兜底
+                    </div>
+
+                    {/* 计划作为对象卡（位置：在「执行卡」之前 —— 就是「第一次 Act 之前」） */}
+                    <div id="plan-card" className={"border-2 rounded p-3 space-y-2 " + (data.planAndExecute.plannerFallback ? "border-orange-400 bg-orange-50" : "border-blue-400 bg-blue-50")}>
+                      <div className="flex items-baseline justify-between">
+                        <div className="text-xs font-semibold text-gray-900">计划 v1（plan · 第一次 Act 之前就存在）</div>
+                        <div className="text-xs text-gray-700">
+                          {data.planAndExecute.plannerFallback
+                            ? "⚠ 兜底 mock（模型没解析出来）"
+                            : "✅ 真模型规划（openai.chat.completions.create）"}
+                        </div>
+                      </div>
+                      <ol className="text-xs space-y-1">
+                        {data.planAndExecute.plan.map((s) => (
+                          <li key={s.index} className="font-mono text-gray-900">
+                            {s.index}. {s.tool}({JSON.stringify(s.args)})
+                            <span className="text-gray-700 font-sans"> · {s.reason}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      <details className="text-xs text-gray-700">
+                        <summary className="cursor-pointer">模型原话（plannerRawText）</summary>
+                        <pre className="mt-1 whitespace-pre-wrap max-h-40 overflow-auto bg-white border border-gray-300 rounded p-2 font-mono">
+                          {data.planAndExecute.plannerRawText || "(空)"}
+                        </pre>
+                      </details>
+                    </div>
+
+                    {/* 执行卡（每步一张白卡） */}
+                    <div className="text-xs text-gray-500">↓ 下面是「第一次 Act 之后」的执行阶段 ↓</div>
+                    {data.planAndExecute.executeTrace.map((step) => (
+                      <div key={step.index} className="border border-gray-300 bg-white rounded p-3 space-y-2">
+                        <div className="flex items-baseline justify-between">
+                          <div className="text-xs font-semibold text-gray-700">执行第 {step.index} 步</div>
+                          <div className="text-xs text-gray-500">耗时 {step.costMs} ms</div>
+                        </div>
+                        <div className="text-xs text-gray-700 bg-gray-50 rounded p-2 font-mono">
+                          {step.step.tool}({JSON.stringify(step.step.args)})
+                        </div>
+                        <div className={
+                          "text-xs rounded p-2 border " +
+                          (step.result.ok ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50")
+                        }>
+                          <span className="text-gray-500">tool_result：</span>
+                          <span className="font-mono">{JSON.stringify(step.result.result)}</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="text-xs text-green-900 bg-green-50 border border-green-300 rounded p-2">
+                      最终答案（绿卡 · 拼好的）：{data.planAndExecute.finalAnswer}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 协议 A · 模型服务商 {env.provider ?? "—"} · 模型 {env.model ?? "—"} · 密钥 {env.hasKey ? "✅" : "❌（未配 Key → 主按钮 disabled）"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -64,7 +64,13 @@
     "app:07-01-agent-loop-react-step-1": "PORT=50049 tsx 07-手写Agent/01-Agent-Loop-ReAct-step-1/server.ts",
     "app:07-01-agent-loop-react-step-2": "PORT=50050 tsx 07-手写Agent/01-Agent-Loop-ReAct-step-2/server.ts",
     "app:07-01-agent-loop-react-step-3": "PORT=50051 tsx 07-手写Agent/01-Agent-Loop-ReAct-step-3/server.ts",
-    "app:07-01-agent-loop-react-step-4": "PORT=50052 tsx 07-手写Agent/01-Agent-Loop-ReAct-step-4/server.ts"
+    "app:07-01-agent-loop-react-step-4": "PORT=50052 tsx 07-手写Agent/01-Agent-Loop-ReAct-step-4/server.ts",
+    "app:07-02-plan-vs-step-step-1": "PORT=50053 tsx 07-手写Agent/02-先规划再执行-vs-一步步走-step-1/server.ts",
+    "app:07-02-plan-vs-step-step-2": "PORT=50054 tsx 07-手写Agent/02-先规划再执行-vs-一步步走-step-2/server.ts",
+    "app:07-02-plan-vs-step-step-3": "PORT=50055 tsx 07-手写Agent/02-先规划再执行-vs-一步步走-step-3/server.ts",
+    "app:07-02-plan-vs-step-step-4": "PORT=50056 tsx 07-手写Agent/02-先规划再执行-vs-一步步走-step-4/server.ts",
+    "app:07-02-plan-vs-step-step-5": "PORT=50057 tsx 07-手写Agent/02-先规划再执行-vs-一步步走-step-5/server.ts",
+    "app:07-02-plan-vs-step-step-6": "PORT=50058 tsx 07-手写Agent/02-先规划再执行-vs-一步步走-step-6/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
