@@ -7429,6 +7429,1804 @@
         ]
       },
       {
+        "label": "08-RAG基础",
+        "children": [
+          {
+            "label": "01-RAG-流水线-step-1",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/data/chunks.db"
+                  }
+                ]
+              },
+              {
+                "label": "knowledge",
+                "children": [
+                  {
+                    "label": "refund.md",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/knowledge/refund.md"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "ask-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/flow/ask-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/flow/ingest-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-upload.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/flow/ingest-upload.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "log",
+                    "children": [
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/log/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "store",
+                    "children": [
+                      {
+                        "label": "vector-store.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/lib/store/vector-store.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "ask-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/components/ask-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "store-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/components/store-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "ask.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/routes/ask.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "ingest-upload.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/routes/ingest-upload.ts"
+                  },
+                  {
+                    "label": "ingest.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/routes/ingest.ts"
+                  },
+                  {
+                    "label": "store.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/routes/store.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-RAG-流水线-step-2",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/data/chunks.db"
+                  }
+                ]
+              },
+              {
+                "label": "knowledge",
+                "children": [
+                  {
+                    "label": "refund.md",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/knowledge/refund.md"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "ask-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/flow/ask-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/flow/ingest-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-upload.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/flow/ingest-upload.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "log",
+                    "children": [
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/log/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "store",
+                    "children": [
+                      {
+                        "label": "vector-store.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/lib/store/vector-store.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "ask-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/components/ask-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "store-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/components/store-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "ask.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/ask.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "ingest-upload.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/ingest-upload.ts"
+                  },
+                  {
+                    "label": "ingest.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/ingest.ts"
+                  },
+                  {
+                    "label": "store-sources.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/store-sources.ts"
+                  },
+                  {
+                    "label": "store.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/routes/store.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-RAG-流水线-step-3",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/data/chunks.db"
+                  }
+                ]
+              },
+              {
+                "label": "knowledge",
+                "children": [
+                  {
+                    "label": "refund.md",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/knowledge/refund.md"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "agent",
+                    "children": [
+                      {
+                        "label": "agent-loop.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/agent/agent-loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "ask-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/flow/ask-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/flow/ingest-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-upload.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/flow/ingest-upload.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "log",
+                    "children": [
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/log/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "store",
+                    "children": [
+                      {
+                        "label": "vector-store.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/store/vector-store.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "search-knowledge.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/lib/tools/search-knowledge.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "agent-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/agent-panel.js"
+                      },
+                      {
+                        "label": "ask-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/ask-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "store-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/store-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "agent-run.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/agent-run.ts"
+                  },
+                  {
+                    "label": "ask.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/ask.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "ingest-upload.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/ingest-upload.ts"
+                  },
+                  {
+                    "label": "ingest.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/ingest.ts"
+                  },
+                  {
+                    "label": "store-sources.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/store-sources.ts"
+                  },
+                  {
+                    "label": "store.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/routes/store.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-RAG-流水线-step-4",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/data/chunks.db"
+                  }
+                ]
+              },
+              {
+                "label": "knowledge",
+                "children": [
+                  {
+                    "label": "refund.md",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/knowledge/refund.md"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "agent",
+                    "children": [
+                      {
+                        "label": "agent-loop.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/agent/agent-loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "ask-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/flow/ask-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/flow/ingest-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-upload.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/flow/ingest-upload.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "log",
+                    "children": [
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/log/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "store",
+                    "children": [
+                      {
+                        "label": "vector-store.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/store/vector-store.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "tools",
+                    "children": [
+                      {
+                        "label": "search-knowledge.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/lib/tools/search-knowledge.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "agent-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/agent-panel.js"
+                      },
+                      {
+                        "label": "ask-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/ask-panel.js"
+                      },
+                      {
+                        "label": "diagnose-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/diagnose-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "store-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/store-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "agent-run.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/agent-run.ts"
+                  },
+                  {
+                    "label": "ask.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/ask.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "ingest-upload.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/ingest-upload.ts"
+                  },
+                  {
+                    "label": "ingest.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/ingest.ts"
+                  },
+                  {
+                    "label": "store-sources.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/store-sources.ts"
+                  },
+                  {
+                    "label": "store.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/routes/store.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-RAG-流水线-step-5",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/data/chunks.db"
+                  }
+                ]
+              },
+              {
+                "label": "knowledge",
+                "children": [
+                  {
+                    "label": "refund.md",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/knowledge/refund.md"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "ask-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/flow/ask-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-pipeline.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/flow/ingest-pipeline.ts"
+                      },
+                      {
+                        "label": "ingest-upload.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/flow/ingest-upload.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "log",
+                    "children": [
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/log/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/logger.ts"
+                  },
+                  {
+                    "label": "store",
+                    "children": [
+                      {
+                        "label": "vector-store.ts",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/lib/store/vector-store.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "ask-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/ask-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/layout.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "store-panel.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/store-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "ask.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/ask.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/health.ts"
+                  },
+                  {
+                    "label": "ingest-upload.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/ingest-upload.ts"
+                  },
+                  {
+                    "label": "ingest.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/ingest.ts"
+                  },
+                  {
+                    "label": "store-sources.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/store-sources.ts"
+                  },
+                  {
+                    "label": "store.ts",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/routes/store.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/01-RAG-流水线-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/lib/flow/chunk.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/public/components/right-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chunk-faq.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/routes/chunk-faq.ts"
+                  },
+                  {
+                    "label": "chunk-fixed.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/routes/chunk-fixed.ts"
+                  },
+                  {
+                    "label": "chunk-structure.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/routes/chunk-structure.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-estimate.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/lib/flow/chunk-estimate.ts"
+                      },
+                      {
+                        "label": "chunk-fallback.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/lib/flow/chunk-fallback.ts"
+                      },
+                      {
+                        "label": "chunk-helpers.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/lib/flow/chunk-helpers.ts"
+                      },
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/lib/flow/chunk.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "budget-bar.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/budget-bar.js"
+                      },
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "overlap-compare-card.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/overlap-compare-card.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/right-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chunk-compare-overlap.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/routes/chunk-compare-overlap.ts"
+                  },
+                  {
+                    "label": "chunk-faq.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/routes/chunk-faq.ts"
+                  },
+                  {
+                    "label": "chunk-fixed.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/routes/chunk-fixed.ts"
+                  },
+                  {
+                    "label": "chunk-structure.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/routes/chunk-structure.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-estimate.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/lib/flow/chunk-estimate.ts"
+                      },
+                      {
+                        "label": "chunk-fallback.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/lib/flow/chunk-fallback.ts"
+                      },
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/lib/flow/chunk.ts"
+                      },
+                      {
+                        "label": "quality.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/lib/flow/quality.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "budget-bar.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/budget-bar.js"
+                      },
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "compare-params-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/compare-params-panel.js"
+                      },
+                      {
+                        "label": "control-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/control-panels.js"
+                      },
+                      {
+                        "label": "doc-type-selector.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/doc-type-selector.js"
+                      },
+                      {
+                        "label": "judge-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/judge-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "quality-card.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/quality-card.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/right-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/utils/api.js"
+                      },
+                      {
+                        "label": "chunking-api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/utils/chunking-api.js"
+                      },
+                      {
+                        "label": "doc-types.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/utils/doc-types.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chunk-faq.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/routes/chunk-faq.ts"
+                  },
+                  {
+                    "label": "chunk-fixed.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/routes/chunk-fixed.ts"
+                  },
+                  {
+                    "label": "chunk-structure.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/routes/chunk-structure.ts"
+                  },
+                  {
+                    "label": "compare-quality.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/routes/compare-quality.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-3/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-estimate.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/flow/chunk-estimate.ts"
+                      },
+                      {
+                        "label": "chunk-fallback.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/flow/chunk-fallback.ts"
+                      },
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/flow/chunk.ts"
+                      },
+                      {
+                        "label": "pdf-chunker.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/flow/pdf-chunker.ts"
+                      },
+                      {
+                        "label": "quality.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/flow/quality.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "budget-bar.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/budget-bar.js"
+                      },
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "compare-params-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/compare-params-panel.js"
+                      },
+                      {
+                        "label": "control-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/control-panels.js"
+                      },
+                      {
+                        "label": "doc-type-selector.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/doc-type-selector.js"
+                      },
+                      {
+                        "label": "judge-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/judge-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "pdf-chunk-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/pdf-chunk-panel.js"
+                      },
+                      {
+                        "label": "pdf-control-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/pdf-control-panel.js"
+                      },
+                      {
+                        "label": "quality-card.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/quality-card.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/right-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/utils/api.js"
+                      },
+                      {
+                        "label": "chunking-api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/utils/chunking-api.js"
+                      },
+                      {
+                        "label": "doc-types.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/utils/doc-types.js"
+                      },
+                      {
+                        "label": "run-actions.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/utils/run-actions.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chunk-faq.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/chunk-faq.ts"
+                  },
+                  {
+                    "label": "chunk-fixed.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/chunk-fixed.ts"
+                  },
+                  {
+                    "label": "chunk-pdf.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/chunk-pdf.ts"
+                  },
+                  {
+                    "label": "chunk-structure.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/chunk-structure.ts"
+                  },
+                  {
+                    "label": "compare-quality.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/compare-quality.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-4/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-estimate.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/lib/flow/chunk-estimate.ts"
+                      },
+                      {
+                        "label": "chunk-fallback.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/lib/flow/chunk-fallback.ts"
+                      },
+                      {
+                        "label": "chunk-recurse.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/lib/flow/chunk-recurse.ts"
+                      },
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/lib/flow/chunk.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "budget-bar.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/budget-bar.js"
+                      },
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/layout.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/right-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chunk-faq.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/routes/chunk-faq.ts"
+                  },
+                  {
+                    "label": "chunk-fixed.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/routes/chunk-fixed.ts"
+                  },
+                  {
+                    "label": "chunk-structure.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/routes/chunk-structure.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-5/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/lib/flow/chunk.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-6/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/public/components/layout.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/public/components/right-panel.js"
+                      },
+                      {
+                        "label": "summary-table.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/public/components/summary-table.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-6/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-6/routes/health.ts"
+                  },
+                  {
+                    "label": "summary.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-6/routes/summary.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-6/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Chunking-step-7",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "chunk-atomic-flow.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/lib/flow/chunk-atomic-flow.ts"
+                      },
+                      {
+                        "label": "chunk-atomic.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/lib/flow/chunk-atomic.ts"
+                      },
+                      {
+                        "label": "chunk-splitters.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/lib/flow/chunk-splitters.ts"
+                      },
+                      {
+                        "label": "chunk.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/lib/flow/chunk.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "atomic-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/public/components/atomic-panels.js"
+                      },
+                      {
+                        "label": "chunk-panels.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/public/components/chunk-panels.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/public/components/layout.js"
+                      },
+                      {
+                        "label": "right-panel.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/public/components/right-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/02-Chunking-step-7/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chunk-atomic-overflow.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/chunk-atomic-overflow.ts"
+                  },
+                  {
+                    "label": "chunk-atomic.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/chunk-atomic.ts"
+                  },
+                  {
+                    "label": "chunk-faq.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/chunk-faq.ts"
+                  },
+                  {
+                    "label": "chunk-fixed.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/chunk-fixed.ts"
+                  },
+                  {
+                    "label": "chunk-structure.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/chunk-structure.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/02-Chunking-step-7/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/02-Chunking-step-7/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "label": "llm.ts",
         "path": "apps/llm.ts"
       },
