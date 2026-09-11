@@ -78,12 +78,14 @@
     "app:07-03-loop-guard-step-5": "PORT=50063 tsx 07-手写Agent/03-死循环防护-step-5/server.ts",
     "app:07-03-loop-guard-step-6": "PORT=50064 tsx 07-手写Agent/03-死循环防护-step-6/server.ts",
     "app:07-03-loop-guard-step-7": "PORT=50065 tsx 07-手写Agent/03-死循环防护-step-7/server.ts",
-    "app:07-03-loop-guard-step-8": "PORT=50066 tsx 07-手写Agent/03-死循环防护-step-8/server.ts"
+    "app:07-03-loop-guard-step-8": "PORT=50066 tsx 07-手写Agent/03-死循环防护-step-8/server.ts",
+    "app:08-01-rag-pipeline-step-1": "PORT=50067 tsx 08-RAG基础/01-RAG-流水线-step-1/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@koa/bodyparser": "^6.1.0",
     "@koa/router": "^13.1.0",
+    "@lancedb/lancedb": "^0.38.0",
     "@types/better-sqlite3": "^9.6.0",
     "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.7",

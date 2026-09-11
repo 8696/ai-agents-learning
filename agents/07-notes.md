@@ -192,29 +192,29 @@
 | 状态 | 含义 |
 | ---- | ---- |
 | 🔄 | step-N 已建，工作区自由打磨中；未锁定 |
-| ✅ | step-N 已锁定（学习者主动锁定 + check-demo 过 + §5.3.2 6 项齐） |
+| ✅ | step-N 已锁定（学习者主动锁定 + check-demo 过 + `yarn typecheck` 过 + §5.3.2 6 项齐） |
 
 **写入时机**：
 
 | 时机 | 怎么做 |
 | ---- | ------ |
 | **step-1 创建** | 加表头 + step-1 那一行（🔄）；表只有 1 行 |
-| **step-1 锁定**（学习者说「锁定」+ check-demo 过 + §5.3.2 齐） | 改该行状态 🔄 → ✅ |
+| **step-1 锁定**（学习者说「锁定」+ check-demo 过 + `yarn typecheck` 过 + §5.3.2 齐） | 改该行状态 🔄 → ✅ |
 | **每加一步** | append 一行新 step-N（🔄） |
 | **每锁定一步** | 改该行状态 🔄 → ✅ |
 | **学习者决定不再加** | 保持现状；表行数 = 实际步数（≠ 预判 N） |
-| **`coach complete` 触发勾 ✅** | 表行数 ≥ 1；至少 1 行 ✅；该 step-N `node scripts/check-demo.cjs` 过 |
+| **`coach complete` 触发勾 ✅** | 表行数 ≥ 1；至少 1 行 ✅；该 step-N `node scripts/check-demo.cjs` 过；`cd apps && yarn typecheck` 过 |
 
 **禁止**：
 
 - 一次写满 N 行（预判了未来步骤 = 违反「动态」）
 - 漏写「Demo 子节进度」块（可运行条）；教练过关检查时检查不到该块 → 不准勾
-- 状态推进不写真实情况（标 ✅ 但 check-demo 不过 / §5.3.2 不齐）
+- 状态推进不写真实情况（标 ✅ 但 check-demo 不过 / typecheck 不过 / §5.3.2 不齐）
 - 把 step-N 顺序写错（数字顺序 = 学习顺序，不是字母序）
 - 把"未来步骤"以 🔄 占位写进表（按新模型，只写**已建**的 step）
 - 教练替学习者标 ✅（**锁定是学习者的决策**，不是自动触发）
 
-`coach complete` 勾本条前：表行数 ≥ 1；至少 1 行 ✅（锁定过）；该 step-N `node scripts/check-demo.cjs` 过；MD 已沉淀。**不**要求所有未来 `step-(N+1)` 完成，因为 N 动态。
+`coach complete` 勾本条前：表行数 ≥ 1；至少 1 行 ✅（锁定过）；该 step-N `node scripts/check-demo.cjs` 过；`cd apps && yarn typecheck` 过；MD 已沉淀。**不**要求所有未来 `step-(N+1)` 完成，因为 N 动态。
 
 ##### step-N 推进时，MD 怎么更新（两层）
 

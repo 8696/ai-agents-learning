@@ -212,7 +212,7 @@ Demo 结论 = `无` / `伪代码`：过关检查 2 按该结论过（不要求 a
 
 **目的**：Demo 判断做过没有、可运行时能不能跑、锁没锁。
 
-**谁查**：教练自己（跑 `check-demo`、对 yarn / 端口 / 锁定表）。
+**谁查**：教练自己（先跑 `check-demo`，再跑 `cd apps && yarn typecheck`，对 yarn / 端口 / 锁定表）。
 
 **必查清单**（逐项 · 过 / 不过）：
 
@@ -223,6 +223,7 @@ Demo 结论 = `无` / `伪代码`：过关检查 2 按该结论过（不要求 a
 | 3 | ≥1 个 `{小节}-step-N` **已锁定 ✅**（学习者主动锁定） | 可运行 |
 | 4 | `apps/package.json` 有对应 `yarn app:{MM}-{SS}-{name}-step-N`，入口是 `server.ts` | 可运行 |
 | 5 | 已锁定 step：`node scripts/check-demo.cjs` 通过 | 可运行 |
+| 5b | `cd apps && yarn typecheck` 通过（与 check-demo 分开；check-demo **之后**跑） | 可运行 |
 | 6 | §5.3.2 六项齐（含 `GET /health`、`#env-info`、`#page-intro` 等） | 可运行 |
 | 7 | 端口：apps/README 占用唯一 + `runtime-ctx` default + 该条 README 端口行 **三处一致** | 可运行 |
 | 8 | **交互跟笔记走**：MD 需求 / 例子的人机步骤，页面能逐步点完（不是一个按钮代劳） | 可运行 |
@@ -243,6 +244,7 @@ Demo 结论 = `无` / `伪代码`：过关检查 2 按该结论过（不要求 a
 | 1 | Demo 行不是还没判断要不要写 | 过/不过 | Demo：… |
 | 3 | 已锁定 step | 过/不过 | step-1…N ✅ |
 | 5 | check-demo | 过/不过 | … |
+| 5b | yarn typecheck | 过/不过 | `cd apps && yarn typecheck` |
 | 8 | 交互跟笔记走 | 过/不过 | MD 步骤 vs 页面步骤 |
 | 9 | 对照拆请求（若有对照） | 过/不过 / 不适用 | 每侧独立 URL；同页须拆组件 |
 | 10 | 主流程单独成文件 | 过/不过 | 核心文件 + 「本步核心」 |

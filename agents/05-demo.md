@@ -132,7 +132,7 @@ N 动态 + 学习者锁定（[§5.3.14](#5314-demo-子节拆分动态引导由�
 | 过关检查 | 本文件对应 | 不过 |
 | -- | -- | -- |
 | **1** | [§7.2](../AGENTS.md#72-沉淀--小节进度对齐) MD 知识 | STOP，不进后面 |
-| **2** | 本节 §5.2：Demo 行不是「还没判断要不要写」；可运行须锁定 step + yarn + `check-demo`（含行数上限 / 一路由一文件）+ [§5.3.2](#532-完整版--必做的-6-项替代-52-最低标准) 六项齐 + 端口三处一致 + [§5.3.8](#538-http-demo-拆分多场景--多接口时强制) 交互跟笔记走 / 对照拆请求 / 主流程单独成文件 | STOP |
+| **2** | 本节 §5.2：Demo 行不是「还没判断要不要写」；可运行须锁定 step + yarn + `check-demo`（含行数上限 / 一路由一文件）+ `cd apps && yarn typecheck`（与 check-demo 分开，check-demo 之后跑）+ [§5.3.2](#532-完整版--必做的-6-项替代-52-最低标准) 六项齐 + 端口三处一致 + [§5.3.8](#538-http-demo-拆分多场景--多接口时强制) 交互跟笔记走 / 对照拆请求 / 主流程单独成文件 | STOP |
 | **3** | [§5.4](#54-目标--代码整合过关检查先抽清单再逐项核对新).A+.B 独立 subagent：抽清单 + 逐项核对 | STOP；补代码或拆成两条进度 |
 
 「锁定 + §5.3.2 + check-demo」= **过关检查 2**；目标↔代码 = **过关检查 3**。复盘行不写过关检查 2/3（[§7.3](../AGENTS.md#73-模块复盘进度表最后一行)）。
@@ -539,7 +539,19 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
 
 新建 / 改端口 / 加 yarn 脚本时：同步 [apps/README.md](../apps/README.md) 表格 + `apps/package.json`。**不要**把条目抄回本节。**不要**写「参照某某 Demo」。
 
-落完或改完可运行 Demo：先 `cd apps && yarn install`，再跑 `node scripts/check-demo.cjs`（无参扫全部 HTTP Demo；也可传一条文件夹；`cd apps && yarn check-demo` 等价）。不过关不准当「按模板写完」。JSX 语法检查用 `apps` 的 `@babel/parser`，不要往仓库塞 Babel Standalone。
+落完或改完可运行 Demo：先 `cd apps && yarn install`（有新依赖才），再按下面「写完后验收顺序」走完。不过关不准当「按模板写完」。JSX 语法检查用 `apps` 的 `@babel/parser`，不要往仓库塞 Babel Standalone。
+
+##### 写完后验收顺序
+
+三步**分开跑**，禁止把 TypeScript 检查写进 `scripts/check-demo.cjs`。
+
+| 顺序 | 做什么 | 命令 | 查什么 |
+| ---- | ------ | ---- | ------ |
+| **1** | check-demo | 仓库根 `node scripts/check-demo.cjs`（可传一条文件夹）；或 `cd apps && yarn check-demo` | 目录 / 端口 / 日志写法 / 行数 / 一路由一文件 |
+| **2** | TypeScript 类型检查 | `cd apps && yarn typecheck`（= `tsc --noEmit`） | `apps/` 下服务端 `.ts` 能不能过编译器 |
+| **3** | 烟雾测试 | 见 [§5.3.16](#5316-详细日志强制) | 服务能起、`logs/` 当天文件 size > 0，然后关服务 |
+
+第 2 步不过 → 先修类型，不要起第 3 步。前端 HTML / Babel JSX 不走 `tsc`，仍靠第 1 步和自己读页面。
 
 模块 00 mini-app 与其它条一样走根目录 `server.ts` + §5.3 HTML，端口按 §5.3.3 顺序分配（首个 50000）。已 ✅ 的旧 HTTP Demo **默认不回头改结构**，除非学习者明确说要。
 
@@ -1016,7 +1028,8 @@ step-N 文件夹是当前**工作区**，不是状态机：
 
 1. 学习者主动说「锁定」
 2. `node scripts/check-demo.cjs apps/{模块文件夹}/{小节文件夹}-step-N` 过
-3. §5.3.2 6 项齐（**完整版门槛只在锁定这一刻校验**）
+3. `cd apps && yarn typecheck` 过（与第 2 步分开，第 2 步之后跑）
+4. §5.3.2 6 项齐（**完整版门槛只在锁定这一刻校验**）
 
 满足后：写入「Demo 子节进度」表，标 ✅；step-N 文件夹此后**冻结**。
 
@@ -1140,9 +1153,12 @@ grep -rn "01-AI与LLM基础认知/06-Embedding-step-1" . --include="*.md" --incl
 
 # 2. yarn check-demo 仍过
 cd apps && yarn check-demo
+
+# 3. TypeScript 类型检查（与 check-demo 分开）
+cd apps && yarn typecheck
 ```
 
-`grep` 必须为空 + `yarn check-demo` 必须过。**任何一处漏 = 该步不算完成**。本规则适用于所有维护场景（批量迁移 / 单条 demo 重命名 / 重构），不限于 step-N 拆分。
+`grep` 必须为空 + `yarn check-demo` 必须过 + `yarn typecheck` 必须过。**任何一处漏 = 该步不算完成**。本规则适用于所有维护场景（批量迁移 / 单条 demo 重命名 / 重构），不限于 step-N 拆分。
 
 ##### 小节 MD 的 `## Demo 子节进度` 表（动态增长）
 
@@ -1179,7 +1195,7 @@ cd apps && yarn check-demo
 
 ##### 过关检查
 
-- **锁定时**：§5.3.2 6 项齐 + `node scripts/check-demo.cjs apps/{模块文件夹}/{小节文件夹}-step-N` 过 + 学习者主动决定锁
+- **锁定时**：§5.3.2 6 项齐 + `node scripts/check-demo.cjs apps/{模块文件夹}/{小节文件夹}-step-N` 过 + `cd apps && yarn typecheck` 过 + 学习者主动决定锁
 - `coach complete` 勾本条前：MD 已沉淀 + **至少 1 个 step-N 锁定（✅）** + 学习者说「我懂了」
 - **不要求**所有未来 `step-(N+1)` 完成，因为 N 是动态的
 - 已 ✅ 的小节**可以**继续加 `step-(N+1)`（加深场景）；新加的 step 走相同过关检查
@@ -1204,7 +1220,7 @@ cd apps && yarn check-demo
 | | 怎么做 |
 | -- | ------ |
 | **要不要起** | agent 自己判断——本条改动影响运行时（HTTP 行为 / 页面渲染 / 流式响应 / 端口冲突），启了看得清就启；纯类型 / 静态检查 / 文件 Read 就够的**不启** |
-| **启了之后** | 完成 verify（`node scripts/check-demo.cjs` 过 + 至少一次 snapshot 或 fetch）→ **立刻关**：`preview_stop` / `TaskStop` / 杀进程；**不留**长跑 |
+| **启了之后** | 完成 verify（`check-demo` 过 + `cd apps && yarn typecheck` 过 + 至少一次 snapshot 或 fetch）→ **立刻关**：`preview_stop` / `TaskStop` / 杀进程；**不留**长跑 |
 | **学习者要自己玩** | `cd apps && yarn app:...` 启动；agent 告诉学习者入口和端口即可，**不替学习者长跑** |
 | **禁止** | verify 完留着 server 不关 / 没事先启一遍"以防万一" / 用 Bash `yarn ... &` 绕开 `preview_*` / 多个 Demo 同进程抢口不报 |
 
@@ -1255,7 +1271,7 @@ app.listen(PORT, "127.0.0.1", () => {
 
 **为什么 data 不塞 endpoints**：路由清单的真实源是 `routes/*.ts` 里 `router.get(...)` / `router.post(...)`；日志里再写一份就是双源真理 —— 加 endpoint 时改 routes 忘了改日志，或反过来，都让"看日志查端点"这件事不可靠。`grep -rE 'router\.(get|post)' apps/{demo}/routes/` 一眼拿到当前清单，何必复制到日志里。
 
-**烟雾测试串联**（落完 / 改完 demo 当下必走）：起服务 → 立刻 `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` → 文件存在 + size > 0 = 这一行 `server.start` 写进去了。详下方「烟雾测试」段。
+**烟雾测试串联**（落完 / 改完 demo 当下必走）：先走完 [写完后验收顺序](#写完后验收顺序) 第 1、2 步，再起服务 → 立刻 `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` → 文件存在 + size > 0 = 这一行 `server.start` 写进去了。详下方「烟雾测试」段。
 
 ---
 
@@ -1289,7 +1305,7 @@ export const logger = createLogger(path.resolve(__dirname, "..logs"));
 
 **烟雾测试（强制 · 落 demo 当下必走）**
 
-落完 / 改完 demo 当下：**起服务 → 看 logs/ → 关服务**。`console.log` 不能代替文件写入 —— `appendFileSync` 在 `try/catch` 里静默吞失败，console 一切正常但 `logs/` 下没文件。
+落完 / 改完 demo 当下：先 `check-demo`，再 `cd apps && yarn typecheck`，再 **起服务 → 看 logs/ → 关服务**。`console.log` 不能代替文件写入 —— `appendFileSync` 在 `try/catch` 里静默吞失败，console 一切正常但 `logs/` 下没文件。typecheck 不过不要起服务。
 
 **最简三步（实测 · 2026-09-09 模块 06 · 01 · 学习者修正）**：
 

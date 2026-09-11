@@ -13,7 +13,7 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**RAG 流水线**：Load → Chunk → Embed → Retrieve → Generate](./01-RAG-流水线.md) | 能默画这一条，不要求背论文 | `RAG retrieval augmented generation explained` `RAG pipeline diagram` · [RAG 论文摘要](https://arxiv.org/abs/2005.11401) · LlamaIndex / LangChain RAG 概念页 | — |
+| ⬜ | [**RAG 流水线**：Load → Chunk → Embed → Retrieve → Generate](./01-RAG-流水线.md) | 能默画这一条，不要求背论文 | `RAG retrieval augmented generation explained` `RAG pipeline diagram` · [RAG 论文摘要](https://arxiv.org/abs/2005.11401) · LlamaIndex / LangChain RAG 概念页 | 暂无链接 |
 | ⬜ | [**Chunking**：太大丢细节、太小丢语义；overlap 补边界](./02-Chunking.md) | 能说出 size / overlap 的取舍 | `text chunking strategies RAG` `chunk size overlap RAG` · Pinecone / LanceDB 博客 | — |
 | ⬜ | [**余弦相似度**：比的是方向，不是向量长度](./03-余弦相似度.md) | 能解释「语义近」在几何上是什么 | `cosine similarity embedding` `vector similarity search` · 3Blue1Brown 向量 · 任意 10 min 科普 | — |
 | ⬜ | [**RAG vs Fine-tuning**：知识常变 / 要引用 → RAG；风格 / 格式稳 → 才考虑微调](./04-RAG-vs-Fine-tuning.md) | 能用一句话说选型 | `RAG vs fine tuning when to use` · OpenAI / Anthropic 官方对比文 | — |

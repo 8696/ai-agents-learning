@@ -172,7 +172,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 
 ### 5.3 小节 Demo 完整版（前后端 · React + koa，2026-09-02 维护模式起生效）
 
-全文：[agents/05-demo.md](agents/05-demo.md)（搜 `### 5.3`）。禁止无页面 CLI Demo。写完跑 `node scripts/check-demo.cjs`。
+全文：[agents/05-demo.md](agents/05-demo.md)（搜 `### 5.3`）。禁止无页面 CLI Demo。写完按验收顺序：**check-demo → `cd apps && yarn typecheck` → 烟雾测试**（三步分开；禁止把 typecheck 并进 `check-demo.cjs`）。细则搜 [agents/05-demo.md](agents/05-demo.md) `写完后验收顺序`。
 
 页面要展示什么（高频遗忘）：**请求参数 / 调用流程 / 响应结果**三件都得上页——对照 [§5.3.10](agents/05-demo.md#5310-颜色色块-高对比可读)、[§5.3.11](agents/05-demo.md#5311-页面必须自解释教学注解强制)、[§5.3.2 #4](agents/05-demo.md#532-完整版--必做的-6-项替代-52-最低标准)；不要只露成功按钮。沉淀笔记里写了几步人机交互，页面就几步；对照两侧各自请求、主流程单独成文件——见 [§5.7](#57-demo-怎么拆才好懂高频错误表层摘要)。
 
@@ -202,7 +202,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 落点（§5.3�
 - **循环 / 流式 / 失败**：循环每圈都写完整；流式只在结束写完整拼好结果；失败 `结束：名字（失败）`
 - **主路径详细写**逐步 + 教学字段说明（键名仍是 `字段释义`）；**普通函数简写**一句带过函数体，五条日志含 `__code`
 - 四参 API / 路径；**禁止** Demo `import apps/logger.ts`（**锁定/未锁定一律**完整拷到 `lib/logger.ts`）；前端不写日志；密钥打码
-- **路径写法 + 烟雾测试（2026-09-09 加）**：logger.ts 必写 `path.resolve(__dirname, "..", "logs")`（**禁止** `new URL("./logs/", import.meta.url)` 落 lib/logs/）；烟雾测试 = `cd /.../apps && PORT=31001 npx tsx .../server.ts` + sleep 4 + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log`（**服务起那一刻已在写日志**，不要 curl / mtime / grep 多余步骤；**禁止**用 `yarn app:` / `preview_start` 跑烟雾测试——会撞学习者默认 50038 端口；Bash 第一条必须 cd apps）
+- **路径写法 + 烟雾测试（2026-09-09 加）**：logger.ts 必写 `path.resolve(__dirname, "..", "logs")`（**禁止** `new URL("./logs/", import.meta.url)` 落 lib/logs/）；写完先 `check-demo`，再 `cd apps && yarn typecheck`，再烟雾测试 = `cd apps && PORT=31001 npx tsx .../server.ts` + sleep 4 + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log`（**服务起那一刻已在写日志**，不要 curl / mtime / grep 多余步骤；**禁止**用 `yarn app:` / `preview_start` 跑烟雾测试——会撞学习者默认 50038 端口；Bash 第一条必须 cd apps）
 
 ### 5.7 Demo 怎么拆才好懂（高频错误·表层摘要）
 

@@ -1,7 +1,7 @@
 # 04 · 踩坑沉淀（自更新）
 
 **Why**：本仓库写死规定不写 Claude 记忆（`memory/`），但 Agent 在 Cursor / Claude Code / Codex 间反复踩同一类坑（端口撞、日志截断、logger 委托、路径写错…）。把坑版本化进仓库，跨 Agent 共享，比本地记忆可靠。
-**How to apply**：任何 Agent 在做以下动作**前**，先 grep 本文件 §3「坑索引」对一遍：落 / 改 Demo、跑命令、写日志、改 `AGENTS.md` / `agents/`、跑 `check-demo`、处理端口冲突、git 操作。**踩坑当场追加**（§2 协议），不积压、不写记忆。
+**How to apply**：任何 Agent 在做以下动作**前**，先 grep 本文件 §3「坑索引」对一遍：落 / 改 Demo、跑命令、写日志、改 `AGENTS.md` / `agents/`、跑 `check-demo`、跑 `yarn typecheck`、处理端口冲突、git 操作。**踩坑当场追加**（§2 协议），不积压、不写记忆。
 
 ---
 
@@ -145,7 +145,7 @@
 - **症状**：Demo 跑完 / `check-demo` 过了之后端口仍被 `npx tsx` / `yarn app:xx` 进程占着；学习者回来开 `yarn app:...` 直接 `EADDRINUSE`；`lsof -i :{端口}` 能查到 ghost 进程；多个 Demo 之间互相撞口
 - **触发**：落 / 改 Demo 后用 `preview_start` 或 `Bash ... &` 起服务做 verify（`node scripts/check-demo.cjs` 过 + 至少一次 snapshot 或 fetch），verify 完没调 `preview_stop` / `TaskStop` / `kill $PID`；用 Bash `yarn ... &` 绕开 `preview_*` 让服务脱离生命周期管控；用 `Ctrl+Z` 挂起当"关了"（端口仍占）
 - **根因**：端口是仓库共享资源（占用表见 [apps/README.md](../apps/README.md)）；Agent 不替学习者持有长跑服务；服务起完不关 = 学习者下次回来必撞口 + Demo 一多互相影响
-- **修复**：verify 完成（`check-demo` 过 + 至少一次 snapshot 或 fetch）后**立刻**收尾 —— `preview_stop` / `TaskStop` / `kill $SERVER_PID`。烟雾测试三步固定：起服务（`cd apps && PORT=31001 npx tsx {demo}/server.ts > /tmp/srv.log 2>&1 &`）→ `sleep 4` + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` 验路径 → **`kill $SERVER_PID`** 收尾。**不留长跑**。
+- **修复**：verify 完成（`check-demo` 过 + `cd apps && yarn typecheck` 过 + 至少一次 snapshot 或 fetch）后**立刻**收尾 —— `preview_stop` / `TaskStop` / `kill $SERVER_PID`。烟雾测试前必须先过 typecheck。烟雾测试三步固定：起服务（`cd apps && PORT=31001 npx tsx {demo}/server.ts > /tmp/srv.log 2>&1 &`）→ `sleep 4` + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` 验路径 → **`kill $SERVER_PID`** 收尾。**不留长跑**。
 - **反模式**：verify 完留着 server 不关 / 没事先启一遍"以防万一" / 用 Bash `yarn ... &` 绕开 `preview_*` / 多个 Demo 同进程抢口不报 / `Ctrl+Z` 挂起冒充关服务 / `yarn app:xx` 跑烟雾测试（占学习者默认口 50038）
 - **关联**：AGENTS.md §5.5、§5.6；[agents/05-demo.md §5.3.15「验证服务生命周期（起完必须关）」](05-demo.md#5315-验证服务生命周期起完必须关)、[§5.3.16 烟雾测试](05-demo.md#5316-详细日志强制)
 
@@ -175,6 +175,42 @@
 - **修复**：所有 Bash 示例用 `cd apps && ...`（cwd 假设仓库根）；绝对路径兜底改成 `npx --prefix apps tsx apps/{demo}/server.ts`
 - **反模式**：`agents/*.md` 出现 `/Users/...`；`cd {绝对路径}/apps`；写示例前先 `echo $PWD` 拿本机路径再抄
 - **关联**：P-012、04-pitfalls.md §1 字段约定、AGENTS.md 白话强制、2026-09-10 清理
+
+### P-014  ·  MiniMax 嵌入误走 OpenAI input
+
+- **症状**：建库 / 提问返回 `Cannot read properties of undefined (reading 'slice')`，hint 是「服务端未分类错误」；日志里 MiniMax 返回 `vectors: null`、`status_code: 2013`、`missing required parameter`（字段名 `texts`）
+- **触发**：RAG Demo 用 `llm.openai.embeddings.create({ model, input })` 给 MiniMax `embo-01` 算向量
+- **根因**：MiniMax 聊天能走协议 A，嵌入接口不能。它要 `texts` + `type: "db"|"query"`，返回 `vectors`，不是 OpenAI 的 `input` / `data[].embedding`
+- **修复**：`provider === "minimax"` 时自己 `POST {baseUrlA}/embeddings`，建库 `type=db`、提问 `type=query`；解析 `vectors`；`base_resp.status_code !== 0` 时把 `status_msg` 做成 `HttpError`。禁止对 MiniMax 嵌入调用 `response.data.slice`
+- **反模式**：`openai.embeddings.create({ input })` 打 MiniMax；建库和提问都传 `type=db`；返回值缺 `data` 仍 `.slice()`
+- **关联**：模块 08 `01-RAG-流水线-step-1` `lib/embed/create-embeddings.ts`
+
+### P-015  ·  智谱嵌入被 SDK 解成全 0
+
+- **症状**：建库成功，查看库 `vector` 全是 0；提问分数全是 0 或乱序
+- **触发**：RAG Demo `openai.embeddings.create({ model, input })` 打智谱 `embedding-3`（`openai@4.85` 没写 `encoding_format`）
+- **根因**：SDK 默认要 base64，再按字节解成 Float32。智谱仍返回小数数组；2048 个小数被当成 2048 字节 → 512 维全 0
+- **修复**：`embeddings.create` 显式 `encoding_format: "float"`；解析后拒绝全 0 向量，禁止写入
+- **反模式**：对智谱嵌入依赖 SDK 默认编码；只拦空数组、把全 0 当成功
+- **关联**：模块 08 `01-RAG-流水线-step-1` `lib/embed/create-embeddings.ts`；openai-node#1312
+
+### P-016  ·  sendError 不要用 koa.Context
+
+- **症状**：`cd apps && yarn typecheck` 报 `Property 'body' does not exist on type 'Request'`，以及 Router 的 ctx 不能传给 `sendError(ctx: Context)`
+- **触发**：新 Demo 的 `lib/http/send-error.ts` 写 `import type { Context } from "koa"`，路由里读 `ctx.request.body`
+- **根因**：`@koa/router` 自带另一份 `@types/koa`，和顶层 `@types/koa` 不是同一个 Context；bodyparser 的 `body` 也不在那份 Request 上
+- **修复**：`sendError` 入参改成 `{ status: number; body: unknown }`；读请求体用 `jsonBody(ctx: { request: object })` 再断言 `body`，不要 import `koa.Context`
+- **反模式**：`sendError(ctx: Context)`；为过编译在路由里写 `@ts-ignore`
+- **关联**：模块 08 `01-RAG-流水线-step-1` `lib/http/send-error.ts`
+
+### P-017  ·  写完 Demo 只跑 check-demo 忘 typecheck
+
+- **症状**：`check-demo` 全过，学习者自己跑 `cd apps && yarn typecheck` 才爆 `tsc` 错误（如 `ctx.request.body` / 两套 `koa.Context`）
+- **触发**：落 / 改可运行 Demo 后只跑 `node scripts/check-demo.cjs`，没跑 `yarn typecheck` 就告诉学习者写完了
+- **根因**：check-demo 查目录 / 端口 / 日志 / 行数，不跑 TypeScript 编译器；两件事不是同一步
+- **修复**：写完按顺序 ① check-demo ② `cd apps && yarn typecheck` ③ 烟雾测试。禁止把 typecheck 并进 `check-demo.cjs`
+- **反模式**：`check-demo` 过就当写完；在 `scripts/check-demo.cjs` 里 `spawn tsc`；typecheck 不过仍起烟雾测试
+- **关联**：agents/05-demo.md 写完后验收顺序、AGENTS.md §5.3、apps/package.json `typecheck`
 
 ---
 

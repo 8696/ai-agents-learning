@@ -45,6 +45,11 @@ export type Llm = {
   modelA: string;
   /** 协议 B 请求体里的 model；多数网关与 A 相同，少数网关两边 id 不一样 */
   modelB: string;
+  /**
+   * 嵌入模型（Embedding Model）id。聊天模型和嵌入模型不是同一个。
+   * 顶层 LLM_EMBEDDING_MODEL 非空时用它；否则用该家默认。没有嵌入接口的家可能是空串。
+   */
+  embeddingModel: string;
   openai: OpenAI;
   anthropic: Anthropic;
   baseUrlA: string;
@@ -62,9 +67,11 @@ type ProviderCatalog = {
   baseBEnv: string;
   modelAEnv: string;
   modelBEnv: string;
+  embedEnv: string;
   defaultBaseA: string;
   defaultBaseB: string;
   defaultModel: string;
+  defaultEmbed: string;
 };
 
 // ── 目录：变量名 ↔ 默认值。实际 Key 只在 apps/.env，不写进本文件 ──
@@ -76,10 +83,12 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     baseBEnv: "MINIMAX_ANTHROPIC_BASE_URL",
     modelAEnv: "MINIMAX_MODEL",
     modelBEnv: "MINIMAX_ANTHROPIC_MODEL",
+    embedEnv: "MINIMAX_EMBEDDING_MODEL",
     // 国内站；不要默认成 api.minimax.io（海外账密不通用）
     defaultBaseA: "https://api.minimaxi.com/v1",
     defaultBaseB: "https://api.minimaxi.com/anthropic",
     defaultModel: "MiniMax-M3",
+    defaultEmbed: "embo-01",
   },
   zhipu: {
     label: "智谱 GLM",
@@ -88,9 +97,11 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     baseBEnv: "ZHIPU_ANTHROPIC_BASE_URL",
     modelAEnv: "ZHIPU_MODEL",
     modelBEnv: "ZHIPU_ANTHROPIC_MODEL",
+    embedEnv: "ZHIPU_EMBEDDING_MODEL",
     defaultBaseA: "https://open.bigmodel.cn/api/paas/v4/",
     defaultBaseB: "https://open.bigmodel.cn/api/anthropic",
     defaultModel: "glm-4-flash",
+    defaultEmbed: "embedding-3",
   },
   deepseek: {
     label: "DeepSeek",
@@ -99,10 +110,13 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     baseBEnv: "DEEPSEEK_ANTHROPIC_BASE_URL",
     modelAEnv: "DEEPSEEK_MODEL",
     modelBEnv: "DEEPSEEK_ANTHROPIC_MODEL",
+    embedEnv: "DEEPSEEK_EMBEDDING_MODEL",
     // 官方文档写的是不带 /v1；OpenAI SDK 会拼 /chat/completions
     defaultBaseA: "https://api.deepseek.com",
     defaultBaseB: "https://api.deepseek.com/anthropic",
     defaultModel: "deepseek-v4-flash",
+    // DeepSeek 官方目前没有嵌入接口；RAG Demo 请改 LLM_EMBEDDING_MODEL 或换一家
+    defaultEmbed: "",
   },
   qwen: {
     label: "千问 DashScope",
@@ -111,10 +125,12 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     baseBEnv: "QWEN_ANTHROPIC_BASE_URL",
     modelAEnv: "QWEN_MODEL",
     modelBEnv: "QWEN_ANTHROPIC_MODEL",
+    embedEnv: "QWEN_EMBEDDING_MODEL",
     // 国内百炼；协议 A 带 /compatible-mode/v1，协议 B 停在 /apps/anthropic（不要再加 /v1）
     defaultBaseA: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     defaultBaseB: "https://dashscope.aliyuncs.com/apps/anthropic",
     defaultModel: "qwen-plus",
+    defaultEmbed: "text-embedding-v3",
   },
   custom: {
     label: "自定义网关",
@@ -123,11 +139,13 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     baseBEnv: "CUSTOM_ANTHROPIC_BASE_URL",
     modelAEnv: "CUSTOM_MODEL",
     modelBEnv: "CUSTOM_ANTHROPIC_MODEL",
+    embedEnv: "CUSTOM_EMBEDDING_MODEL",
     // 协议 A 带 /v1（OpenAI SDK 会拼 /chat/completions）；协议 B 不带 /v1（Anthropic SDK 自己拼路径）
     defaultBaseA: "https://llm.goaichat.top/v1",
     defaultBaseB: "https://llm.goaichat.top",
     // 自定义网关没有「全仓库默认模型」，必须填 CUSTOM_MODEL 或顶层 LLM_MODEL
     defaultModel: "",
+    defaultEmbed: "",
   },
 };
 
@@ -135,6 +153,7 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
 const selectorSchema = z.object({
   LLM_PROVIDER: z.enum(PROVIDER_IDS).default("minimax"),
   LLM_MODEL: z.string().optional(),
+  LLM_EMBEDDING_MODEL: z.string().optional(),
   LLM_ANTHROPIC_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
 });
 
@@ -162,11 +181,13 @@ function resolveProvider(id: ProviderId): {
   baseUrlB: string;
   defaultModelA: string;
   defaultModelB: string;
+  defaultEmbed: string;
   label: string;
 } {
   const spec = CATALOG[id];
   const defaultModelA = envTrim(spec.modelAEnv) || spec.defaultModel;
   const defaultModelB = envTrim(spec.modelBEnv) || defaultModelA;
+  const defaultEmbed = envTrim(spec.embedEnv) || spec.defaultEmbed;
   return {
     label: spec.label,
     apiKey: envTrim(spec.keyEnv),
@@ -174,6 +195,7 @@ function resolveProvider(id: ProviderId): {
     baseUrlB: envTrim(spec.baseBEnv) || spec.defaultBaseB,
     defaultModelA,
     defaultModelB,
+    defaultEmbed,
   };
 }
 
@@ -191,6 +213,8 @@ function buildLlm(requireKey: boolean): Llm | null {
   const override = selector.LLM_MODEL?.trim() ?? "";
   const modelA = override || resolved.defaultModelA;
   const modelB = override || resolved.defaultModelB;
+  const embedOverride = selector.LLM_EMBEDDING_MODEL?.trim() ?? "";
+  const embeddingModel = embedOverride || resolved.defaultEmbed;
 
   if (!resolved.apiKey) {
     if (!requireKey) {
@@ -211,6 +235,7 @@ function buildLlm(requireKey: boolean): Llm | null {
     resolved,
     modelA,
     modelB || modelA,
+    embeddingModel,
     selector.LLM_ANTHROPIC_MAX_TOKENS,
   );
 }
@@ -220,6 +245,7 @@ function makeLlm(
   resolved: ReturnType<typeof resolveProvider>,
   modelA: string,
   modelB: string,
+  embeddingModel: string,
   maxTokensB: number,
 ): Llm {
   return {
@@ -227,6 +253,7 @@ function makeLlm(
     model: modelA,
     modelA,
     modelB,
+    embeddingModel,
     // 同 Key 只换 baseURL：这就是「一家提供商、两套协议」
     openai: new OpenAI({
       apiKey: resolved.apiKey,
@@ -271,7 +298,9 @@ export function getLlmForProvider(id: ProviderId): Llm | null {
   const modelB = resolved.defaultModelB || modelA;
   if (!resolved.apiKey || !modelA) return null;
 
-  const llm = makeLlm(id, resolved, modelA, modelB, selector.LLM_ANTHROPIC_MAX_TOKENS);
+  const embedOverride = selector.LLM_EMBEDDING_MODEL?.trim() ?? "";
+  const embeddingModel = embedOverride || resolved.defaultEmbed;
+  const llm = makeLlm(id, resolved, modelA, modelB, embeddingModel, selector.LLM_ANTHROPIC_MAX_TOKENS);
   cachedByProvider.set(id, llm);
   return llm;
 }
