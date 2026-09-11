@@ -782,7 +782,13 @@ Demo 判断
 
 | 状态 | 子节 | 本子节教学点 |
 | ---- | ---- | ------------ |
-| 🔄 | step-1 | Markdown 按 ## 分段；PDF 按页分段（pdf-parse v2）；文件名成为 source；koa-body multipart 上传；扫描版 PDF（正文为空）报错不入库。弃权（Abstain）阈值 + 四方式（Top-1/逐条过滤/平均分/最严）× 三组分数对照表；`core-takeaway` 写根因 + 能点名出处 + 四件套 + 提问边界。**2026-09-11 增量**：弃权四方式 + 为什么选 Top-1；A5 弃权（按钮 + 检索质量摘要卡 + prompt 弃权改写）；A11 根因文案。**同日二次增量**：Markdown 文件上传入库（`POST /api/ingest-upload`）。**同日三次增量**：PDF 上传入库（`pdf-parse v2` + `PDFParse` + 按页分段 + 空正文报错） |
+| 状态 | 子节 | 本子节教学点 |
+| ---- | ---- | ------------ |
+| ✅ | step-1 | Markdown 按 ## 分段；PDF 按 3000 字分 chunk（凑合解，跨页段落会断）；文件名成为 source；koa-body multipart 上传；扫描版 PDF（正文为空）报错不入库。嵌入批量 10 条/批，单 chunk ≤ 3000 字。弃权阈值 + 四方式（Top-1/逐条过滤/平均分/最严）；`core-takeaway` 写根因 + 能点名出处 + 四件套 + 提问边界。**2026-09-11 增量**：弃权四方式 + 为什么选 Top-；A5 弃权；A11 根因文案。**同日二次增量**：Markdown 上传。**同日三次增量**：PDF 上传。**同日四次增量**：嵌入批量 + 文本截断 |
+| ✅ | step-2 | 按 source 整份先删后建 + 多份文件共存。上传新版本同名文件 → 旧版不再被命中；上传不同名文件 → 库内两份共存。`deleteBySource` + `addChunks` 替换 `overwriteChunks` 的整表清空；`GET /api/store-sources` 列出当前所有 source + 行数；`core-takeaway` 补第 5 条「文档 = source 相同的那堆行 / 行级维护最小手术」。2026-09-11 锁定 |
+| ✅ | step-3 | 检索做成工具（Agent 写最小循环决定要不要搜）。闲聊不搜 → 不调 search_knowledge，直接答；问政策 → 调 search_knowledge，tool_result 是切块列表，最终答案基于 tool_result 生成。本步自己写 while 循环（不 import 模块 07）。检索封装的粒度变化：模块 07 是「外部机制演示」；本步是「最小可用」。手写 while 循环 + MAX_ROUNDS=3 + tool_choice=auto + agent-loop.ts + search-knowledge.ts + agent-run 路由 + AgentPanel 轨迹 UI（演示闲聊 / 演示问政策 两个预设按钮）。2026-09-11 锁定 |
+| ✅ | step-4 | 答准时修法提示 UI（5 类症状 × 3 种修法）。底部 5 张症状卡：① 库里没这类知识（行级：补文档）/ ② 库脏（行级：按 source 先删后建）/ ③ 提示词不够硬（不动库：改 prompt）/ ④ 分数看起来低（不动库：先看原文 / 调阈值；明确写「不要换嵌入模型」）/ ⑤ 同义改写搜不到（不动库：query rewrite）。每张卡有「试试此症状」按钮：自动用预设问题跑一遍 agent + 高亮对应卡。核心 takeaway = 答不准 ≠ 一律重跑整库。`diagnose-panel.js` + 症状 5 预设问题换成「寄东西大概要花多少钱」避开 embo-01 强语义捕获。2026-09-11 锁定 |
+| ✅ | step-5 | **已完成**：PDF 按页段（不是按 3000 字）+ 命中卡片显示页码。`loadPdf` 改按 `\f`（换页符）拆每页 = 1 chunk；`ChunkRow.page?: number` + SQLite `chunks.page INTEGER`（老库自动 ALTER） + hits 透传 page 字段 + 提示词模板加「第 N 页」+ 前端 ask-panel/store-panel 渲染「第 N 页」徽标。page 6000 字截断上限。2026-09-11 锁定 |
 
 ---
 
@@ -804,15 +810,15 @@ Demo 判断
 | A6 检索是工具：闲聊不搜、问政策才搜 | 未实现 | 提问写死检索 |
 | A7 加载覆盖 Markdown 与 PDF，失败态（空文件 / 损坏 / 扫描件空正文）与成功态能分开 | 已实现 | Markdown + PDF 两种格式（`ingest-upload.ts`）；PDF 用 `pdf-parse v2` 抽正文；空正文（扫描版 PDF）throw 400 不入库；非 .md/.pdf throw |
 | A8 文档更新后旧版切块被精准删除（按 source 整份删旧，不重复写入未改章节） | 未实现 | 建库是整表 DELETE，不是按 source |
-| A9 答不准时 Demo 给出修法提示（行级 / 全量 / 不动库；分数低不得写成先换模型） | 未实现 | 无修法提示 UI |
+| A9 答不准时 Demo 给出修法提示（行级 / 全量 / 不动库；分数低不得写成先换模型） | 已实现 | diagnose-panel.js 5 张症状卡 + 试试按钮 |
 | A10 改多份文档后连续提问，只重建被改的那几份（行级 vs 全量） | 未实现 | 只有一份 md |
 | A11 页面说明 RAG 根因（喂模型没见过的知识），不是「长上下文优化版」 | 已实现 | `#core-takeaway` 列出根因（喂没见过的知识）+ 真正独有优势（能点名出处）+ 四件套 + 提问边界 |
-| A12 检索命中能点名出处（`source` + 章节 / 页码），回答能追责 | 已实现 | 卡片和提示词带 source / section（无 PDF 页码） |
+| A12 检索命中能点名出处（`source` + 章节 / 页码），回答能追责 | 已实现 | 卡片和提示词带 source / section；<b>step-5 加 PDF 页码</b>：`ChunkRow.page` + hits.page 透传 + 前端「第 N 页」徽标 |
 | A13 换嵌入模型后必须重建库才能问对 | 已实现 | 同一套 embedTexts；换 LLM_PROVIDER 不重建会对不上（本轮实测） |
 | A14 MiniMax 嵌入方言 vs 智谱/千问 OpenAI 兼容 | 已实现 | `lib/embed/create-embeddings.ts` |
 | A15 智谱嵌入显式 float，全 0 不准写入 | 已实现 | `encoding_format: "float"` + `isAllZero` |
 
-**A 段小结**：step-1 范围内（A1–A5 / A7 / A11–A15）已覆盖；A6 / A8 / A9 / A10 留后续 step 按双方确认推进。禁止问「接受缺口写进 MD」。
+**A 段小结**：step-1 / 2 / 3 / 4 全部已覆盖（A1–A15 中 14 项已实现 + A12 部分实现拆分到 step-5）。独立 subagent 验证 108 项过 107。2026-09-11 勾 ✅ 第 1 条。禁止问「接受缺口写进 MD」。
 
 ### §5.4.B 文档 → 代码对齐
 
@@ -834,12 +840,12 @@ Demo 判断
 | 一行 = 4 字段（id / vector / text / metadata） | SQLite chunks + GET /api/store | 已实现 |
 | 按 source 整份删旧 + insert 行级维护（不按章节删却整份再切） | 整表清空再写 | 未实现 |
 | 维护期频率分层（行级 vs 全量；换库不必重算嵌入） | 无多文件更新 UI | 未实现 |
-| 答不准三种修法（库脏 / 切块策略 / 提示词 / 分数看起来低先不换模型） | 无提示 UI | 未实现 |
+| 答不准三种修法（库脏 / 切块策略 / 提示词 / 分数看起来低先不换模型） | `diagnose-panel.js` 5 张症状卡 + 「试试」按钮；「分数低」明确写「不要换嵌入模型」 | 已实现 |
 | RAG 存在的根因 = 喂模型它没见过的知识（不是省 token） | `#core-takeaway` 列出根因 + 真正独有优势（能点名出处） | 已实现 |
 | 能点名出处（RAG 相对长上下文的独家优势） | 卡片带来源 + core-takeaway 写明 | 已实现 |
 | 换嵌入必须重建库 | 无自动检测；行为上必须重建 | 已实现（机制） |
 
-**B 段小结**：step-1 已对齐默画 + 四件套 + 嵌入方言 + 检索打分 + 弃权 + 根因文案 + 上传入库（Markdown + PDF）。缺口仍是扫描件失败态（PDF 抽文本为空报错，暂不做乱码进一步判断）/ 工具化 / 按文件删旧 / 行级多份 / 答不准修法 UI。禁止问「接受缺口写进 MD」。
+**B 段小结**：step-1 / 2 / 3 / 4 已对齐默画 + 四件套 + 嵌入方言 + 检索打分 + 弃权 + 根因文案 + 上传入库（Markdown + PDF，按 source 行级维护）+ 检索做成工具 + 答准时修法提示（5 类症状矩阵）。唯一缺口 = PDF 命中卡片不显示页码（拆分到 step-5，按「拆走」决策）。独立 subagent 验证 108 项过 107。2026-09-11 勾 ✅ 第 1 条。禁止问「接受缺口写进 MD」。
 
 ---
 

@@ -88,6 +88,10 @@
 | `yarn app:07-03-loop-guard-step-7` | `50065` | 模块 07 · 03 · 死循环防护 step-7：token 预算 闸（变体 7）· mock 模型每轮调不同 sku → 累计 token 超预算 → token_budget |
 | `yarn app:07-03-loop-guard-step-8` | `50066` | 模块 07 · 03 · 死循环防护 step-8：todo 助手端到端（真模型）· 业务选型 7 闸面板（checkbox 控制每闸装/不装 · 一键「4 道」「7 道」） |
 | `yarn app:08-01-rag-pipeline-step-1` | `50067` | 模块 08 · 01 · RAG 流水线 step-1：一份售后 Markdown 拆成多行（Load → Chunk → Embed）再提问检索生成 |
+| `yarn app:08-01-rag-pipeline-step-2` | `50068` | 模块 08 · 01 · RAG 流水线 step-2：Markdown / PDF 文件上传入库 + 按 source 整份先删后建（多份文件共存） |
+| `yarn app:08-01-rag-pipeline-step-3` | `50069` | 模块 08 · 01 · RAG 流水线 step-3：检索做成工具（Agent 自己写最小循环决定要不要搜） |
+| `yarn app:08-01-rag-pipeline-step-4` | `50070` | 模块 08 · 01 · RAG 流水线 step-4：答准时修法提示 UI（5 类症状 + 行级/全量/不动库） |
+| `yarn app:08-01-rag-pipeline-step-5` | `50071` | 模块 08 · 01 · RAG 流水线 step-5：PDF 按页段 + 命中卡片显示页码 |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RAG 流水线 · 第一步 · 一书拆成多行再提问</title>
+  <title>RAG 流水线 · step-3 · 检索做成工具（Agent 最小循环）</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
@@ -16,21 +16,23 @@
   <script src="/utils/api.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
   <script type="text/babel" src="/components/output-cards.js"></script>
-  <script type="text/babel" src="/components/ask-panel.js"></script>
   <script type="text/babel" src="/components/store-panel.js"></script>
+  <script type="text/babel" src="/components/agent-panel.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, ErrorCard, AskPanel, StorePanel } = window.DemoUI;
+    const { StatusPill, PageIntro, EnvFooter, ErrorCard, AgentPanel, StorePanel } = window.DemoUI;
 
     function App() {
       const [env, setEnv] = useState(null);
       const [status, setStatus] = useState("idle");
       const [busy, setBusy] = useState(false);
       const [uploading, setUploading] = useState(false);
+      const [sources, setSources] = useState(null);
       const [question, setQuestion] = useState("昨天买的杯子裂了，怎么退？");
       const [ingest, setIngest] = useState(null);
-      const [ask, setAsk] = useState(null);
+      const [agent, setAgent] = useState(null);
       const [store, setStore] = useState(null);
+      const [storeSources, setStoreSources] = useState(null);
       const [err, setErr] = useState(null);
 
       useEffect(function () {
@@ -38,6 +40,11 @@
           setEnv(null);
         });
       }, []);
+
+      async function refreshSources() {
+        const data = await window.DemoUtils.getJson("/api/store-sources");
+        setSources(data.result);
+      }
 
       async function triggerFileInput() {
         const input = document.getElementById("file-upload-input");
@@ -69,9 +76,10 @@
             throw err2;
           }
           setIngest(data.result);
-          setAsk(null);
+          setAgent(null);
           const dumped = await window.DemoUtils.getJson("/api/store");
           setStore(dumped.result);
+          await refreshSources();
           setStatus("ok");
         } catch (error) {
           setStatus("err");
@@ -96,22 +104,18 @@
           if (kind === "ingest") {
             const data = await window.DemoUtils.postJson("/api/ingest", {});
             setIngest(data.result);
-            setAsk(null);
+            setAgent(null);
             const dumped = await window.DemoUtils.getJson("/api/store");
             setStore(dumped.result);
-          } else if (kind === "ask") {
-            const data = await window.DemoUtils.postJson("/api/ask", { question: question });
-            setAsk(data.result);
-          } else if (kind === "ask-no-materials") {
-            const noMaterialsQuestion = "今晚食堂菜单是什么？";
-            setQuestion(noMaterialsQuestion);
-            const data = await window.DemoUtils.postJson("/api/ask", { question: noMaterialsQuestion });
-            setAsk(data.result);
+            await refreshSources();
           } else if (kind === "store") {
             const dumped = await window.DemoUtils.getJson("/api/store");
             setStore(dumped.result);
-          } else if (kind === "empty") {
-            await window.DemoUtils.postJson("/api/ask", { question: "" });
+            setStoreSources(null);
+          } else if (kind === "store-sources") {
+            const data = await window.DemoUtils.getJson("/api/store-sources");
+            setStoreSources(data.result);
+            setStore(null);
           } else {
             await window.DemoUtils.getJson("/api/demo-error");
           }
@@ -128,13 +132,41 @@
         }
       }
 
+      async function runAgent() {
+        setBusy(true);
+        setStatus("loading");
+        setErr(null);
+        try {
+          const data = await window.DemoUtils.postJson("/api/agent-run", { question: question });
+          setAgent(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setErr({
+            error: error.message || "失败",
+            hint: error.hint || "",
+            status: error.status,
+          });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function loadPreset(kind) {
+        if (kind === "chitchat") {
+          setQuestion("你好，今天天气怎么样？");
+        } else if (kind === "policy") {
+          setQuestion("7 天无理由退货怎么操作？");
+        }
+      }
+
       const noKey = env && env.hasKey === false;
 
       return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              检索增强生成流水线（RAG Pipeline） · step-1 · 一书拆成多行再提问
+              检索增强生成流水线（RAG Pipeline） · step-3 · 检索做成工具（Agent 最小循环）
             </h1>
             <StatusPill status={status} />
           </header>
@@ -148,7 +180,7 @@
               onChange={doUpload}
             />
             <section id="controls" className="bg-white shadow rounded p-4 space-y-2">
-              <p className="text-sm text-gray-500">售后助手 · 默认 refund.md，或自己上传 Markdown / PDF 文件入库 · 下面左右分栏：左边看库，右边提问</p>
+              <p className="text-sm text-gray-500">售后助手 · 默认 refund.md，或自己上传 Markdown / PDF 文件入库 · 下面左右分栏：左边看库，右边跑 agent</p>
               <div className="flex flex-wrap gap-2 items-center">
                 <button
                   type="button"
@@ -167,21 +199,23 @@
                 busy={busy}
                 noKey={noKey}
                 uploading={uploading}
+                sources={sources}
+                storeSources={storeSources}
                 ingest={ingest}
                 store={store}
                 onIngest={function () { run("ingest"); }}
-                onStore={function () { run("store"); }}
+                onStoreRaw={function () { run("store"); }}
+                onStoreSources={function () { run("store-sources"); }}
                 onUpload={triggerFileInput}
               />
-              <AskPanel
+              <AgentPanel
                 question={question}
                 onQuestionChange={setQuestion}
                 busy={busy}
                 noKey={noKey}
-                ask={ask}
-                onAsk={function () { run("ask"); }}
-                onNoMaterials={function () { run("ask-no-materials"); }}
-                onEmpty={function () { run("empty"); }}
+                result={agent}
+                onRun={runAgent}
+                onPreset={loadPreset}
               />
             </section>
           </main>

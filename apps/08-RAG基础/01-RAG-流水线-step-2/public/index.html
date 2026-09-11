@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RAG 流水线 · 第一步 · 一书拆成多行再提问</title>
+  <title>RAG 流水线 · step-2 · Markdown / PDF 上传入库</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
@@ -27,10 +27,12 @@
       const [status, setStatus] = useState("idle");
       const [busy, setBusy] = useState(false);
       const [uploading, setUploading] = useState(false);
+      const [sources, setSources] = useState(null);
       const [question, setQuestion] = useState("昨天买的杯子裂了，怎么退？");
       const [ingest, setIngest] = useState(null);
       const [ask, setAsk] = useState(null);
       const [store, setStore] = useState(null);
+      const [storeSources, setStoreSources] = useState(null);
       const [err, setErr] = useState(null);
 
       useEffect(function () {
@@ -38,6 +40,11 @@
           setEnv(null);
         });
       }, []);
+
+      async function refreshSources() {
+        const data = await window.DemoUtils.getJson("/api/store-sources");
+        setSources(data.result);
+      }
 
       async function triggerFileInput() {
         const input = document.getElementById("file-upload-input");
@@ -72,6 +79,7 @@
           setAsk(null);
           const dumped = await window.DemoUtils.getJson("/api/store");
           setStore(dumped.result);
+          await refreshSources();
           setStatus("ok");
         } catch (error) {
           setStatus("err");
@@ -99,6 +107,7 @@
             setAsk(null);
             const dumped = await window.DemoUtils.getJson("/api/store");
             setStore(dumped.result);
+            await refreshSources();
           } else if (kind === "ask") {
             const data = await window.DemoUtils.postJson("/api/ask", { question: question });
             setAsk(data.result);
@@ -110,6 +119,11 @@
           } else if (kind === "store") {
             const dumped = await window.DemoUtils.getJson("/api/store");
             setStore(dumped.result);
+            setStoreSources(null);
+          } else if (kind === "store-sources") {
+            const data = await window.DemoUtils.getJson("/api/store-sources");
+            setStoreSources(data.result);
+            setStore(null);
           } else if (kind === "empty") {
             await window.DemoUtils.postJson("/api/ask", { question: "" });
           } else {
@@ -134,7 +148,7 @@
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              检索增强生成流水线（RAG Pipeline） · step-1 · 一书拆成多行再提问
+              检索增强生成流水线（RAG Pipeline） · step-2 · Markdown 文件上传入库
             </h1>
             <StatusPill status={status} />
           </header>
@@ -167,10 +181,13 @@
                 busy={busy}
                 noKey={noKey}
                 uploading={uploading}
+                sources={sources}
+                storeSources={storeSources}
                 ingest={ingest}
                 store={store}
                 onIngest={function () { run("ingest"); }}
-                onStore={function () { run("store"); }}
+                onStoreRaw={function () { run("store"); }}
+                onStoreSources={function () { run("store-sources"); }}
                 onUpload={triggerFileInput}
               />
               <AskPanel
