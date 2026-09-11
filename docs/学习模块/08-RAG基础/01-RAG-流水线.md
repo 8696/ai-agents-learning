@@ -782,13 +782,13 @@ Demo 判断
 
 | 状态 | 子节 | 本子节教学点 |
 | ---- | ---- | ------------ |
-| 🔄 | step-1 | 一份 refund.md：左边建库 / 查看库，右边提问。建库看见一书变多行；查看库把 SQLite 四件套打到页上（向量不能全是 0；智谱须 encoding_format=float）。提问看见前 K 条、分数、带来源的提示词和回答；连续提问不再跑加载/切块。MiniMax 嵌入走 HTTP（db/query），智谱/千问走 embeddings.create；换提供商须重建库。LanceDB 包已装，本步仍用 SQLite。**2026-09-11 增量**：加「演示库里没有答案」按钮（Abstain）+ runAsk 阈值 `ABSTAIN_MAX_SCORE=0.5` + `AskResult.retrieval` 字段（hitCount/maxScore/threshold/abstained/reason）+ 检索质量摘要卡（命中数 / 最高分 / 阈值 / 是否弃权）+ 弃权时提示词材料区被替换成「（无可用材料）」 + `core-takeaway` 改写根因 + 能点名出处 |
+| 🔄 | step-1 | Markdown 按 ## 分段；PDF 按页分段（pdf-parse v2）；文件名成为 source；koa-body multipart 上传；扫描版 PDF（正文为空）报错不入库。弃权（Abstain）阈值 + 四方式（Top-1/逐条过滤/平均分/最严）× 三组分数对照表；`core-takeaway` 写根因 + 能点名出处 + 四件套 + 提问边界。**2026-09-11 增量**：弃权四方式 + 为什么选 Top-1；A5 弃权（按钮 + 检索质量摘要卡 + prompt 弃权改写）；A11 根因文案。**同日二次增量**：Markdown 文件上传入库（`POST /api/ingest-upload`）。**同日三次增量**：PDF 上传入库（`pdf-parse v2` + `PDFParse` + 按页分段 + 空正文报错） |
 
 ---
 
 ## §5.4 目标 ↔ 代码整合过关检查
 
-跑过关检查日期：2026-09-11（step-1 已落后增量重扫；step-1 未锁定。状态只有已实现 / 未实现。2026-09-11 同日增量 A5 / A11 已实现）
+跑过关检查日期：2026-09-11（step-1 持续打磨中；step-1 未锁定。状态只有已实现 / 未实现。2026-09-11 同日增量 A5/A11/弃权四方式/上传入库已实现）
 
 ### §5.4.A 目标 → 代码覆盖
 
@@ -802,7 +802,7 @@ Demo 判断
 | A4 生成区可见带材料的提示词与最终回答，来源能对上卡片 | 已实现 | 输出区 prompt + answer |
 | A5 库里没有 / 低分时回答弃权，不编造 | 已实现 | 「演示库里没有答案」按钮 → `runAsk` 算 `retrieval.abstained` → 提示词材料区替换为「（无可用材料）」 + system 强说不知道；UI 检索质量摘要卡显示命中数 / 最高分 / 阈值 / 是否弃权 |
 | A6 检索是工具：闲聊不搜、问政策才搜 | 未实现 | 提问写死检索 |
-| A7 加载覆盖 Markdown 与 PDF，失败态（空文件 / 损坏 / 扫描件空正文）与成功态能分开 | 未实现 | 仅 refund.md |
+| A7 加载覆盖 Markdown 与 PDF，失败态（空文件 / 损坏 / 扫描件空正文）与成功态能分开 | 已实现 | Markdown + PDF 两种格式（`ingest-upload.ts`）；PDF 用 `pdf-parse v2` 抽正文；空正文（扫描版 PDF）throw 400 不入库；非 .md/.pdf throw |
 | A8 文档更新后旧版切块被精准删除（按 source 整份删旧，不重复写入未改章节） | 未实现 | 建库是整表 DELETE，不是按 source |
 | A9 答不准时 Demo 给出修法提示（行级 / 全量 / 不动库；分数低不得写成先换模型） | 未实现 | 无修法提示 UI |
 | A10 改多份文档后连续提问，只重建被改的那几份（行级 vs 全量） | 未实现 | 只有一份 md |
@@ -812,15 +812,15 @@ Demo 判断
 | A14 MiniMax 嵌入方言 vs 智谱/千问 OpenAI 兼容 | 已实现 | `lib/embed/create-embeddings.ts` |
 | A15 智谱嵌入显式 float，全 0 不准写入 | 已实现 | `encoding_format: "float"` + `isAllZero` |
 
-**A 段小结**：step-1 范围内（A1–A5 / A11–A15）已覆盖；A6 / A7 / A8 / A9 / A10 留后续 step-2 起按双方确认推进。禁止问「接受缺口写进 MD」。
+**A 段小结**：step-1 范围内（A1–A5 / A7 / A11–A15）已覆盖；A6 / A8 / A9 / A10 留后续 step 按双方确认推进。禁止问「接受缺口写进 MD」。
 
 ### §5.4.B 文档 → 代码对齐
 
 | MD 讲点 | 代码里有没有 | 状态 |
 |---|---|---|
-| 五步数据怎么走（售后助手一条线） | ingest-pipeline + ask-pipeline | 已实现（仅 Markdown） |
+| 五步数据怎么走（售后助手一条线） | ingest-pipeline + ingest-upload + ask-pipeline | 已实现（Markdown + PDF） |
 | 建库时 vs 提问时 | `/api/ingest` 与 `/api/ask` 分开 | 已实现 |
-| Markdown / PDF 两种加载 + 加载失败（含扫描件空正文） | 仅 knowledge/refund.md | 未实现 |
+| Markdown / PDF 两种加载 + 加载失败（含扫描件空正文） | `ingest-upload.ts`（Markdown + PDF；`pdf-parse v2` + `PDFParse` + 按页分段；空正文 throw 400 | 已实现 |
 | 切块带着来源（本条不深讲大小） | 按 `##` 切，source/section 写入 | 已实现 |
 | 建库 Embed 与提问 Embed 同一模型 + 同一套约定 | embedTexts db/query 或 input | 已实现 |
 | MiniMax HTTP `texts`+`type`；智谱/千问 `embeddings.create` | create-embeddings.ts 按 provider 分流 | 已实现 |
@@ -839,7 +839,7 @@ Demo 判断
 | 能点名出处（RAG 相对长上下文的独家优势） | 卡片带来源 + core-takeaway 写明 | 已实现 |
 | 换嵌入必须重建库 | 无自动检测；行为上必须重建 | 已实现（机制） |
 
-**B 段小结**：step-1 已对齐默画 + 四件套 + 嵌入方言 + 检索打分 + 弃权 + 根因文案。缺口仍是 PDF / 失败 / 工具化 / 按文件删旧 / 行级多份 / 答不准修法 UI。禁止问「接受缺口写进 MD」。
+**B 段小结**：step-1 已对齐默画 + 四件套 + 嵌入方言 + 检索打分 + 弃权 + 根因文案 + 上传入库（Markdown + PDF）。缺口仍是扫描件失败态（PDF 抽文本为空报错，暂不做乱码进一步判断）/ 工具化 / 按文件删旧 / 行级多份 / 答不准修法 UI。禁止问「接受缺口写进 MD」。
 
 ---
 

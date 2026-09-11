@@ -26,6 +26,7 @@
       const [env, setEnv] = useState(null);
       const [status, setStatus] = useState("idle");
       const [busy, setBusy] = useState(false);
+      const [uploading, setUploading] = useState(false);
       const [question, setQuestion] = useState("昨天买的杯子裂了，怎么退？");
       const [ingest, setIngest] = useState(null);
       const [ask, setAsk] = useState(null);
@@ -37,6 +38,55 @@
           setEnv(null);
         });
       }, []);
+
+      async function triggerFileInput() {
+        const input = document.getElementById("file-upload-input");
+        if (input) input.click();
+      }
+
+      async function doUpload() {
+        const input = document.getElementById("file-upload-input");
+        const file = input && input.files && input.files[0];
+        if (!file) return;
+        setUploading(true);
+        setBusy(true);
+        setStatus("loading");
+        setErr(null);
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const response = await fetch("/api/ingest-upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await response.json().catch(function () {
+            return { ok: false, error: "响应不是 JSON" };
+          });
+          if (!response.ok) {
+            const err2 = new Error(data.error || "上传入库失败");
+            err2.status = response.status;
+            err2.hint = data.hint || "";
+            throw err2;
+          }
+          setIngest(data.result);
+          setAsk(null);
+          const dumped = await window.DemoUtils.getJson("/api/store");
+          setStore(dumped.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setErr({
+            error: error.message || "失败",
+            hint: error.hint || "",
+            status: error.status,
+          });
+        } finally {
+          setBusy(false);
+          setUploading(false);
+          const input2 = document.getElementById("file-upload-input");
+          if (input2) input2.value = "";
+        }
+      }
 
       async function run(kind) {
         setBusy(true);
@@ -84,14 +134,21 @@
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              检索增强生成流水线（RAG Pipeline） · 第一步（step-1） · 一书拆成多行再提问
+              检索增强生成流水线（RAG Pipeline） · step-2 · Markdown 文件上传入库
             </h1>
             <StatusPill status={status} />
           </header>
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <PageIntro />
+            <input
+              id="file-upload-input"
+              type="file"
+              accept=".md .pdf"
+              className="hidden"
+              onChange={doUpload}
+            />
             <section id="controls" className="bg-white shadow rounded p-4 space-y-2">
-              <p className="text-sm text-gray-500">售后助手 · 只有一份 refund.md · 下面左右分栏：左边看库，右边提问</p>
+              <p className="text-sm text-gray-500">售后助手 · 默认 refund.md，或自己上传 Markdown / PDF 文件入库 · 下面左右分栏：左边看库，右边提问</p>
               <div className="flex flex-wrap gap-2 items-center">
                 <button
                   type="button"
@@ -109,10 +166,12 @@
               <StorePanel
                 busy={busy}
                 noKey={noKey}
+                uploading={uploading}
                 ingest={ingest}
                 store={store}
                 onIngest={function () { run("ingest"); }}
                 onStore={function () { run("store"); }}
+                onUpload={triggerFileInput}
               />
               <AskPanel
                 question={question}

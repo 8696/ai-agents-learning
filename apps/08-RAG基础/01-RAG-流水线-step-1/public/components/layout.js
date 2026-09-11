@@ -23,13 +23,14 @@
     return (
       <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
         <p className="text-sm text-gray-700">
-          本页只演示：把一份售后 Markdown <b>拆进向量库（Vector Database）</b>，再提问检索生成。第一步是加载（Load），第二步才是切块（Chunk）。
+          本页演示：把 Markdown 文件<b>上传入库</b>（或用默认 refund.md），拆进向量库（Vector Database），再提问检索生成。加载（Load）是第一步，切块（Chunk）是第二步。
         </p>
         <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-          <li>左边点「建库」→ POST /api/ingest → 加载原文 → 按章节切成卡片 → 向量化（Embed）→ 写成多行</li>
+          <li>左边点「上传 Markdown 文件入库」→ POST /api/ingest-upload（multipart/form-data）→ 加载文件原文 → 按 ## 标题切成卡片 → 向量化（Embed）→ 写成多行。文件名会成为 source 入库。</li>
+          <li>左边点「建库（refund.md）」→ POST /api/ingest → 用默认文件入库（不走上传）</li>
           <li>左边点「查看库」→ GET /api/store → 把 SQLite 里每一行读出来（不调模型）</li>
           <li>右边点「提问」→ POST /api/ask → 问题也向量化 → 检索前 K 条 → 把材料塞进提示词（Prompt）生成</li>
-          <li>第二问不应再跑加载 / 切块。左右对照：检索卡片的来源应对上左边某行。维护（按来源删旧）本步不做</li>
+          <li>连续提问不再跑加载 / 切块。左右对照：检索卡片的来源应对上左边某行。PDF / 按来源删旧 / 做成工具本步不做</li>
         </ol>
         <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-2 mt-2">
           <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>

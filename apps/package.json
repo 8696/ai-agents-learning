@@ -12,6 +12,7 @@
     "gen-manifest": "node ../scripts/gen-manifest.js",
     "static-serve": "node ../scripts/static-server.js",
     "start-all-demo": "node ../scripts/start-all-demo.js",
+    "rebuild-better-sqlite3":"npm rebuild better-sqlite3",
     "app:00-01-mini-app-step-1": "PORT=50000 tsx 00-环境准备/01-mini-app-step-1/server.ts",
     "app:00-01-api-key-billing-step-1": "PORT=50001 tsx 00-环境准备/01-API-Key-计费-step-1/server.ts",
     "app:01-02-token-step-1": "PORT=50002 tsx 01-AI与LLM基础认知/02-Token-step-1/server.ts",
@@ -94,6 +95,7 @@
     "koa-body": "^8.0.1",
     "koa-static": "^5.0.0",
     "openai": "^4.85.4",
+    "pdf-parse": "^2.4.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
  * 职责：装配 HTTP 服务。不写业务路由。
  * 数据流：load env → 挂 routes → 静态页 → listen。
  */
-import { bodyParser } from "@koa/bodyparser";
+import koaBody from "koa-body";
 import Router from "@koa/router";
 import Koa from "koa";
 import serve from "koa-static";
@@ -16,6 +16,7 @@ import { mountAsk } from "./routes/ask.js";
 import { mountDemoError } from "./routes/demo-error.js";
 import { mountHealth } from "./routes/health.js";
 import { mountIngest } from "./routes/ingest.js";
+import { mountIngestUpload } from "./routes/ingest-upload.js";
 import { mountStore } from "./routes/store.js";
 
 loadRootEnv();
@@ -27,11 +28,17 @@ const app = new Koa();
 const router = new Router();
 mountHealth(router);
 mountIngest(router);
+mountIngestUpload(router);
 mountAsk(router);
 mountStore(router);
 mountDemoError(router);
 
-app.use(bodyParser());
+app.use(
+  koaBody({
+    multipart: true,
+    formidable: { maxFileSize: 10 * 1024 * 1024 },
+  }),
+);
 app.use(router.routes());
 app.use(router.allowedMethods());
 app.use(serve(publicDir));

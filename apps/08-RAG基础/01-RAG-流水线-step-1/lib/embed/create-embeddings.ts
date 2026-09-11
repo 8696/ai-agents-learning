@@ -3,6 +3,9 @@
  * 建库 type=db，提问 type=query，这就是「同一模型、两边约定要一致」。
  * 智谱 / 千问走 embeddings.create，必须显式 encoding_format=float：
  * OpenAI SDK 默认按 base64 解码，智谱仍返回小数数组，会被解成全 0。
+ *
+ * 分批逻辑：嵌入接口对单次请求的 Token 总数有限制。
+ * 100 页 PDF 一次送 100 条会超限。按 20 条一批拆开并行调用，拼接后返回完整向量列表。
  */
 import type { Llm } from "../../../../llm.js";
 import { HttpError } from "../http/send-error.js";
@@ -122,13 +125,38 @@ export async function embedTexts(llm: Llm, texts: string[], kind: EmbedKind): Pr
     );
   }
   if (texts.length === 0) return [];
-  const vectors = llm.provider === "minimax"
-    ? await embedMiniMax(llm, texts, kind)
-    : await embedOpenAiCompat(llm, texts);
-  if (vectors.length !== texts.length) {
+
+  // 分批：嵌入接口对单次请求 Token 总数有限制。100 页 PDF 一次送会超限，按 20 条一批拆开并行调用。
+  const BATCH_SIZE = 10;
+  if (texts.length <= BATCH_SIZE) {
+    const vectors = llm.provider === "minimax"
+      ? await embedMiniMax(llm, texts, kind)
+      : await embedOpenAiCompat(llm, texts);
+    validateVectors(vectors, texts.length);
+    return vectors;
+  }
+
+  const batches: string[][] = [];
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    batches.push(texts.slice(i, i + BATCH_SIZE));
+  }
+  const batchVectors = await Promise.all(
+    batches.map((batch) =>
+      llm.provider === "minimax"
+        ? embedMiniMax(llm, batch, kind)
+        : embedOpenAiCompat(llm, batch),
+    ),
+  );
+  const vectors = batchVectors.flat();
+  validateVectors(vectors, texts.length);
+  return vectors;
+}
+
+function validateVectors(vectors: number[][], expectedLen: number): void {
+  if (vectors.length !== expectedLen) {
     throw new HttpError(
       502,
-      `向量条数对不上：${vectors.length} vs ${texts.length}`,
+      `向量条数对不上：${vectors.length} vs ${expectedLen}`,
       "看日志里的完整返回值，对一下 texts 和 vectors",
     );
   }
@@ -142,5 +170,4 @@ export async function embedTexts(llm: Llm, texts: string[], kind: EmbedKind): Pr
       "OpenAI SDK 默认按 base64 解码。智谱返回的是小数数组，会被解成全 0。本步已要求 encoding_format=float；若仍全 0，看日志完整返回值。",
     );
   }
-  return vectors;
 }
