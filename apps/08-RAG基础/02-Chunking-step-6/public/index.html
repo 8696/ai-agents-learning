@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切块（Chunking） · 第六步 · 综合对比收尾</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/summary-table.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, SummaryTable } = window.DemoUI;
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [summary, setSummary] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.getJson("/health").then(setEnv).catch(function () {
+          setEnv(null);
+        });
+        setStatus("loading");
+        window.DemoUtils.getJson("/api/summary").then(function (data) {
+          setSummary(data.summary);
+          setStatus("ok");
+        }).catch(function () {
+          setStatus("err");
+        });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              切块（Chunking） · 第六步（step-6） · 综合对比收尾
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <main id="page-main" className="max-w-[1200px] mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示 <b>综合对比收尾</b>：把 step-1 ~ step-5 各 demo 的能力列成一张表，帮你回忆「全部 demo 能干什么」。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>下面表格来自 GET /api/summary（后端硬编码 summary.ts）</li>
+                <li>每行 = 一个 step 的独立 demo（独立端口、独立 yarn 脚本、独立页面）</li>
+                <li>点「打开 →」直接进对应 demo 页面；点「入口命令」复制到本地跑</li>
+                <li>本页不教新东西——只回顾。还要继续学新切法：看模块 09 RAG 进阶</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-2 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li>
+                    <b>本条已覆盖的核心三件 + 进阶三件</b>：size / overlap / 切法（step-1）→ 单位 + 兜底 + 撞预算（step-2）→ 判断 + 文档类型（step-3）→ PDF（step-4）→ 递归四级降级（step-5）。
+                  </li>
+                  <li>
+                    <b>每个 demo 独立端口</b>：50072 ~ 50076 顺序分配，不互相依赖——可以单独开一个、关一个、随便玩。
+                  </li>
+                  <li>
+                    <b>下一步该学什么</b>：本条收尾。下一站是 <b>模块 09 RAG 进阶</b>——真实嵌入、余弦、Top-K 优化、检索后处理、ReRank 这些。
+                  </li>
+                </ul>
+                <div className="text-xs text-gray-600">
+                  一句话钉死：<b>切块（Chunking）= 把「喂给模型的材料」切成可独立检索的小卡片。卡片切得对不对，决定 RAG 后面的所有事情。</b>
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                本页核心交互 = 从后端拉一次 summary。点「重新加载」可重拉，下方表格更新。
+              </p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  disabled={status === "loading"}
+                  onClick={function () {
+                    setStatus("loading");
+                    window.DemoUtils.getJson("/api/summary").then(function (data) {
+                      setSummary(data.summary);
+                      setStatus("ok");
+                    }).catch(function () {
+                      setStatus("err");
+                    });
+                  }}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                >
+                  重新加载 /api/summary
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                说明：summary 是后端硬编码在 routes/summary.ts 里的 —— 不读库、不调 LLM，加新 step 时只需在这里加一行。
+              </p>
+            </section>
+
+            <section id="output" className="space-y-4">
+              <SummaryTable summary={summary} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

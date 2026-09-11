@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切块（Chunking） · 第五步 · 递归切分完整版</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/chunk-panels.js"></script>
+  <script type="text/babel" src="/components/budget-bar.js"></script>
+  <script type="text/babel" src="/components/right-panel.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar } = window.DemoUI;
+
+    // step-5 · I 件：混合示例——同时触发 4 档降级（## / 段落 / 句号 / 兜底再切）
+    const MIXED_DOC = (function () {
+      // 节 2 用：每段 ~1350 字符（≤ 2000）→ 多段拼起来让整节 > 2000 → boundary="段落"
+      const paraOnlyPara = "本段长度适中演示段落档降级——段落超长但每段 ≤ 2000。".repeat(45);
+      // 节 3 用：单段 ~2870 字符（有句号）→ 段 > 2000 → 降级到句号档 → boundary="句号"
+      const superLongWithPeriods = "本句为演示「句号」降级——段超长且内部有句号分割因此按段落降级后切出多个句号小块。".repeat(70);
+      // 节 4 用：单段 ~3500 字符（无任何终结符）→ 段 > 2000 → 句号档也压不住 → boundary="fallback-fixed"
+      const superLongNoPeriod = "本句为演示「兜底再切」单段超长且内部没有任何句号分割因此按段落降级按句号降级都压不住最后走兜底硬切".repeat(70);
+      return [
+        // 节 1：短章节 → boundary="##"
+        "## 短章节（≤ 2000 字符 · boundary=##）",
+        "这是第一段文字，演示正常按 ## 切——一段直接收块。",
+        "这是第二段文字，演示 ## 标题作为块的边界。",
+        "",
+        // 节 2：长节，多段独立 → boundary="段落"
+        "## 长节（每段 ≤ 2000 · 整节 > 2000 · boundary=段落）",
+        paraOnlyPara,
+        "",
+        paraOnlyPara + "第二段独有。",
+        "",
+        paraOnlyPara + "第三段独有。",
+        "",
+        // 节 3：单段 > 2000 + 有句号 → boundary="句号"
+        "## 长段（一段 > 2000 · boundary=句号）",
+        superLongWithPeriods,
+        "",
+        // 节 4：单段 > 2000 + 无句号 → boundary="fallback-fixed"
+        "## 兜底硬切（无句号 · boundary=fallback-fixed）",
+        superLongNoPeriod,
+      ].join("\n");
+    })();
+
+    // 默认文档：售后 Markdown，含三段不同密度的内容便于看 size / overlap 的影响
+    const DEFAULT_DOC = [
+      "## 破损处理",
+      "运输过程中造成的破损，可在签收后 48 小时内申请补发或退货。",
+      "请保留完整包装与商品外观照片，作为售后凭证。",
+      "客户回寄运费由我方承担。",
+      "",
+      "## 保修政策",
+      "本公司所有电器类商品保修期为两年。",
+      "该期限自签收之日起算，不含运输时间。",
+      "易耗品（如灯泡、滤芯）不在保修范围内。",
+      "",
+      "## 偏远地区运费",
+      "新疆、西藏、内蒙古偏远地区需另付运费 20 元。",
+      "其余地区满 99 元包邮。",
+      "港澳台暂不直邮。",
+    ].join("\n");
+
+    // step-2 · B 件：超长一节文档——按结构切时单节超 2000 字 / 内部句子也超 2000 字，
+// 触发兜底再切为 fallback-fixed。
+const LONG_DOC = (function () {
+  const title = "## 保修政策（含完整细则）";
+  // 一个完整长句（≈295 字符）重复 8 次 ≈ 2360 字符，超过 MAX_CHUNK_BEFORE_FALLBACK=2000。
+  const sentence =
+    "本节说明保修细则，包括退换货流程、保修期计算、易耗品范围、损坏责任划分、运输破损赔付标准、发票补开规则、跨平台账号绑定、地区差异说明、海外邮寄限制、节假日延期处理、客户投诉处理时效、客服响应时效、配件单独购买渠道、整机与配件保修区分、保修期内维修费用承担、保修期外维修费用标准、二次维修条件、跨年度保修期延续、保修起算时间判定、签收时间判定方式、发票补开时效要求、发票类型说明、电子发票与纸质发票区分、发票抬头变更流程、保修延保服务说明、增值服务购买方式、礼品订单保修规则、跨境订单保修说明、团购订单保修说明、批量定制订单保修说明、企业客户保修规则，便于演示按结构切时一节超长触发兜底再切。";
+  // slice 去掉原句末尾的「。」再 repeat(8)，末尾追加一个「；」——让 longSentence 内部没有终结符，
+  // splitByPeriod 不会把它拆开；整段 ≈ 2360 字符 > MAX_CHUNK_BEFORE_FALLBACK=2000 → 触发兜底。
+  const longSentence = sentence.slice(0, -1).repeat(8) + "；";
+  // 3 个超长句子 → 每句 ≈ 2360 字符 → 触发 MAX_CHUNK_BEFORE_FALLBACK=2000 → 兜底再切
+  return [title, longSentence, longSentence, longSentence].join("\n");
+})();
+
+    // 默认 FAQ 文档：演示「overlap = 0 也合理」
+    const DEFAULT_FAQ = [
+      "## 如何退货？",
+      "在签收后 7 天内联系客服，提供订单号即可办理退货。",
+      "",
+      "## 如何换货？",
+      "商品出现质量问题时，可在 15 天内申请换货，寄回运费由我方承担。",
+      "",
+      "## 发票如何补开？",
+      "订单完成后 90 天内可申请补开发票，需提供订单号与抬头信息。",
+    ].join("\n");
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+
+      const [text, setText] = useState(DEFAULT_DOC);
+      const [sizeVal, setSizeVal] = useState(300);
+      const [overlap, setOverlap] = useState(30);
+      const [estimateMode, setEstimateMode] = useState("mixed");
+      const [topK, setTopK] = useState(5);
+      const [budget, setBudget] = useState(2000);
+
+      const [fixed, setFixed] = useState(null);
+      const [structure, setStructure] = useState(null);
+      const [faq, setFaq] = useState(null);
+
+      const [fixedErr, setFixedErr] = useState(null);
+      const [structureErr, setStructureErr] = useState(null);
+      const [faqErr, setFaqErr] = useState(null);
+
+      const [err, setErr] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.getJson("/health").then(setEnv).catch(function () {
+          setEnv(null);
+        });
+      }, []);
+
+      async function callApi(url, body) {
+        const data = await window.DemoUtils.postJson(url, body);
+        return data;
+      }
+
+      async function runFixed() {
+        setBusy(true);
+        setStatus("loading");
+        setFixedErr(null);
+        try {
+          const data = await callApi("/api/chunk/fixed", { text: text, size: sizeVal, overlap: overlap });
+          setFixed(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setFixedErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runStructure() {
+        setBusy(true);
+        setStatus("loading");
+        setStructureErr(null);
+        try {
+          const data = await callApi("/api/chunk/structure", { text: text });
+          setStructure(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setStructureErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runFaq() {
+        setBusy(true);
+        setStatus("loading");
+        setFaqErr(null);
+        try {
+          const data = await callApi("/api/chunk/faq", { text: DEFAULT_FAQ });
+          setFaq(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setFaqErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runError() {
+        setBusy(true);
+        setStatus("loading");
+        setErr(null);
+        try {
+          await callApi("/api/demo-error", {});
+        } catch (error) {
+          setStatus("err");
+          setErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runEmpty() {
+        setBusy(true);
+        setStatus("loading");
+        setErr(null);
+        try {
+          await callApi("/api/chunk/fixed", { text: "", size: sizeVal, overlap: overlap });
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function loadLongDoc() {
+        setText(LONG_DOC);
+      }
+
+      function loadDefaultDoc() {
+        setText(DEFAULT_DOC);
+      }
+
+      function loadMixedDoc() {
+        setText(MIXED_DOC);
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              切块（Chunking） · 第五步（step-5） · 递归切分完整版
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页演示：<b>递归切分完整版</b>（变体 10）——按结构切的 4 档显式降级：<code>##</code> → <code>段落</code> → <code>句号</code> → <code>兜底再切</code>。每块的<b>徽标</b>显示它在<b>哪一档被切</b>。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「加载混合示例」→ 选一份混合文档（含 ## + 长段落 + 长句子 + 兜底）</li>
+                <li>点中栏「跑按结构切」→ POST /api/chunk/structure → 服务端 <code>recurseByLevel</code> 显式四档降级</li>
+                <li>每块卡片带「## / 段落 / 句号 / 兜底再切」徽标——一眼看清哪一档被切</li>
+                <li>如果所有块都 ≤ 2000 字符 = 都按 ## 切；如果某段特别长 = 降级到段落 / 句号 / 兜底</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-2 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li>
+                    <b>这是生产默认切法</b>：先按结构（最好）→ 降级到段落（中）→ 句号（中）→ 硬切兜底（保底）。<b>不调嵌入模型也能跑</b>，纯本地文本操作。
+                  </li>
+                  <li>
+                    <b>boundary 字段 = 在哪一档被切</b>：前端徽标显示 → 调参后能立刻看到「这一段是不是降级了」。
+                  </li>
+                  <li>
+                    <b>兜底硬切的代价</b>：硬切会切断句子（骑在切口上的句子可能半句话）——所以 boundary="fallback-fixed" 块经常带「半句话开头」红字徽标。
+                  </li>
+                </ul>
+                <div className="text-xs text-gray-600">
+                  观察：加载混合示例 → 跑中栏 → 看每个块徽标。如果一段全是「##」徽标 = 该段 ≤ 2000 字符；如果出现「段落」= 该段 > 2000 字符降级到段落；如果出现「兜底再切」= 一句还压不住。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="text-xs text-gray-700 space-y-1 block">
+                <span>输入文本（Markdown · 中间按结构切用）</span>
+                <textarea
+                  rows={6}
+                  value={text}
+                  onChange={function (e) { setText(e.target.value); }}
+                  className="w-full border border-gray-300 rounded p-2 font-mono text-xs"
+                />
+              </label>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={loadMixedDoc}
+                  className="border border-purple-300 bg-purple-50 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                >
+                  加载混合示例（4 档降级全演示）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={loadLongDoc}
+                  className="border border-orange-300 bg-orange-50 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                >
+                  加载超长示例（8000 字一节 · 看兜底再切）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={loadDefaultDoc}
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                >
+                  加载默认示例
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="text-xs text-gray-700 space-y-1 block">
+                  <span>材料词元预算（Token Budget）</span>
+                  <input
+                    type="number"
+                    min="100"
+                    max="20000"
+                    step="100"
+                    value={budget}
+                    onChange={function (e) { setBudget(Number(e.target.value) || 2000); }}
+                    className="w-full border border-gray-300 rounded p-1"
+                  />
+                </label>
+                <label className="text-xs text-gray-700 space-y-1 block">
+                  <span>Top-K（一次喂模型几条材料）</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    step="1"
+                    value={topK}
+                    onChange={function (e) { setTopK(Number(e.target.value) || 5); }}
+                    className="w-full border border-gray-300 rounded p-1"
+                  />
+                </label>
+              </div>
+              <BudgetBar
+                size={sizeVal}
+                topK={topK}
+                budget={budget}
+                avgTokensPerChunk={fixed && fixed.stats && fixed.stats.total > 0 ? fixed.stats.avgTokensPerChunk || 0 : 0}
+              />
+              <p className="text-xs text-gray-500">FAQ 那一栏固定用「如何退货 / 如何换货 / 发票如何补开」——演示「每块自洽 → overlap = 0 也合理」。左栏的 size / overlap / 单位 滑块已挪到左栏内。</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={runEmpty}
+                  className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  演示空输入（4xx · 第一类错误）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={runError}
+                  className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  演示上游失败（5xx · 第二类错误 · /api/demo-error）
+                </button>
+              </div>
+              {err ? (
+                <div className="border border-red-300 bg-red-50 text-red-700 text-xs rounded p-2 space-y-1">
+                  <div>错误：{err.error}</div>
+                  {err.hint ? <div>提示：{err.hint}</div> : null}
+                  {err.status ? <div>状态：HTTP {err.status}</div> : null}
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+              <LeftPanel
+                running={busy}
+                result={fixed}
+                error={fixedErr}
+                onRun={runFixed}
+                sizeVal={sizeVal}
+                setSizeVal={setSizeVal}
+                overlap={overlap}
+                setOverlap={setOverlap}
+                estimateMode={estimateMode}
+                setEstimateMode={setEstimateMode}
+              />
+              <Panel
+                title="中：按结构切（structure）"
+                hint="按 Markdown ## / 段落 / 句号递归切；超长单节自动兜底再切"
+                buttonText="跑按结构切"
+                buttonHint="点这一栏的按钮会调 POST /api/chunk/structure；与 size / overlap 滑块无关"
+                running={busy}
+                result={structure}
+                error={structureErr}
+                onRun={runStructure}
+                estimateMode={estimateMode}
+              />
+              <RightPanel
+                running={busy}
+                result={faq}
+                error={faqErr}
+                onRun={runFaq}
+              />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

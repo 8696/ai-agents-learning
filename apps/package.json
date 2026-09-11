@@ -84,7 +84,13 @@
     "app:08-01-rag-pipeline-step-2": "PORT=50068 tsx 08-RAG基础/01-RAG-流水线-step-2/server.ts",
     "app:08-01-rag-pipeline-step-3": "PORT=50069 tsx 08-RAG基础/01-RAG-流水线-step-3/server.ts",
     "app:08-01-rag-pipeline-step-4": "PORT=50070 tsx 08-RAG基础/01-RAG-流水线-step-4/server.ts",
-    "app:08-01-rag-pipeline-step-5": "PORT=50071 tsx 08-RAG基础/01-RAG-流水线-step-5/server.ts"
+    "app:08-01-rag-pipeline-step-5": "PORT=50071 tsx 08-RAG基础/01-RAG-流水线-step-5/server.ts",
+    "app:08-02-chunking-step-1": "PORT=50072 tsx 08-RAG基础/02-Chunking-step-1/server.ts",
+    "app:08-02-chunking-step-2": "PORT=50073 tsx 08-RAG基础/02-Chunking-step-2/server.ts",
+    "app:08-02-chunking-step-3": "PORT=50074 tsx 08-RAG基础/02-Chunking-step-3/server.ts",
+    "app:08-02-chunking-step-4": "PORT=50075 tsx 08-RAG基础/02-Chunking-step-4/server.ts",
+    "app:08-02-chunking-step-5": "PORT=50076 tsx 08-RAG基础/02-Chunking-step-5/server.ts",
+    "app:08-02-chunking-step-6": "PORT=50077 tsx 08-RAG基础/02-Chunking-step-6/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

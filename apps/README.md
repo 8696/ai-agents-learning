@@ -92,6 +92,12 @@
 | `yarn app:08-01-rag-pipeline-step-3` | `50069` | 模块 08 · 01 · RAG 流水线 step-3：检索做成工具（Agent 自己写最小循环决定要不要搜） |
 | `yarn app:08-01-rag-pipeline-step-4` | `50070` | 模块 08 · 01 · RAG 流水线 step-4：答准时修法提示 UI（5 类症状 + 行级/全量/不动库） |
 | `yarn app:08-01-rag-pipeline-step-5` | `50071` | 模块 08 · 01 · RAG 流水线 step-5：PDF 按页段 + 命中卡片显示页码 |
+| `yarn app:08-02-chunking-step-1` | `50072` | 模块 08 · 02 · 切块（Chunking）step-1：三栏对照 size / overlap / 切法差异；纯本地文本操作，不调 LLM |
+| `yarn app:08-02-chunking-step-2` | `50073` | 模块 08 · 02 · 切块（Chunking）step-2：单位对照 + 兜底截断 + size×Top-K 撞预算；纯本地文本操作，不调 LLM |
+| `yarn app:08-02-chunking-step-3` | `50074` | 模块 08 · 02 · 切块（Chunking）step-3：怎么判断切得好不好 + 5 种文档类型选不同策略；纯本地文本操作，不调 LLM |
+| `yarn app:08-02-chunking-step-4` | `50075` | 模块 08 · 02 · 切块（Chunking）step-4：PDF 按页切 + 跨页段落腰斩可见 + 页码元数据；纯本地文本操作，不调 LLM |
+| `yarn app:08-02-chunking-step-5` | `50076` | 模块 08 · 02 · 切块（Chunking）step-5：递归切分完整版（## → 段落 → 句号 → 硬切兜底四级显式降级）；纯本地文本操作，不调 LLM |
+| `yarn app:08-02-chunking-step-6` | `50077` | 模块 08 · 02 · 切块（Chunking）step-6：综合对比收尾 · step-1 ~ step-5 各 demo 能力回顾；纯本地展示，不调 LLM |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。

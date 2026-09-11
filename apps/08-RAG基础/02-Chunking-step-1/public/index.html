@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切块（Chunking） · 第一步 · size / overlap / 切法对照</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/chunk-panels.js"></script>
+  <script type="text/babel" src="/components/right-panel.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel } = window.DemoUI;
+
+    // 默认文档：售后 Markdown，含三段不同密度的内容便于看 size / overlap 的影响
+    const DEFAULT_DOC = [
+      "## 破损处理",
+      "运输过程中造成的破损，可在签收后 48 小时内申请补发或退货。",
+      "请保留完整包装与商品外观照片，作为售后凭证。",
+      "客户回寄运费由我方承担。",
+      "",
+      "## 保修政策",
+      "本公司所有电器类商品保修期为两年。",
+      "该期限自签收之日起算，不含运输时间。",
+      "易耗品（如灯泡、滤芯）不在保修范围内。",
+      "",
+      "## 偏远地区运费",
+      "新疆、西藏、内蒙古偏远地区需另付运费 20 元。",
+      "其余地区满 99 元包邮。",
+      "港澳台暂不直邮。",
+    ].join("\n");
+
+    // 默认 FAQ 文档：演示「overlap = 0 也合理」
+    const DEFAULT_FAQ = [
+      "## 如何退货？",
+      "在签收后 7 天内联系客服，提供订单号即可办理退货。",
+      "",
+      "## 如何换货？",
+      "商品出现质量问题时，可在 15 天内申请换货，寄回运费由我方承担。",
+      "",
+      "## 发票如何补开？",
+      "订单完成后 90 天内可申请补开发票，需提供订单号与抬头信息。",
+    ].join("\n");
+
+    // 混合示例：5 个不同主题挤在一个 ## 大杂烩 节，~3000 字。
+    // 演示变体 1「太大丢细节」——把 size 拉到 3000 字符，左栏一整块就把这 5 个主题全吃了，
+    // 向量方向被平均；问其中一个具体主题时，块里 5 个主题一起被命中、噪音进提示词。
+    const MIXED_DOC = [
+      "## 大杂烩（售后政策合订本）",
+      "【一】破损处理：运输过程中造成的破损，可在签收后 48 小时内申请补发或退货。请保留完整包装与商品外观照片作为售后凭证，客户回寄运费由我方承担。易碎品（玻璃、陶瓷、电子屏幕）建议加保；未加保且外包装完好的，由物流公司按运单条款赔付，每件最高 50 元。",
+      "【二】保修政策：本公司所有电器类商品保修期为两年，自签收之日起算，不含运输时间。易耗品（灯泡、滤芯、密封圈、电池）不在保修范围内；外观划痕、私自拆机、进液、烧毁属人为损坏，不在保修范围。保修期内非人为故障免费维修；人为损坏或超期故障按 30 元 / 次检测费 + 配件成本报价。",
+      "【三】退换货流程：7 天无理由退货需保持商品完好（未拆封、未使用、吊牌齐全、外包装无破损）；15 天内质量问题可换同款，缺货时按退款处理。退货前请先在「我的订单」页提交申请并上传 3 张以上实拍图；审核通过后系统推送快递单号，寄回商品请使用普通快递（到付件拒收）。退款原路返回，信用卡 1~3 工作日到账，借记卡 / 余额即时到账。",
+      "【四】偏远地区运费：新疆、西藏、内蒙古、青海、宁夏偏远地区需另付运费 20 元 / 单；满 199 元包邮。港澳台暂不直邮，需走转运；海外地址请单独咨询客服。海外订单以美元结算，关税自理。",
+      "【五】发票与开票：订单完成后 90 天内可申请补开发票，需提供订单号与抬头信息；电子发票 24 小时内推送到下单手机号，纸质发票 7 个工作日内邮寄。增值税专票需提前提供纳税人识别号、开户行、银行账号、注册地址、注册电话五项信息，资料齐全后 5 个工作日内寄出。",
+      "【六】会员与积分：普通会员购物 1 元 = 1 积分；银卡会员 1 元 = 1.2 积分（年消费满 1000 元自动升级）；金卡会员 1 元 = 1.5 积分（年消费满 5000 元）。积分 100 起兑，100 积分 = 1 元；过期积分每年 12 月 31 日清零，不可跨年累积。",
+      "【七】客服与投诉：在线客服 9:00~22:00；电话客服 400-100-2000（9:00~18:00）；紧急投诉请发邮件至 complaint@example.com 并附订单号 + 通话录音 + 投诉内容三件套，48 小时内首次回复，5 个工作日内出具处理方案。",
+      "【八】隐私与数据：账号注册需手机号 + 验证码；订单收货信息加密存储；快递面单默认隐藏手机号中四位；用户可在「账户安全」页随时导出 / 删除全部个人数据，删除后 30 天内从生产库与备份库双删。",
+      "【九】活动与促销：满减（满 200 减 30 / 满 500 减 80）不与优惠券叠加；优惠券有效期 30 天，过期不退；秒杀商品不支持 7 天无理由；预售商品定金不退、尾款按页面公示时间支付。",
+      "【十】争议与法律：本规则适用中华人民共和国《消费者权益保护法》《电子商务法》；争议提交被告住所地有管辖权的人民法院诉讼解决；调解优先，可向平台所在地的消费者协会申请调解。",
+    ].join("\n");
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+
+      const [text, setText] = useState(DEFAULT_DOC);
+      const [sizeVal, setSizeVal] = useState(300);
+      const [overlap, setOverlap] = useState(30);
+
+      const [fixed, setFixed] = useState(null);
+      const [structure, setStructure] = useState(null);
+      const [faq, setFaq] = useState(null);
+
+      const [fixedErr, setFixedErr] = useState(null);
+      const [structureErr, setStructureErr] = useState(null);
+      const [faqErr, setFaqErr] = useState(null);
+
+      const [err, setErr] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.getJson("/health").then(setEnv).catch(function () {
+          setEnv(null);
+        });
+      }, []);
+
+      async function callApi(url, body) {
+        const data = await window.DemoUtils.postJson(url, body);
+        return data;
+      }
+
+      async function runFixed() {
+        setBusy(true);
+        setStatus("loading");
+        setFixedErr(null);
+        try {
+          const data = await callApi("/api/chunk/fixed", { text: text, size: sizeVal, overlap: overlap });
+          setFixed(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setFixedErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runStructure() {
+        setBusy(true);
+        setStatus("loading");
+        setStructureErr(null);
+        try {
+          const data = await callApi("/api/chunk/structure", { text: text });
+          setStructure(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setStructureErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runFaq() {
+        setBusy(true);
+        setStatus("loading");
+        setFaqErr(null);
+        try {
+          const data = await callApi("/api/chunk/faq", { text: DEFAULT_FAQ });
+          setFaq(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setFaqErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runError() {
+        setBusy(true);
+        setStatus("loading");
+        setErr(null);
+        try {
+          await callApi("/api/demo-error", {});
+        } catch (error) {
+          setStatus("err");
+          setErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runEmpty() {
+        setBusy(true);
+        setStatus("loading");
+        setErr(null);
+        try {
+          await callApi("/api/chunk/fixed", { text: "", size: sizeVal, overlap: overlap });
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              切块（Chunking） · 第一步（step-1） · size / overlap / 切法三栏对照
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
+            <PageIntro />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="text-xs text-gray-700 space-y-1 block">
+                <span>输入文本（Markdown · 中间按结构切用）</span>
+                <textarea
+                  rows={6}
+                  value={text}
+                  onChange={function (e) { setText(e.target.value); }}
+                  className="w-full border border-gray-300 rounded p-2 font-mono text-xs"
+                />
+              </label>
+              <p className="text-xs text-gray-500">FAQ 那一栏固定用上面的「如何退货 / 如何换货 / 发票如何补开」——演示「每块自洽 → overlap = 0 也合理」。左栏的 size / overlap 滑块已挪到左栏内。</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={function () { setText(DEFAULT_DOC); }}
+                  className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  加载默认示例（三段单主题）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={function () { setText(MIXED_DOC); }}
+                  className="border border-orange-300 bg-orange-50 text-orange-800 px-3 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  加载混合示例（一节 5 主题 · ~3000 字 · 演示「太大丢细节」）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={runEmpty}
+                  className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  演示空输入（4xx · 第一类错误）
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={runError}
+                  className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
+                >
+                  演示上游失败（5xx · 第二类错误 · /api/demo-error）
+                </button>
+              </div>
+              {err ? (
+                <div className="border border-red-300 bg-red-50 text-red-700 text-xs rounded p-2 space-y-1">
+                  <div>错误：{err.error}</div>
+                  {err.hint ? <div>提示：{err.hint}</div> : null}
+                  {err.status ? <div>状态：HTTP {err.status}</div> : null}
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+              <LeftPanel
+                running={busy}
+                result={fixed}
+                error={fixedErr}
+                onRun={runFixed}
+                sizeVal={sizeVal}
+                setSizeVal={setSizeVal}
+                overlap={overlap}
+                setOverlap={setOverlap}
+              />
+              <Panel
+                title="中：按结构切（structure）"
+                hint="按 Markdown ## / 段落 / 句号递归切；每块带「在哪个边界」徽标"
+                buttonText="跑按结构切"
+                buttonHint="点这一栏的按钮会调 POST /api/chunk/structure；与 size / overlap 滑块无关"
+                running={busy}
+                result={structure}
+                error={structureErr}
+                onRun={runStructure}
+              />
+              <RightPanel
+                running={busy}
+                result={faq}
+                error={faqErr}
+                onRun={runFaq}
+              />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
