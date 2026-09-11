@@ -1,12 +1,12 @@
-# 切块（Chunking） · 第一步
+# 切块（Chunking） · 第二步 · 单位 + 兜底 + size×Top-K 撞预算
 
-把同一份售后 Markdown 用三种切法切成若干块，三栏并排比对——不调大模型（纯本地文本操作）。
+字符 / 词元 / 汉字三种数法对照 + 超长块自动硬切兜底 + size×Top-K 撞预算提示——纯本地文本操作。
 
 ## 跑入口
 
 ```bash
-cd apps && yarn app:08-02-chunking-step-1
-# 浏览器：http://127.0.0.1:50072/
+cd apps && yarn app:08-02-chunking-step-2
+# 浏览器：http://127.0.0.1:50073/
 ```
 
 ## 端口

@@ -1,12 +1,12 @@
-# 切块（Chunking） · 第一步
+# 切块（Chunking） · 第六步 · 综合对比收尾
 
-把同一份售后 Markdown 用三种切法切成若干块，三栏并排比对——不调大模型（纯本地文本操作）。
+step-1 ~ step-5 各 demo 能力回顾表（端口 / 入口 / 教学点 / 典型用法）——纯本地展示，不调 LLM。
 
 ## 跑入口
 
 ```bash
-cd apps && yarn app:08-02-chunking-step-1
-# 浏览器：http://127.0.0.1:50072/
+cd apps && yarn app:08-02-chunking-step-6
+# 浏览器：http://127.0.0.1:50077/
 ```
 
 ## 端口

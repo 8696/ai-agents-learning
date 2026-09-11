@@ -186,6 +186,49 @@
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <PageIntro />
 
+            <details id="frontend-scenarios" className="bg-white shadow rounded p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+                📐 前端场景对照（为什么切块这件事前端也会遇到 · 折叠展开）
+              </summary>
+              <div className="mt-3 space-y-3 text-xs text-gray-700">
+                <p className="text-gray-600">
+                  后端的切块是为了让向量检索更准；前端也有「按什么粒度把内容拆成可索引单元」的问题——三个常见场景：
+                </p>
+
+                <div className="border border-gray-200 rounded p-3 bg-gray-50 space-y-2">
+                  <div className="font-semibold text-gray-900">① 大小 · 前端：帮助中心搜索索引</div>
+                  <p>给一篇帮助文档建客户端搜索索引，到底按什么粒度建？</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>用整篇 <code>&lt;article&gt;</code> 文本建索引 → 用户搜「退款手续费」命中整篇，跳过去还得自己找</li>
+                    <li>按 <code>&lt;h2&gt;</code> 分段建索引 → 直接锚点跳到那一节（推荐）</li>
+                    <li>按 <code>&lt;span&gt;</code> 建索引 → 命中一个「手续」，毫无意义</li>
+                  </ul>
+                  <p className="text-gray-600">→ 太大没定位，太小没语义，跟后端切块同一个取舍。</p>
+                </div>
+
+                <div className="border border-gray-200 rounded p-3 bg-gray-50 space-y-2">
+                  <div className="font-semibold text-gray-900">② 重叠 · 前端：无限滚动 overscan</div>
+                  <p>无限滚动列表为了滚动时不闪空白，会在可视区上下多渲染 N 条（overscan）。</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>overlap（前端叫 overscan）= 相邻可视区共享的部分，作用就是「答案骑在边界上时别让它消失」</li>
+                    <li>代价一样：多渲染的几条 <code>key</code> 要处理好，否则重复 <code>key</code> 警告 + 重复 DOM</li>
+                    <li>overlap 不是越大越保险——多渲染 100 条只是多花点内存，不至于错；但切块 overlap ≥ 50% 就是信号「该换切法了」</li>
+                  </ul>
+                </div>
+
+                <div className="border border-gray-200 rounded p-3 bg-gray-50 space-y-2">
+                  <div className="font-semibold text-gray-900">③ 切法 · 前端：flex-wrap + page-break-inside</div>
+                  <p>CSS 的换行逻辑跟切块的「结构优先 / 兜底硬切」是一回事：</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><code>flex-wrap</code> 默认在空格处换行（结构边界）</li>
+                    <li>单个英文词超宽时浏览器自动 <code>word-break: break-all</code>（硬切兜底）</li>
+                    <li><code>page-break-inside: avoid</code> 对应切块变体 14「不能腰斩的结构」——表格 / 代码块 / 编号条款不允许被切断</li>
+                  </ul>
+                  <p className="text-gray-600">→ <b>优先自然边界，超限才强切</b>——这正是递归切分（结构优先 + 硬切兜底）的逻辑。</p>
+                </div>
+              </div>
+            </details>
+
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
               <label className="text-xs text-gray-700 space-y-1 block">
                 <span>输入文本（Markdown · 中间按结构切用）</span>

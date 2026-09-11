@@ -48,6 +48,8 @@ export type Chunk = {
   startsMidSentence: boolean;
   boundary: string;
   fallbackSplit: boolean;
+  /** 章节标题（仅按结构切 / FAQ 切时有；fixed 切时无）。来自 Markdown ## 后的标题文字。 */
+  section?: string;
 };
 
 export type ChunkStats = {
@@ -145,7 +147,8 @@ export function chunkByStructure(text: string): ChunkResult {
       offset += sec.text.length;
       continue;
     }
-    chunks.push(...recurseByLevel(sec.text, offset + sec.start, idxRef, "##"));
+    const section = extractSection(sec.text);
+    chunks.push(...recurseByLevel(sec.text, offset + sec.start, idxRef, "##", section));
     offset += sec.text.length;
   }
 
@@ -192,7 +195,8 @@ export function chunkByFaq(text: string): ChunkResult {
       offset += sec.text.length;
       continue;
     }
-    chunks.push(makeChunk(idx++, sec.text, offset + sec.start, offset + sec.end, "faq-q"));
+    const section = extractSection(sec.text);
+    chunks.push(makeChunk(idx++, sec.text, offset + sec.start, offset + sec.end, "faq-q", section));
     offset += sec.text.length;
   }
   const result = buildResult(chunks, "faq", {});
@@ -205,7 +209,14 @@ export function chunkByFaq(text: string): ChunkResult {
   return result;
 }
 
-export function makeChunk(index: number, text: string, start: number, end: number, boundary: string): Chunk {
+/** 从 Markdown 文本里提取第一个 ## 标题后的文字（去掉前导 ## 与空格）。无 ## 标题则返回 undefined。 */
+function extractSection(text: string): string | undefined {
+  if (!text) return undefined;
+  const m = text.match(/^##\s+(.+?)\s*$/m);
+  return m ? m[1] : undefined;
+}
+
+export function makeChunk(index: number, text: string, start: number, end: number, boundary: string, section?: string): Chunk {
   const startsMid = start > 0 && !isSentenceBoundary(text[start - 1]);
   return {
     index,
@@ -220,6 +231,7 @@ export function makeChunk(index: number, text: string, start: number, end: numbe
     startsMidSentence: startsMid,
     boundary,
     fallbackSplit: false,
+    section,
   };
 }
 

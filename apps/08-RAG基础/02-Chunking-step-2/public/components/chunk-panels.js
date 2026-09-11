@@ -39,6 +39,8 @@
           <span className="text-gray-500">字符 {chunk.charCount}</span>
           <span className="text-gray-500">{tokenLabel} {tokenCount}</span>
           <span className="px-1.5 py-0.5 rounded border border-gray-300 text-gray-600">{boundaryLabel}</span>
+          {chunk.section ? <span className="px-1.5 py-0.5 rounded border border-blue-200 text-blue-700"># {chunk.section}</span> : null}
+          {chunk.inheritedHeader ? <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">标题前缀已拼</span> : null}
           {chunk.fallbackSplit ? <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-800">兜底再切</span> : null}
           {isMid ? <span className="px-1.5 py-0.5 rounded bg-red-200 text-red-800">半句话开头</span> : null}
           {overlap > 0 ? <span className="text-gray-500">与上一块重叠 {overlap} 字</span> : null}

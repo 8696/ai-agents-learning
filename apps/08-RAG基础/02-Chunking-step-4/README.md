@@ -1,12 +1,12 @@
-# 切块（Chunking） · 第一步
+# 切块（Chunking） · 第四步 · PDF 按页切
 
-把同一份售后 Markdown 用三种切法切成若干块，三栏并排比对——不调大模型（纯本地文本操作）。
+每页独立成块 + 跨页段落腰斩可见 + 页码元数据——纯本地文本操作，不调 LLM。
 
 ## 跑入口
 
 ```bash
-cd apps && yarn app:08-02-chunking-step-1
-# 浏览器：http://127.0.0.1:50072/
+cd apps && yarn app:08-02-chunking-step-4
+# 浏览器：http://127.0.0.1:50075/
 ```
 
 ## 端口

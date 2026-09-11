@@ -18,9 +18,10 @@
   <script type="text/babel" src="/components/chunk-panels.js"></script>
   <script type="text/babel" src="/components/budget-bar.js"></script>
   <script type="text/babel" src="/components/right-panel.js"></script>
+  <script type="text/babel" src="/components/overlap-compare-card.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar } = window.DemoUI;
+    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar, OverlapCompareCard } = window.DemoUI;
 
     // 默认文档：售后 Markdown，含三段不同密度的内容便于看 size / overlap 的影响
     const DEFAULT_DOC = [
@@ -77,14 +78,17 @@ const LONG_DOC = (function () {
       const [estimateMode, setEstimateMode] = useState("mixed");
       const [topK, setTopK] = useState(5);
       const [budget, setBudget] = useState(2000);
+      const [inheritHeader, setInheritHeader] = useState(false);
 
       const [fixed, setFixed] = useState(null);
       const [structure, setStructure] = useState(null);
       const [faq, setFaq] = useState(null);
+      const [overlapCompare, setOverlapCompare] = useState(null);
 
       const [fixedErr, setFixedErr] = useState(null);
       const [structureErr, setStructureErr] = useState(null);
       const [faqErr, setFaqErr] = useState(null);
+      const [overlapCompareErr, setOverlapCompareErr] = useState(null);
 
       const [err, setErr] = useState(null);
 
@@ -120,12 +124,28 @@ const LONG_DOC = (function () {
         setStatus("loading");
         setStructureErr(null);
         try {
-          const data = await callApi("/api/chunk/structure", { text: text });
+          const data = await callApi("/api/chunk/structure", { text: text, inheritHeader: inheritHeader });
           setStructure(data.result);
           setStatus("ok");
         } catch (error) {
           setStatus("err");
           setStructureErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runOverlapCompare() {
+        setBusy(true);
+        setStatus("loading");
+        setOverlapCompareErr(null);
+        try {
+          const data = await callApi("/api/chunk/compare-overlap", { text: text, size: sizeVal });
+          setOverlapCompare(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setOverlapCompareErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
         } finally {
           setBusy(false);
         }
@@ -256,6 +276,20 @@ const LONG_DOC = (function () {
                 avgTokensPerChunk={fixed && fixed.stats && fixed.stats.total > 0 ? fixed.stats.avgTokensPerChunk || 0 : 0}
               />
               <p className="text-xs text-gray-500">FAQ 那一栏固定用「如何退货 / 如何换货 / 发票如何补开」——演示「每块自洽 → overlap = 0 也合理」。左栏的 size / overlap / 单位 滑块已挪到左栏内。</p>
+              <div className="border border-blue-200 bg-blue-50 rounded p-2 space-y-1">
+                <div className="text-xs font-semibold text-blue-900">变体 15 · 标题继承开关</div>
+                <label className="flex items-center gap-2 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={inheritHeader}
+                    onChange={function (e) { setInheritHeader(e.target.checked); }}
+                  />
+                  <span>
+                    开：每块文本前拼章节标题——救「该期限」类指代断裂（搜「保修」能命中「该期限自签收之日起算」块）。
+                    关：只保留原文本——向量方向可能偏窄。
+                  </span>
+                </label>
+              </div>
               <div className="flex flex-wrap gap-2 items-center">
                 <button
                   type="button"
@@ -298,7 +332,7 @@ const LONG_DOC = (function () {
               />
               <Panel
                 title="中：按结构切（structure）"
-                hint="按 Markdown ## / 段落 / 句号递归切；超长单节自动兜底再切"
+                hint={"按 Markdown ## / 段落 / 句号递归切；超长单节自动兜底再切" + (inheritHeader ? " · 标题继承：开（每块文本前拼章节标题）" : " · 标题继承：关")}
                 buttonText="跑按结构切"
                 buttonHint="点这一栏的按钮会调 POST /api/chunk/structure；与 size / overlap 滑块无关"
                 running={busy}
@@ -312,6 +346,31 @@ const LONG_DOC = (function () {
                 result={faq}
                 error={faqErr}
                 onRun={runFaq}
+              />
+            </section>
+
+            <section id="overlap-compare" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-base font-semibold text-gray-900">需求 5 · overlap 三组对照（0 / 10% / 30%）</h2>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={runOverlapCompare}
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                >
+                  跑三组 overlap 对照
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                同一份文档、固定 size={sizeVal} 字符，分别按 overlap=0% / 10% / 30% 各跑一次 chunkByFixed——
+                一眼看三组的「块数 / 总字符 / 嵌入次数 / 库膨胀百分比」。
+                点击按钮会调 POST /api/chunk/compare-overlap。
+              </p>
+              <OverlapCompareCard
+                size={sizeVal}
+                running={busy}
+                result={overlapCompare}
+                error={overlapCompareErr}
               />
             </section>
           </main>

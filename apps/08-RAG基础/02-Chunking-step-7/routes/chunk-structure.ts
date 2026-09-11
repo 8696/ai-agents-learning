@@ -1,6 +1,6 @@
 /**
  * 职责：POST /api/chunk/structure —— 按结构切块。
- * 数据流：body = { text, inheritHeader? } → chunkByStructure → { chunks, stats }。
+ * 数据流：body = { text } → chunkByStructure → { chunks, stats }。
  *
  * 不调 LLM：纯本地文本操作，失败仅来自 Zod 校验（4xx）。
  */
@@ -11,8 +11,6 @@ import { chunkByStructure } from "../lib/flow/chunk.js";
 
 const bodySchema = z.object({
   text: z.string().min(1, "text 不能为空"),
-  /** 变体 15 标题继承开关：true → 把章节标题拼到块文本前（救「该期限」类指代断裂）。默认 false。 */
-  inheritHeader: z.boolean().optional().default(false),
 });
 
 export function mountChunkStructure(router: Router): void {
@@ -24,11 +22,11 @@ export function mountChunkStructure(router: Router): void {
         ok: false,
         error: "入参不合法",
         issues: parsed.error.issues,
-        hint: "text 必填；inheritHeader 可选布尔。",
+        hint: "text 必填。",
       };
       return;
     }
-    const result = chunkByStructure(parsed.data.text, parsed.data.inheritHeader);
+    const result = chunkByStructure(parsed.data.text);
     ctx.body = { ok: true, result };
   });
 }

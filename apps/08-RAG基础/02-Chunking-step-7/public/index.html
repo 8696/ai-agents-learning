@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切块（Chunking） · 第七步 · atomic 块保护</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/chunk-panels.js"></script>
+  <script type="text/babel" src="/components/atomic-panels.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, AtomicComparePanel } = window.DemoUI;
+
+    // atomic 演示文档：含 Markdown 表格 + 代码围栏 + 编号条款。
+    // 跑档 2「开启 atomic」时，三段都会被识别为 atomic 整块保留；
+    // 跑档 3「开启 atomic + 阈值 200」时，表格 + 代码围栏 + 编号条款都会超阈值标 fallbackSplit=true。
+    const ATOMIC_DOC = [
+      "## 服务等级与故障赔付",
+      "",
+      "### 一、故障赔付标准",
+      "",
+      "我们根据故障时长分三档赔付（详见下表）：",
+      "",
+      "| 故障时长 | 赔付比例 | 赔付形式 |",
+      "| --- | --- | --- |",
+      "| 1 小时以内 | 10% | 代金券 |",
+      "| 1~4 小时 | 30% | 代金券 |",
+      "| 4 小时以上 | 100% | 全额退款 + 代金券 |",
+      "",
+      "### 二、检测方法",
+      "",
+      "使用下列命令检测服务可用性：",
+      "",
+      "```bash",
+      "curl -s -o /dev/null -w '%{http_code}\\n' https://api.example.com/health",
+      "# 期望返回 200；返回 5xx 表示服务端故障",
+      "```",
+      "",
+      "### 三、责任划分",
+      "",
+      "第一条 因我方基础设施故障造成的不可用，按上一节表格赔付。",
+      "",
+      "第二条 因用户侧网络或配置问题造成的不可用，不在赔付范围。",
+      "",
+      "第三条 因第三方服务商（如 CDN / 短信平台）造成的不可用，由我方代为索赔后再赔付用户，赔付比例同上一档。",
+      "",
+      "第四条 因不可抗力（自然灾害 / 政策管制）造成的不可用，按上一档的 50% 赔付。",
+    ].join("\n");
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+
+      const [text, setText] = useState(ATOMIC_DOC);
+
+      const [offResult, setOffResult] = useState(null);
+      const [atomicResult, setAtomicResult] = useState(null);
+      const [overflowResult, setOverflowResult] = useState(null);
+
+      const [offErr, setOffErr] = useState(null);
+      const [atomicErr, setAtomicErr] = useState(null);
+      const [overflowErr, setOverflowErr] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.getJson("/health").then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      async function callApi(url, body) {
+        const data = await window.DemoUtils.postJson(url, body);
+        return data;
+      }
+
+      async function runOff() {
+        setBusy(true);
+        setStatus("loading");
+        setOffErr(null);
+        try {
+          const data = await callApi("/api/chunk/structure", { text: text });
+          setOffResult(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setOffErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runAtomic() {
+        setBusy(true);
+        setStatus("loading");
+        setAtomicErr(null);
+        try {
+          const data = await callApi("/api/chunk/atomic", { text: text, threshold: 2000 });
+          setAtomicResult(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setAtomicErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runOverflow() {
+        setBusy(true);
+        setStatus("loading");
+        setOverflowErr(null);
+        try {
+          // threshold 设小（如 200）→ 大 atomic 块会超阈值标 fallbackSplit=true + 给 overflowNote
+          const data = await callApi("/api/chunk/atomic-overflow", { text: text, threshold: 200 });
+          setOverflowResult(data.result);
+          setStatus("ok");
+        } catch (error) {
+          setStatus("err");
+          setOverflowErr({ error: error.message || "失败", hint: error.hint || "", status: error.status });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              切块（Chunking） · 第七步（step-7） · atomic 块保护
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页演示：<b>atomic 块保护</b>（变体 14）——「有些结构不能切」。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>加载含 <b>表格 / 代码围栏 / 编号条款</b> 的演示文档（已默认加载）</li>
+                <li>点档 1「跑关闭 atomic」→ 调 <code>POST /api/chunk/structure</code> → 表格可能被切 / 编号条款散开</li>
+                <li>点档 2「跑开启 atomic」→ 调 <code>POST /api/chunk/atomic</code> → 表格 / 代码围栏 / 编号条款整块保留，徽标「整块保留」</li>
+                <li>点档 3「跑超阈值演示」→ 调 <code>POST /api/chunk/atomic-overflow</code>（threshold=200）→ atomic 块超阈值时标 fallbackSplit=true + 红字 overflowNote 给出兜底说明</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-2 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li>
+                    <b>有些结构不能腰斩</b>——表格 / 代码块 / 编号条款切断后整段语义都废（表头和数据行分家 / 半截函数 / 「第三条」和内容分家）。
+                  </li>
+                  <li>
+                    <b>「宁可超过 size 上限也不切开</b>——atomic 块先抽出来整块保留，剩余文本按结构切。
+                  </li>
+                  <li>
+                    <b>超过嵌入上限时怎么办？</b>——标 fallbackSplit=true + 给 overflowNote，由后续嵌入接口兜底（按行截断 / 单独处理 / 提示用户）；<b>不静默截断</b>。
+                  </li>
+                </ul>
+                <div className="text-xs text-gray-600">观察：档 1 看表格是否被切两半；档 2 看「整块保留」紫色徽标；档 3 看「超嵌入上限」红字 + overflowNote 说明。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="text-xs text-gray-700 space-y-1 block">
+                <span>输入文本（含表格 + 代码围栏 + 编号条款的演示文档）</span>
+                <textarea
+                  rows={10}
+                  value={text}
+                  onChange={function (e) { setText(e.target.value); }}
+                  className="w-full border border-gray-300 rounded p-2 font-mono text-xs"
+                />
+              </label>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <AtomicComparePanel
+                running={busy}
+                offResult={offResult}
+                offErr={offErr}
+                onRunOff={runOff}
+                atomicResult={atomicResult}
+                atomicErr={atomicErr}
+                onRunAtomic={runAtomic}
+                overflowResult={overflowResult}
+                overflowErr={overflowErr}
+                onRunOverflow={runOverflow}
+                overflowThreshold={200}
+              />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

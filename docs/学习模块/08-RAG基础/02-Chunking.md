@@ -534,6 +534,7 @@ Demo 判断
 | ✅ | step-4 | `yarn app:08-02-chunking-step-4` | `50075` | F · PDF 按页切（每页独立成块 + 跨页段落腰斩可见 + 页码元数据） |
 | ✅ | step-5 | `yarn app:08-02-chunking-step-5` | `50076` | I · 递归切分完整版（## → 段落 → 句号 → 硬切兜底 四级显式降级 · 每块带在哪档被切） |
 | ✅ | step-6 | `yarn app:08-02-chunking-step-6` | `50077` | K · 综合对比收尾 · step-1 ~ step-5 各 demo 能力回顾表（端口 / 入口 / 教学点 / 典型用法） |
+| ✅ | step-7 | `yarn app:08-02-chunking-step-7` | `50078` | L · atomic 块保护（表格 / 代码围栏 / 编号条款整块保留 + 超嵌入上限兜底说明）· 覆盖需求 10 + 变体 14 + 踩坑 6 |
 
 后续 step 由学习者主动锁定后双方决定加什么；N 动态，禁止预判。
 
@@ -541,7 +542,7 @@ Demo 判断
 
 ## §5.4 目标 ↔ 代码整合过关检查
 
-跑过关检查日期：待补（`coach complete` 前跑）
+跑过关检查日期：2026-09-11（CHUNK-02 完整跑完）
 
 ### §5.4.A 目标 → 代码覆盖
 
@@ -554,12 +555,12 @@ Demo 判断
 | A3 overlap 滑块可调，且能看见它救了哪一块 | 已实现 | `public/index.html` overlap 滑块 + `Chunk.overlapWithPrev` + `ChunkCard` 黄色高亮重叠字符 |
 | A4 固定长度切 vs 按结构切 同页并排对照 | 已实现 | `public/index.html` 同页三栏（左 / 中 / 右）+ 各自独立端点 `/api/chunk/{fixed,structure,faq}` |
 | A5 FAQ 切演示「overlap = 0 也合理」 | 已实现 | `lib/flow/chunk.ts:chunkByFaq` + 右栏固定 FAQ 样例 |
-| A6 size / overlap 不撞嵌入上限（兜底截断） | 未实现（推到 step-2） | step-2 加：单块超 3000 字自动再切；需求 3 |
-| A7 overlap 代价可量化（库膨胀 / 嵌入次数 / Top-K 重复度） | 未实现（推到 step-2） | step-2 加量化表；需求 5、6 |
-| A8 标题继承开/关对照 | 未实现（推到 step-2） | step-2 加继承开关；需求 11 |
-| A9 完整递归切分（结构优先 + 超长降级 + 硬切兜底） | 部分实现 | 本步实现 ## / 段落 / 句号三档降级；完整「递归」把「降级 + 兜底」显式化留 step-2 |
+| A6 size / overlap 不撞嵌入上限（兜底截断） | 已实现 | `step-2 lib/flow/chunk.ts:MAX_CHUNK_BEFORE_FALLBACK=2000` + `lib/flow/chunk-fallback.ts:applyFallback` |
+| A7 overlap 代价可量化（库膨胀 / 嵌入次数 / Top-K 重复度） | 已实现 | `step-2 lib/flow/chunk.ts:compareOverlap` + `routes/chunk-compare-overlap.ts` + `public/components/overlap-compare-card.js` |
+| A8 标题继承开/关对照 | 已实现 | `step-2 lib/flow/chunk.ts:chunkByStructure(text, inheritHeader)` + `routes/chunk-structure.ts` body.inheritHeader + `ChunkCard` 「标题前缀已拼」蓝字 |
+| A9 完整递归切分（结构优先 + 超长降级 + 硬切兜底） | 已实现 | `step-5 lib/flow/chunk-recurse.ts:recurseByLevel` 四档显式降级（## → 段落 → 句号 → 兜底再切） |
 
-**A 段小结**：step-1 已实现核心 5 条；size 上限兜底 / overlap 量化 / 标题继承 推到 step-2。
+**A 段小结**：A1~A9 全部已实现。step-1 核心 5 条；step-2 加 3 条（兜底 + overlap 量化 + 标题继承）；step-5 完整递归。step-7 atomic 保护 + 超阈值兜底（新 A10/A11 由 step-7 承担）。
 
 ### §5.4.B 文档 → 代码对齐
 
@@ -569,27 +570,33 @@ Demo 判断
 | 「例子 · 大小 · 生活」· 一菜一卡 vs 一句一卡 | 左栏 size 滑块可视化大小变化；中栏按结构切演示自洽块 | 已实现 |
 | 「例子 · 重叠 · 生活」· 撕传真纸 + 多留两行 | 左栏 overlap 滑块 + 每块高亮重叠部分 | 已实现 |
 | 「例子 · 切法 · 生活」· 按条款撕 vs 拿尺子裁 | 中栏按 ## / 段落 / 句号递归 | 已实现 |
-| 「例子 · 标题继承 · 生活」· 索引卡顶上写章节路径 | step-2 实现；step-1 不要求 | 未实现（推到 step-2） |
-| 「例子 · 小块检索大块喂 · 生活」· 便利贴 | step-4 实现 | 未实现（推到 step-4） |
+| 「例子 · 标题继承 · 生活」· 索引卡顶上写章节路径 | `step-2 ChunkCard` 蓝字「标题前缀已拼」 | 已实现（step-2） |
+| 「例子 · 小块检索大块喂 · 生活」· 便利贴 | 由 01-RAG-流水线-step-3 承担 | 未分配（拆出本条） |
 | 「需求 1 · 同一份文档两种切法并排能看见」 | 左 + 中两栏同页 + 各自端点 | 已实现 |
 | 「需求 2 · size 可调，太大太小后果可见」 | size 滑块 + 半句话红字 + 块数 / 平均字数实时变 | 已实现 |
-| 「需求 3 · 单位 + 兜底截断」 | 显示「字符数」+「≈ N token」估算；兜底截断 step-2 | 部分实现（step-1 不要求兜底） |
+| 「需求 3 · 单位 + 兜底截断」 | `step-2 三种估算模式 radio` + `applyFallback` 兜底 | 已实现（step-2） |
 | 「需求 4 · overlap 可调，且能看见它救了哪一块」 | overlap 滑块 + 重叠部分黄色高亮 | 已实现 |
-| 「需求 5 · overlap 代价量化」 | step-2 量化 | 未实现（推到 step-2） |
-| 「需求 6 · 重叠命中重复内容能看出来」 | 本步看每块重叠部分；step-2 量化 | 部分实现（step-2 补量化） |
+| 「需求 5 · overlap 代价能量化」 | `step-2 compareOverlap` + 0/10/30% 三组对照 + 库膨胀% | 已实现（step-2） |
+| 「需求 6 · 重叠命中重复内容能看出来」 | `step-3 topKRepeatRate` + `QualityCard` | 已实现（step-3） |
 | 「需求 7 · 重叠 = 0 合理的场景」 | 右栏 FAQ 切 | 已实现 |
-| 「需求 8 · 递归切分」 | 中栏三档降级（## / 段落 / 句号） | 已实现（简化递归） |
-| 「需求 9~15 · PDF / 不能腰斩 / 父子切块 / 质量判断 / 撞预算 / 全量重建」 | step-2/3/4 推进 | 未实现（按规划推到对应 step） |
-| 「易混点 · 切块大小 ≠ 嵌入模型输入上限」 | step-2 加兜底截断演示 | 未实现（推到 step-2） |
-| 「易混点 · 重叠越大越保险」 | overlap 滑块可调到 500；左栏 StatsBar 显示平均 / 最大字符 | 部分实现 |
+| 「需求 8 · 递归切分：结构优先、超长降级」 | `step-1 简化版` + `step-5 完整版` 四档显式降级 | 已实现（step-1+5） |
+| 「需求 9 · PDF 按页切的代价能看见」 | `step-4 pdf-chunker.ts` + 跨页腰斩检测 + 页码元数据 | 已实现（step-4） |
+| 「需求 10 · 表格 / 代码块 / 编号条款不被切」 | `step-7 atomic 块抽取` + 整块保留 + overflowNote | 已实现（step-7） |
+| 「需求 11 · 标题继承让指代断裂的块能被搜到」 | `step-2 inheritHeader 开关` + 章节前缀拼到块文本 | 已实现（step-2） |
+| 「需求 12 · 小块检索、大块喂模型」 | 由 01-RAG-流水线-step-3 承担 | 未分配（拆出本条） |
+| 「需求 13 · 切块质量可判断，不靠感觉」 | `step-3 evaluateQuality` 4 维度 + 「只有同一嵌入 + 同一问句 + 只改切块参数时对比才成立」显式提示 | 已实现（step-3） |
+| 「需求 14 · size × Top-K 撞上词元预算时能看见」 | `step-2 BudgetBar` size×Top-K + 预算提示 | 已实现（step-2） |
+| 「需求 15 · 改切块策略 = 全量重建，不是行级维护」 | 由第 1 条维护期频率表承担 | 未分配（拆出本条） |
+| 「易混点 · 切块大小 ≠ 嵌入模型输入上限」 | `step-2 兜底截断` + `step-7 atomic 超阈值兜底说明` | 已实现 |
+| 「易混点 · 重叠越大越保险」 | overlap 滑块 0~500 + 提示「建议 ≤ size 的 20%」 | 已实现（step-1） |
 | 「易混点 · 按结构切 ≠不用管大小」 | 中栏的「最大 800 字降级到句号」徽标 | 已实现 |
 | 「易混点 · 切小了 ≠ 更准」 | 半句话开头红字 | 已实现 |
-| 「易混点 · 切块参数和 Top-K 无关」 | step-3 加 size × Top-K 撞预算演示 | 未实现（推到 step-3） |
-| 「踩坑 1 · 照抄英文 chunk_size=512」 | step-2 加中英文单位对照 | 未实现（推到 step-2） |
-| 「踩坑 2 · 没有兜底截断」 | step-2 加 | 未实现（推到 step-2） |
+| 「易混点 · 切块参数和 Top-K 无关」 | `step-2 BudgetBar` 联动 size + Top-K + 预算 | 已实现（step-2） |
+| 「踩坑 1 · 照抄英文 chunk_size=512」 | `step-2 三种估算模式` + 中文/英文对照提示 | 已实现（step-2） |
+| 「踩坑 2 · 没有兜底截断」 | `step-2 applyFallback` | 已实现（step-2） |
 | 「踩坑 3 · 靠加大重叠补救错误的切法」 | overlap 滑块允许调到 500（远超 20%）；StatsBar 给块大小分布 | 已实现 |
 
-**B 段小结**：本 step-1 覆盖 MD 核心三件套（size / overlap / 切法）+ 需求 1、2、4、7、8。剩余需求 / 踩坑 / 易混按规划推到 step-2~4。
+**B 段小结**：本条全部核心教学点（step-1~7 七个 demo）已实现。少数例子（小块检索大块喂）和全量重建由 01-RAG-流水线承担。
 
 ---
 

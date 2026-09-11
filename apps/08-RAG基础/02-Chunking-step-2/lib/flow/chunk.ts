@@ -1,8 +1,8 @@
 /**
- * 本步核心：把一段文本切成若干块。三种切法对照演示 step-1 教学点；
- * step-2 加 A · 单位对照 + B · 兜底截断（拆到 chunk-estimate.ts / chunk-fallback.ts）。
+ * 本步核心：把一段文本切成若干块。step-2 主流程 = 四个主切法对照。
+ *   chunkByFixed / chunkByStructure / chunkByFaq / compareOverlap。
  *
- * 职责：纯文本操作，不调 LLM、不发网络请求。同一份文本进，三种切法各自返回块数组 + 统计。
+ * 职责：纯文本操作，不调 LLM、不发网络请求。同一份文本进，主切法各自返回块数组 + 统计。
  *
  * 数据流：routes/chunk-*.ts → Zod 校验 → 调用本文件对应函数 → 返回 {chunks, stats}。
  *
@@ -10,6 +10,7 @@
  *   chunk-splitters.ts — 切段（按 ## / 段落 / 句号）
  *   chunk-estimate.ts  — 单位对照（字符 / 词元 / 汉字）
  *   chunk-fallback.ts  — 兜底再切（超长块按固定长度拆）
+ *   chunk-helpers.ts   — 类型 / 常量 / 工具函数（makeChunk / buildResult / emptyResult / extractSection）
  */
 import { logger } from "../logger.js";
 import {
@@ -23,51 +24,20 @@ import {
   approxTokensEnglish,
 } from "./chunk-estimate.js";
 import { applyFallback } from "./chunk-fallback.js";
-
-// ── 切块参数边界（防止 OOM / 死循环） ──
-export const SIZE_MIN = 50;
-export const SIZE_MAX = 5000;
-export const OVERLAP_MIN = 0;
-export const OVERLAP_MAX = 1000;
-/** step-2 · B 件：单块超过这个字符数就走兜底再切（不依赖具体嵌入模型上限，本步先取保守值）。 */
-export const MAX_CHUNK_BEFORE_FALLBACK = 2000;
-
-/** 检测一个字符是句子终结符（句号 / 问号 / 感叹号 / 中文句号 / 段落结束） */
-export function isSentenceBoundary(ch: string): boolean {
-  if (!ch) return true;
-  return /[。！？!?\n]/.test(ch);
-}
-
-export type Chunk = {
-  index: number;
-  text: string;
-  charCount: number;
-  approxTokens: number;
-  approxTokensChinese: number;
-  approxTokensEnglish: number;
-  startOffset: number;
-  endOffset: number;
-  overlapWithPrev: number;
-  startsMidSentence: boolean;
-  boundary: string;
-  fallbackSplit: boolean;
-};
-
-export type ChunkStats = {
-  total: number;
-  totalChars: number;
-  avgChars: number;
-  maxChars: number;
-  minChars: number;
-  midSentenceCount: number;
-  fallbackChunks: number;
-};
-
-export type ChunkResult = {
-  chunks: Chunk[];
-  stats: ChunkStats;
-  params: { size?: number; overlap?: number; algorithm: string };
-};
+import {
+  buildResult,
+  emptyResult,
+  extractSection,
+  isSentenceBoundary,
+  makeChunk,
+  MAX_CHUNK_BEFORE_FALLBACK,
+} from "./chunk-helpers.js";
+import type {
+  Chunk,
+  ChunkResult,
+  OverlapCompareResult,
+  OverlapCompareRow,
+} from "./chunk-helpers.js";
 
 /**
  * 固定长度切（Fixed-size）：数够 N 个字就切，overlap 相邻共享。
@@ -119,13 +89,17 @@ export function chunkByFixed(text: string, size: number, overlap: number): Chunk
 /**
  * 按结构切（Structure-aware）：按 Markdown 标题 / 段落空行 / 句号递归切；
  * 切完后走 step-2 · B 件的兜底——单块超 MAX_CHUNK_BEFORE_FALLBACK 字符的，按固定长度再切。
+ *
+ * inheritHeader=true 时，把每块的章节标题拼到块文本前（变体 15 标题继承）——同时 Chunk 标
+ * `inheritedHeader=true` + `headerInheritText` 字段，前端 ChunkCard 显示蓝字「标题前缀」徽标。
  */
-export function chunkByStructure(text: string): ChunkResult {
+export function chunkByStructure(text: string, inheritHeader: boolean = false): ChunkResult {
   logger.info(
     "│ 调用函数-chunkByStructure",
     "调用函数开始：chunkByStructure",
-    "按结构切：先按 ## 切，再按段落空行切，再按句号切；切完后用 applyFallback 兜底超长块。",
-    { 入参: { textLen: text.length, maxBeforeFallback: MAX_CHUNK_BEFORE_FALLBACK }, __code: "const result = chunkByStructure(text);" },
+    "按结构切：先按 ## 切，再按段落空行切，再按句号切；切完后用 applyFallback 兜底超长块。" +
+      (inheritHeader ? " inheritHeader=true → 每块文本前拼章节标题（变体 15）。" : ""),
+    { 入参: { textLen: text.length, maxBeforeFallback: MAX_CHUNK_BEFORE_FALLBACK, inheritHeader }, __code: "const result = chunkByStructure(text, inheritHeader);" },
   );
   const t0 = Date.now();
   const chunks: Chunk[] = [];
@@ -140,6 +114,7 @@ export function chunkByStructure(text: string): ChunkResult {
       offset += sec.text.length;
       continue;
     }
+    const section = extractSection(sec.text);
     if (sec.text.length > 800) {
       const paragraphs = splitByBlankLine(sec.text);
       for (const p of paragraphs) {
@@ -148,14 +123,14 @@ export function chunkByStructure(text: string): ChunkResult {
           const sentences = splitByPeriod(p.text);
           for (const s of sentences) {
             if (!s.text.trim()) continue;
-            chunks.push(makeChunk(idx++, s.text, offset + s.start, offset + s.end, "句号"));
+            chunks.push(makeChunk(idx++, s.text, offset + s.start, offset + s.end, "句号", section, inheritHeader));
           }
         } else {
-          chunks.push(makeChunk(idx++, p.text, offset + p.start, offset + p.end, "段落"));
+          chunks.push(makeChunk(idx++, p.text, offset + p.start, offset + p.end, "段落", section, inheritHeader));
         }
       }
     } else {
-      chunks.push(makeChunk(idx++, sec.text, offset + sec.start, offset + sec.end, "##"));
+      chunks.push(makeChunk(idx++, sec.text, offset + sec.start, offset + sec.end, "##", section, inheritHeader));
     }
     offset += sec.text.length;
   }
@@ -166,7 +141,7 @@ export function chunkByStructure(text: string): ChunkResult {
   logger.info(
     "│ 调用函数-chunkByStructure",
     "调用函数结束：chunkByStructure",
-    "已按结构切完 + 兜底处理完。",
+    "已按结构切完 + 兜底处理完。" + (inheritHeader ? " 每块已拼章节前缀，inheritedHeader=true 块数=" + finalChunks.filter(c => c.inheritedHeader).length : ""),
     {
       返回值: {
         total: result.stats.total,
@@ -216,57 +191,48 @@ export function chunkByFaq(text: string): ChunkResult {
   return result;
 }
 
-function makeChunk(index: number, text: string, start: number, end: number, boundary: string): Chunk {
-  const startsMid = start > 0 && !isSentenceBoundary(text[start - 1]);
-  return {
-    index,
-    text,
-    charCount: text.length,
-    approxTokens: approxTokens(text),
-    approxTokensChinese: approxTokensChinese(text),
-    approxTokensEnglish: approxTokensEnglish(text),
-    startOffset: start,
-    endOffset: end,
-    overlapWithPrev: 0,
-    startsMidSentence: startsMid,
-    boundary,
-    fallbackSplit: false,
-  };
-}
-
-function buildResult(chunks: Chunk[], algorithm: string, params: { size?: number; overlap?: number; fallbackChunks?: number }): ChunkResult {
-  const charCounts = chunks.map(c => c.charCount);
-  const totalChars = charCounts.reduce((a, b) => a + b, 0);
-  const stats: ChunkStats = {
-    total: chunks.length,
-    totalChars,
-    avgChars: chunks.length > 0 ? Math.round(totalChars / chunks.length) : 0,
-    maxChars: charCounts.length > 0 ? Math.max(...charCounts) : 0,
-    minChars: charCounts.length > 0 ? Math.min(...charCounts) : 0,
-    midSentenceCount: chunks.filter(c => c.startsMidSentence).length,
-    fallbackChunks: params.fallbackChunks ?? 0,
-  };
-  for (let i = 1; i < chunks.length; i++) {
-    const prev = chunks[i - 1];
-    const cur = chunks[i];
-    const overlap = Math.max(0, prev.endOffset - cur.startOffset);
-    chunks[i] = { ...cur, overlapWithPrev: overlap };
-  }
-  return { chunks, stats, params: { ...params, algorithm } };
-}
-
-function emptyResult(algorithm: string, params: { size?: number; overlap?: number; fallbackChunks?: number }): ChunkResult {
-  return {
-    chunks: [],
-    stats: {
-      total: 0,
-      totalChars: 0,
-      avgChars: 0,
-      maxChars: 0,
-      minChars: 0,
-      midSentenceCount: 0,
-      fallbackChunks: params.fallbackChunks ?? 0,
+/**
+ * 需求 5：同一份文档 + 同一 size，分别按 overlap=0% / 10% / 30% 各跑一次 chunkByFixed，
+ * 返回三组「块数 / 总字符 / 嵌入次数 / 库膨胀百分比」对照——学习者一眼看到 overlap 的代价。
+ *
+ * 库膨胀百分比 = (当前组块数 - overlap=0% 组块数) / overlap=0% 组块数 × 100
+ * 嵌入次数 = 块总数（每块要调一次嵌入接口）
+ */
+export function compareOverlap(text: string, size: number): OverlapCompareResult {
+  logger.info(
+    "│ 调用函数-compareOverlap",
+    "调用函数开始：compareOverlap",
+    "需求 5：同一文档 + 同一 size，分别按 overlap=0/10/30% 各跑一次 chunkByFixed，对照块数 / 嵌入次数 / 库膨胀%。",
+    { 入参: { textLen: text.length, size }, __code: "const result = compareOverlap(text, size);" },
+  );
+  const t0 = Date.now();
+  const overlapPercents = [0, 10, 30];
+  const baselineTotal = chunkByFixed(text, size, 0).stats.total || 1;
+  const rows: OverlapCompareRow[] = overlapPercents.map((pct) => {
+    const overlap = Math.max(0, Math.round((size * pct) / 100));
+    const r = chunkByFixed(text, size, overlap);
+    const libBloatPercent = Math.round(((r.stats.total - baselineTotal) / baselineTotal) * 100);
+    return {
+      overlapPercent: pct,
+      overlap,
+      chunks: r.chunks,
+      stats: r.stats,
+      embedCalls: r.stats.total,
+      libBloatPercent,
+    };
+  });
+  const result: OverlapCompareResult = { size, rows };
+  logger.info(
+    "│ 调用函数-compareOverlap",
+    "调用函数结束：compareOverlap",
+    "三组 overlap 对照跑完；每组的块数 / 嵌入次数 / 库膨胀% 在 rows 里。",
+    {
+      返回值: {
+        size,
+        rowSummaries: rows.map(function (r) { return { overlapPercent: r.overlapPercent, total: r.stats.total, embedCalls: r.embedCalls, libBloatPercent: r.libBloatPercent }; }),
+      },
+      耗时ms: Date.now() - t0,
     },
-    params: { ...params, algorithm },
-  };
+  );
+  return result;
 }

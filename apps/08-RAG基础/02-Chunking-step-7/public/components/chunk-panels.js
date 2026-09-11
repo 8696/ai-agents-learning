@@ -1,21 +1,22 @@
 /**
- * 职责：chunkByFixed / chunkByStructure / chunkByFaq 切块结果展示——左栏 LeftPanel（自带 size / overlap 滑块）、
- * 中栏 Panel（按结构切）、右栏 RightPanel（FAQ 切，带文档来源说明）。
- * 挂 window.DemoUI。三个 Panel 拆三个组件文件，stats / ChunkCard 通用部分留本文件。
+ * 职责：左 / 中 / 右 三栏块列表组件。每栏独立接收自己的 chunks + stats；
+ * 不在父组件内联 JSX 里全堆——单页多组件（§5.3.8）。挂 window.DemoUI。
  *
- * step-2：ChunkCard 显示字符 / token 三种数法 + 兜底再切徽标；StatsBar 显示 fallbackChunks。
+ * 三栏对应三种切法：
+ *   LeftPanel    = 固定长度切（叠加 size / overlap 滑块 UI 之外的部分）
+ *   MiddlePanel  = 按结构切
+ *   RightPanel   = FAQ 切
  */
 (function () {
   const DemoUI = window.DemoUI || {};
 
   /**
-   * 单块卡（ChunkCard）：每块用一块卡片展示——块序号 / 字符数 / 估算 token / 边界徽标 / 半句话标记 / 兜底徽标 / 原文。
+   * 单块卡（ChunkCard）：每块用一块卡片展示——块序号 / 字符数 / 估算 token / 边界徽标 / 半句话标记 / 原文。
    * 切口处高亮「与上一块重叠」的部分。
    */
   function ChunkCard(props) {
     const chunk = props.chunk;
     const isMid = chunk.startsMidSentence;
-    const estimateMode = props.estimateMode || "mixed"; // "mixed" | "chinese" | "english"
     const boundaryLabel = {
       fixed: "fixed",
       "##": "##",
@@ -23,33 +24,35 @@
       句号: "句号",
       "faq-q": "faq-q",
       "fallback-fixed": "兜底再切",
+      "atomic-table": "表格",
+      "atomic-code": "代码围栏",
+      "atomic-numbered-clause": "编号条款",
     }[chunk.boundary] || chunk.boundary;
-    const tokenCount =
-      estimateMode === "chinese"
-        ? chunk.approxTokensChinese
-        : estimateMode === "english"
-        ? chunk.approxTokensEnglish
-        : chunk.approxTokens;
-    const tokenLabel = estimateMode === "chinese" ? "≈ 汉字 token" : estimateMode === "english" ? "≈ 英文词 token" : "≈ token 混合";
     const overlap = chunk.overlapWithPrev || 0;
     return (
-      <div className={"border rounded p-2 space-y-1 " + (chunk.fallbackSplit ? "border-orange-300 bg-orange-50" : isMid ? "border-red-300 bg-red-50" : "border-gray-300 bg-white")}>
+      <div className={"border rounded p-2 space-y-1 " + (chunk.fallbackSplit ? "border-red-300 bg-red-50" : isMid ? "border-red-300 bg-red-50" : "border-gray-300 bg-white")}>
         <div className="flex flex-wrap gap-2 items-center text-xs text-gray-700">
           <span className="font-semibold">块 {chunk.index + 1}</span>
           <span className="text-gray-500">字符 {chunk.charCount}</span>
-          <span className="text-gray-500">{tokenLabel} {tokenCount}</span>
+          <span className="text-gray-500">≈ {chunk.approxTokens} token</span>
           <span className="px-1.5 py-0.5 rounded border border-gray-300 text-gray-600">{boundaryLabel}</span>
           {chunk.section ? <span className="px-1.5 py-0.5 rounded border border-blue-200 text-blue-700"># {chunk.section}</span> : null}
-          {chunk.fallbackSplit ? <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-800">兜底再切</span> : null}
+          {chunk.boundary && chunk.boundary.startsWith("atomic-") ? <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800">整块保留</span> : null}
+          {chunk.fallbackSplit ? <span className="px-1.5 py-0.5 rounded bg-red-200 text-red-800">超嵌入上限</span> : null}
           {isMid ? <span className="px-1.5 py-0.5 rounded bg-red-200 text-red-800">半句话开头</span> : null}
           {overlap > 0 ? <span className="text-gray-500">与上一块重叠 {overlap} 字</span> : null}
         </div>
+        {chunk.overflowNote ? (
+          <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+            ⚠ {chunk.overflowNote}
+          </div>
+        ) : null}
         <pre className="whitespace-pre-wrap text-xs text-gray-800 max-h-32 overflow-auto">{renderHighlightedText(chunk)}</pre>
       </div>
     );
   }
 
-  /** 在「与上一块重叠」的字符上加高亮底色（黄） */
+  /** 在「与上一块重叠」的字符上加高亮底色（红黄） */
   function renderHighlightedText(chunk) {
     if (!chunk.overlapWithPrev || chunk.overlapWithPrev <= 0) {
       return chunk.text;
@@ -66,10 +69,32 @@
     );
   }
 
-  /** 统计摘要条：块数 / 总字符 / 平均 / 最大 / 最小 / 半句话块数 / 兜底块数 */
+  /** 启发式「一块里塞了几个 ## 主题 / 几个独立编号段」——
+   *  数 ## 出现次数 + 数【X】/ 一、 / 1. 这种可被看作新主题的标记。
+   *  仅作变体 1 提示用，不替代真实主题识别。返回整型数组（每块一个）。 */
+  function countTopicMarkers(text) {
+    if (!text) return 0;
+    let n = 0;
+    const h2 = text.match(/^##\s+/gm);
+    if (h2) n += h2.length;
+    // 【一】~【十】 这种编号小标题（一节多主题时常用）
+    const bracket = text.match(/【[一二三四五六七八九十百千]+】/g);
+    if (bracket) n += bracket.length;
+    return n;
+  }
+
+  function buildTopicCounts(chunks) {
+    return (chunks || []).map(function (c) { return countTopicMarkers(c.text); });
+  }
+
+  /** 统计摘要条：块数 / 总字符 / 平均 / 最大 / 最小 / 半句话块数 / 启发式主题数 */
   function StatsBar(props) {
     const stats = props.stats;
     if (!stats) return null;
+    // 启发式「一块塞了 N 个主题」：## 出现次数 - 1（除掉首个），最少 1。
+    // 仅作变体 1 提示；真实主题数需要专门识别器（未实现）。
+    const chunkTopicCount = props.topicCounts || [];
+    const sumTopicCount = chunkTopicCount.reduce(function (a, b) { return a + b; }, 0);
     return (
       <div className="flex flex-wrap gap-3 text-xs text-gray-700 border border-gray-200 bg-gray-50 rounded px-2 py-1">
         <span>块数 <b className="text-gray-900">{stats.total}</b></span>
@@ -80,8 +105,10 @@
         <span className={stats.midSentenceCount > 0 ? "text-red-700" : "text-gray-500"}>
           半句话块 <b>{stats.midSentenceCount}</b>
         </span>
-        {typeof stats.fallbackChunks === "number" && stats.fallbackChunks > 0 ? (
-          <span className="text-orange-700">兜底再切 <b>{stats.fallbackChunks}</b></span>
+        {chunkTopicCount.length > 0 ? (
+          <span className={sumTopicCount > stats.total ? "text-orange-700" : "text-gray-500"}>
+            一块塞 <b>{Math.max(1, Math.round(sumTopicCount / Math.max(1, stats.total)))}</b> 个 ## 主题（启发式）
+          </span>
         ) : null}
       </div>
     );
@@ -89,7 +116,8 @@
 
   /** 通用栏：标题 + 跑按钮 + 摘要 + 块列表 + 空态（中栏 / 右栏用） */
   function Panel(props) {
-    const { title, hint, running, result, error, onRun, buttonText, buttonHint, estimateMode } = props;
+    const { title, hint, running, result, error, onRun, buttonText, buttonHint } = props;
+    const topicCounts = result ? buildTopicCounts(result.chunks) : [];
     return (
       <section className="bg-white shadow rounded p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -114,12 +142,12 @@
         ) : null}
         {result ? (
           <>
-            <StatsBar stats={result.stats} />
+            <StatsBar stats={result.stats} topicCounts={topicCounts} />
             <div className="space-y-2 max-h-[600px] overflow-auto">
               {result.chunks.length === 0 ? (
                 <p className="text-xs text-gray-500">没有切出任何块（输入为空？）</p>
               ) : (
-                result.chunks.map(function (c) { return <ChunkCard key={c.index} chunk={c} estimateMode={estimateMode} />; })
+                result.chunks.map(function (c) { return <ChunkCard key={c.index} chunk={c} />; })
               )}
             </div>
           </>
@@ -133,11 +161,9 @@
   /**
    * 左栏专用（固定长度切）：自带 size / overlap 滑块——这两个参数只影响这一栏，
    * 放在共用 #controls 会让人误以为也影响中栏 / 右栏。
-   *
-   * step-2：多接 estimateMode + 把滑块文案更新（含"按字符 / 按词元 / 按汉字"提示）。
    */
   function LeftPanel(props) {
-    const { running, result, error, onRun, sizeVal, setSizeVal, overlap, setOverlap, estimateMode, setEstimateMode } = props;
+    const { running, result, error, onRun, sizeVal, setSizeVal, overlap, setOverlap } = props;
     return (
       <section className="bg-white shadow rounded p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -181,24 +207,9 @@
             <span className="text-gray-500">{overlap} 字符（建议 ≤ size 的 20%）</span>
           </label>
         </div>
-        <div className="border border-gray-200 rounded p-2 bg-gray-50 space-y-1">
-          <div className="text-xs font-semibold text-gray-700">step-2 · A 件 · 单位对照</div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <label className="flex items-center gap-1">
-              <input type="radio" name="estimateMode" value="mixed" checked={estimateMode === "mixed"} onChange={function () { setEstimateMode("mixed"); }} />
-              <span>混合估算（汉字 1.5 + 英文 1.3）</span>
-            </label>
-            <label className="flex items-center gap-1">
-              <input type="radio" name="estimateMode" value="chinese" checked={estimateMode === "chinese"} onChange={function () { setEstimateMode("chinese"); }} />
-              <span>按汉字 1 token / 字</span>
-            </label>
-            <label className="flex items-center gap-1">
-              <input type="radio" name="estimateMode" value="english" checked={estimateMode === "english"} onChange={function () { setEstimateMode("english"); }} />
-              <span>按英文词 1 token / 词</span>
-            </label>
-          </div>
-          <p className="text-xs text-gray-500">同一个 size=512，英文教程 vs 中文文档切出来的块数会差几倍——这就是为什么不能直接抄英文教程的数字。</p>
-        </div>
+        <p className="text-xs text-orange-700">
+          变体 1 演示：点上方「加载混合示例」按钮加载「## 大杂烩（5 个主题）」文档，size 拉到 3000 → 左栏一整块把 5 个主题全吃；摘要条里「一块塞 N 个主题（启发式）」会 ≥ 3，向量方向被平均掉。
+        </p>
         {error ? (
           <div className="border border-red-300 bg-red-50 text-red-700 text-xs rounded p-2 space-y-1">
             <div>错误：{error.error || error.message || "失败"}</div>
@@ -208,12 +219,12 @@
         ) : null}
         {result ? (
           <>
-            <StatsBar stats={result.stats} />
+            <StatsBar stats={result.stats} topicCounts={buildTopicCounts(result.chunks)} />
             <div className="space-y-2 max-h-[600px] overflow-auto">
               {result.chunks.length === 0 ? (
                 <p className="text-xs text-gray-500">没有切出任何块（输入为空？）</p>
               ) : (
-                result.chunks.map(function (c) { return <ChunkCard key={c.index} chunk={c} estimateMode={estimateMode} />; })
+                result.chunks.map(function (c) { return <ChunkCard key={c.index} chunk={c} />; })
               )}
             </div>
           </>

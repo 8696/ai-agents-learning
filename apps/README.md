@@ -98,6 +98,7 @@
 | `yarn app:08-02-chunking-step-4` | `50075` | 模块 08 · 02 · 切块（Chunking）step-4：PDF 按页切 + 跨页段落腰斩可见 + 页码元数据；纯本地文本操作，不调 LLM |
 | `yarn app:08-02-chunking-step-5` | `50076` | 模块 08 · 02 · 切块（Chunking）step-5：递归切分完整版（## → 段落 → 句号 → 硬切兜底四级显式降级）；纯本地文本操作，不调 LLM |
 | `yarn app:08-02-chunking-step-6` | `50077` | 模块 08 · 02 · 切块（Chunking）step-6：综合对比收尾 · step-1 ~ step-5 各 demo 能力回顾；纯本地展示，不调 LLM |
+| `yarn app:08-02-chunking-step-7` | `50078` | 模块 08 · 02 · 切块（Chunking）step-7：atomic 块保护（表格 / 代码围栏 / 编号条款整块保留 + 超上限兜底说明）；纯本地文本操作，不调 LLM |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。

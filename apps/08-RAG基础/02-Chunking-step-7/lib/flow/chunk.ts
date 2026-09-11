@@ -1,26 +1,14 @@
 /**
- * 本步核心：把一段文本切成若干块。三种切法对照演示 step-1 教学点。
+ * 本步核心：把一段文本切成若干块。三种切法对照演示 step-1 教学点；
+ * step-7 加 atomic 块保护（变体 14：表格 / 代码块 / 编号条款整块保留，拆到 chunk-atomic.ts）。
  *
  * 职责：纯文本操作，不调 LLM、不发网络请求。同一份文本进，三种切法各自返回块数组 + 统计。
  *
- * 为什么单独成文件：本条教学点就是「三种切法的差异」，学习者打开这一个文件就能把
- * size / overlap / 切法边界 / 块结构读完，route 只调不实现。
+ * 数据流：routes/chunk-*.ts → Zod 校验 → 调用本文件对应函数 → 返回 {chunks, stats}。
  *
- * 数据流：
- *   routes/chunk-{fixed,structure,faq}.ts
- *     → Zod 校验入参（{text, size, overlap} 或 {text}）
- *     → 调用本文件对应函数
- *     → 返回 {chunks, stats, params} 给页面
- *
- * 切段辅助函数（splitByMarkdownH2 / splitByBlankLine / splitByPeriod）抽到
- * 同目录相邻文件 chunk-splitters.ts（§5.3.8：核心里相邻小步骤同目录相邻文件）。
- *
- * 输出形状（统一）：
- *   chunk = {
- *     index, text, charCount, approxTokens,
- *     startOffset, endOffset, overlapWithPrev,
- *     startsMidSentence, boundary
- *   }
+ * 相邻辅助文件（§5.3.8）：
+ *   chunk-splitters.ts — 切段（按 ## / 段落 / 句号）
+ *   chunk-atomic.ts    — atomic 块保护实现（识别 + 抽取 + chunkByAtomic）
  */
 import { logger } from "../logger.js";
 import {
@@ -34,18 +22,6 @@ export const SIZE_MIN = 50;
 export const SIZE_MAX = 5000;
 export const OVERLAP_MIN = 0;
 export const OVERLAP_MAX = 1000;
-
-/**
- * 中文 / 英文混合的粗略 token 估算：汉字按 1.5 token / 字符、英文按 1.3 token / 单词。
- * 不接 tokenizer 是因为 step-1 是 sketch，本条不调 LLM 也不引入本地 encode 依赖。
- */
-export function approxTokens(text: string): number {
-  if (!text) return 0;
-  const chineseChars = (text.match(/[一-鿿]/g) || []).length;
-  const englishWords = (text.match(/[A-Za-z0-9]+/g) || []).length;
-  const otherChars = text.length - chineseChars - englishWords;
-  return Math.round(chineseChars * 1.5 + englishWords * 1.3 + otherChars * 0.3);
-}
 
 /** 检测一个字符是句子终结符（句号 / 问号 / 感叹号 / 中文句号 / 段落结束） */
 export function isSentenceBoundary(ch: string): boolean {
@@ -65,6 +41,12 @@ export type Chunk = {
   boundary: string;
   /** 章节标题（仅按结构切 / FAQ 切时有；fixed 切时无）。来自 Markdown ## 后的标题文字。 */
   section?: string;
+  /** true = 这块超兜底阈值，需要外部处理（不再硬切）。仅 atomic 块且超 threshold 时为 true。 */
+  fallbackSplit?: boolean;
+  /** atomic 块种类（仅 boundary 以 "atomic-" 开头时有）。 */
+  atomicKind?: "table" | "code" | "numbered-clause";
+  /** atomic 块超兜底阈值时的说明（仅 atomic + 超阈值时有）。 */
+  overflowNote?: string;
 };
 
 export type ChunkStats = {
@@ -79,12 +61,14 @@ export type ChunkStats = {
 export type ChunkResult = {
   chunks: Chunk[];
   stats: ChunkStats;
-  params: { size?: number; overlap?: number; algorithm: string };
+  params: { size?: number; overlap?: number; algorithm: string; threshold?: number };
 };
 
 /**
  * 固定长度切（Fixed-size）：数够 N 个字就切，overlap 相邻共享。
  * 切口位置纯靠运气，overlap 是补救。
+ *
+ * step-7 不调；保留接口对齐 step-1，作为对照（对照里「永远把 atomic 也按 size 切开」）。
  */
 export function chunkByFixed(text: string, size: number, overlap: number): ChunkResult {
   logger.info(
@@ -129,12 +113,15 @@ export function chunkByFixed(text: string, size: number, overlap: number): Chunk
 /**
  * 按结构切（Structure-aware）：按 Markdown 标题 / 段落空行 / 句号递归切。
  * 这是生产里最常用的默认策略的简化版（不递归降级，只按 ## 与段落）。
+ *
+ * step-7 不直接调用；保留接口对齐 step-1，作为对照（对照里「不开 atomic → 表格被切两半、编号条款散开」）；
+ * atomic 版的 chunkByAtomic 在 chunk-atomic.ts 里复用本函数。
  */
 export function chunkByStructure(text: string): ChunkResult {
   logger.info(
     "│ 调用函数-chunkByStructure",
     "调用函数开始：chunkByStructure",
-    "按结构切：先按 ## 切，再按段落空行切。切口落在语义边界上，块自洽。",
+    "按结构切：先按 ## 切，再按段落空行切。切口落在语义边界上，块自洽。step-7 不调，作为对照。",
     { 入参: { textLen: text.length }, __code: "const result = chunkByStructure(text);" },
   );
   const t0 = Date.now();
@@ -223,6 +210,18 @@ function extractSection(text: string): string | undefined {
   if (!text) return undefined;
   const m = text.match(/^##\s+(.+?)\s*$/m);
   return m ? m[1] : undefined;
+}
+
+/**
+ * 中英文混合的粗略 token 估算：汉字按 1.5 token / 字符、英文按 1.3 token / 单词。
+ * 不接 tokenizer 是因为本条不调 LLM 也不引入本地 encode 依赖。
+ */
+export function approxTokens(text: string): number {
+  if (!text) return 0;
+  const chineseChars = (text.match(/[一-鿿]/g) || []).length;
+  const englishWords = (text.match(/[A-Za-z0-9]+/g) || []).length;
+  const otherChars = text.length - chineseChars - englishWords;
+  return Math.round(chineseChars * 1.5 + englishWords * 1.3 + otherChars * 0.3);
 }
 
 function makeChunk(index: number, text: string, start: number, end: number, boundary: string, section?: string): Chunk {

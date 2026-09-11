@@ -21,16 +21,16 @@ const MAX = 2000;
 /**
  * 递归切分核心：按当前文本长度判断该在哪档切。
  */
-export function recurseByLevel(text: string, baseOffset: number, idxRef: { v: number }, boundary: string): Chunk[] {
+export function recurseByLevel(text: string, baseOffset: number, idxRef: { v: number }, boundary: string, section?: string): Chunk[] {
   logger.debug(
     "││ 调用函数-recurseByLevel",
     "调用函数开始：recurseByLevel",
     "step-5 · I 件：递归切分核心；当前 boundary=" + boundary + "，text 长度=" + text.length,
-    { 入参: { textLen: text.length, boundary }, __code: "const chunks = recurseByLevel(text, baseOffset, idxRef, boundary);" },
+    { 入参: { textLen: text.length, boundary, section }, __code: "const chunks = recurseByLevel(text, baseOffset, idxRef, boundary);" },
   );
   const t0 = Date.now();
   if (text.length <= MAX) {
-    const out = [makeChunk(idxRef.v++, text, baseOffset, baseOffset + text.length, boundary)];
+    const out = [makeChunk(idxRef.v++, text, baseOffset, baseOffset + text.length, boundary, section)];
     logger.debug(
       "││ 调用函数-recurseByLevel",
       "调用函数结束：recurseByLevel",
@@ -49,7 +49,7 @@ export function recurseByLevel(text: string, baseOffset: number, idxRef: { v: nu
         innerOffset += p.text.length;
         continue;
       }
-      out.push(...recurseByLevel(p.text, innerOffset + p.start, idxRef, "段落"));
+      out.push(...recurseByLevel(p.text, innerOffset + p.start, idxRef, "段落", section));
       innerOffset += p.text.length;
     }
     logger.debug(
@@ -70,7 +70,7 @@ export function recurseByLevel(text: string, baseOffset: number, idxRef: { v: nu
         innerOffset += s.text.length;
         continue;
       }
-      out.push(...recurseByLevel(s.text, innerOffset + s.start, idxRef, "句号"));
+      out.push(...recurseByLevel(s.text, innerOffset + s.start, idxRef, "句号", section));
       innerOffset += s.text.length;
     }
     logger.debug(
@@ -82,7 +82,7 @@ export function recurseByLevel(text: string, baseOffset: number, idxRef: { v: nu
     return out;
   }
   // boundary === "句号"：句号都压不住 → 兜底硬切（applyFallback 会再走一遍）
-  const out = [makeChunk(idxRef.v++, text, baseOffset, baseOffset + text.length, "fallback-fixed")];
+  const out = [makeChunk(idxRef.v++, text, baseOffset, baseOffset + text.length, "fallback-fixed", section)];
   logger.debug(
     "││ 调用函数-recurseByLevel",
     "调用函数结束：recurseByLevel",

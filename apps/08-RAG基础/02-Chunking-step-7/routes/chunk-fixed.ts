@@ -7,13 +7,7 @@
 import type { Context } from "koa";
 import type Router from "@koa/router";
 import { z } from "zod";
-import { chunkByFixed } from "../lib/flow/chunk.js";
-import {
-  OVERLAP_MAX,
-  OVERLAP_MIN,
-  SIZE_MAX,
-  SIZE_MIN,
-} from "../lib/flow/chunk-helpers.js";
+import { chunkByFixed, SIZE_MIN, SIZE_MAX, OVERLAP_MIN, OVERLAP_MAX } from "../lib/flow/chunk.js";
 
 const bodySchema = z.object({
   text: z.string().min(1, "text 不能为空"),

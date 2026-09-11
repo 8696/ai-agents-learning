@@ -10,8 +10,7 @@
  * 切完后每块 boundary="fallback-fixed"、fallbackSplit=true，前端 ChunkCard 显示橙色徽标。
  */
 import { logger } from "../logger.js";
-import type { Chunk } from "./chunk.js";
-import { isSentenceBoundary } from "./chunk.js";
+import { isSentenceBoundary, type Chunk } from "./chunk-helpers.js";
 import { approxTokens, approxTokensChinese, approxTokensEnglish } from "./chunk-estimate.js";
 
 /**
@@ -38,6 +37,9 @@ export function fallbackSplitChunk(chunk: Chunk, threshold: number, nextIndexRef
       startsMidSentence: subStartsMid,
       boundary: "fallback-fixed",
       fallbackSplit: true,
+      section: chunk.section,
+      inheritedHeader: chunk.inheritedHeader,
+      headerInheritText: chunk.headerInheritText,
     });
     i = end;
   }

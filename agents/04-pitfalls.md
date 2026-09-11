@@ -212,6 +212,15 @@
 - **反模式**：`check-demo` 过就当写完；在 `scripts/check-demo.cjs` 里 `spawn tsc`；typecheck 不过仍起烟雾测试
 - **关联**：agents/05-demo.md 写完后验收顺序、AGENTS.md §5.3、apps/package.json `typecheck`
 
+### P-018  ·  dev CLI 调试脚本 commit 进 demo 根目录
+
+- **症状**：`check-demo` 报「`{demo}/debug-xxx.ts 文件头缺「职责」注释`」，但该文件其实是 dev 临时跑的 CLI 探针（不在 `lib/` / `routes/`，文件头英文「Debug：...」风格跟正式 demo 不符）
+- **触发**：落 / 改 Demo 时在 demo 根目录写 `debug-pdf.ts` / `probe.ts` / `try-*.ts` 这种 `tsx debug-xxx.ts <arg>` 跑的临时脚本，调试完顺手 `git add .` commit 进仓库（典型：PDF 解析入库前先用一次性脚本探 `result.pages` 结构）
+- **根因**：`scripts/check-demo/check-structure.cjs:64-67` 用 `walk(root)` 深度扫所有 `.ts`，任何文件头不含「职责」的就报失败。CLI 调试脚本文件头往往是英文短注释（「Debug：直接调用 pdf-parse v2 打印…」），过不了规则。AGENTS.md §5.7 已禁止「无页面 CLI Demo」，但只在新增时拦，没拦「debug 期间临时写、用完没删」的脚本
+- **修复**：调试完直接 `rm` 删掉（**首选**）。不要保留 demo 根目录 + 加职责注释糊弄过 check-demo —— 留 CLI 脚本违反 §5.7。git 历史用 `git rm` / `git commit --amend` 抹掉这次误提交（仅本地分支、没推）；已推的话新 commit 删文件 + commit message 说明「清掉 dev 调试脚本」
+- **反模式**：调试脚本留 demo 根目录加职责注释过 check-demo；移进 `lib/debug/`（仍是 CLI 违反 §5.3）；保留脚本并希望学习者以后自己看结构
+- **关联**：AGENTS.md §5.7、scripts/check-demo/check-structure.cjs:64-67、commit f870b97（dev CLI 调试脚本随 PDF 解析一起入库）
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）
