@@ -31,13 +31,24 @@
           <li>右边点「提问」→ POST /api/ask → 问题也向量化 → 检索前 K 条 → 把材料塞进提示词（Prompt）生成</li>
           <li>第二问不应再跑加载 / 切块。左右对照：检索卡片的来源应对上左边某行。维护（按来源删旧）本步不做</li>
         </ol>
-        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+        <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-2 mt-2">
           <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
-          <div className="text-xs text-gray-800">
-            一本说明书入库后不是一个大对象，是 N 行四件套：编号（id）/ 向量（vector）/ 原文（text）/ 来源写在元数据（metadata）里。点「查看库」看到的就是 SQLite 里这些行。提问不再拆库。向量不能全是 0——那是编码格式（encoding_format）解错了，检索分数会全变成 0。
-          </div>
+          <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+            <li>
+              <b>根因（Root Cause）</b>：RAG 是为了<b>喂模型它训练时没见过的知识</b>——公司内部规则 / 训练截止之后的事实。省 token / 加快 / 准 是副产品，不是 RAG 独有的优势；它也不是「长上下文（Long Context）的优化版」。
+            </li>
+            <li>
+              <b>真正独有的优势</b>：<b>能点名出处（Source Attribution）</b>。命中卡片带 source / 章节 / 页码——客服答错可追责、文档过期可更新、库里没有能拒绝编造，长上下文答对了你说不清它看了哪一段。
+            </li>
+            <li>
+              <b>物理结构</b>：一本说明书入库后不是一个大对象，是 <b>N 行四件套</b>——编号（id）/ 向量（vector）/ 原文（text）/ 来源写在元数据（metadata）里。点「查看库」看到的就是 SQLite 里这些行。
+            </li>
+            <li>
+              <b>提问的边界</b>：检索不到相关材料时（库是空 / Top-1 最高分 &lt; 阈值），模型必须说「不知道」，不能编。点「演示库里没有答案」看 hits 命中数 + 最高分 + 是否触发弃权（Abstain）。
+            </li>
+          </ul>
           <div className="text-xs text-gray-600">
-            观察：左右并排。左边能看到每行的 id / vector / text / source；向量开头应是带正负号的小数，不是一串 0；右边提问区的流程里没有 load / chunk；检索卡片的来源能对上左边某行。
+            观察：左右并排。左边能看到每行的 id / vector / text / source；向量开头应是带正负号的小数，不是一串 0；右边提问区的流程里没有 load / chunk；检索卡片的来源能对上左边某行；弃权时提示词里材料区被替换成「（无可用材料）」。
           </div>
         </div>
       </section>

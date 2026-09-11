@@ -52,6 +52,11 @@
           } else if (kind === "ask") {
             const data = await window.DemoUtils.postJson("/api/ask", { question: question });
             setAsk(data.result);
+          } else if (kind === "ask-no-materials") {
+            const noMaterialsQuestion = "今晚食堂菜单是什么？";
+            setQuestion(noMaterialsQuestion);
+            const data = await window.DemoUtils.postJson("/api/ask", { question: noMaterialsQuestion });
+            setAsk(data.result);
           } else if (kind === "store") {
             const dumped = await window.DemoUtils.getJson("/api/store");
             setStore(dumped.result);
@@ -116,6 +121,7 @@
                 noKey={noKey}
                 ask={ask}
                 onAsk={function () { run("ask"); }}
+                onNoMaterials={function () { run("ask-no-materials"); }}
                 onEmpty={function () { run("empty"); }}
               />
             </section>

@@ -5,14 +5,32 @@
 import { getLlm } from "../../../../llm.js";
 import { embedPrefixRule, embedTexts } from "../embed/create-embeddings.js";
 import { HttpError } from "../http/send-error.js";
+import { logger } from "../logger.js";
 import { maskSecret, withCall } from "../log/with-call.js";
 import { countChunks, searchChunks, type HitRow } from "../store/vector-store.js";
 
 const TOP_K = 3;
 
+/**
+ * 弃权阈值：Top-1 分数低于这条线，就当作「库没有相关材料」。
+ * 笔记取舍表说「分数线等 Demo 跑出来再定，禁止拍脑袋写死」。
+ * 这里先用一个保守值（0.5），调整方法：同一条无关问题打几次，看 Top-1
+ * 通常落在哪一带，把这条线挪到能区分「真命中 / 假命中」的位置。
+ */
+const ABSTAIN_MAX_SCORE = 0.5;
+
+export type RetrievalQuality = {
+  hitCount: number;
+  maxScore: number;
+  threshold: number;
+  abstained: boolean;
+  reason: "no-materials" | "ok";
+};
+
 export type AskResult = {
   question: string;
   embed: { model: string; prefixRule: string; dimensions: number };
+  retrieval: RetrievalQuality;
   hits: Array<{
     id: string;
     score: number;
@@ -26,16 +44,27 @@ export type AskResult = {
   rebuiltIndex: false;
 };
 
-function buildPrompt(question: string, hits: HitRow[]): { system: string; user: string } {
-  const system =
+function buildPrompt(
+  question: string,
+  hits: HitRow[],
+  retrieval: RetrievalQuality,
+): { system: string; user: string } {
+  const baseSystem =
     "你是售后助手。只根据下面材料回答。回答里点出来源文件和章节。材料不够就说不知道，不要编政策。";
+  const system = retrieval.abstained
+    ? baseSystem +
+      "\n【本次检索结果】知识库里没有与用户问题相关的材料。" +
+      "请直接回答「知识库里没有相关信息，我不能编」，不要尝试给政策、不要编订单号或菜单。"
+    : baseSystem;
   const materials = hits
     .map(
       (hit, index) =>
         `【材料${index + 1}】${hit.source} / ${hit.section}（分数 ${hit.score.toFixed(3)}）\n${hit.text}`,
     )
     .join("\n\n");
-  const user = `${materials}\n\n【问题】${question}`;
+  const user = retrieval.abstained
+    ? `（无可用材料）\n\n【问题】${question}`
+    : `${materials}\n\n【问题】${question}`;
   return { system, user };
 }
 
@@ -62,7 +91,25 @@ export async function runAsk(question: string): Promise<AskResult> {
       }
       const queryVector = (await embedTexts(llm, [question], "query"))[0] ?? [];
       const hits = await searchChunks(queryVector, TOP_K);
-      const prompt = buildPrompt(question, hits);
+      const maxScore = hits.length > 0 ? hits[0].score : 0;
+      const retrieval: RetrievalQuality = {
+        hitCount: hits.length,
+        maxScore,
+        threshold: ABSTAIN_MAX_SCORE,
+        abstained: hits.length === 0 || maxScore < ABSTAIN_MAX_SCORE,
+        reason:
+          hits.length === 0 || maxScore < ABSTAIN_MAX_SCORE ? "no-materials" : "ok",
+      };
+      logger.info(
+        "调用函数-runAsk",
+        "字段释义 · AskResult.retrieval",
+        "本次检索质量摘要：命中数 / Top-1 最高分 / 阈值 / 是否触发弃权 / 原因。abstained=true 时模型被强制要求说不知道。",
+        {
+          入参: retrieval,
+          __code: "abstained = (hitCount === 0) || (maxScore < threshold)",
+        },
+      );
+      const prompt = buildPrompt(question, hits, retrieval);
       const chat = await withCall({
         scope: "││ 调用模型-对话补全",
         kind: "模型",
@@ -93,6 +140,7 @@ export async function runAsk(question: string): Promise<AskResult> {
           prefixRule: embedPrefixRule(llm.provider),
           dimensions: queryVector.length,
         },
+        retrieval,
         hits: hits.map((hit) => ({
           id: hit.id,
           score: hit.score,
