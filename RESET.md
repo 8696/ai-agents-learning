@@ -193,7 +193,7 @@ find apps -mindepth 1 -maxdepth 1 ! -name README.md ! -name .env -exec rm -rf {}
 
 1. `apps/package.json`：
    - `scripts` **只留** 仓库根 `scripts/` 下的工具脚本入口（`typecheck` / `check-demo` / `gen-manifest` / `static-serve` / `start-all-demo`），删掉全部 `app:*`。
-   - `dependencies` 起步集（[AGENTS.md §5.0](AGENTS.md#50-代码落点规范node--ts--注释--key--选型)）：`tsx` `dotenv` `zod` `openai` `@anthropic-ai/sdk` `typescript` `@types/node` + koa 栈（`koa` `@koa/bodyparser` `@koa/router` `koa-static` `@types/koa` `@types/koa-static` `@types/koa__router`）。
+   - `dependencies` 起步集（[AGENTS.md §5.0](AGENTS.md#50-代码约定node--ts--注释--key--选型)）：`tsx` `dotenv` `zod` `openai` `@anthropic-ai/sdk` `typescript` `@types/node` + koa 栈（`koa` `@koa/bodyparser` `@koa/router` `koa-static` `@types/koa` `@types/koa-static` `@types/koa__router`）。
    - **小节专属依赖卸掉**：模块 06 才用的 `better-sqlite3` `@types/better-sqlite3` `gpt-tokenizer`、`@babel/parser`（manifest 生成）等。拿不准就留，不影响重学。
 2. [apps/README.md](apps/README.md)：约定段落、Key / CATALOG、端口公式 + 「新建 / 改口 5 步 checklist」保留。「当前已有」占用表清空，只留表头 + 一句「尚无已落 Demo。学到该条、§5.2 判为可运行再加行。」不要提前建空模块夹。
 3. 可选：仓库根 `node scripts/gen-manifest.js`（导航清单若还指着已删路径）。

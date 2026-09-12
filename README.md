@@ -54,7 +54,7 @@ yarn app:06-01-context-vs-memory-step-2
 
 ## 仓库约定
 
-- **TS 5 + Node ≥22 + yarn**（[AGENTS.md §5.0](AGENTS.md#50-代码落点规范node--ts--注释--key--选型)）
+- **TS 5 + Node ≥22 + yarn**（[AGENTS.md §5.0](AGENTS.md#50-代码约定node--ts--注释--key--选型)）
 - **三家供应商、两种协议、两个 SDK**（[docs/02-怎么用.md §1.2.1](docs/02-怎么用.md)）：
   - 协议 A = `openai` + `/v1` 端点（OpenAI Chat Completions）
   - 协议 B = `@anthropic-ai/sdk` + Messages API（Anthropic 兼容）
@@ -62,7 +62,7 @@ yarn app:06-01-context-vs-memory-step-2
 - **Zod 守门**（环境变量 + 外部数据）
 - **apps/ 子文件夹互不 import**；条与条不互相 import
 - **共用 Key 只放 `apps/.env`，不进 git**
-- **不抽共享 npm 包**；新建入口复制 `apps/load-root-env.ts`（[AGENTS.md §5.0](AGENTS.md#50-代码落点规范node--ts--注释--key--选型)）
+- **不抽共享 npm 包**；新建入口复制 `apps/load-root-env.ts`（[AGENTS.md §5.0](AGENTS.md#50-代码约定node--ts--注释--key--选型)）
 - **HTTP 端口** 从 `50000` 起顺序分配（`max+1`，不回收）；新建/改口 5 步 checklist → [apps/README.md](apps/README.md)
 
 清进度 / 重学（按需打开，非日常） → [RESET.md](RESET.md)。

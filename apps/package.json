@@ -104,7 +104,8 @@
     "app:09-01-bm25-hybrid-step-2": "PORT=50088 tsx 09-RAG进阶/01-BM25-混合检索-step-2/server.ts",
     "app:09-01-bm25-hybrid-step-3": "PORT=50089 tsx 09-RAG进阶/01-BM25-混合检索-step-3/server.ts",
     "app:09-01-bm25-hybrid-step-4": "PORT=50090 tsx 09-RAG进阶/01-BM25-混合检索-step-4/server.ts",
-    "app:09-01-bm25-hybrid-step-5": "PORT=50091 tsx 09-RAG进阶/01-BM25-混合检索-step-5/server.ts"
+    "app:09-01-bm25-hybrid-step-5": "PORT=50091 tsx 09-RAG进阶/01-BM25-混合检索-step-5/server.ts",
+    "app:09-02-rerank-step-1": "PORT=50092 tsx 09-RAG进阶/02-Rerank-step-1/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

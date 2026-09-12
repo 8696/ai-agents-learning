@@ -1,7 +1,7 @@
-# 04 · 踩坑沉淀（自更新）
+# 04 · 踩坑写入小节文档（自更新）
 
 **Why**：本仓库写死规定不写 Claude 记忆（`memory/`），但 Agent 在 Cursor / Claude Code / Codex 间反复踩同一类坑（端口撞、日志截断、logger 委托、路径写错…）。把坑版本化进仓库，跨 Agent 共享，比本地记忆可靠。
-**How to apply**：任何 Agent 在做以下动作**前**，先 grep 本文件 §3「坑索引」对一遍：落 / 改 Demo、跑命令、写日志、改 `AGENTS.md` / `agents/`、跑 `check-demo`、跑 `yarn typecheck`、处理端口冲突、git 操作。**踩坑当场追加**（§2 协议），不积压、不写记忆。
+**How to apply**：任何 Agent 在做以下动作**前**，先 grep 本文件 §3「坑索引」对一遍：写出或修改演示、跑命令、写日志、改 `AGENTS.md` / `agents/`、跑 `check-demo`、跑 `yarn typecheck`、处理端口冲突、git 操作。**踩坑当场追加**（§2 协议），不积压、不写记忆。
 
 ---
 
@@ -64,7 +64,7 @@
 - **症状**：`check-demo` 报「委托：`apps/{demo}/lib/logger.ts` 里 `import` 路径指向 `../../apps/logger.ts`」
 - **触发**：落新 Demo 时直接 `cp apps/logger.ts apps/{demo}/lib/logger.ts` 但忘了改内部 `import`
 - **根因**：顶层 `apps/logger.ts` 用相对路径 `../../logs`；Demo 拷到 `apps/{demo}/lib/` 后相对路径变成 `../../apps/logs`，错的
-- **修复**：落 Demo 当下**完整拷** `apps/logger.ts` 到 `apps/{demo}/lib/logger.ts`，**重写** `path.resolve(__dirname, "..", "logs")`（即 `apps/{demo}/logs/`），**禁止**用 `new URL("./logs/", import.meta.url)`（会落 `lib/logs/`）
+- **修复**：写出演示 当下**完整拷** `apps/logger.ts` 到 `apps/{demo}/lib/logger.ts`，**重写** `path.resolve(__dirname, "..", "logs")`（即 `apps/{demo}/logs/`），**禁止**用 `new URL("./logs/", import.meta.url)`（会落 `lib/logs/`）
 - **反模式**：`import { logger } from "../../apps/logger"` / `from "../../../logger"`
 - **关联**：AGENTS.md §5.6、agents/05-demo.md §5.3.16
 
@@ -109,18 +109,18 @@
 - **症状**：对话、MD、或 Demo 日志 `explain` / 注释里出现「听起来重要、读完却对不上简单意思」的压缩说法（如「为什么打」「三拍」「五件套」「出门包」「这一刀」「闸门」「落盘」「合上笔记」「出网」「真活」）
 - **触发**：为了短、为了像协议口令、或从旧笔记 / 旧 Demo 习惯性抄词
 - **根因**：把陪跑口令当成教材用语；读者要先翻译才能懂
-- **修复**：当场改成白话（为什么写这条日志 / 三个阶段 / 五条日志 / 提问清单 / 这一步 / 过关检查 / 写进文件 / 真发网络请求 / 真正干活的那一层）；对照根 [AGENTS.md 白话强制](../AGENTS.md)。新落 Demo 的 `explain` 禁止再写「为什么打：」
+- **修复**：当场改成白话（为什么写这条日志 / 三个阶段 / 五条日志 / 提问清单 / 这一步 / 打钩前检查 / 写进文件 / 真发网络请求 / 真正干活的那一层）；对照根 [AGENTS.md 必须讲人话](../AGENTS.md)。新写出的演示的 `explain` 禁止再写「为什么打：」。改完再检查协议正文和口语有没有缩短词（见 P-022）
 - **反模式**：明知是黑话仍「先写着、以后再改」；新造更短的黑话替换旧黑话；整词替换后不检查页面按钮文案是否被误伤（如「只打一次」被改成「只写一次」）
-- **关联**：AGENTS.md 白话强制（2026-09-10）；本对话黑话清理（含 apps/ 日志 explain）
+- **关联**：AGENTS.md 必须讲人话（2026-09-10）；本对话黑话清理（含 apps/ 日志 explain）；P-022（缩短词出现在约束里）
 
 ### P-007  ·  把多步交互压成一个按钮
 
-- **症状**：沉淀 MD 写了「先出计划再确认」「第 2 步依赖第 1 步」「对照两侧」，页面却只有一个「开始」按钮，点一次服务端全跑完，前端只展示最终 JSON
-- **触发**：落 / 改 Demo 时图快，用「最简闭环 / 一个端点一个按钮」覆盖本步教学点其实是多步的场景（模块 06 对照、模块 07 计划预览最常见）
+- **症状**：写入小节文档 MD 写了「先出计划再确认」「第 2 步依赖第 1 步」「对照两侧」，页面却只有一个「开始」按钮，点一次服务端全跑完，前端只展示最终 JSON
+- **触发**：写出或修改演示 时图快，用「最简闭环 / 一个端点一个按钮」覆盖本步教学点其实是多步的场景（模块 06 对照、模块 07 计划预览最常见）
 - **根因**：把 §5.3.14「step-1 能多小就多小」误读成「任何 step 都可以压成一次点击」；没对照需求清单的验收步骤
-- **修复**：落代码前先数 MD 里的人机步骤；几步就做几步请求 / 几个中间态。先预览再确认 = GET 只要计划 + POST 才执行；对照 = 每侧自己的 fetch
+- **修复**：把代码写进 apps/ 之前先数 MD 里的人机步骤；几步就做几步请求 / 几个中间态。先预览再确认 = GET 只要计划 + POST 才执行；对照 = 每侧自己的 fetch
 - **反模式**：`POST /api/compare` 一次返回「计划 + 已执行结果」却号称实现了「确认前无副作用」；一个按钮跑完 4 组轨迹
-- **关联**：AGENTS.md §5.7、agents/05-demo.md §5.3.8、过关检查 2 第 8 项、过关检查 3「交互步骤」
+- **关联**：AGENTS.md §5.7、agents/05-demo.md §5.3.8、打钩前检查 3 第 8 项、打钩前检查 4「交互步骤」
 
 ### P-008  ·  对照塞进一个超级路由 / 单页堆满
 
@@ -134,16 +134,16 @@
 ### P-009  ·  本步核心埋在路由里
 
 - **症状**：打开 Demo 找不到 Agent 循环 / 调大模型写在哪；`routes/agent.ts` 或 `routes/compare.ts` 里塞着 while、规划器、`openai.chat.completions.create`；`lib/flow/` 没有一眼能认的主文件
-- **触发**：落 Demo 时先写通一个胖 route，再「有空再拆」；或按行数上限切碎成一堆 8 行文件，主路径被拆断
+- **触发**：写出演示 时先写通一个胖 route，再「有空再拆」；或按行数上限切碎成一堆 8 行文件，主路径被拆断
 - **根因**：没先判断「本步核心是什么」。本仓库是学大模型 / Agent 的，核心必须单独成文件，但不要拆太细
-- **修复**：落代码前先写一句「本步核心：……」进 `lib/flow/{名字}.ts` 文件头；route 只校验入参、调用它、返回。相邻小帮手（parseArgs、剥 think 块）可以和核心同文件
+- **修复**：把代码写进 apps/ 之前先写一句「本步核心：……」进 `lib/flow/{名字}.ts` 文件头；route 只校验入参、调用它、返回。相邻小帮手（parseArgs、剥 think 块）可以和核心同文件
 - **反模式**：核心写在 `routes/*.ts`；一函数一文件把 while 拆成看不懂的碎片；对照拆成两个 HTML 却仍把调模型写在 route 里
-- **关联**：AGENTS.md §5.7、agents/05-demo.md §5.3.8「落代码前先点名本步核心」、过关检查 2 第 10 项
+- **关联**：AGENTS.md §5.7、agents/05-demo.md §5.3.8「把代码写进 apps/ 之前先点名本步核心」、打钩前检查 3 第 10 项
 
 ### P-010  ·  验证完忘关服务（起服务做 verify，端口没释放）
 
 - **症状**：Demo 跑完 / `check-demo` 过了之后端口仍被 `npx tsx` / `yarn app:xx` 进程占着；学习者回来开 `yarn app:...` 直接 `EADDRINUSE`；`lsof -i :{端口}` 能查到 ghost 进程；多个 Demo 之间互相撞口
-- **触发**：落 / 改 Demo 后用 `preview_start` 或 `Bash ... &` 起服务做 verify（`node scripts/check-demo.cjs` 过 + 至少一次 snapshot 或 fetch），verify 完没调 `preview_stop` / `TaskStop` / `kill $PID`；用 Bash `yarn ... &` 绕开 `preview_*` 让服务脱离生命周期管控；用 `Ctrl+Z` 挂起当"关了"（端口仍占）
+- **触发**：写出或修改演示 后用 `preview_start` 或 `Bash ... &` 起服务做 verify（`node scripts/check-demo.cjs` 过 + 至少一次 snapshot 或 fetch），verify 完没调 `preview_stop` / `TaskStop` / `kill $PID`；用 Bash `yarn ... &` 绕开 `preview_*` 让服务脱离生命周期管控；用 `Ctrl+Z` 挂起当"关了"（端口仍占）
 - **根因**：端口是仓库共享资源（占用表见 [apps/README.md](../apps/README.md)）；Agent 不替学习者持有长跑服务；服务起完不关 = 学习者下次回来必撞口 + Demo 一多互相影响
 - **修复**：verify 完成（`check-demo` 过 + `cd apps && yarn typecheck` 过 + 至少一次 snapshot 或 fetch）后**立刻**收尾 —— `preview_stop` / `TaskStop` / `kill $SERVER_PID`。烟雾测试前必须先过 typecheck。烟雾测试三步固定：起服务（`cd apps && PORT=31001 npx tsx {demo}/server.ts > /tmp/srv.log 2>&1 &`）→ `sleep 4` + `ls -lh apps/{demo}/logs/$(date +%Y-%m-%d).log` 验路径 → **`kill $SERVER_PID`** 收尾。**不留长跑**。
 - **反模式**：verify 完留着 server 不关 / 没事先启一遍"以防万一" / 用 Bash `yarn ... &` 绕开 `preview_*` / 多个 Demo 同进程抢口不报 / `Ctrl+Z` 挂起冒充关服务 / `yarn app:xx` 跑烟雾测试（占学习者默认口 50038）
@@ -152,7 +152,7 @@
 ### P-011  ·  check-demo 把 /api/X/a 和 /api/X/b 收成一条
 
 - **症状**：一个 `routes/*.ts` 里挂了 `/api/agent/with-gate`、`/api/agent/timeout-gate` 等多条静态路径，`node scripts/check-demo.cjs` 仍报「一路由 … → /api/agent」通过
-- **触发**：落 Demo 时路由写成 `/api/{资源}/{变体}`（第三段是静态名字）；或以为 `health.ts` / `error-demo.ts` 不查就可以往里塞；Agent 以为 check-demo 过了就符合 §5.3.8
+- **触发**：写出演示 时路由写成 `/api/{资源}/{变体}`（第三段是静态名字）；或以为 `health.ts` / `error-demo.ts` 不查就可以往里塞；Agent 以为 check-demo 过了就符合 §5.3.8
 - **根因**：`routePathFamily` 把所有 `/api/X/...` 收成 `/api/X`，把「只把 `:id` 当同族」写过头了
 - **修复**：`scripts/check-demo/limits.cjs` 的 `routePathFamily` 只剥 `/:[^/]+` 动态段；`/api/foo` 与 `/api/foo/:id` 同族，`/api/agent/a` 与 `/api/agent/b` 必须拆文件。改完跑 `node scripts/check-demo.cjs apps/07-手写Agent/03-死循环防护-step-3` 应失败。旧锁定文件才进 `ONE_URL_GRANDFATHER`
 - **反模式**：为了让新 Demo 过关去扩豁免名单；把「同一业务」理解成「同一 `/api/X` 前缀就可以同文件」
@@ -161,7 +161,7 @@
 ### P-012  ·  Bash 第一条不 cd apps，npx tsx 找不到 demo
 
 - **症状**：跑烟雾测试 `PORT=xxxx npx tsx {demo}/server.ts` 报 `ERR_MODULE_NOT_FOUND: Cannot find module '.../apps/{demo}/server.ts'`（cwd 在仓库根，npx 解析仓库根下的 `{demo}/server.ts`，路径少一段 `apps/`）；`yarn install` / `yarn check-demo` 同样报路径不存在
-- **触发**：落 / 改 Demo 后写 Bash 跑 `npx tsx ...` / `yarn ...` / `node .../check-demo.cjs` 时，第一条命令没以 `cd .../apps` 开头；常见于「这条命令很短，应该不用 cd」的直觉
+- **触发**：写出或修改演示 后写 Bash 跑 `npx tsx ...` / `yarn ...` / `node .../check-demo.cjs` 时，第一条命令没以 `cd .../apps` 开头；常见于「这条命令很短，应该不用 cd」的直觉
 - **根因**：Bash cwd 每条命令都从仓库根重置（不持久）；`apps/` 是仓库子目录，仓库根跑 `npx tsx` 看不到 apps/ 下的文件。已有协议 [agents/05-demo.md §5.3.16](../agents/05-demo.md) 「Bash 命令第一条必须是 cd /.../apps」+ AGENTS.md §5.6 末尾「Bash 第一条必须 cd apps」，但 §3 没单独 P-NNN，Agent 不扫 §3 时容易忘
 - **修复**：每条 Bash 第一条 token **必须是** `cd apps &&`（仓库根下操作，apps 是子目录）；后续 `&&` 串起来。兜底：`npx --prefix apps tsx apps/{demo}/server.ts`（从仓库根起的相对路径）。**禁止**用 cwd 推断「应该已经在 apps/ 下」——Bash 不持久
 - **反模式**：`PORT=xxxx npx tsx {demo}/server.ts`（不 cd）；`yarn check-demo`（cwd 在仓库根，scripts/check-demo.cjs 找不到）；`git log` 顺手跑完不 cd 后面继续跑 npx；cd 后忘了 && 把后续命令接到同一行；用 `cd apps && npx ... &` 的后台进程脱离当前 shell 后 cwd 跑回根
@@ -174,7 +174,7 @@
 - **根因**：协议要进仓库跟版本走，被所有 clone 者用；本机绝对路径 ≠ 仓库相对路径，不能写进共享规范
 - **修复**：所有 Bash 示例用 `cd apps && ...`（cwd 假设仓库根）；绝对路径兜底改成 `npx --prefix apps tsx apps/{demo}/server.ts`
 - **反模式**：`agents/*.md` 出现 `/Users/...`；`cd {绝对路径}/apps`；写示例前先 `echo $PWD` 拿本机路径再抄
-- **关联**：P-012、04-pitfalls.md §1 字段约定、AGENTS.md 白话强制、2026-09-10 清理
+- **关联**：P-012、04-pitfalls.md §1 字段约定、AGENTS.md 必须讲人话、2026-09-10 清理
 
 ### P-014  ·  MiniMax 嵌入误走 OpenAI input
 
@@ -206,7 +206,7 @@
 ### P-017  ·  写完 Demo 只跑 check-demo 忘 typecheck
 
 - **症状**：`check-demo` 全过，学习者自己跑 `cd apps && yarn typecheck` 才爆 `tsc` 错误（如 `ctx.request.body` / 两套 `koa.Context`）
-- **触发**：落 / 改可运行 Demo 后只跑 `node scripts/check-demo.cjs`，没跑 `yarn typecheck` 就告诉学习者写完了
+- **触发**：写出或修改可运行演示 后只跑 `node scripts/check-demo.cjs`，没跑 `yarn typecheck` 就告诉学习者写完了
 - **根因**：check-demo 查目录 / 端口 / 日志 / 行数，不跑 TypeScript 编译器；两件事不是同一步
 - **修复**：写完按顺序 ① check-demo ② `cd apps && yarn typecheck` ③ 烟雾测试。禁止把 typecheck 并进 `check-demo.cjs`
 - **反模式**：`check-demo` 过就当写完；在 `scripts/check-demo.cjs` 里 `spawn tsc`；typecheck 不过仍起烟雾测试
@@ -215,7 +215,7 @@
 ### P-018  ·  dev CLI 调试脚本 commit 进 demo 根目录
 
 - **症状**：`check-demo` 报「`{demo}/debug-xxx.ts 文件头缺「职责」注释`」，但该文件其实是 dev 临时跑的 CLI 探针（不在 `lib/` / `routes/`，文件头英文「Debug：...」风格跟正式 demo 不符）
-- **触发**：落 / 改 Demo 时在 demo 根目录写 `debug-pdf.ts` / `probe.ts` / `try-*.ts` 这种 `tsx debug-xxx.ts <arg>` 跑的临时脚本，调试完顺手 `git add .` commit 进仓库（典型：PDF 解析入库前先用一次性脚本探 `result.pages` 结构）
+- **触发**：写出或修改演示 时在 demo 根目录写 `debug-pdf.ts` / `probe.ts` / `try-*.ts` 这种 `tsx debug-xxx.ts <arg>` 跑的临时脚本，调试完顺手 `git add .` commit 进仓库（典型：PDF 解析入库前先用一次性脚本探 `result.pages` 结构）
 - **根因**：`scripts/check-demo/check-structure.cjs:64-67` 用 `walk(root)` 深度扫所有 `.ts`，任何文件头不含「职责」的就报失败。CLI 调试脚本文件头往往是英文短注释（「Debug：直接调用 pdf-parse v2 打印…」），过不了规则。AGENTS.md §5.7 已禁止「无页面 CLI Demo」，但只在新增时拦，没拦「debug 期间临时写、用完没删」的脚本
 - **修复**：调试完直接 `rm` 删掉（**首选**）。不要保留 demo 根目录 + 加职责注释糊弄过 check-demo —— 留 CLI 脚本违反 §5.7。git 历史用 `git rm` / `git commit --amend` 抹掉这次误提交（仅本地分支、没推）；已推的话新 commit 删文件 + commit message 说明「清掉 dev 调试脚本」
 - **反模式**：调试脚本留 demo 根目录加职责注释过 check-demo；移进 `lib/debug/`（仍是 CLI 违反 §5.3）；保留脚本并希望学习者以后自己看结构
@@ -241,9 +241,18 @@
 - **症状**：学习者问「这是 BM25 / 某库里的说法吗？」——答案其实是「不是，Demo 自己起的名」（例：「编号问 / 口语问」其实都只是问句例子）
 - **触发**：为对照实验起短标签，再配假英文括注（如 `口语问（Spoken Query）`）写进页面 / MD / 讲课，听起来像领域标准
 - **根因**：把「两种例子」误做成「两种术语」；与 P-006（陪跑口令黑话）同类，但是面向知识点的假术语
-- **修复**：改成直述场景（「带货号的问句」「日常说法、库里未必同词的问句」）；业界没有的词不准当术语、不准硬配英文括注。对照根 [AGENTS.md 白话强制](../AGENTS.md) + [06-teach §6.2 2a](agents/06-teach.md) + [05-demo §5.3.11.a](agents/05-demo.md#5311a-用户可见文案格式--中文为主--英文括注2026-09-09-立--强制)
+- **修复**：改成直述场景（「带货号的问句」「日常说法、库里未必同词的问句」）；业界没有的词不准当术语、不准硬配英文括注。对照根 [AGENTS.md 必须讲人话](../AGENTS.md) + [06-teach §6.2 2a](agents/06-teach.md) + [05-demo §5.3.11.a](agents/05-demo.md#5311a-用户可见文案格式--中文为主--英文括注2026-09-09-立--强制)
 - **反模式**：继续用「编号问 / 口语问」当章节标题；新造 `混合问 / 稀有问` 一类标签；代码 id 可以描述性，页面文案又发明一套中文黑话
 - **关联**：2026-09-12 模块 09 · 01 BM25 Demo；P-006（口令黑话）
+
+### P-022  ·  约束里出现缩短词，开口就会跟着学
+
+- **症状**：对话、讲课、小节文档或演示页面出现「先落再勾」「扫完变体钉住本条」；动词没宾语（只说「讲完」「对齐」）；名词砍短（「条」「MD」「清单」不说是哪一份）。根上往往是 `AGENTS.md` / `agents/` 自己还在用这些缩短词
+- **触发**：协议正文把缩短词当工作用词；或给协议开「内部可以缩短、对学习者再展开」的例外
+- **根因**：约束里出现的词，模型会照着学
+- **修复**：`AGENTS.md`、`agents/`、演示模板只用完整说法。缩短词只许出现在「不准写」的例句里。发现协议还在用缩短词 → 先改正文，再改正对学习者说的话。对照根 [AGENTS.md 必须讲人话](../AGENTS.md) 第 3 类
+- **反模式**：一面禁止缩短词、一面在协议正文继续写「落 Demo」；给协议开「内部可以缩短」的例外
+- **关联**：AGENTS.md 必须讲人话第 3 类（2026-09-12）；P-006（口令黑话）；P-021（教学分类名）；`coach complete` 打钩前检查 1
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）
@@ -267,4 +276,4 @@
 - **写入**：任意 Agent，踩坑当场
 - **合稿 / 删草稿**：用户 review 时处理
 - **归档**：用户确认某条不再触发后，从 §3 移 §5
-- **禁止**：Agent 自行删 §3 / 自行改 §1 §2 协议 / 跨条目合并（除非用户明确指令）
+- **禁止**：Agent 自行删 §3 / 自行改 §1 §2 协议 / 跨小节目合并（除非用户明确指令）

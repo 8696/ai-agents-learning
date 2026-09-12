@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rerank · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="components/recall-vs-rerank.js"></script>
+  <script type="text/babel" src="components/corpus-vectors-table.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [env, setEnv] = useState({ port: 50092, provider: "—", model: "—", embeddingModel: "—", hasKey: false });
+      const [query, setQuery] = useState("杯子在路上碎了能退吗");
+      const [n, setN] = useState(5);
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待跑");
+      const [errorText, setErrorText] = useState("");
+      const [recall, setRecall] = useState(null);
+      const [rerank, setRerank] = useState(null);
+      const [vectors, setVectors] = useState(null);
+      const [vectorsBusy, setVectorsBusy] = useState(false);
+
+      async function loadVectors() {
+        setVectorsBusy(true);
+        setErrorText("");
+        try {
+          const response = await fetch("/api/corpus-vectors");
+          const json = await response.json();
+          if (!json.ok) {
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setVectors(json.result);
+        } catch (error) {
+          setErrorText(String(error));
+        } finally {
+          setVectorsBusy(false);
+        }
+      }
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((d) => {
+          setEnv({
+            port: d.port,
+            provider: d.provider || "—",
+            model: d.model || "—",
+            embeddingModel: d.embeddingModel || "—",
+            hasKey: Boolean(d.hasKey),
+          });
+        }).catch(() => {});
+      }, []);
+
+      async function runRecall() {
+        if (!query.trim()) {
+          setStatus("❌ 错误");
+          setErrorText("问句不能为空");
+          return;
+        }
+        setBusy(true);
+        setStatus("🔄 粗召回中（第一次发请求）");
+        setErrorText("");
+        setRerank(null);
+        try {
+          const response = await fetch("/api/search-recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: query, n }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setRecall(json.result);
+          setStatus("✅ 粗召回完成 · 下一步：继续精排");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runRerank() {
+        if (!recall) {
+          setStatus("❌ 错误");
+          setErrorText("先点「跑粗召回」拿到候选");
+          return;
+        }
+        setBusy(true);
+        setStatus("🔄 精排中（第二次发请求：调大模型打分）");
+        setErrorText("");
+        try {
+          const response = await fetch("/api/rerank", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query, candidates: recall.rows }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setRerank(json.result);
+          setStatus("✅ 精排完成 · 看两榜对比");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function reset() {
+        setRecall(null);
+        setRerank(null);
+        setStatus("⏸ 待跑");
+        setErrorText("");
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header id="page-header" className="border-b p-4 bg-white flex justify-between items-center">
+            <h1 id="page-title" className="text-lg font-semibold">
+              Rerank · 第一步（step-1）· 粗召回 → 真调模型精排 · 两榜并排
+            </h1>
+            <span id="status-pill" className={"text-xs px-2 py-1 rounded " + (status.startsWith("❌") ? "bg-red-100 text-red-800" : status.startsWith("🔄") ? "bg-blue-100 text-blue-800" : "bg-gray-200")}>
+              {status}
+            </span>
+          </header>
+
+          <main id="page-main" className="max-w-6xl mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>同一问句先发两次请求</b>：第一次走向量 + BM25 + RRF 合成<b>粗召回榜</b>（N 条）；第二次把候选送进大模型按"问句 + 文档"成对打 0~1 分，按精排分<b>重排</b>得到<b>精排榜</b>。两榜并排、名次跳动 = 「不是一次 Top-K 定生死」。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>输入问句 + 选 N（默认 5），点「跑粗召回」→ 发请求到 /api/search-recall</li>
+                <li>服务端并行调嵌入模型 + 本地 BM25，按名次 RRF 投票合成粗名单</li>
+                <li>粗召回完成后点「继续精排」→ 发请求到 /api/rerank（问句字符串不变）</li>
+                <li>服务端拼 prompt 调大模型一次性给每条 0~1 分，按分降序重排 → 两榜并排展示</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
+                <div className="font-semibold text-yellow-900">本页核心教学点</div>
+                <div>① 粗召回只管"对的在不在候选里"，精排只管"候选里谁该在最前"——两阶段用的是不同打分器；</div>
+                <div>② 第二阶段是真发网络请求的模型调用：把每对"问句 + 文档"塞进 prompt，按 0~1 出一组分；</div>
+                <div>③ 名次跳动是这一页的"画面"：同一问句两张榜，至少一篇从前排掉下去、或者从后面升上来。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-gray-700 flex-1 min-w-[200px]">
+                  <span className="block text-xs text-gray-500 mb-1">问句（精排不改这一句字符串）</span>
+                  <input
+                    className="w-full border rounded px-2 py-1 text-sm"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <label className="text-sm text-gray-700">
+                  <span className="block text-xs text-gray-500 mb-1">候选 N（粗召回从语料捞几条）</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    className="w-20 border rounded px-2 py-1 text-sm"
+                    value={n}
+                    onChange={(e) => setN(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+                  />
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !env.hasKey}
+                  onClick={runRecall}
+                  title="第一次发请求：调嵌入模型 + 本地 BM25 + RRF 合成粗召回榜"
+                >
+                  ① 跑粗召回
+                </button>
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !recall || !env.hasKey}
+                  onClick={runRerank}
+                  title="第二次发请求：把粗召回候选送进大模型打分重排"
+                >
+                  ② 继续精排
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={vectorsBusy}
+                  onClick={loadVectors}
+                  title="从缓存读语料向量（前 8 维 + 范数）；首次需先跑一次粗召回把缓存建起来"
+                >
+                  查看语料向量
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={reset}
+                >
+                  重置
+                </button>
+                {!env.hasKey ? (
+                  <span className="text-xs text-red-700">
+                    当前未配 密钥（apps/.env 没填）—— 主按钮 disabled
+                  </span>
+                ) : null}
+              </div>
+              {errorText ? (
+                <div className="text-xs text-red-700 bg-red-50 border border-red-300 rounded p-2">
+                  {errorText}
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {vectors ? (
+                <DemoUI.CorpusVectorsTable data={vectors} />
+              ) : null}
+              {!recall && !rerank ? (
+                <div className="text-xs text-gray-400">
+                  还没跑。先点「① 跑粗召回」拿左榜；再点「② 继续精排」拿右榜。
+                </div>
+              ) : (
+                <DemoUI.RecallVsRerank recall={recall} rerank={rerank} />
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 嵌入 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
