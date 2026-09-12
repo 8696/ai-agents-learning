@@ -13,7 +13,7 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**BM25 / 混合检索**：关键词能补纯向量的短板（专有名词、编号）](./01-BM25-混合检索.md) | 知道向量不擅长什么、BM25 补什么 | `BM25 algorithm explained simple` `hybrid search vector bm25` · Elasticsearch BM25 文档 · Pinecone hybrid 教程 | — |
+| ✅ | [**BM25 / 混合检索**：关键词能补纯向量的短板（专有名词、编号）](./01-BM25-混合检索.md) | 知道向量不擅长什么、BM25 补什么 | `BM25 algorithm explained simple` `hybrid search vector bm25` · Elasticsearch BM25 文档 · Pinecone hybrid 教程 | — |
 | ⬜ | [**Rerank**：先粗召回再精排，不是一次 Top-K 定生死](./02-Rerank.md) | 能说出两阶段各干什么 | `cross encoder reranking RAG` `Cohere rerank` · Cohere Rerank 文档 · Jina Reranker | — |
 | ⬜ | [**Query Rewrite**：用户口语往往不是好检索词](./03-Query-Rewrite.md) | 知道为什么要改写 / 扩展 query | `query rewriting RAG` `HyDE retrieval` · RAG 评测博客 | — |
 | ⬜ | [**切块与查询变体**：Parent-Child、Contextual Retrieval、Multi-query、Query Expansion 各补哪类失败](./04-切块与查询变体.md) | 能说清各解决什么；**至少动手做过其中两种**，其余能讲场景即可 | `parent child chunking RAG` `contextual retrieval anthropic` `multi query retrieval` `query expansion RAG` · Anthropic Contextual Retrieval · LlamaIndex 切块文档 | — |
