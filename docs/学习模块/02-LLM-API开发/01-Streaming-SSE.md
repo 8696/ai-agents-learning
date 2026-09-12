@@ -315,7 +315,7 @@ prompt：`用一句话介绍你自己，30 字以内。`（MiniMax-M3 模型，2
 
 ## 过关自检
 
-合上文件，能讲清：
+关上文件，能讲清：
 
 1. **一帧长什么样**：`Content-Type: text/event-stream`；一个或多个 `field: value` 行 + 空行（`\n\n` 收帧）；OpenAI 每帧 `data: {json}\n\n`，`json.choices[0].delta.content` 是增量；结束帧 `data: [DONE]\n\n`。
 2. **为什么选 SSE 而不是 WebSocket**：① HTTP/1.1 兼容 + 企业网关/代理友好；② 浏览器 `EventSource` 直接带 `Authorization` Header，WebSocket **带不了**（Key 进 URL = 泄漏）；③ 自动重连 + Last-Event-ID 断点续传；④ 服务端实现 3 行；⑤ 单向推内容，WebSocket 的「双向」是多余能力。

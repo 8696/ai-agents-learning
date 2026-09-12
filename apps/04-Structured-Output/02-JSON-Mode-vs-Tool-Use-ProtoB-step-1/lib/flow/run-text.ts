@@ -1,7 +1,7 @@
 /**
  * 职责：协议 B 的「JSON Mode 等价路径」——无 tools，纯文本 + prompt 强约束。
  * 数据流：{ llm, prompt } → anthropic.messages.create（不带 tools）→ 拼 text 块 → parse。
- * 为什么单独成文件：协议 B 没有 response_format。这一刀只能靠 prompt，
+ * 为什么单独成文件：协议 B 没有 response_format。这一步只能靠 prompt，
  *   和 tool-use 混在一个函数里，读者会以为 Anthropic 也有 json_object 开关。
  *
  * 日志（§5.3.16）：调用函数 五条日志（runTextNoTools 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。

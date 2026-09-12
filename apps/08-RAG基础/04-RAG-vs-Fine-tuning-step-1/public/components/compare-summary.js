@@ -1,6 +1,6 @@
 // 职责：对照小结卡片 + 「同时跑两栏」按钮。
 // 「同时跑两栏」 = 浏览器并发 Promise.all（两条 fetch 同时发起）→ 把两份结果交给父组件。
-// 这是 §5.3.8「对照拆请求」 + 「交互跟笔记走」：不是 /api/compare 打包跑多轨迹。
+// 这是 §5.3.8「对照拆请求」 + 「交互跟笔记走」：不是 /api/compare 一个接口同时跑多套。
 const CompareSummary = function ({ question, bothLoading, bothError, onRunBoth }) {
   return (
     <section
@@ -9,7 +9,7 @@ const CompareSummary = function ({ question, bothLoading, bothError, onRunBoth }
     >
       <div className="text-sm font-semibold text-yellow-900">本页核心教学点</div>
       <div className="text-xs text-gray-800">
-        同一问句、两条独立请求：左栏「只靠模型」（无材料 / 无出处）；右栏「检索增强生成」（命中切块 / 带出处）。
+        同一问句、两条独立请求：左栏「不接 RAG（model only · 无材料 · 无出处）」；右栏「检索增强生成」（命中切块 / 带出处）。
         <br />
         知识一改：左栏答的是旧的或编的；右栏答的是新的并列出文件 / 段落。
         <br />

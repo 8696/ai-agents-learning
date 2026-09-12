@@ -54,7 +54,7 @@ React 渲染：trajectory 按圈 + 失败 Observe 卡片（failedCount + 首末�
 - trajectory 区按圈展开：每圈显示 Reason（assistant 摘要 + tool_calls 或正文）/ Act+Observe（每个 tool_result 原文 + 成功/失败红绿徽标）/ 圈耗时
 - 数据前后对照三栏（diff 应只列真正成功那条 todo 的改动）
 - 类 A 错误：发空字符串 → 400 黄字（Zod 校验）
-- 类 B 错误：点「演示上游失败」→ 502 红字（教学用端点）
+- 类 B 错误：点「演示后端 5xx」→ 502 红字（教学用端点）
 - 缺 Key 时主按钮 disabled，页脚 `密钥 ❌`
 
 ## step-3 教学点

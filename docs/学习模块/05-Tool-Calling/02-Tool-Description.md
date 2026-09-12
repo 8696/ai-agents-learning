@@ -448,7 +448,7 @@ classifyPick(picked, qType, content):
 | ---- | -------- | ---- |
 | 「刚刚 step-1 怎么写都调错」 | 我以为 verdict 失败是「模型选择错」（描述不够好），实际是 expected 写死 + query C 不该存在 + 正则误伤 | 答：expected 必须按 query 内容动态判定（`pickExpectedTool` 按关键字命中 order/logistics），不能写死；query C「无关天气」超出本条教学点，要删；正则「到」字误伤 query B，要改成完整词组匹配 + 先 order 后 logistics。**这条追问是新理解**——「verdict 写错 vs 模型选错」是两个层面的问题。 |
 | 「把两个 demo 都改成单独调用 + 完整差异点」 | 我以为「一键对比跑完看调对/调错」就够教学，实际学习者要的是「单变量可控 + 完整差异可观察」 | 答：教学模式设计原则 = 「单 Tool 独立调用」让学习者能完整对比所有维度（pickedToolName / finish_reason / arguments / response.content / token / 耗时），不是只看「调对/调错」二元判定。 |
-| 「我的快递到哪了，订单是「123456」，调用 B 组时它不应该可以成功调工具吗？」 | B 组反例「不要用于 X」是否只拦订单详情类、还是一刀切 | 答：**过滤精准**——反例只拦订单详情类（地址/状态/金额），不拦物流类。query Z「我的快递到哪了 + 订单号」= 物流类 + 给了具体订单号 → B 组应稳定调对 query_logistics + order_id="123456"。**这是变体 3「反例」的另一个验证维度：拦截 + 不误伤**。 |
+| 「我的快递到哪了，订单是「123456」，调用 B 组时它不应该可以成功调工具吗？」 | B 组反例「不要用于 X」是否只拦订单详情类、还是不分情况一律拦 | 答：**过滤精准**——反例只拦订单详情类（地址/状态/金额），不拦物流类。query Z「我的快递到哪了 + 订单号」= 物流类 + 给了具体订单号 → B 组应稳定调对 query_logistics + order_id="123456"。**这是变体 3「反例」的另一个验证维度：拦截 + 不误伤**。 |
 | 「pickedToolName=null 是合法结果吗？」| step-3 我把「模型没调 Tool」当 502 报错 | 答：**pickedToolName=null 有两种合法原因**：① 反例生效（content 说「这是订单详情，不是物流」）② 缺字段识破（content 说「没提供订单号，请告诉我」）两者都是「模型识破 → 不调」，但触发机制不同。CompareSide 加 `ok: boolean` 字段区分；判定函数拆 4 档 `neg / missing / both / none`。**这是变体 2 + 变体 3 的边界交叉**。 |
 | 「我的快递到哪了，订单号是 2938293」B 组调用对了但完整差异点表说「瞎调」 | 核心对照只看 pickedToolName!==null 误判「调对」为「瞎调」| 答：**5 档分类函数 `classifyPick(picked, qType, content)` = 三维交叉**：
 - query 类型（logistics/order_detail/boundary，由 `classifyQuery(query)` 词组匹配判）

@@ -32,7 +32,7 @@ export async function answerWithoutRag(input: unknown): Promise<NoRagResult> {
   logger.info(
     "│ 调用函数-answerWithoutRag",
     "调用函数开始：answerWithoutRag",
-    "为什么写这条日志：左栏「只靠模型」那一侧的入口；不喂材料，看模型说过期的还是新的。" +
+    "为什么写这条日志：左栏「不接 RAG（model only · 无材料 · 无出处）」那一侧的入口；不喂材料，看模型说过期的还是新的。" +
       " 当前：路由 /api/no-rag 收到请求；下一步交给模型。",
     { 入参: { question }, __code: "const response = await llm.openai.chat.completions.create({...});" },
   );

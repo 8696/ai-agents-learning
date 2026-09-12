@@ -149,7 +149,7 @@ export function isAbortError(err: unknown): boolean {
   );
 }
 
-/** 上游失败时页面要同时看到人话和 HTTP 码（401 Key / 429 限流 / 5xx 对方挂了）。 */
+/** 后端 5xx 时页面要同时看到人话和 HTTP 码（401 Key / 429 限流 / 5xx 对方挂了）。 */
 export function describeUpstreamError(err: unknown): {
   message: string;
   upstreamStatus?: number;

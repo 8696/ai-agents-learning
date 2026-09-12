@@ -92,7 +92,7 @@ export function mountChatRoutes(router: Router): void {
     console.log(
       `  POST /api/chat  帧数=${stats.frameCount}` +
         (stats.usage ? `  total_tokens=${stats.usage.total_tokens}` : "  usage=无") +
-        (stats.failed ? `  上游失败=${stats.failed.message}` : ""),
+        (stats.failed ? `  后端 5xx=${stats.failed.message}` : ""),
     );
   });
 }

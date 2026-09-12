@@ -38,7 +38,7 @@
 
 **常见坑**：把「记忆」和「上下文」混为一谈。上下文是这一次请求发出去的内容，记忆是跨会话持久化的东西（模块 10）。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`context vs memory agent` · `conversation summarization LLM`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`context vs memory agent` · `conversation summarization LLM`
 
 ## 动手落点
 

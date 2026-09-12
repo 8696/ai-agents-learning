@@ -49,7 +49,7 @@ cd apps && yarn app:05-04-tool-gateway-step-3
 ## §5.3.2 6 项全齐
 
 - Happy path ✓ alice / bob 拉 per-user 邮件；platform-god / carol 拒调
-- 错误处理 ≥2 类 ✓ HTTP 502 上游失败 + OAuth FORBIDDEN（platform-god / 未 OAuth）+ Key 缺失
+- 错误处理 ≥2 类 ✓ HTTP 502 后端 5xx + OAuth FORBIDDEN（platform-god / 未 OAuth）+ Key 缺失
 - Loading ✓ runChat setStatus → pill 切 🔄 + 按钮 disabled
 - 单会话输出 ✓ Round 1/2 数据卡 + read_recent_emails 结果 + final_reply 全在同一 `#output`
 - 环境元信息 ✓ /health + 页脚 #env-info（含 provider / model / hasKey / oauthUsers）

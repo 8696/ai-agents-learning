@@ -221,7 +221,7 @@
                 <li>方法一路径：直接丢最旧直到 fit → 拼消息发给模型 → 拿到回答一</li>
                 <li>方法二路径：远期 N 条 → 调一次模型做摘要 → 拼消息发给模型 → 拿到回答二</li>
                 <li>系统检测两个回答里有没有「陈述」关键事实（区分肯定句 vs 反例/否认）→ 一眼对比</li>
-                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
+                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示后端 5xx」→ 5xx（红底）</li>
               </ol>
 
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
@@ -276,7 +276,7 @@
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 第二类错误 · /api/compare-force-error）</button>
+                >演示后端 5xx（5xx · 第二类错误 · /api/compare-force-error）</button>
               </div>
               {errorMsg ? (
                 <div
@@ -289,7 +289,7 @@
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

@@ -26,7 +26,7 @@ yarn app:08-03-cosine-similarity-step-1
 
 - 看见问题 / 短同向 / 长同向 / 略偏 / 无关 五条二维向量
 - 三侧分请求：余弦并列、点积长赢、欧氏长远
-- 两类失败：空卡片 4xx、演示上游失败 5xx
+- 两类失败：空卡片 4xx、后端 5xx
 - 页脚来自 `GET /health`（`callsModel: false`，缺密钥不禁用按钮）
 
 ## 对应学习沉淀

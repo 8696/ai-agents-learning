@@ -37,7 +37,7 @@
 
 **常见坑**：用正则或 `JSON.parse` 裸解析模型输出，没有 Schema 校验层。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`JSON Schema tutorial` · `structured outputs vs json mode`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`JSON Schema tutorial` · `structured outputs vs json mode`
 
 ## 动手落点
 

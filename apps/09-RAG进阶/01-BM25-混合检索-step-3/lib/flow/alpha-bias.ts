@@ -2,8 +2,8 @@
  * 本步核心：按问句偏置 α（变体 7）——不需要人手调权重，问句类型自己挑 α。
  *
  * 职责：检测问句是否含「编号 / 货号 / 错误码」模式 → 给出建议 α：
- *   - 纯编号问 → α 小（偏 BM25，因为编号只能 BM25 中）
- *   - 纯口语问 → α 大（偏向量，因为同义只能向量中）
+ *   - 纯带货号的问句 → α 小（偏 BM25，因为编号只能 BM25 中）
+ *   - 纯日常说法、库里未必同词的问句 → α 大（偏向量，因为同义只能向量中）
  *   - 两者都有 → α 中（让两侧都救人）
  *
  * 数据流：输入 { query } → 正则检测 → 分类 → 返回 { suggestedAlpha, detected, reason }
@@ -23,9 +23,9 @@ export type AlphaBias = {
   query: string;
   /** 是不是检测到了编号 / 货号 / 错误码模式 */
   hasNumbered: boolean;
-  /** 是不是口语化（不含编号模式，但有中文连续 + 问号 / 怎么 / 退 / 修 等口语词） */
+  /** 是不是日常说法（不含编号模式，但有中文连续 + 问号 / 怎么 / 退 / 修 等日常说法提示词） */
   hasSpoken: boolean;
-  /** 分类：numbered（纯编号） / spoken（纯口语） / mixed（两者都有） */
+  /** 分类：numbered（纯带货号的） / spoken（纯日常说法） / mixed（两者都有） */
   category: "numbered" | "spoken" | "mixed" | "unknown";
   /** 建议 α：向量侧权重。α 小 → 偏 BM25；α 大 → 偏向量 */
   suggestedAlpha: number;
@@ -35,7 +35,7 @@ export type AlphaBias = {
 
 /** 编号 / 货号 / 错误码模式：至少 2 个大写字母 + 连字符 / 下划线 + 数字（允许跨字符） */
 const NUMBERED_PATTERN = /[A-Z]{2,}[-_]?\d+/;
-/** 口语提示词：问号 / 怎么 / 退 / 修 / 换 / 坏了 / 裂了 等 */
+/** 日常说法提示词：问号 / 怎么 / 退 / 修 / 换 / 坏了 / 裂了 等 */
 const SPOKEN_HINTS = /(怎么|为什么|如何|退|换|修|坏了|裂了|碎了|投诉|不行|出错|失败)/;
 
 /**
@@ -66,19 +66,19 @@ export async function detectAlpha(input: { query: string }): Promise<AlphaBias> 
       if (hasNumbered && hasSpoken) {
         category = "mixed";
         suggestedAlpha = 0.5;
-        reason = "问句同时含编号 + 口语 → 各半（编号定位商品，口语定位政策），两侧都能救人";
+        reason = "问句同时含编号 + 日常说法 → 各半（编号定位商品，日常说法定位政策），两侧都能救人";
       } else if (hasNumbered) {
         category = "numbered";
         suggestedAlpha = 0.2;
-        reason = "问句是纯编号（如 SKU-8821 / ERR-4401）→ 编号只能 BM25 中，α 小（偏 BM25）";
+        reason = "问句是纯带货号的（如 SKU-8821 / ERR-4401）→ 编号只能 BM25 中，α 小（偏 BM25）";
       } else if (hasSpoken) {
         category = "spoken";
         suggestedAlpha = 0.8;
-        reason = "问句是口语（怎么 / 退 / 修 / 裂了 等）→ 共同词少，靠向量；α 大（偏向量）";
+        reason = "问句是日常说法、库里未必同词（怎么 / 退 / 修 / 裂了 等）→ 共同词少，靠向量；α 大（偏向量）";
       } else {
         category = "unknown";
         suggestedAlpha = 0.5;
-        reason = "问句既不像编号也不像口语 → 默认各半（人后续再调）";
+        reason = "问句既不像带货号的也不像日常说法 → 默认各半（人后续再调）";
       }
 
       return {

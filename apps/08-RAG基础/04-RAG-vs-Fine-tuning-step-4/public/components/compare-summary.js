@@ -1,4 +1,4 @@
-// 职责：对照小结卡片 + 「重新加载」 + 「演示上游失败」按钮。
+// 职责：对照小结卡片 + 「重新加载」 + 「演示后端 5xx」按钮。
 // 教学点：检索增强生成 vs 微调——喂的数据完全不一样。文档段落 vs 问答对。
 const CompareSummary = function ({ docsCount, qasCount, onReload, onDemoError, demoErrorLoading }) {
   return (
@@ -34,7 +34,7 @@ const CompareSummary = function ({ docsCount, qasCount, onReload, onDemoError, d
           className="border border-gray-300 px-3 py-1 rounded disabled:opacity-50 text-sm"
           title="演示第二类错误：GET /api/demo-error 强制返回 5xx，#status-pill 变红"
         >
-          {demoErrorLoading ? "请求中…" : "演示上游失败（5xx · 第二类错误）"}
+          {demoErrorLoading ? "请求中…" : "演示后端错误（5xx · 第二类错误）"}
         </button>
       </div>
     </section>

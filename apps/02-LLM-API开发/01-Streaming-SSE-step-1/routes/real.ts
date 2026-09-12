@@ -91,7 +91,7 @@ async function handleReal(ctx: Context): Promise<void> {
         耗时ms: Date.now() - tHandlerStart,
       },
     );
-    console.log(`  ${ctx.method} /api/real  上游失败=${stats.failed.message}`);
+    console.log(`  ${ctx.method} /api/real  后端 5xx=${stats.failed.message}`);
   } else {
     logger.info(
       "api.real",

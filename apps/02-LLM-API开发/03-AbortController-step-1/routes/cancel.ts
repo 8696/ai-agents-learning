@@ -67,7 +67,7 @@ export function mountCancelRoutes(router: Router): void {
     console.log(
       `  POST /api/cancel-after-frames  帧数=${stats.frameIdx}` +
         (stats.aborted ? `  aborted=${stats.abortReason}` : "") +
-        (stats.failed ? `  上游失败=${stats.failed.message}` : ""),
+        (stats.failed ? `  后端 5xx=${stats.failed.message}` : ""),
     );
 
     if (stats.failed) {

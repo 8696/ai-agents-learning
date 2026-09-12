@@ -6,7 +6,7 @@
  *   - 所有 Tool 共享同一道 Gateway（统一权限 / 配额 / 危险操作校验）
  *   - 业务端（routes/chat.ts）只面对 executeTool()，不直接 import 每个 Tool
  *
- * 教学锚点（这一刀覆盖 §05-Tool-Calling-04 Tool Gateway / 幂等的"请求 ≠ 执行"一刀）：
+ * 教学锚点（这一步覆盖 §05-Tool-Calling-04 Tool Gateway / 幂等的"请求 ≠ 执行"一步）：
  *   模型发出 tool_call ≠ 允许执行 —— gatewayCheck 在 execute 前必须跑过；
  *   dangerous 工具 / 未注册工具都被拦下，回灌 tool_result 时返回 { ok:false, error } 让模型能自纠。
  *

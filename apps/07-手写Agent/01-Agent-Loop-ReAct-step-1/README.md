@@ -51,7 +51,7 @@ React 按圈渲染：每圈一张卡（assistant + tool_calls + tool_results + �
 - 轨迹区按圈展开：每圈显示 Reason（assistant 摘要 + tool_calls 或正文）/ Act+Observe（每个 tool_result 原文 + 是否成功）/ 圈耗时
 - 跑完可展开「完整 messages」看到 Loop 把 assistant+tool 一圈一圈追加进了什么
 - 类 A 错误：发空字符串 → 400 黄字（Zod 校验）
-- 类 B 错误：点「演示上游失败」→ 502 红字（教学用端点）
+- 类 B 错误：点「演示后端 5xx」→ 502 红字（教学用端点）
 - 缺 Key 时主按钮 disabled，页脚 `密钥 ❌`
 
 ## step-1 教学点

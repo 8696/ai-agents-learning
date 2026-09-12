@@ -280,7 +280,7 @@
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 类 B 错误）</button>
+                >演示后端 5xx（类 B 错误）</button>
               </div>
               {(status.key === "running" || status.key === "cancelling") && runId && (
                 <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-2">
@@ -299,7 +299,7 @@
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

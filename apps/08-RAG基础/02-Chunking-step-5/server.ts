@@ -45,7 +45,7 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "切块 step-5：递归切分完整版（## / 段落 / 句号 / 硬切兜底四级显式降级）；纯本地文本操作，不调 LLM", {
+  logger.info("server.start", "listening", "切块 step-5：递归切分完整版（## / 段落 / 句号 / 按字数切兜底四级显式降级）；纯本地文本操作，不调 LLM", {
     url: `http://127.0.0.1:${PORT}/`,
     protocol: "local",
   });

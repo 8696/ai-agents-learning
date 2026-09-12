@@ -53,7 +53,7 @@ React 四张卡：① 双策略判定小结  ② trim 路径  ③ summarize 路�
 - 默认参数下：trim 路径 key fact 被丢 → trimReply ❌；summarize 路径 summary 里仍含 → summarizeReply ✅
 - 改 `historyCount` 调大 → trimDropped 增多 → trim 路径更惨；summarize 路径受影响小
 - 改 `summarizeFrom` 调小（如 5）→ 远期喂摘要的 N 少 → summary 短 → 拼装后预算更容易塞进窗口
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`
 
 ## step-2 教学点

@@ -22,14 +22,14 @@
     const { useState, useEffect } = React;
     const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar } = window.DemoUI;
 
-    // step-5 · I 件：混合示例——同时触发 4 档降级（## / 段落 / 句号 / 兜底再切）
+    // step-5 · I 件：混合示例——同时触发 4 档降级（## / 段落 / 句号 / 按字数切兜底）
     const MIXED_DOC = (function () {
       // 节 2 用：每段 ~1350 字符（≤ 2000）→ 多段拼起来让整节 > 2000 → boundary="段落"
       const paraOnlyPara = "本段长度适中演示段落档降级——段落超长但每段 ≤ 2000。".repeat(45);
       // 节 3 用：单段 ~2870 字符（有句号）→ 段 > 2000 → 降级到句号档 → boundary="句号"
       const superLongWithPeriods = "本句为演示「句号」降级——段超长且内部有句号分割因此按段落降级后切出多个句号小块。".repeat(70);
       // 节 4 用：单段 ~3500 字符（无任何终结符）→ 段 > 2000 → 句号档也压不住 → boundary="fallback-fixed"
-      const superLongNoPeriod = "本句为演示「兜底再切」单段超长且内部没有任何句号分割因此按段落降级按句号降级都压不住最后走兜底硬切".repeat(70);
+      const superLongNoPeriod = "本句为演示「按字数切兜底」单段超长且内部没有任何句号分割因此按段落降级按句号降级都压不住最后走按字数切兜底".repeat(70);
       return [
         // 节 1：短章节 → boundary="##"
         "## 短章节（≤ 2000 字符 · boundary=##）",
@@ -49,7 +49,7 @@
         superLongWithPeriods,
         "",
         // 节 4：单段 > 2000 + 无句号 → boundary="fallback-fixed"
-        "## 兜底硬切（无句号 · boundary=fallback-fixed）",
+        "## 按字数切兜底（无句号 · boundary=fallback-fixed）",
         superLongNoPeriod,
       ].join("\n");
     })();
@@ -73,16 +73,16 @@
     ].join("\n");
 
     // step-2 · B 件：超长一节文档——按结构切时单节超 2000 字 / 内部句子也超 2000 字，
-// 触发兜底再切为 fallback-fixed。
+// 触发按字数切兜底为 fallback-fixed。
 const LONG_DOC = (function () {
   const title = "## 保修政策（含完整细则）";
   // 一个完整长句（≈295 字符）重复 8 次 ≈ 2360 字符，超过 MAX_CHUNK_BEFORE_FALLBACK=2000。
   const sentence =
-    "本节说明保修细则，包括退换货流程、保修期计算、易耗品范围、损坏责任划分、运输破损赔付标准、发票补开规则、跨平台账号绑定、地区差异说明、海外邮寄限制、节假日延期处理、客户投诉处理时效、客服响应时效、配件单独购买渠道、整机与配件保修区分、保修期内维修费用承担、保修期外维修费用标准、二次维修条件、跨年度保修期延续、保修起算时间判定、签收时间判定方式、发票补开时效要求、发票类型说明、电子发票与纸质发票区分、发票抬头变更流程、保修延保服务说明、增值服务购买方式、礼品订单保修规则、跨境订单保修说明、团购订单保修说明、批量定制订单保修说明、企业客户保修规则，便于演示按结构切时一节超长触发兜底再切。";
+    "本节说明保修细则，包括退换货流程、保修期计算、易耗品范围、损坏责任划分、运输破损赔付标准、发票补开规则、跨平台账号绑定、地区差异说明、海外邮寄限制、节假日延期处理、客户投诉处理时效、客服响应时效、配件单独购买渠道、整机与配件保修区分、保修期内维修费用承担、保修期外维修费用标准、二次维修条件、跨年度保修期延续、保修起算时间判定、签收时间判定方式、发票补开时效要求、发票类型说明、电子发票与纸质发票区分、发票抬头变更流程、保修延保服务说明、增值服务购买方式、礼品订单保修规则、跨境订单保修说明、团购订单保修说明、批量定制订单保修说明、企业客户保修规则，便于演示按结构切时一节超长触发按字数切兜底。";
   // slice 去掉原句末尾的「。」再 repeat(8)，末尾追加一个「；」——让 longSentence 内部没有终结符，
   // splitByPeriod 不会把它拆开；整段 ≈ 2360 字符 > MAX_CHUNK_BEFORE_FALLBACK=2000 → 触发兜底。
   const longSentence = sentence.slice(0, -1).repeat(8) + "；";
-  // 3 个超长句子 → 每句 ≈ 2360 字符 → 触发 MAX_CHUNK_BEFORE_FALLBACK=2000 → 兜底再切
+  // 3 个超长句子 → 每句 ≈ 2360 字符 → 触发 MAX_CHUNK_BEFORE_FALLBACK=2000 → 按字数切兜底
   return [title, longSentence, longSentence, longSentence].join("\n");
 })();
 
@@ -231,29 +231,29 @@ const LONG_DOC = (function () {
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">
-                本页演示：<b>递归切分完整版</b>（变体 10）——按结构切的 4 档显式降级：<code>##</code> → <code>段落</code> → <code>句号</code> → <code>兜底再切</code>。每块的<b>徽标</b>显示它在<b>哪一档被切</b>。
+                本页演示：<b>递归切分完整版</b>（变体 10）——按结构切的 4 档显式降级：<code>##</code> → <code>段落</code> → <code>句号</code> → <code>按字数切兜底</code>。每块的<b>徽标</b>显示它在<b>哪一档被切</b>。
               </p>
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
                 <li>点「加载混合示例」→ 选一份混合文档（含 ## + 长段落 + 长句子 + 兜底）</li>
                 <li>点中栏「跑按结构切」→ POST /api/chunk/structure → 服务端 <code>recurseByLevel</code> 显式四档降级</li>
-                <li>每块卡片带「## / 段落 / 句号 / 兜底再切」徽标——一眼看清哪一档被切</li>
+                <li>每块卡片带「## / 段落 / 句号 / 按字数切兜底」徽标——一眼看清哪一档被切</li>
                 <li>如果所有块都 ≤ 2000 字符 = 都按 ## 切；如果某段特别长 = 降级到段落 / 句号 / 兜底</li>
               </ol>
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-2 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
                 <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
                   <li>
-                    <b>这是生产默认切法</b>：先按结构（最好）→ 降级到段落（中）→ 句号（中）→ 硬切兜底（保底）。<b>不调嵌入模型也能跑</b>，纯本地文本操作。
+                    <b>这是生产默认切法</b>：先按结构（最好）→ 降级到段落（中）→ 句号（中）→ 按字数切兜底（保底）。<b>不调嵌入模型也能跑</b>，纯本地文本操作。
                   </li>
                   <li>
                     <b>boundary 字段 = 在哪一档被切</b>：前端徽标显示 → 调参后能立刻看到「这一段是不是降级了」。
                   </li>
                   <li>
-                    <b>兜底硬切的代价</b>：硬切会切断句子（骑在切口上的句子可能半句话）——所以 boundary="fallback-fixed" 块经常带「半句话开头」红字徽标。
+                    <b>按字数切兜底的代价</b>：按字数切会切断句子（骑在切口上的句子可能半句话）——所以 boundary="fallback-fixed" 块经常带「半句话开头」红字徽标。
                   </li>
                 </ul>
                 <div className="text-xs text-gray-600">
-                  观察：加载混合示例 → 跑中栏 → 看每个块徽标。如果一段全是「##」徽标 = 该段 ≤ 2000 字符；如果出现「段落」= 该段 > 2000 字符降级到段落；如果出现「兜底再切」= 一句还压不住。
+                  观察：加载混合示例 → 跑中栏 → 看每个块徽标。如果一段全是「##」徽标 = 该段 ≤ 2000 字符；如果出现「段落」= 该段 > 2000 字符降级到段落；如果出现「按字数切兜底」= 一句还压不住。
                 </div>
               </div>
             </section>
@@ -283,7 +283,7 @@ const LONG_DOC = (function () {
                   onClick={loadLongDoc}
                   className="border border-orange-300 bg-orange-50 px-3 py-1.5 rounded text-sm disabled:opacity-50"
                 >
-                  加载超长示例（8000 字一节 · 看兜底再切）
+                  加载超长示例（8000 字一节 · 看按字数切兜底）
                 </button>
                 <button
                   type="button"
@@ -342,7 +342,7 @@ const LONG_DOC = (function () {
                   onClick={runError}
                   className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
                 >
-                  演示上游失败（5xx · 第二类错误 · /api/demo-error）
+                  演示后端 5xx（第二类错误 · /api/demo-error）
                 </button>
               </div>
               {err ? (
@@ -369,7 +369,7 @@ const LONG_DOC = (function () {
               />
               <Panel
                 title="中：按结构切（structure）"
-                hint="按 Markdown ## / 段落 / 句号递归切；超长单节自动兜底再切"
+                hint="按 Markdown ## / 段落 / 句号递归切；超长单节自动按字数切兜底"
                 buttonText="跑按结构切"
                 buttonHint="点这一栏的按钮会调 POST /api/chunk/structure；与 size / overlap 滑块无关"
                 running={busy}

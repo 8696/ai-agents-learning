@@ -42,7 +42,7 @@ app.listen(PORT, "127.0.0.1", () => {
   logger.info(
     "server.start",
     "listening",
-    "服务起好了；step-3 教学要点：同一道库里没有的题，左栏只靠模型 vs 右栏检索增强生成 —— 看「幻觉 vs 弃权」的对照。本步没有训练任务。",
+    "服务起好了；step-3 教学要点：同一道库里没有的题，左栏不接 RAG（model only · 无材料 · 无出处） vs 右栏检索增强生成 —— 看「凭空编一个（无依据） vs 弃权」的对照。本步没有训练任务。",
     {
       url: `http://127.0.0.1:${PORT}/`,
       protocol: "A",

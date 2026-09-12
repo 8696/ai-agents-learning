@@ -9,7 +9,7 @@
 (function () {
   window.DemoUI = window.DemoUI || {};
 
-  /** 一侧 shot 一张卡。row.ok=false 是上游失败，不是格式不合法。 */
+  /** 一侧 shot 一张卡。row.ok=false 是后端 5xx，不是格式不合法。 */
   function ShotCard({ title, row }) {
     if (!row) {
       return (
@@ -23,7 +23,7 @@
       return (
         <div className="rounded border border-red-300 bg-red-50 p-3 space-y-1">
           <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="text-xs text-gray-500">上游失败 HTTP {row.status}</p>
+          <p className="text-xs text-gray-500">后端 5xx HTTP {row.status}</p>
           <pre className="whitespace-pre-wrap text-xs max-h-32 overflow-auto">{row.error}</pre>
         </div>
       );

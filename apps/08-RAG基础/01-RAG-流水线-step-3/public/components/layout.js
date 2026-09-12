@@ -42,7 +42,7 @@
               <b>真正独有的优势</b>：<b>能点名出处（Source Attribution）</b>。命中卡片带 source / 章节 / 页码——客服答错可追责、文档过期可更新、库里没有能拒绝编造，长上下文答对了你说不清它看了哪一段。
             </li>
             <li>
-              <b>物理结构</b>：一本说明书入库后不是一个大对象，是 <b>N 行四件套</b>——编号（id）/ 向量（vector）/ 原文（text）/ 来源写在元数据（metadata）里。点「查看库」看到的就是 SQLite 里这些行。
+              <b>物理结构</b>：一本说明书入库后不是一个大对象，是 <b>N 行向量库一行要存的四个字段</b>——编号（id）/ 向量（vector）/ 原文（text）/ 来源写在元数据（metadata）里。点「查看库」看到的就是 SQLite 里这些行。
             </li>
             <li>
               <b>文档 = source 相同的那堆行（行级维护）</b>：按 source 整份先删后建是行级维护的最小手术——上传 v2 同名文件 → <code>DELETE WHERE source = filename</code> + insert v2 新行；v1 整份被替换，库内其它文档不动。

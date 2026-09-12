@@ -20,7 +20,7 @@ export const SIZE_MIN = 50;
 export const SIZE_MAX = 5000;
 export const OVERLAP_MIN = 0;
 export const OVERLAP_MAX = 1000;
-/** step-2 · B 件：单块超过这个字符数就走兜底再切（不依赖具体嵌入模型上限，本步先取保守值）。 */
+/** step-2 · B 件：单块超过这个字符数就走按字数切兜底（不依赖具体嵌入模型上限，本步先取保守值）。 */
 export const MAX_CHUNK_BEFORE_FALLBACK = 2000;
 
 /** 检测一个字符是句子终结符（句号 / 问号 / 感叹号 / 中文句号 / 段落结束） */

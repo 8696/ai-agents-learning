@@ -174,7 +174,7 @@
                 <li>调真模型 #3（摘要后）→ summarizeReply</li>
                 <li>看四张卡：① 裁剪前 ② summary 内容（看 LLM 写了啥） ③ 摘要后 ④ 对比小结</li>
                 <li><b>对照 step-1</b>：滑动窗口丢字面（卡 ① vs 卡 ② 关键事实丢失）；摘要压缩留语义（卡 ① vs 卡 ③ 关键事实还在）。</li>
-                <li><b>错误两类 · 一眼分开</b>：summarizeFrom + keepRecent 超 turnCount → 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
+                <li><b>错误两类 · 一眼分开</b>：summarizeFrom + keepRecent 超 turnCount → 4xx（黄底） · 点「演示后端 5xx」→ 5xx（红底）</li>
               </ol>
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
@@ -227,7 +227,7 @@
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 类 B）</button>
+                >演示后端 5xx（5xx · 类 B）</button>
               </div>
               {errorMsg ? (
                 <div
@@ -240,7 +240,7 @@
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

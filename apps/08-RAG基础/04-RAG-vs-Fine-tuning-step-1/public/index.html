@@ -168,13 +168,13 @@
               className="bg-white shadow rounded p-4 space-y-2"
             >
               <p className="text-sm text-gray-700">
-                <b>本页只演示：</b>同一问句、两条独立请求对照 —— 左栏「只靠模型」vs 右栏「检索增强生成」。
+                <b>本页只演示：</b>同一问句、两条独立请求对照 —— 左栏「不接 RAG（model only · 无材料 · 无出处）」vs 右栏「检索增强生成」。
                 <br />
                 用同一个问题连点两次（左右各一次）或点「同时跑两栏」，看到两侧答复差异，就能讲清「知识会改 / 要出处 → 用检索增强生成」。
               </p>
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
                 <li>输入框里改个问题，或用默认「现在还能七天无理由退货吗？」</li>
-                <li>点「跑『只靠模型』」→ POST /api/no-rag → 调模型、无材料、无出处</li>
+                <li>点「跑『不接 RAG』」→ POST /api/no-rag → 调模型、无材料、无出处</li>
                 <li>点「跑『检索增强生成』」→ POST /api/rag → 检索命中切块、调模型、带出处</li>
                 <li>点「同时跑两栏」→ 浏览器并发 Promise.all（不是 /api/compare 打包）</li>
                 <li>对照两栏「模型答复」+ 右栏「依据」列表，就能一眼看到选型差异</li>
@@ -248,7 +248,7 @@
             >
               {leftData || rightData
                 ? "对照看上面两栏：左栏无依据 / 右栏有依据。"
-                : "还没跑过 —— 在上面输入框改问题，点「只靠模型」或「检索增强生成」或「同时跑两栏」。"}
+                : "还没跑过 —— 在上面输入框改问题，点「不接 RAG（model only · 无材料 · 无出处）」或「检索增强生成」或「同时跑两栏」。"}
             </section>
           </main>
 

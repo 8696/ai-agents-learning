@@ -79,7 +79,7 @@ export function finishRun(runId: string, result: LoopResult): void {
   s.status = result.stoppedReason === "cancelled" ? "cancelled" : "done";
 }
 
-/** 真上游失败（getLlm 抛错 / LLM 调不通）→ status=error，error 字段填结构化信息 */
+/** 真后端错误（getLlm 抛错 / LLM 调不通）→ status=error，error 字段填结构化信息 */
 export function errorRun(
   runId: string,
   error: { error: string; message: string }

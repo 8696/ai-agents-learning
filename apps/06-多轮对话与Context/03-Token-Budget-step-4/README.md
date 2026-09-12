@@ -47,7 +47,7 @@ React 5 张卡：① 触发说明 ② 路径 A 全塞基线(完整 messages) ③
 - 改 query="上次那个跑步的" → 命中健身段 → 验证"按内容选,不是按时间选"
 - 改 keywords=空 → 不命中任何段 → selective 等于全塞
 - 改 selectN=20 → 全塞也命中不了 20 个 topic turn(只有 5 段 × 10 轮 = 50 段) → 实际取 max
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`(provider / model / hasKey)
 
 ## step-4 教学点

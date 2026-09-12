@@ -32,7 +32,7 @@
       "服务端故意发一份缺 additionalProperties:false、且含 anyOf 的 schema",
       "真 token-mask 的网关：HTTP 400，报错原文会点名哪条属性违规",
       "软约束网关：可能 200 + unexpectedSuccess —— 这是诊断结果，不是 Demo 写错了",
-      "和「诱导 unknown」不是一回事：那一刀测模型守约，这一刀测网关有没有硬闸",
+      "和「诱导 unknown」不是一回事：那一步测模型守约，这一步测网关有没有硬闸",
     ];
 
     window.DemoUtils.waitDemoUI(
@@ -59,7 +59,7 @@
             try {
               const res = await callEndpoint("/api/strict-rejected", {});
               setResult({ status: res.status, data: res.data });
-              // 期望 400 也算「跑通了这一刀」；只有 fetch 失败才进 ErrorBanner
+              // 期望 400 也算「跑通了这一步」；只有 fetch 失败才进 ErrorBanner
               setStatus(res.status === 0 ? "error" : "ok");
             } catch (e) {
               setError({

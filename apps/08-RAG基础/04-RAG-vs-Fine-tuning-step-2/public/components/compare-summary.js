@@ -1,6 +1,6 @@
 // 职责：对照小结卡片 + 「同时跑两栏」按钮。
 // 「同时跑两栏」 = 浏览器并发 Promise.all（两条 fetch 同时发起）→ 把两份结果交给父组件。
-// 这是 §5.3.8「对照拆请求」+ 「交互跟笔记走」：不是 /api/rag-compare 打包跑多轨迹。
+// 这是 §5.3.8「对照拆请求」+ 「交互跟笔记走」：不是 /api/rag-compare 一个接口同时跑多套。
 const CompareSummary = function ({ question, bothLoading, bothError, onRunBoth }) {
   return (
     <section

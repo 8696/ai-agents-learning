@@ -53,7 +53,7 @@ React 按圈渲染：每圈一张卡 + 最终答案绿卡 + 并行对照卡片�
 - **并行对照卡片**（变体 E）：max(各 tool_call) vs sum(各 tool_call) + 节省 ms + handler 列表；让学习者肉眼看到「Promise.all vs for await」的差距
 - 跑完可展开「完整 messages」看到 Loop 把 assistant+tool 一圈一圈追加进了什么
 - 类 A 错误：发空字符串 → 400 黄字（Zod 校验）
-- 类 B 错误：点「演示上游失败」→ 502 红字（教学用端点）
+- 类 B 错误：点「演示后端 5xx」→ 502 红字（教学用端点）
 - 缺 Key 时主按钮 disabled，页脚 `密钥 ❌`
 
 ## step-2 教学点

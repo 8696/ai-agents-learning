@@ -1,5 +1,5 @@
 /**
- * 职责：把切块行写成「一行四件套」。本步用 SQLite 存，不装 LanceDB。
+ * 职责：把切块行写成「一行向量库一行要存的四个字段」。本步用 SQLite 存，不装 LanceDB。
  * 教学点是行结构，不是某一家向量库 API。检索对这几行做余弦排序。
  */
 import fs from "node:fs";
@@ -221,7 +221,7 @@ export async function listChunks(): Promise<ChunkRow[]> {
     scope: "│ 调用函数-listChunks",
     kind: "函数",
     name: "listChunks",
-    explain: "把 SQLite 里已经落盘的行读出来给页面看。不调嵌入、不调聊天。",
+    explain: "把 SQLite 里已经写入数据库的行读出来给页面看。不调嵌入、不调聊天。",
     args: { dbFile: DB_FILE },
     code: "SELECT id, vector, text, source, section, chunkIndex FROM chunks",
     run: async () => {

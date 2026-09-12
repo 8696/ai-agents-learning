@@ -1,9 +1,9 @@
 /**
- * 职责：左栏「只靠模型」端点（POST /api/no-rag）。校验入参 → 调本步核心 2 → 写 ctx.body。
+ * 职责：左栏「不接 RAG（model only · 无材料 · 无出处）」端点（POST /api/no-rag）。校验入参 → 调本步核心 2 → 写 ctx.body。
  * 一个业务 URL 一个 route 文件（§5.3.8）。
  *
  * 入参支持 forceError=true —— 用于 §5.3.2 #2「第二类错误」演示：模拟上游 5xx，让
- *   #status-pill 变 ❌ + 左栏卡片显示红字「演示上游失败：HTTP 500」。默认 false。
+ *   #status-pill 变 ❌ + 左栏卡片显示红字「演示后端错误：HTTP 500」。默认 false。
  */
 import type { Context } from "koa";
 import type Router from "@koa/router";
@@ -32,18 +32,18 @@ export function mountNoRagRoute(router: Router): void {
       },
     );
     try {
-      // ── 第二类错误：演示上游失败（§5.3.2 #2）──
+      // ── 第二类错误：演示后端 5xx（§5.3.2 #2）──
       if (parsed.forceError) {
         logger.warn(
           "server.no-rag",
-          "调用函数结束：/api/no-rag（演示上游失败）",
-          "为什么写这条日志：让学习者看见左栏「演示上游失败」按钮触发时是这一条路径走的。" +
+          "调用函数结束：/api/no-rag（演示后端 5xx）",
+          "为什么写这条日志：让学习者看见左栏「演示后端 5xx」按钮触发时是这一条路径走的。" +
             " 当前：forceError=true 已生效；下一步抛 5xx。",
           { 返回值: { status: 500 }, 耗时ms: Date.now() - t0 },
         );
         ctx.status = 500;
         ctx.body = {
-          error: "演示上游失败（forceError=true）：模拟上游大模型 5xx 响应",
+          error: "演示后端 5xx（forceError=true）：模拟上游大模型 5xx 响应",
         };
         return;
       }

@@ -16,10 +16,10 @@ export function mountDemoErrorRoutes(router: Router): void {
       "为什么写这条日志：本页第二类失败要能和 4xx 一眼分开。当前：故意返回 500。",
       {
         入参: null,
-        __code: "sendError(ctx, 500, { ok: false, error: \"演示上游失败（5xx）\" })",
+        __code: "sendError(ctx, 500, { ok: false, error: \"演示后端 5xx（5xx）\" })",
       },
     );
-    sendError(ctx, 500, { ok: false, error: "演示上游失败（5xx）。这不是打分算错，是服务端自己炸了。" });
+    sendError(ctx, 500, { ok: false, error: "演示后端 5xx（5xx）。这不是打分算错，是服务端自己炸了。" });
     logger.info(
       "演示失败-5xx",
       "调用函数结束：demoError",

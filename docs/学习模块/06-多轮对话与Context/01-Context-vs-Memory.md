@@ -162,7 +162,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 **step-1 验证：Context 在累积 ≠ Memory**
 
-`apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/` 是当前 demo：输入框 + 发送 + 清空 + 演示上游失败。
+`apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/` 是当前 demo：输入框 + 发送 + 清空 + 演示后端 5xx。
 
 1. 起服务：`cd apps && yarn app:06-01-context-vs-memory-step-1`
 2. 浏览器发："请你先记住我叫 Tina"
@@ -313,7 +313,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 | 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
 |------|------|------|------|--------------|
-| ✅ | step-1 | `yarn app:06-01-context-vs-memory-step-1` | `50038` | 「看见 Context 累积」最小可观察：输入框 + 发送 / 清空 + 真 LLM（协议 A）；前端 messages 数组即 Context；服务端日志 `data.入参 = { request: {model, messages: [...]}, totalTokensEstimate }` + 字段释义 + 本轮为什么是这些参数；「清空对话」演示 Context 消失；演示上游失败按钮（§5.3.2 #2 类 B 5xx 教学端点） |
+| ✅ | step-1 | `yarn app:06-01-context-vs-memory-step-1` | `50038` | 「看见 Context 累积」最小可观察：输入框 + 发送 / 清空 + 真 LLM（协议 A）；前端 messages 数组即 Context；服务端日志 `data.入参 = { request: {model, messages: [...]}, totalTokensEstimate }` + 字段释义 + 本轮为什么是这些参数；「清空对话」演示 Context 消失；演示后端 5xx按钮（§5.3.2 #2 类 B 5xx 教学端点） |
 | ✅ | step-2 | `yarn app:06-01-context-vs-memory-step-2` | `50039` | 「Memory 跨会话还记」最小闭环：SQLite 持久化（`data/preferences.db`）+ §5.3.17 KV 抽象（`kvGet/kvSet/kvDel/kvList`）；POST /api/memory 写入偏好 + GET /api/memory 列出 + DELETE /api/memory 删除；每次发送 routes/chat.ts 从 db 读偏好 → 拼到 system 末尾 → 服务端日志 `data.入参.fromMemory` 字段 + `request.messages[0]` 注入段；前端 React state 看不到 Memory 段；「清空对话」只清 Context，Memory 不动（与 step-1 最大区别 = 跨会话还记） |
 
 > step-N 是工作区（自由打磨），学习者主动说「锁定」才算这步完成（§5.3.14）；锁定那一刻才校验 §5.3.2 6 项 + `node scripts/check-demo.cjs` 过。
@@ -324,7 +324,7 @@ Cursor 在你新开一个空项目时仍然记得你"用 Rust" —— **那就�
 
 ### 过关自检
 
-合上文件后还能自己讲出来能否用自己的话讲清：
+关上文件还能讲出来能否用自己的话讲清：
 
 - [ ] **Context = 本轮 messages；Memory = 跨会话持久化。**（最核心一句话）
 - [ ] Context 不是单一概念，是分类（C1-C4）。Memory 也是（M1-M5）。操作是 O1-O4。

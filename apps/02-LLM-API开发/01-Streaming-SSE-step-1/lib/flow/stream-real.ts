@@ -6,7 +6,7 @@
  *     → chat.completions.create({ stream:true, stream_options:{ include_usage:true } })
  *     → JSON.parse(JSON.stringify(chunk)) 把 SDK 的 zod 实例 plain 化
  *     → writer.writeRaw(JSON) → 最后 data: [DONE]
- *   上游失败 → writer.frame({ error, upstreamStatus }) → writer.done()
+ *   后端 5xx → writer.frame({ error, upstreamStatus }) → writer.done()
  *
  * 为什么单独成文件：
  *   routes/real.ts 只该做「校验 + 开流」；把 for await 抄进 route，教学点会被 HTTP 细节淹没。

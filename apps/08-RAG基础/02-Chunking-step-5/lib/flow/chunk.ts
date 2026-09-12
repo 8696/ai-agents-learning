@@ -9,7 +9,7 @@
  * 相邻辅助文件（§5.3.8）：
  *   chunk-splitters.ts — 切段（按 ## / 段落 / 句号）
  *   chunk-estimate.ts  — 单位对照（字符 / 词元 / 汉字）
- *   chunk-fallback.ts  — 兜底再切（超长块按固定长度拆）
+ *   chunk-fallback.ts  — 按字数切兜底（超长块按固定长度拆）
  */
 import { logger } from "../logger.js";
 import { splitByMarkdownH2 } from "./chunk-splitters.js";
@@ -26,7 +26,7 @@ export const SIZE_MIN = 50;
 export const SIZE_MAX = 5000;
 export const OVERLAP_MIN = 0;
 export const OVERLAP_MAX = 1000;
-/** step-2 · B 件：单块超过这个字符数就走兜底再切（不依赖具体嵌入模型上限，本步先取保守值）。 */
+/** step-2 · B 件：单块超过这个字符数就走按字数切兜底（不依赖具体嵌入模型上限，本步先取保守值）。 */
 export const MAX_CHUNK_BEFORE_FALLBACK = 2000;
 
 /** 检测一个字符是句子终结符（句号 / 问号 / 感叹号 / 中文句号 / 段落结束） */
@@ -118,20 +118,20 @@ export function chunkByFixed(text: string, size: number, overlap: number): Chunk
 /**
  * 按结构切（Structure-aware）—— step-5 · I 件：递归切分完整版，四级显式降级。
  *
- * 降级顺序：## → 段落 → 句号 → 硬切兜底
+ * 降级顺序：## → 段落 → 句号 → 按字数切兜底
  * 每块的 boundary 字段记录「实际在哪档被切」：
  *   - "##"           — 该段 ≤ MAX_CHUNK_BEFORE_FALLBACK 字符，按 ## 切
  *   - "段落"          — 按 ## 切后还超长，再按段落空行降级
  *   - "句号"          — 按段落还超长，再按中英文句号降级
  *   - "fallback-fixed" — 句号也压不住，按固定长度兜底（不再降级）
  *
- * 这是生产默认切法的显式化：先按结构（最好），再按结构降级（中），最后硬切兜底（保底）。
+ * 这是生产默认切法的显式化：先按结构（最好），再按结构降级（中），最后按字数切兜底（保底）。
  */
 export function chunkByStructure(text: string): ChunkResult {
   logger.info(
     "│ 调用函数-chunkByStructure",
     "调用函数开始：chunkByStructure",
-    "step-5 · I 件：递归切分完整版——## → 段落 → 句号 → 硬切兜底 四级显式降级，每块 boundary 记录在哪档切。",
+    "step-5 · I 件：递归切分完整版——## → 段落 → 句号 → 按字数切兜底 四级显式降级，每块 boundary 记录在哪档切。",
     { 入参: { textLen: text.length, maxBeforeFallback: MAX_CHUNK_BEFORE_FALLBACK }, __code: "const result = chunkByStructure(text);" },
   );
   const t0 = Date.now();

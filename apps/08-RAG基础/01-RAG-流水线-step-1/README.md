@@ -20,17 +20,17 @@ yarn app:08-01-rag-pipeline-step-1
   knowledge/refund.md ──Load──► 原文 + source
                    ──Chunk─► 若干卡片（按 ## 标题分段）
                    ──Embed─► 每张一条向量
-                   ──写入──► SQLite 多行四件套
+                   ──写入──► SQLite 多行向量库一行要存的四个字段
 
 点「上传 Markdown 或 PDF 文件入库」POST /api/ingest-upload
   multipart/form-data → ──Load──► 原文 + 文件名当 source
                       ──Chunk─► Markdown 按 ## 标题分段；PDF 按页分段（pdf-parse v2）
                       ──Embed─► 每张一条向量
-                      ──写入──► SQLite 多行四件套
+                      ──写入──► SQLite 多行向量库一行要存的四个字段
   支持 .md / .pdf；扫描版 PDF（正文为空）→ 报错不入库
 
 点「查看库」GET /api/store
-  SELECT chunks ─► 把已写入的 id / vector / text / source / section / chunkIndex 打到页面
+  SELECT chunks ─► 把已写入的 id / vector / text / source / section / chunkIndex 显示到页面
                   （不调嵌入、不调聊天）
 
 点「提问」POST /api/ask
@@ -44,7 +44,7 @@ yarn app:08-01-rag-pipeline-step-1
 - refund.md 点「建库（refund.md）」入库；自己准备 Markdown 或 PDF 点「上传 Markdown 或 PDF 文件入库」入库——两种方式二选一
 - Markdown 按 `##` 标题分段；PDF 按页分段（pdf-parse v2）；文件名会成为 `source` 入库
 - 上传后可以立即在「查看库」里看到新文件的每一行；PDF 的切块 section 显示「第 N 页」
-- 点「查看库」看见 SQLite 里每一行的四件套（含完整向量）。向量开头应是带正负号的小数；若全是 0，说明嵌入解码错了，改完后必须重新建库
+- 点「查看库」看见 SQLite 里每一行的向量库一行要存的四个字段（含完整向量）。向量开头应是带正负号的小数；若全是 0，说明嵌入解码错了，改完后必须重新建库
 - 提问看见检索卡片和带来源的回答（来源是你上传的文件名）
 - 连续提问不会再跑加载 / 切块
 - 库里没有相关材料时，点「演示库里没有答案」→ 检索质量摘要卡片显示命中数 / Top-1 最高分 / 阈值 / 是否触发弃权（Abstain）；提示词里材料区被替换成「（无可用材料）」，模型被强制要求说「不知道」，不编政策 / 订单号 / 菜单

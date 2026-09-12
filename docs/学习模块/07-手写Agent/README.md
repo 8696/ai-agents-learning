@@ -43,7 +43,7 @@
 
 **给 AI 助手的特别提示**：这个模块是整条路线的分水岭。禁止任何 Agent 框架；按条可以写满本条 / 模块复盘这一步，不要用框架代劳。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`ReAct agent loop` · `reason act observe` · ReAct 论文摘要
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`ReAct agent loop` · `reason act observe` · ReAct 论文摘要
 
 ## 动手落点
 

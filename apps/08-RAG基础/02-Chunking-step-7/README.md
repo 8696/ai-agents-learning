@@ -34,7 +34,7 @@ cd apps && yarn app:08-02-chunking-step-7
 - **档 2 · 开启 atomic（生产阈值）**：点「跑开启 atomic」→ 调 `/api/chunk/atomic`，threshold=2000 → 表格 / 代码围栏 / 编号条款整块保留（紫色「整块保留」徽标），其余按结构切。
 - **档 3 · 开启 atomic + 超阈值**：点「跑超阈值演示」→ 调 `/api/chunk/atomic-overflow`，threshold=200（故意小）→ atomic 块超阈值时标 fallbackSplit=true + red「超嵌入上限」徽标 + 红字 overflowNote 说明「宁可超过 size 上限也不切开，超过嵌入上限时再单独处理」。
 - **第一类错误（4xx）**：Zod 校验失败时返回 400（任何端点都拦）。
-- **第二类错误（5xx）**：点「演示上游失败」会走 `/api/demo-error` 返回 500。
+- **第二类错误（5xx）**：点「演示后端 5xx」会走 `/api/demo-error` 返回 500。
 
 ## 教学点对照
 

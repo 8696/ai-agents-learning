@@ -19,7 +19,7 @@ cd apps && yarn app:07-02-plan-vs-step-step-4
 | 维度 | step-3 | step-4 |
 | ---- | ------ | ------ |
 | 任务 | 1 个（长任务）| **2 个**：短任务「把 todo-001 标完成」（1 步）+ 长任务「春季上新」（多步）|
-| 工具 | 三件套（query_stock / write_copy / notify_ops）| **四件套**：加 `complete_todo(todo_id)` |
+| 工具 | 三个工具（query_stock / write_copy / notify_ops）| **四个工具**：加 `complete_todo(todo_id)` |
 | A 路径 | 真模型循环（只用 query_stock/write_copy/notify_ops）| **真模型循环（工具通用化）**：model 自选 4 个工具之一；短任务 1 圈调 complete_todo 停 |
 | B 路径 | 真规划器 + 重规划（针对长任务）| 短任务 B：规划 1 步 + 执行 1 步 / 长任务 B：保留 step-3 重规划逻辑 |
 | 接口 | `GET /api/compare → { task, stepByStep, planAndExecute, comparison }` | `GET /api/step-by-step?task=short\|long` + `GET /api/plan-and-execute?task=short\|long`（四组各自请求） |

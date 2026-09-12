@@ -41,7 +41,7 @@
 
 **常见坑**：把检索写死在流程里（每次都检索），而不是做成 Tool 让 Agent 判断。前者在闲聊时会检索出一堆噪音。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`RAG pipeline explained` · `chunking strategies RAG` · `cosine similarity embedding`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`RAG pipeline explained` · `chunking strategies RAG` · `cosine similarity embedding`
 
 ## 动手落点
 

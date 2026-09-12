@@ -1,5 +1,5 @@
 /**
- * 职责：内置判定用例列表——同一库上，手写 BM25 与 wink-bm25-text-search 各跑一遍，
+ * 职责：内置判定用例列表——同一库上，手写 BM25 与 wink-bm25-text-search 各跑一次，
  *       用「期望 Top-1」自动打过 / 不过。
  *
  * 数据流：前端拉 GET /api/judge-cases → 点跑 → 服务端按 case 调对照 → 返回判定。
@@ -20,7 +20,7 @@ export type JudgeCase = {
 export const JUDGE_CASES: JudgeCase[] = [
   {
     id: "numbered-key",
-    title: "编号问 · 生产密钥 ID",
+    title: "带货号的问句 · 生产密钥 ID",
     question: "API-KEY-7741 怎么轮换",
     rule: "top1-equals",
     expectTop1: "api-key-7741",

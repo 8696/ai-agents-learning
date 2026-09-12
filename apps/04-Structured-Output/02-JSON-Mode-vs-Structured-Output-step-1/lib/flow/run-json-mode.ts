@@ -1,7 +1,7 @@
 /**
  * 职责：协议 A 的语法闸 —— response_format: { type: "json_object" }。
  * 数据流：{ llm, prompt } → chat.completions.create → raw → parse + analyze → ModeCallResult。
- * 为什么单独成文件：这一刀只保「能 JSON.parse」，不保字段名 / enum。
+ * 为什么单独成文件：这一步只保「能 JSON.parse」，不保字段名 / enum。
  *   和 structured 混在一个函数里，读者会以为两个开关只差一个参数。
  *
  * 日志（§5.3.16）：调用函数 五条日志（runJsonMode 封装层），调用模型 五条日志（真正发网络请求的那一层，含 __code + 字段释义）。

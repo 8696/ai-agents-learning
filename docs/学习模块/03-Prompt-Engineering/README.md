@@ -39,7 +39,7 @@
 
 **常见坑**：把 Prompt 当成玄学不断加「你必须！！！一定要！！！」，而不是改结构、加示例、加约束。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`few shot prompting` · `chain of thought` · Anthropic Prompt 官方
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`few shot prompting` · `chain of thought` · Anthropic Prompt 官方
 
 ## 动手落点
 

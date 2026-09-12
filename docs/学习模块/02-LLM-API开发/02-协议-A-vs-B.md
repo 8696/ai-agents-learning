@@ -920,7 +920,7 @@ for await (const delta of sendMessageStream(opts)) {
 
 ## 过关自检
 
-合上文件能讲清：
+关上文件还能讲清：
 
 1. **协议 A vs B**——A 是 OpenAI Chat Completions（`openai` 包 + `chat.completions.create`），B 是 Anthropic Messages API（`@anthropic-ai/sdk` + `messages.create` / `messages.stream`）。
 2. **同 Key 换协议**——MiniMax / 智谱各暴露双协议，**同 Key 只换 baseURL**（A 走 `/v1`，B 走 `/anthropic`）。

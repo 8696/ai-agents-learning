@@ -59,7 +59,7 @@ export function mountNoSignalRoutes(router: Router): void {
     console.log(
       `  POST /api/no-signal-abort  帧数=${stats.frameIdx}` +
         (stats.socketClosedEarly ? "  socket=5s已关" : "") +
-        (stats.failed ? `  上游失败=${stats.failed.message}` : ""),
+        (stats.failed ? `  后端 5xx=${stats.failed.message}` : ""),
     );
 
     if (stats.failed) {

@@ -11,7 +11,7 @@
  *   - 新增 POST /api/cancel/:runId 触发 AbortController.abort()
  *   - 前端「取消」按钮：状态机 ⏸ / 🔄 / 🚫，三态切换的 #status-pill
  *   - lib/flow/loop.ts 透传 signal 到 openai.chat.completions.create；while 起点检测 signal.aborted
- *     → break + stoppedReason="cancelled"；AbortError 区分于 502 上游失败
+ *     → break + stoppedReason="cancelled"；AbortError 区分于 502 后端错误
  *   - 关键点：取消的物理动作 = AbortController.abort()；**已发出的 tool handler 不感知**，
  *     让那一圈 Act 跑完（变体 M 妥协，对照 MD 例子 5 「知识库已发出则在轨迹写『用户取消』」）
  *

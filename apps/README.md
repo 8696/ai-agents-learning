@@ -51,7 +51,7 @@
 | `yarn app:05-02-description-step-4` | `50028` | 模块 05 · 02 · Tool Description step-4：单 Tool · 唯一差异 = query_logistics.description 含不含 1 个 few-shot 示例；user 问模糊订单号，看模型是否按示例规范填（变体 4「少样示例」实证） |
 | `yarn app:05-02-description-step-5` | `50029` | 模块 05 · 02 · Tool Description step-5：单 Tool · 唯一差异 = priority 字段是否用 enum 限定 ['low','medium','high']；user 问"急"类 query，看模型幻觉 enum 外值 vs 稳填 enum 内（变体 5「Enum 约束」实证） |
 | `yarn app:05-02-description-step-6` | `50030` | 模块 05 · 02 · Tool Description step-6：同 Tool schema · 唯一差异 = 协议 A `openai.chat.completions` vs 协议 B `anthropic.messages`；验证「step-1~5 综合最优 Tool schema」跨 Provider 是否通用（变体 6「跨 Provider 兼容」实证） |
-| `yarn app:05-03-tool-choice-step-1` | `50031` | 模块 05 · 03 · Tool Choice step-1：同 tools + 同 query，前端切换 auto/none/required；三档结果常驻对照 hasToolCalls（变体 1–3 起手） |
+| `yarn app:05-03-tool-choice-step-1` | `50031` | 模块 05 · 03 · Tool Choice step-1：同 tools + 同 query，前端切换 auto/none/required；三档结果常驻对照 hasToolCalls（变体 1–3） |
 | `yarn app:05-03-tool-choice-step-2` | `50032` | 模块 05 · 03 · Tool Choice step-2：双 Tool（物流+天气）；required 任选 vs 钉死 name；对照 firstToolName（变体 4） |
 | `yarn app:05-03-tool-choice-step-3` | `50033` | 模块 05 · 03 · Tool Choice step-3：产品开关「只聊天/允许工具/强制查库」→ none/auto/required 映射（变体 5） |
 | `yarn app:05-04-tool-gateway-step-1` | `50034` | 模块 05 · 04 · Tool Gateway step-1：协议 B（Anthropic Messages API）真 LLM + delete_user Gateway 三钩子（鉴权 / 配额 / 危险）+ 二次确认（变体 1） |
@@ -63,7 +63,7 @@
 | `yarn app:06-02-compress-vs-window-step-1` | `50040` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-1：滑动窗口（按条数 K + system pin）对照实验；50 轮假历史 + 1 轮「自我介绍」含 key fact + 1 轮「你还记得吗」；调真模型 #1（完整）→ beforeReply + 滑动窗口裁剪 → 调真模型 #2（裁剪后）→ afterReply；三张卡：① 裁剪前 messages + beforeReply  ② 裁剪后 messages + afterReply  ③ 对比小结（key fact 在 / 不在）；step-1 sketch：跑滑动窗口这一条策略的「丢了什么」 |
 | `yarn app:06-02-compress-vs-window-step-2` | `50041` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-2：摘要压缩（远期 N 条 → 调 LLM 浓缩成 1 条 summary + 近 K 条留原文）；同 50 轮假历史，调真模型 3 次（before 基线 + 远期摘要 + after 验证）；四张卡：① 裁剪前 ② summary 内容（看 LLM 写了啥） ③ 摘要后 ④ 对比小结；step-2 sketch：跑摘要压缩这一条策略的「保留了什么」 |
 | `yarn app:06-02-compress-vs-window-step-3` | `50042` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-3：双策略并跑 · 三方对照 · 一页 4 次真调模型（完整 + 滑动窗口 + 摘要 + 摘要后问答）；同份 50 轮假历史 + 同一问句 + 同一模型 → 五张卡：① 完整（基线） ② 滑动窗口（按条数 K + system pin） ③ 摘要压缩（远期 summary + 近期原文） ④ summary 内容 ⑤ 三方对比小结；标准结果：full ✅ / sliding ❌ / summarize ✅ → 「丢字面 vs 留语义」可观察对照（覆盖需求 4「对比演示页」） |
-| `yarn app:06-02-compress-vs-window-step-4` | `50043` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-4：失败兜底降级 · 同 step-3 三方对照 + 1 个「模拟摘要失败」开关；摘要 LLM throw → catch → fallback 标记 used=true → 用滑动窗口答题（仍 200）；服务端日志 warn「摘要失败，降级为滑动窗口」；用户感知不到失败；点「演示上游失败」→ 5xx 红字（与兜底降级形成对照）；覆盖需求 5「摘要失败兜底降级」 |
+| `yarn app:06-02-compress-vs-window-step-4` | `50043` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-4：失败兜底降级 · 同 step-3 三方对照 + 1 个「模拟摘要失败」开关；摘要 LLM throw → catch → fallback 标记 used=true → 用滑动窗口答题（仍 200）；服务端日志 warn「摘要失败，降级为滑动窗口」；用户感知不到失败；点「演示后端 5xx」→ 5xx 红字（与兜底降级形成对照）；覆盖需求 5「摘要失败兜底降级」 |
 | `yarn app:06-02-compress-vs-window-step-5` | `50044` | 模块 06 · 02 · 压缩 / 摘要 vs 滑动窗口 step-5：按 token 算窗口（变体 2）· 滑动窗口 K 从「条数」换成「token 数」（gpt-tokenizer 估算）；从最新往旧累加 ≤ B 为止；system pin；同份假历史 + 同一问句 + 同一模型 → 五张卡：① 完整 ② 滑动窗口（按 token B={B}） ③ 摘要压缩 ④ summary 内容 ⑤ 「按 token vs 按条数」对照；token 硬上限 = 生产里最稳的硬控制方式（不受单条超长消息影响） |
 | `yarn app:06-03-token-budget-step-1` | `50045` | 模块 06 · 03 · Token Budget step-1：三块预算分账（system / history / output）+ 拼装前打印 token + 超预算丢最旧非 system 消息 + 调真模型一次；前端 4 卡对照（触发说明 / 裁前裁后预算 / 完整 messages / 模型回复）；覆盖需求 1「三块预算分账」+ 需求 5「完整 messages 打印」 |
 | `yarn app:06-03-token-budget-step-2` | `50046` | 模块 06 · 03 · Token Budget step-2：双策略对照 — 方法一「直接丢最旧 / trim」vs 方法二「远期摘要 + 近期原文 / summarize」；同 query 同模型同 history 走两条路径 3 次真发网络请求（1 摘要 + 2 问答）+ KEY_FACT 检测（肯定句式 + 否定标记）；前端 4 卡（对比小结 / 方法一 / 方法二 + summary 原文 / 裁前基线）；覆盖需求 3「滑动窗口 vs 摘要 效果对比」+ 需求 5 |
@@ -96,18 +96,18 @@
 | `yarn app:08-02-chunking-step-2` | `50073` | 模块 08 · 02 · 切块（Chunking）step-2：单位对照 + 兜底截断 + size×Top-K 撞预算；纯本地文本操作，不调 LLM |
 | `yarn app:08-02-chunking-step-3` | `50074` | 模块 08 · 02 · 切块（Chunking）step-3：怎么判断切得好不好 + 5 种文档类型选不同策略；纯本地文本操作，不调 LLM |
 | `yarn app:08-02-chunking-step-4` | `50075` | 模块 08 · 02 · 切块（Chunking）step-4：PDF 按页切 + 跨页段落腰斩可见 + 页码元数据；纯本地文本操作，不调 LLM |
-| `yarn app:08-02-chunking-step-5` | `50076` | 模块 08 · 02 · 切块（Chunking）step-5：递归切分完整版（## → 段落 → 句号 → 硬切兜底四级显式降级）；纯本地文本操作，不调 LLM |
+| `yarn app:08-02-chunking-step-5` | `50076` | 模块 08 · 02 · 切块（Chunking）step-5：递归切分完整版（## → 段落 → 句号 → 按字数切兜底四级显式降级）；纯本地文本操作，不调 LLM |
 | `yarn app:08-02-chunking-step-6` | `50077` | 模块 08 · 02 · 切块（Chunking）step-6：综合对比收尾 · step-1 ~ step-5 各 demo 能力回顾；纯本地展示，不调 LLM |
 | `yarn app:08-02-chunking-step-7` | `50078` | 模块 08 · 02 · 切块（Chunking）step-7：atomic 块保护（表格 / 代码围栏 / 编号条款整块保留 + 超上限兜底说明）；纯本地文本操作，不调 LLM |
 | `yarn app:08-03-cosine-similarity-step-1` | `50079` | 模块 08 · 03 · 余弦相似度 step-1：六 page 一站（① 余弦对照 / ② Top-K 截断 / ③ Top-K + 阈值弃权 / ④ 跨模型重标定 / ⑤ 距离排序对照 / ⑥ 归一化）；同向不同长的二维教学向量（含真近义句 + 冲突政策），三把尺子分请求对照；纯本地计算，不调 LLM |
-| `yarn app:08-04-rag-vs-fine-tuning-step-1` | `50080` | 模块 08 · 04 · RAG vs 微调 step-1：同一问句两条独立 URL 并排对照，左栏只靠模型 vs 右栏检索增强生成（toy 词袋 + 余弦 + 内置 refund-v2 语料 · 真调大模型 · 微调侧本步不真训） |
+| `yarn app:08-04-rag-vs-fine-tuning-step-1` | `50080` | 模块 08 · 04 · RAG vs 微调 step-1：同一问句两条独立 URL 并排对照，左栏不接 RAG（model only · 无材料 · 无出处）vs 右栏检索增强生成（toy 词袋 + 余弦 + 内置 refund-v2 语料 · 真调大模型 · 微调侧本步不真训） |
 | `yarn app:08-04-rag-vs-fine-tuning-step-2` | `50081` | 模块 08 · 04 · RAG vs 微调 step-2：同份检索材料 + 不同系统提示词对照，左栏空提示词 vs 右栏带 3 条品牌范例（第三条路 · 少样本 · 权重未改 · 不是微调） |
-| `yarn app:08-04-rag-vs-fine-tuning-step-3` | `50082` | 模块 08 · 04 · RAG vs 微调 step-3：同一道「库里没有」的题，左栏只靠模型 vs 右栏检索增强生成（幻觉 vs 弃权 · 检索能给一条弃权指令让模型别编） |
+| `yarn app:08-04-rag-vs-fine-tuning-step-3` | `50082` | 模块 08 · 04 · RAG vs 微调 step-3：同一道「库里没有」的题，左栏不接 RAG（model only · 无材料 · 无出处）vs 右栏检索增强生成（幻觉 vs 弃权 · 检索能给一条弃权指令让模型别编） |
 | `yarn app:08-04-rag-vs-fine-tuning-step-4` | `50083` | 模块 08 · 04 · RAG vs 微调 step-4：左栏文档段落（喂 RAG）vs 右栏客服问答对（喂微调）—— 数据形态对照，不调 LLM |
 | `yarn app:08-04-rag-vs-fine-tuning-step-5` | `50084` | 模块 08 · 04 · RAG vs 微调 step-5：决策卡 + 反例集，8 个 sub-page 共享同一端口（A5 混合 / A6 不该检索 真调模型，其他 6 个决策卡） |
 | `yarn app:08-04-rag-vs-fine-tuning-step-6` | `50085` | 模块 08 · 04 · RAG vs 微调 step-6：「该不该检索」三种流程：路由层规则 / 命中阈值 / agent loop（模型自己决定），3 个 sub-page 共享同端口 |
 | `yarn app:08-04-rag-vs-fine-tuning-step-7` | `50086` | 模块 08 · 04 · RAG vs 微调 step-7：混合 pipeline 综合 demo —— 事实层（corpus 可变） + 口吻层（system 3 种模板） 各管各的 |
-| `yarn app:09-01-bm25-hybrid-step-1` | `50087` | 模块 09 · 01 · BM25 / 混合检索 step-1：同一库 6 条卡 · 编号问 + 口语问 × 向量 / BM25 分请求对照 · 真调嵌入模型算向量 · BM25 本地算 |
+| `yarn app:09-01-bm25-hybrid-step-1` | `50087` | 模块 09 · 01 · BM25 / 混合检索 step-1：同一库 6 条卡 · 带货号的问句 + 日常说法、库里未必同词的问句 × 向量 / BM25 分请求对照 · 真调嵌入模型算向量 · BM25 本地算 |
 | `yarn app:09-01-bm25-hybrid-step-2` | `50088` | 模块 09 · 01 · BM25 / 混合检索 step-2：混合两边召回（变体 4）+ 加权融合 + min-max 拉齐（变体 5）· α 滑块 + 「未拉齐 vs 拉齐后」对照 · 在 step-1 基础上加 /api/search-hybrid |
 | `yarn app:09-01-bm25-hybrid-step-3` | `50089` | 模块 09 · 01 · BM25 / 混合检索 step-3：RRF（变体 6）+ 按问句偏置 α（变体 7）· /api/search-rrf + /api/search-bias + 「RRF vs 加权」对照 · 在 step-2 基础上加 |
 | `yarn app:09-01-bm25-hybrid-step-4` | `50090` | 模块 09 · 01 · BM25 / 混合检索 step-4：切词对照（变体 8）· /api/search-bm25-variant · 「保留连字符」vs「撕单字」同问句两次 BM25 → 排名变差 · 在 step-3 基础上加 |

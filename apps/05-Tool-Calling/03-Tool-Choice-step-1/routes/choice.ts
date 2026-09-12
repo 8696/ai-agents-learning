@@ -172,7 +172,7 @@ export function mountChoiceRoutes(router: Router): void {
         logger.warn(
           "api.choice",
           "调用函数结束：handleChoice（失败）",
-          "为什么写这条日志：thinking × required/object 是本条可观察边界（400），与普通 502 上游失败分开。当前：网关拒收强制 Choice。",
+          "为什么写这条日志：thinking × required/object 是本条可观察边界（400），与普通 502 后端 5xx 分开。当前：网关拒收强制 Choice。",
           {
             返回值: { httpStatus: 400, code: "thinking_x_forced_choice" },
             耗时ms: Date.now() - t0,

@@ -2,7 +2,7 @@
 // 数据流：父组件传 question / data / loading / error / forceErrorLoading → 渲染按钮 + 结果。
 // 单跑：用户点按钮 → onRunFewshot() → 父组件去 fetch("/api/rag-fewshot", {promptVariant: "fewshot"})。
 // 教学点：右栏与左栏对照 = 同一份检索材料 + 同一问句；差异 = system 是否含品牌口吻约定 + 3 条范例。
-// 「演示上游失败」按钮 → onRunFewshotForceError() → 父组件 fetch("/api/rag-fewshot", {forceError:true}) → 5xx。
+// 「演示后端 5xx」按钮 → onRunFewshotForceError() → 父组件 fetch("/api/rag-fewshot", {forceError:true}) → 5xx。
 const PromptFewshotCard = function ({ question, data, loading, error, forceErrorLoading, onRunFewshot, onRunFewshotForceError }) {
   const sources = data?.sources ?? [];
   return (
@@ -26,13 +26,13 @@ const PromptFewshotCard = function ({ question, data, loading, error, forceError
           className="border border-gray-300 px-3 py-1 rounded disabled:opacity-50 text-sm"
           title="演示第二类错误：让 /api/rag-fewshot 强制返回 5xx，#status-pill 变红"
         >
-          {forceErrorLoading ? "请求中…" : "演示上游失败（5xx · 第二类错误）"}
+          {forceErrorLoading ? "请求中…" : "演示后端错误（5xx · 第二类错误）"}
         </button>
       </div>
       {error && (
         <div className="text-red-600 text-sm">
           失败：{error}
-          {data === null && " —— 这是 §5.3.2 第二类错误通道（演示上游失败）"}
+          {data === null && " —— 这是 §5.3.2 第二类错误通道（演示后端错误）"}
         </div>
       )}
       {data && (

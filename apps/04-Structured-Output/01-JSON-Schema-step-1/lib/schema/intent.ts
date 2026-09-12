@@ -141,7 +141,7 @@ export function runRepair(payload: unknown) {
   logger.info(
     "│ 契约-runRepair",
     "调用函数开始：runRepair",
-    "为什么写这条日志：route 只认这一层返回的 { success, data/issues, repairPrompt }；本条不调 LLM，只是把 issues 拼成可喂回模型的修复提示。当前：先跑一遍校验拿 issues 再拼 repair prompt。",
+    "为什么写这条日志：route 只认这一层返回的 { success, data/issues, repairPrompt }；本条不调 LLM，只是把 issues 拼成可喂回模型的修复提示。当前：先跑一次校验拿 issues 再拼 repair prompt。",
     {
       入参: { payloadType: typeof payload, payloadKeys: payload && typeof payload === "object" ? Object.keys(payload) : null },
       __code: "const safe = Intent.safeParse(payload);",

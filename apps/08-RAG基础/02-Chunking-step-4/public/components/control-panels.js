@@ -32,7 +32,7 @@
             onClick={loadLongDoc}
             className="border border-orange-300 bg-orange-50 px-3 py-1.5 rounded text-sm disabled:opacity-50"
           >
-            加载超长示例（8000 字一节 · 看兜底再切）
+            加载超长示例（8000 字一节 · 看按字数切兜底）
           </button>
           <button
             type="button"

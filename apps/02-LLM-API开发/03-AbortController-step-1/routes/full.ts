@@ -59,7 +59,7 @@ export function mountFullRoutes(router: Router): void {
     const stats = await runFull({ llm, message: parsed.message, writer });
     console.log(
       `  POST /api/full  帧数=${stats.frameIdx}` +
-        (stats.failed ? `  上游失败=${stats.failed.message}` : ""),
+        (stats.failed ? `  后端 5xx=${stats.failed.message}` : ""),
     );
 
     if (stats.failed) {

@@ -25,7 +25,7 @@ yarn app:08-04-rag-vs-fine-tuning-step-2
   │           └─ llm.openai.chat.completions.create(...)
   │
   └─ [同时跑两栏] 浏览器 Promise.all([fetch /api/rag-empty, fetch /api/rag-fewshot])
-        —— 两条独立请求；不是 /api/rag-compare 打包跑多轨迹
+        —— 两条独立请求；不是 /api/rag-compare 一个接口同时跑多套
 ```
 
 ## 当前能做什么

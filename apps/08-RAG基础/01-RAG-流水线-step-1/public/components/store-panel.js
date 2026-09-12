@@ -123,7 +123,7 @@
             </div>
             <div className="bg-green-50 border border-green-300 rounded p-3 space-y-2">
               <div className="text-xs font-semibold text-green-900">
-                响应结果 · 库里 {store.rowCount} 行四件套
+                响应结果 · 库里 {store.rowCount} 行向量库一行要存的四个字段
               </div>
               {store.rowCount === 0 ? (
                 <p className="text-xs text-gray-700">还是空表。先点「建库」。</p>

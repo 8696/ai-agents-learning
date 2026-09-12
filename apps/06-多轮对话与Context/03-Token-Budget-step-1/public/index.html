@@ -183,7 +183,7 @@
                 <li>三块合计 &gt; 上限 → 触发裁剪（丢最旧非系统消息）</li>
                 <li>拼装 messages：[system, ...裁后 history, userText]，调真模型</li>
                 <li>对照三块预算裁前/裁后 + 实际 messages + 模型回答</li>
-                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
+                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示后端 5xx」→ 5xx（红底）</li>
               </ol>
 
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
@@ -226,7 +226,7 @@
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 第二类错误 · /api/budget-force-error）</button>
+                >演示后端 5xx（5xx · 第二类错误 · /api/budget-force-error）</button>
               </div>
               {errorMsg ? (
                 <div
@@ -239,7 +239,7 @@
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

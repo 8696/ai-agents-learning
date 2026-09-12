@@ -49,7 +49,7 @@ React 5 张卡：① 完整 ② 滑动窗口（按 token） ③ 摘要压缩 ④
 - 默认参数（50/500/5000/5/1）下：full ✅ / sliding ❌ / summarize ✅ → 「按 token 滑动窗口也丢 key fact」（远期超预算）
 - 改 `slidingTokenBudget` = 10000 → 预算够大，sliding 也记得 key fact
 - 卡 ⑤ 「按 token vs 按条数」对照：解释变体 2 的核心价值
-- 点「演示上游失败」→ 5xx 红字
+- 点「演示后端 5xx」→ 5xx 红字
 
 ## step-5 教学点（变体 2）
 

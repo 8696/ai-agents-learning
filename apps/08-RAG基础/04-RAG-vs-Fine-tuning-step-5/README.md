@@ -41,7 +41,7 @@ yarn app:08-04-rag-vs-fine-tuning-step-5
 （其他 4 个 sub-page 同上：纯展示决策卡 + PageNav 跳转）
 
 /api/demo-error（§5.3.2 #2 第二类错误通道）
-  └─ GET /api/demo-error → 500 + 错误信息 → 任何 sub-page 的「演示上游失败」按钮触发
+  └─ GET /api/demo-error → 500 + 错误信息 → 任何 sub-page 的「演示后端 5xx」按钮触发
 ```
 
 ## 当前能做什么
@@ -62,7 +62,7 @@ yarn app:08-04-rag-vs-fine-tuning-step-5
 - 6 个决策卡 sub-page 全部纯展示 —— **不调 LLM**
 - 端点：
   - `routes/health.ts`：GET /health → 页脚 provider / model / hasKey
-  - `routes/corpus-edit.ts`：POST /api/corpus-edit → 改 refund-v2-001（保留 —— 为 sub-page 演示 "演示上游失败" 按钮预留接口契约；当前 sub-page 不调）
+  - `routes/corpus-edit.ts`：POST /api/corpus-edit → 改 refund-v2-001（保留 —— 为 sub-page 演示 "演示后端 5xx" 按钮预留接口契约；当前 sub-page 不调）
   - `routes/demo-error.ts`：GET /api/demo-error → §5.3.2 #2 第二类错误
 - 共享组件：
   - `public/components/layout.js`：EnvFooter

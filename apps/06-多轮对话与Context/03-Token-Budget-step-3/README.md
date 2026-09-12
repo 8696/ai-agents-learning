@@ -51,7 +51,7 @@ React 4 张卡：① 触发说明（mode 软写死的判定） ② 先裁或摘�
 - 默认参数(50 轮 / outputBudget=800 / totalBudget=2000 / hardLimit=1000) → total=3129 > 1000 → **默认就触发丢掉历史只留 3 条**(这是预期:默认展示只留 3 条保服务)
 - 调 totalBudget=8000 / hardLimit=4000 → 3129 < 4000 → 先裁或摘要 trim(不裁)
 - 调 historyCount=200 → total 远超 hardLimit → 丢掉历史只留 3 条,messages 只剩 3 条(应急)
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`(provider / model / hasKey)
 
 ## step-3 教学点

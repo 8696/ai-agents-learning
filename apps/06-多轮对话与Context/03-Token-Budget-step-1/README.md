@@ -52,7 +52,7 @@ React 四张卡：① 触发说明  ② 三块预算裁前/裁后  ③ 实际发
 - 改 `totalBudget` 调大（如 8000）→ 不触发裁剪 → 整段 history 全留
 - 改 `historyCount` 调小（如 10）→ history 段 token 变小 → 不触发裁剪
 - 改 `historyCount` 调大（如 200）→ dropped 数字增大 → 看裁剪上限兜底
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`（provider / model / hasKey）
 
 ## step-1 教学点

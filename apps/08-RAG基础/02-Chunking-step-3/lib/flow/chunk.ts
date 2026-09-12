@@ -9,7 +9,7 @@
  * 相邻辅助文件（§5.3.8）：
  *   chunk-splitters.ts — 切段（按 ## / 段落 / 句号）
  *   chunk-estimate.ts  — 单位对照（字符 / 词元 / 汉字）
- *   chunk-fallback.ts  — 兜底再切（超长块按固定长度拆）
+ *   chunk-fallback.ts  — 按字数切兜底（超长块按固定长度拆）
  */
 import { logger } from "../logger.js";
 import {
@@ -29,7 +29,7 @@ export const SIZE_MIN = 50;
 export const SIZE_MAX = 5000;
 export const OVERLAP_MIN = 0;
 export const OVERLAP_MAX = 1000;
-/** step-2 · B 件：单块超过这个字符数就走兜底再切（不依赖具体嵌入模型上限，本步先取保守值）。 */
+/** step-2 · B 件：单块超过这个字符数就走按字数切兜底（不依赖具体嵌入模型上限，本步先取保守值）。 */
 export const MAX_CHUNK_BEFORE_FALLBACK = 2000;
 
 /** 检测一个字符是句子终结符（句号 / 问号 / 感叹号 / 中文句号 / 段落结束） */
@@ -77,7 +77,7 @@ export function chunkByFixed(text: string, size: number, overlap: number): Chunk
   logger.info(
     "│ 调用函数-chunkByFixed",
     "调用函数开始：chunkByFixed",
-    "固定长度切：数够 size 个字符就切一刀，overlap 与上一块共享尾部。本步核心对照之一。",
+    "固定长度切：数够 size 个字符就切，overlap 与上一块共享尾部。本步核心对照之一。",
     { 入参: { textLen: text.length, size, overlap }, __code: "const result = chunkByFixed(text, size, overlap);" },
   );
   const t0 = Date.now();

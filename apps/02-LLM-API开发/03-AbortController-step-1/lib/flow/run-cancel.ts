@@ -178,7 +178,7 @@ export async function runCancelAfterFrames(params: {
     logger.error(
       "│ cancel-runCancelAfterFrames",
       "调用函数结束：runCancelAfterFrames（失败）",
-      "为什么写这条日志：非 abort 类的上游失败（401 / 429 / 5xx / 网络断）；记 upstreamStatus + message 让排错时知道是 abort 路径还是真挂了。当前：抛非 AbortError，已发 error 帧。",
+      "为什么写这条日志：非 abort 类的后端 5xx（401 / 429 / 5xx / 网络断）；记 upstreamStatus + message 让排错时知道是 abort 路径还是真挂了。当前：抛非 AbortError，已发 error 帧。",
       {
         返回值: {
           frameIdx,

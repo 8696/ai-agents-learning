@@ -1,7 +1,7 @@
 /**
  * 职责：输出区卡片 —— 一版 Prompt 的长度 / 推理标记 / 原文。
  *
- * 颜色按 §5.3.10：请求参数灰、模型终态绿、含推理是中性协议事件（黄徽标）、上游失败红。
+ * 颜色按 §5.3.10：请求参数灰、模型终态绿、含推理是中性协议事件（黄徽标）、后端 5xx 红。
  *
  * 挂载：window.DemoUI.{ VersionCard, CompareResult, ErrorBanner }
  */
@@ -21,7 +21,7 @@
       return (
         <div className="rounded border border-red-300 bg-red-50 p-3 space-y-1">
           <h3 className="text-sm font-semibold">{title}</h3>
-          <p className="text-xs text-gray-500">上游失败 HTTP {row.status}</p>
+          <p className="text-xs text-gray-500">后端 5xx HTTP {row.status}</p>
           <pre className="whitespace-pre-wrap text-xs max-h-32 overflow-auto">{row.error}</pre>
         </div>
       );

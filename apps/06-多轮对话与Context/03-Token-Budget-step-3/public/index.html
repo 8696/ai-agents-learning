@@ -180,7 +180,7 @@
                 <li>软路径（total ≤ hardLimit）：按所选策略 trim 或 summarize → 拼消息 → 调真模型</li>
                 <li>硬路径（total &gt; hardLimit）：只留 system + history 末轮 + 提示"请重述" → 调真模型</li>
                 <li>看页面 4 张卡：触发说明 / 软路径 / 硬路径 / 裁前基线 —— 一眼看见"软硬双层"</li>
-                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示上游失败」→ 5xx（红底）</li>
+                <li><b>错误两类 · 一眼分开</b>：参数不合法（Zod bad_request）→ 4xx（黄底） · 点「演示后端 5xx」→ 5xx（红底）</li>
               </ol>
 
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
@@ -261,7 +261,7 @@ total &gt; hardLimit          → 硬路径:应急模式(只留 system + 末轮 
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 第二类错误 · /api/emergency-force-error）</button>
+                >演示后端 5xx（5xx · 第二类错误 · /api/emergency-force-error）</button>
               </div>
               {errorMsg ? (
                 <div
@@ -274,7 +274,7 @@ total &gt; hardLimit          → 硬路径:应急模式(只留 system + 末轮 
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

@@ -42,7 +42,7 @@ app.listen(PORT, "127.0.0.1", () => {
   logger.info(
     "server.start",
     "listening",
-    "服务起好了；step-1 教学要点：同一问句，左栏只靠模型 vs 右栏检索增强生成，两条独立 URL 并排对照；微调侧本步不真训。",
+    "服务起好了；step-1 教学要点：同一问句，左栏不接 RAG（model only · 无材料 · 无出处） vs 右栏检索增强生成，两条独立 URL 并排对照；微调侧本步不真训。",
     {
       url: `http://127.0.0.1:${PORT}/`,
       protocol: "A",

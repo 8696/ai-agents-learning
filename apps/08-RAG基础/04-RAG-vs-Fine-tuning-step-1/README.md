@@ -22,12 +22,12 @@ yarn app:08-04-rag-vs-fine-tuning-step-1
   │           └─ llm.openai.chat.completions.create(...)
   │
   └─ [同时跑两栏] 浏览器 Promise.all([fetch /api/no-rag, fetch /api/rag])
-        —— 两条独立请求；不是 /api/compare 打包跑多轨迹
+        —— 两条独立请求；不是 /api/compare 一个接口同时跑多套
 ```
 
 ## 当前能做什么
 
-同一问句、两条独立请求，左栏「只靠模型」vs 右栏「检索增强生成」并排对照：
+同一问句、两条独立请求，左栏「不接 RAG（model only · 无材料 · 无出处）」vs 右栏「检索增强生成」并排对照：
 
 - **左栏**：模型用训练时的常识 / 印象答，无出处。对照演示「知识改的时候不检索就跟不上」。
 - **右栏**：从内置「退款政策 v2」语料里命中切块（9 月 1 日改成三天），按材料说话并列出文件 / 章节 / chunkId。

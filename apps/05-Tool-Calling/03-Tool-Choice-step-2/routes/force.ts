@@ -215,7 +215,7 @@ export function mountForceRoutes(router: Router): void {
       logger.error(
         "api.force",
         "调用函数结束：handleForce（失败）",
-        "为什么写这条日志：上游失败走 502。",
+        "为什么写这条日志：后端 5xx 走 502。",
         {
           返回值: { httpStatus: 502, error: message },
           耗时ms: Date.now() - t0,

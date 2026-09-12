@@ -53,7 +53,7 @@ React 四张卡：① 裁剪前（messages + beforeReply） ② summary 内容�
 - 默认参数（50/45/5/1）下：before 记得 key fact、summary 里也写 key fact、摘要后也记得 → 一眼看见「摘要压缩保留了什么」
 - 卡 ② summary 内容单独展示，让学习者**直接看到** LLM 把远期 N 条浓缩出来的文本
 - 对照 step-1：step-1 滑动窗口 K=6 时 afterReply 忘 key fact；step-2 摘要压缩 summarizeReply 记得 key fact
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`（provider / model / hasKey）
 
 ## step-2 教学点

@@ -137,7 +137,7 @@
                 <li>Loop 终止：本圈 tool_calls 空 → 最终答案（变体 J）→ stoppedReason=final_answer</li>
                 <li>轨迹区按圈展示每圈的 assistant 摘要 / tool_calls / tool_results / 耗时；最后一圈额外「最终答案」绿卡</li>
                 <li><b>数据前后对照</b>：跑完 Agent 后下方「数据前后对照」三栏（before / after / diff） —— Loop 在内存里真改了哪些 todo 一目了然</li>
-                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示后端 5xx」→ 5xx（红底 · 教学用 502 端点）</li>
               </ol>
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
@@ -214,7 +214,7 @@
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 类 B 错误）</button>
+                >演示后端 5xx（类 B 错误）</button>
               </div>
               {errorMsg ? (
                 <div
@@ -227,7 +227,7 @@
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

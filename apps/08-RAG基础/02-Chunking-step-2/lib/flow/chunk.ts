@@ -9,7 +9,7 @@
  * 相邻辅助文件（§5.3.8）：
  *   chunk-splitters.ts — 切段（按 ## / 段落 / 句号）
  *   chunk-estimate.ts  — 单位对照（字符 / 词元 / 汉字）
- *   chunk-fallback.ts  — 兜底再切（超长块按固定长度拆）
+ *   chunk-fallback.ts  — 按字数切兜底（超长块按固定长度拆）
  *   chunk-helpers.ts   — 类型 / 常量 / 工具函数（makeChunk / buildResult / emptyResult / extractSection）
  */
 import { logger } from "../logger.js";
@@ -47,7 +47,7 @@ export function chunkByFixed(text: string, size: number, overlap: number): Chunk
   logger.info(
     "│ 调用函数-chunkByFixed",
     "调用函数开始：chunkByFixed",
-    "固定长度切：数够 size 个字符就切一刀，overlap 与上一块共享尾部。本步核心对照之一。",
+    "固定长度切：数够 size 个字符就切，overlap 与上一块共享尾部。本步核心对照之一。",
     { 入参: { textLen: text.length, size, overlap }, __code: "const result = chunkByFixed(text, size, overlap);" },
   );
   const t0 = Date.now();

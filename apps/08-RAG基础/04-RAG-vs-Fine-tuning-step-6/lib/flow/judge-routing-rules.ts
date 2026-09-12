@@ -7,7 +7,7 @@
  *
  * 数据流：POST /api/chat-routing 入参 → judgeRoutingRules() → 返回 { branch, reason, answer, sources? }
  *
- * 为什么先有这一刀：最简单、最可预测 —— 工程师写的规则，每条都能解释「为什么这道题走检索」。
+ * 为什么先有这一步：最简单、最可预测 —— 工程师写的规则，每条都能解释「为什么这道题走检索」。
  */
 import { logger } from "../logger.js";
 import { getLlm } from "../../../../llm.js";

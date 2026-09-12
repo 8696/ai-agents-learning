@@ -43,7 +43,7 @@
 
 **常见坑**：一次性加了五种优化手段，效果变好了但不知道是哪个起的作用。**一次只加一个变量，每次都跑评测集**。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`BM25 hybrid search` · `reranking RAG` · `query rewriting retrieval` · `parent child chunking` · `contextual retrieval`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`BM25 hybrid search` · `reranking RAG` · `query rewriting retrieval` · `parent child chunking` · `contextual retrieval`
 
 ## 动手落点
 

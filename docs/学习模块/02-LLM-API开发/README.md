@@ -41,7 +41,7 @@
 
 **常见坑**：只写 happy path，第一次遇到 429 就整个应用崩掉。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`SSE vs WebSocket LLM` · `rate limit exponential backoff`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`SSE vs WebSocket LLM` · `rate limit exponential backoff`
 
 ## 动手落点
 

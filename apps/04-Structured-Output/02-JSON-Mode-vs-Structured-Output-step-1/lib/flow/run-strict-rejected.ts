@@ -1,7 +1,7 @@
 /**
  * 职责：故意发一份违反 OpenAI strict 白名单的 schema，看 API 入口拒不拒。
  * 数据流：BAD_STRICT_SCHEMA → create → 期望抛错（真 400）或 unexpectedSuccess（软约束网关）。
- * 为什么单独成文件：这一刀测的不是模型守约，是「这家网关有没有真做 token-mask」。
+ * 为什么单独成文件：这一步测的不是模型守约，是「这家网关有没有真做 token-mask」。
  *   和诱导 enum 违规不是一回事，混进 structured 会让人以为是 prompt 写坏了。
  *
  * 日志（§5.3.16）：调用函数 五条日志（runStrictRejected 封装层），调用模型 五条日志（真正发网络请求的那一层）。
@@ -53,7 +53,7 @@ export async function runStrictRejected(llm: Llm): Promise<StrictRejectedOk> {
   logger.info(
     "││ 调用模型-协议A 对话补全",
     "调用模型开始：协议A 对话补全",
-    "为什么写这条日志：这一刀测的不是模型守约，是网关有没有真做 token-mask；缺 additionalProperties:false + 含 anyOf 都该在 API 入口 400。当前：即将发出坏 schema + strict 请求。",
+    "为什么写这条日志：这一步测的不是模型守约，是网关有没有真做 token-mask；缺 additionalProperties:false + 含 anyOf 都该在 API 入口 400。当前：即将发出坏 schema + strict 请求。",
     {
       入参: {
         model: request.model,

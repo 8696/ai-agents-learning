@@ -36,7 +36,7 @@ cd apps && yarn app:07-01-agent-loop-react-step-4
        ├─ 202 + { status: "running", elapsedMs }           ← 继续轮询
        ├─ 200 + { status: "done", trajectory, ... }        ← 自然完成（final_answer / max_rounds）
        ├─ 200 + { status: "cancelled", trajectory, ... }   ← 用户取消（变体 M）
-       └─ 502 + { error: "upstream_failed", ... }          ← 真上游失败
+       └─ 502 + { error: "upstream_failed", ... }          ← 真后端错误
 ```
 
 服务端日志（`logs/YYYY-MM-DD.log`）每轮写：调用循环开始/结束 + 调用模型开始/结束 + 「用户取消」日志 + 后台 loop 收尾（finishRun / errorRun）。
@@ -53,7 +53,7 @@ cd apps && yarn app:07-01-agent-loop-react-step-4
   - 数据前后对照三栏：取消时若 Act 已完成部分 → diff 列出「已发出没回滚」的条数；若在圈 1 取消 → diff 为空
 - **不取消**：loop 自然走完，stoppedReason = `final_answer`，状态徽标变绿 `✅ 最终答案`
 - 类 A 错误：发空字符串 → 400 黄字（Zod 校验）
-- 类 B 错误：点「演示上游失败」→ 502 红字（教学用端点）
+- 类 B 错误：点「演示后端 5xx」→ 502 红字（教学用端点）
 - 缺 Key 时主按钮 disabled，页脚 `密钥 ❌`
 
 ## step-4 教学点（变体 M 用户取消）
@@ -67,7 +67,7 @@ cd apps && yarn app:07-01-agent-loop-react-step-4
   - 加 `signal?: AbortSignal` 入参
   - while 起点检测 `signal?.aborted` → break + `stoppedReason = "cancelled"`
   - `openai.chat.completions.create(request, { signal })` 透传
-  - catch AbortError 区分于真上游失败（502）—— AbortError 不冒出去，让 loop 收尾
+  - catch AbortError 区分于真后端错误（502）—— AbortError 不冒出去，让 loop 收尾
   - cancelled 时 finalAnswer 用清晰文案 `（用户已取消 · 未给出最终答案）`，不写「未收敛」
 - **关键边界（变体 M 的妥协）**：
   - **已发出的 tool handler 不感知 signal**（变体 M 不演示「已发出也能取消」）

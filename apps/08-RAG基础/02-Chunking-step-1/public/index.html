@@ -218,13 +218,13 @@
 
                 <div className="border border-gray-200 rounded p-3 bg-gray-50 space-y-2">
                   <div className="font-semibold text-gray-900">③ 切法 · 前端：flex-wrap + page-break-inside</div>
-                  <p>CSS 的换行逻辑跟切块的「结构优先 / 兜底硬切」是一回事：</p>
+                  <p>CSS 的换行逻辑跟切块的「结构优先 / 按字数切兜底」是一回事：</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li><code>flex-wrap</code> 默认在空格处换行（结构边界）</li>
-                    <li>单个英文词超宽时浏览器自动 <code>word-break: break-all</code>（硬切兜底）</li>
+                    <li>单个英文词超宽时浏览器自动 <code>word-break: break-all</code>（按字数切兜底）</li>
                     <li><code>page-break-inside: avoid</code> 对应切块变体 14「不能腰斩的结构」——表格 / 代码块 / 编号条款不允许被切断</li>
                   </ul>
-                  <p className="text-gray-600">→ <b>优先自然边界，超限才强切</b>——这正是递归切分（结构优先 + 硬切兜底）的逻辑。</p>
+                  <p className="text-gray-600">→ <b>优先自然边界，超限才强切</b>——这正是递归切分（结构优先 + 按字数切兜底）的逻辑。</p>
                 </div>
               </div>
             </details>
@@ -271,7 +271,7 @@
                   onClick={runError}
                   className="border border-gray-300 px-3 py-2 rounded text-sm disabled:opacity-50"
                 >
-                  演示上游失败（5xx · 第二类错误 · /api/demo-error）
+                  演示后端 5xx（第二类错误 · /api/demo-error）
                 </button>
               </div>
               {err ? (

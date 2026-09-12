@@ -6,7 +6,7 @@
  *     → chat.completions.create({ stream: true, stream_options: { include_usage: true } })
  *     → for await chunk → writer.frame(chunk)（原样转发，页面才看得见真实协议字段）
  *     → 汇总 usage / 帧数 → writer.done() 发 [DONE]
- *   上游失败 → writer.frame({ error, upstreamStatus }) → writer.done()
+ *   后端 5xx → writer.frame({ error, upstreamStatus }) → writer.done()
  *
  * 为什么单独成文件：
  *   routes/chat.ts 只该做「校验 + 开流 + 交给谁」；把 for await 循环抄进 route，

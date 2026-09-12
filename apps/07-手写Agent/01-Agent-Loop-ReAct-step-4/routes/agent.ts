@@ -168,7 +168,7 @@ export function mountAgentRoutes(router: Router): void {
       ctx.status = 502;
       ctx.body = {
         error: run.error?.error ?? "upstream_failed",
-        message: run.error?.message ?? "Loop 中上游失败",
+        message: run.error?.message ?? "Loop 中后端错误",
         runId,
       };
       return;
@@ -249,7 +249,7 @@ async function runAgentLoopInBackground(args: {
       { runId, error: err });
     errorRun(runId, {
       error: "upstream_failed",
-      message: (err as Error).message || "Loop 中上游失败",
+      message: (err as Error).message || "Loop 中后端错误",
     });
   }
 }

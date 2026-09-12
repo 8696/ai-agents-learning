@@ -43,7 +43,7 @@ app.listen(PORT, "127.0.0.1", () => {
   logger.info(
     "server.start",
     "listening",
-    "服务起好了；step-5 教学要点：6 个决策卡 sub-page 共享同一端口（需求 3 / 11 / 12 / 13 / 变体 9 / 14）。需求 5「混合」已拎到 step-7、需求 6「不该检索」已拎到 step-6 独立 sub-page。",
+    "服务起好了；step-5 教学要点：6 个决策卡 sub-page 共享同一端口（需求 3 / 11 / 12 / 13 / 变体 9 / 14）。需求 5「混合」已移到 step-7、需求 6「不该检索」已移到 step-6 独立 sub-page。",
     {
       url: `http://127.0.0.1:${PORT}/`,
       protocol: "local",  // 6 个决策卡 sub-page 全部纯展示，不调 LLM

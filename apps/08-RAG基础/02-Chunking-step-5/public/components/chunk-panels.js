@@ -3,7 +3,7 @@
  * 中栏 Panel（按结构切）、右栏 RightPanel（FAQ 切，带文档来源说明）。
  * 挂 window.DemoUI。三个 Panel 拆三个组件文件，stats / ChunkCard 通用部分留本文件。
  *
- * step-2：ChunkCard 显示字符 / token 三种数法 + 兜底再切徽标；StatsBar 显示 fallbackChunks。
+ * step-2：ChunkCard 显示字符 / token 三种数法 + 按字数切兜底徽标；StatsBar 显示 fallbackChunks。
  */
 (function () {
   const DemoUI = window.DemoUI || {};
@@ -22,7 +22,7 @@
       段落: "段落",
       句号: "句号",
       "faq-q": "faq-q",
-      "fallback-fixed": "兜底再切",
+      "fallback-fixed": "按字数切兜底",
     }[chunk.boundary] || chunk.boundary;
     const tokenCount =
       estimateMode === "chinese"
@@ -40,7 +40,7 @@
           <span className="text-gray-500">{tokenLabel} {tokenCount}</span>
           <span className="px-1.5 py-0.5 rounded border border-gray-300 text-gray-600">{boundaryLabel}</span>
           {chunk.section ? <span className="px-1.5 py-0.5 rounded border border-blue-200 text-blue-700"># {chunk.section}</span> : null}
-          {chunk.fallbackSplit ? <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-800">兜底再切</span> : null}
+          {chunk.fallbackSplit ? <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-800">按字数切兜底</span> : null}
           {isMid ? <span className="px-1.5 py-0.5 rounded bg-red-200 text-red-800">半句话开头</span> : null}
           {overlap > 0 ? <span className="text-gray-500">与上一块重叠 {overlap} 字</span> : null}
         </div>
@@ -81,7 +81,7 @@
           半句话块 <b>{stats.midSentenceCount}</b>
         </span>
         {typeof stats.fallbackChunks === "number" && stats.fallbackChunks > 0 ? (
-          <span className="text-orange-700">兜底再切 <b>{stats.fallbackChunks}</b></span>
+          <span className="text-orange-700">按字数切兜底 <b>{stats.fallbackChunks}</b></span>
         ) : null}
       </div>
     );

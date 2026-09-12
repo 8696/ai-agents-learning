@@ -166,7 +166,7 @@
                 <li>服务端原样发给模型，并把完整 messages + token 估算写到日志（看 console / logs/）</li>
                 <li>助手回复合回 messages；下一次发送时把它一并带走 —— 这就是「Context 在累积」</li>
                 <li>点「清空对话」→ messages 归零 → 下次发送时模型就看不到任何历史（Context 没了）</li>
-                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示上游失败」→ 5xx（红底 · 教学用 502 端点）</li>
+                <li><b>错误两类 · 一眼分开</b>：发空字符串 → 4xx（黄底 · 入参校验） · 点「演示后端 5xx」→ 5xx（红底 · 教学用 502 端点）</li>
               </ol>
               {/* 核心教学点卡片（§5.3.11.b 强制） */}
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
@@ -202,7 +202,7 @@
                   id="btn-simulate-error"
                   className="border border-orange-300 text-orange-700 px-4 py-2 rounded text-sm"
                   onClick={simulateUpstreamError}
-                >演示上游失败（5xx · 类 B）</button>
+                >演示后端 5xx（5xx · 类 B）</button>
               </div>
               {errorMsg ? (
                 <div
@@ -215,7 +215,7 @@
                   }
                 >
                   <div className="font-semibold">
-                    {errorKind === "5xx" ? "上游失败（5xx）" : "入参校验失败（4xx）"}
+                    {errorKind === "5xx" ? "后端错误（5xx）" : "入参校验失败（4xx）"}
                   </div>
                   <div className="mt-1">{errorMsg}</div>
                 </div>

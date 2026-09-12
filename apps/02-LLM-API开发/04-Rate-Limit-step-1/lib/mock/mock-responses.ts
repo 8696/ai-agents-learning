@@ -66,7 +66,7 @@ export function handleDirect(path: string): {
       耗时ms: Date.now() - tFuncStart,
     },
   );
-  logger.debug("mock.respond", `${path} 返回 ${out.status}`, "mock 替代 LLM 给 retry 吃；记 status + retry-after 让 retry.decide 时间线能追到这一刀", {
+  logger.debug("mock.respond", `${path} 返回 ${out.status}`, "mock 替代 LLM 给 retry 吃；记 status + retry-after 让 retry.decide 时间线能追到这一步", {
     path,
     status: out.status,
     retryAfter: out.headers["retry-after"] ?? null,

@@ -43,7 +43,7 @@
 
 **常见坑**：Tool Description 写得太简略，模型不知道什么时候该调用；或者一次注册 20 个 Tool 把模型搞晕。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`function calling guide` · `writing good tool descriptions LLM`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`function calling guide` · `writing good tool descriptions LLM`
 
 ## 动手落点
 

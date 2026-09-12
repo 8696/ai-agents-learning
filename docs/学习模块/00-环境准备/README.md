@@ -43,7 +43,7 @@
 - MiniMax 用了海外站域名 `*.minimax.io`，或把 Token Plan 订阅 Key 当成按量 API Key 用。
 - 本机 Node **低于 22** 时，`engines` 会拦住 `yarn app:...`；在 `apps/` 下 `nvm use`（读 `apps/.nvmrc`）后跑。22 及以上（含 24）都可以。
 
-**出门线索**（完整勾选表见 [小节进度](#小节进度)）：`LLM API pricing` · `git secret scanning`
+**学完后自己搜的关键词**（完整勾选表见 [小节进度](#小节进度)）：`LLM API pricing` · `git secret scanning`
 
 ## 动手落点
 

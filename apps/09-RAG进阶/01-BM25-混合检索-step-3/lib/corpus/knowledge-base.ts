@@ -1,7 +1,7 @@
 /**
  * 职责：内置一份售后知识库（6 条卡）——本 demo 用来演示「同一库、同一问句，
  * 向量检索（Dense Retrieval）漏编号、BM25 关键词检索（Sparse Retrieval）捞编号」；
- * 以及「口语问，BM25 漏同义、向量能中」。
+ * 以及「日常说法、库里未必同词的问句，BM25 漏同义、向量能中」。
  *
  * 为什么内置：
  *   本条教学点是「对照」，不是「如何入库」。把语料写死在代码里，每次跑结果稳定、可复盘。
@@ -56,7 +56,7 @@ export const PRESET_QUERIES = {
   spoken: "杯子裂了怎么退？",
 } as const;
 
-/** 给前端讲解用：哪张卡是「该中的卡」——编号问期望命中 sku-8821；口语问期望命中 shipping-damage */
+/** 给前端讲解用：哪张卡是「该中的卡」——带货号的问句期望命中 sku-8821；日常说法、库里未必同词的问句期望命中 shipping-damage */
 export const EXPECTED_HIT = {
   numbered: "sku-8821",
   spoken: "shipping-damage",

@@ -1,6 +1,6 @@
 // 职责：左栏「空系统提示词 + RAG」卡片（受控组件）。
 // 数据流：父组件传 question / data / loading / error / forceErrorLoading → 渲染按钮 + 结果。
-// 「演示上游失败」按钮 → onRunEmptyForceError() → 父组件 fetch("/api/rag-empty", {forceError:true}) → 5xx。
+// 「演示后端 5xx」按钮 → onRunEmptyForceError() → 父组件 fetch("/api/rag-empty", {forceError:true}) → 5xx。
 // 这是 §5.3.2 #2「第二类错误」：与「空问题 400」不同的失败通道。
 const PromptEmptyCard = function ({ question, data, loading, error, forceErrorLoading, onRunEmpty, onRunEmptyForceError }) {
   return (
@@ -24,13 +24,13 @@ const PromptEmptyCard = function ({ question, data, loading, error, forceErrorLo
           className="border border-gray-300 px-3 py-1 rounded disabled:opacity-50 text-sm"
           title="演示第二类错误：让 /api/rag-empty 强制返回 5xx，#status-pill 变红"
         >
-          {forceErrorLoading ? "请求中…" : "演示上游失败（5xx · 第二类错误）"}
+          {forceErrorLoading ? "请求中…" : "演示后端错误（5xx · 第二类错误）"}
         </button>
       </div>
       {error && (
         <div className="text-red-600 text-sm">
           失败：{error}
-          {data === null && " —— 这是 §5.3.2 第二类错误通道（演示上游失败）"}
+          {data === null && " —— 这是 §5.3.2 第二类错误通道（演示后端错误）"}
         </div>
       )}
       {data && (

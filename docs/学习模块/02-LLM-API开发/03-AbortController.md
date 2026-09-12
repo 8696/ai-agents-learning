@@ -275,7 +275,7 @@ for await (const chunk of stream) {
 
 ## 过关自检
 
-合上文件，能讲清：
+关上文件还能讲出来，能讲清：
 
 1. **AbortController 三件套**：实例 + `.abort()` + `signal`。
 2. **fetch / SDK 接 signal**：OpenAI SDK 把 `signal` 作为第二个 `options` 参数；Anthropic SDK 同。

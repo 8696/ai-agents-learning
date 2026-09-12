@@ -122,7 +122,7 @@
                 <li>看「事实层（corpus 原文）+ 口吻层（system 模板描述）+ 答复 + 依据」</li>
                 <li>换 system 模板不改 corpus → 口吻变，事实不变</li>
                 <li>改 corpus 不换 system → 事实变，口吻不变</li>
-                <li>点「演示上游失败」→ GET /api/demo-error → 5xx + #status-pill 变 ❌</li>
+                <li>点「演示后端 5xx」→ GET /api/demo-error → 5xx + #status-pill 变 ❌</li>
               </ol>
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
@@ -131,7 +131,7 @@
                   改 corpus → 事实跟变；换 system → 口吻跟变；两路互不干扰。
                 </div>
                 <div className="text-xs text-gray-800">
-                  <b>对照：</b>step-1（左栏只靠模型 · step-2（口吻用 system） · step-3（库里没有按指令弃权） · step-5 mix（corpus 可变 + 单一 system） · step-7（本步：3 种 system 模板可切）。
+                  <b>对照：</b>step-1（左栏不接 RAG（model only） · step-2（口吻用 system） · step-3（库里没有按指令弃权） · step-5 mix（corpus 可变 + 单一 system） · step-7（本步：3 种 system 模板可切）。
                 </div>
                 <div className="text-xs text-gray-600">怎么观察：连续跑 2 次 + 改 corpus 1 次 + 切 system 1 次 —— 看哪些字段跟变。</div>
               </div>
@@ -186,7 +186,7 @@
                   disabled={errorLoading}
                   className="border border-gray-300 px-3 py-1 rounded disabled:opacity-50 text-sm"
                   title="演示第二类错误：让 #status-pill 变 ❌">
-                  {errorLoading ? "请求中…" : "演示上游失败（5xx · 第二类错误）"}
+                  {errorLoading ? "请求中…" : "演示后端错误（5xx · 第二类错误）"}
                 </button>
               </div>
 

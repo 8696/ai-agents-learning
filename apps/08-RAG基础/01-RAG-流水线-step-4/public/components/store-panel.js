@@ -64,7 +64,7 @@
             onClick={function () { props.onStoreRaw(); }}
             className="border border-gray-300 px-3 py-2 rounded disabled:opacity-50"
           >
-            查看库里原始数据（四件套）
+            查看库里原始数据（向量库一行要存的四个字段）
           </button>
         </div>
         {props.uploading ? (
@@ -169,7 +169,7 @@
             </div>
             <div className="bg-green-50 border border-green-300 rounded p-3 space-y-2">
               <div className="text-xs font-semibold text-green-900">
-                响应结果 · 库里 {store.rowCount} 行四件套
+                响应结果 · 库里 {store.rowCount} 行向量库一行要存的四个字段
               </div>
               {store.rowCount === 0 ? (
                 <p className="text-xs text-gray-700">还是空表。先点「建库」。</p>

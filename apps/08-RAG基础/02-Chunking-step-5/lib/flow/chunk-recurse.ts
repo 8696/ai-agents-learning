@@ -81,7 +81,7 @@ export function recurseByLevel(text: string, baseOffset: number, idxRef: { v: nu
     );
     return out;
   }
-  // boundary === "句号"：句号都压不住 → 兜底硬切（applyFallback 会再走一遍）
+  // boundary === "句号"：句号都压不住 → 按字数切兜底（applyFallback 会再走一遍）
   const out = [makeChunk(idxRef.v++, text, baseOffset, baseOffset + text.length, "fallback-fixed", section)];
   logger.debug(
     "││ 调用函数-recurseByLevel",

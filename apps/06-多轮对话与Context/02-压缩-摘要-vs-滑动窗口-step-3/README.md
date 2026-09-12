@@ -53,7 +53,7 @@ React 5 张卡：① 完整（fullReply） ② 滑动窗口（slidingReply） �
 - 改 `keyFactAtTurn` = 49 → 三方都记得（key fact 在窗口内 + summary 里）
 - 改 `slidingWindowSize` = 50 → sliding 也记得（窗口够大）
 - 改 `keepRecent` = 0 极端摘要态：summarize 也记得（summary 里写了 key fact）
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 
 ## step-3 教学点
 

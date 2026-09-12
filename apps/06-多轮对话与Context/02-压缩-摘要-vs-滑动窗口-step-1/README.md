@@ -47,7 +47,7 @@ React 三张卡：① 裁剪前（messages + beforeReply） ② 裁剪后（mess
 - 默认参数（50/6/1）下：before 记得 key fact；after 忘掉 key fact → 一眼看见「滑动窗口丢了什么」
 - 改 `keyFactAtTurn` = 49 → key fact 在窗口内 → 两边都记得 → 反向印证
 - 改 `windowSize` = 50 → 不丢任何东西 → 两边都记得
-- 点「演示上游失败」→ 5xx 红字 + #status-pill ❌
+- 点「演示后端 5xx」→ 5xx 红字 + #status-pill ❌
 - 页脚 `#env-info` 来自 `GET /health`（provider / model / hasKey）
 
 ## step-1 教学点

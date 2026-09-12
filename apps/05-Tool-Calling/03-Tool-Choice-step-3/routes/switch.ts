@@ -186,7 +186,7 @@ export function mountSwitchRoutes(router: Router): void {
       logger.error(
         "api.switch",
         "调用函数结束：handleSwitch（失败）",
-        "为什么写这条日志：502 上游失败。",
+        "为什么写这条日志：502 后端 5xx。",
         {
           返回值: { httpStatus: 502, error: message },
           耗时ms: Date.now() - t0,

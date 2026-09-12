@@ -23,7 +23,7 @@
       段落: "段落",
       句号: "句号",
       "faq-q": "faq-q",
-      "fallback-fixed": "兜底再切",
+      "fallback-fixed": "按字数切兜底",
       "atomic-table": "表格",
       "atomic-code": "代码围栏",
       "atomic-numbered-clause": "编号条款",

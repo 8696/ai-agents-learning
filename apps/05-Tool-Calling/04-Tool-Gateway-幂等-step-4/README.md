@@ -53,7 +53,7 @@ cd apps && yarn app:05-04-tool-gateway-step-4
 - 环境元信息 ✓ /health + 页脚 #env-info（含 provider / model / hasKey）
 - 页面自解释 ✓ #page-intro 完整 3 场景说明 + 大白话解释
 
-## 关键教学点（合上文件后还能自己讲出来也能讲清）
+## 关键教学点（关上文件后还能自己讲出来也能讲清）
 
 | 概念 | 演示 |
 | ---- | ---- |
