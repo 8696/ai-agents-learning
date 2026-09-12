@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BM25 / 混合检索 · 第五步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="components/side-rank-table.js"></script>
+  <script type="text/babel" src="components/judge-case-card.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [env, setEnv] = useState({ port: 50091, library: "—", callsModel: false });
+      const [cases, setCases] = useState([]);
+      const [corpus, setCorpus] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待连接");
+      const [judgeById, setJudgeById] = useState({});
+      const [summary, setSummary] = useState(null);
+      const [customQ, setCustomQ] = useState("API-KEY-7741 怎么轮换");
+      const [customCompare, setCustomCompare] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((d) => {
+          setEnv({ port: d.port, library: d.library || "wink-bm25-text-search", callsModel: Boolean(d.callsModel) });
+        }).catch(() => {});
+        fetch("/api/judge-cases").then((r) => r.json()).then((d) => {
+          if (d.ok) setCases(d.result.cases);
+        }).catch(() => {});
+        fetch("/api/corpus").then((r) => r.json()).then((d) => {
+          if (d.ok) setCorpus(d.result);
+        }).catch(() => {});
+      }, []);
+
+      async function runOne(caseId) {
+        setBusy(true);
+        setStatus("🔄 请求中");
+        setErrorText("");
+        try {
+          const response = await fetch("/api/judge-run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "one", caseId, topK: 5 }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setJudgeById((prev) => ({ ...prev, [caseId]: json.result }));
+          setStatus("✅ 完成");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runAll() {
+        setBusy(true);
+        setStatus("🔄 请求中");
+        setErrorText("");
+        try {
+          const response = await fetch("/api/judge-run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "all", topK: 5 }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          const map = {};
+          json.result.results.forEach((r) => { map[r.case.id] = r; });
+          setJudgeById(map);
+          setSummary(json.result.summary);
+          setStatus("✅ 完成");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runCustom() {
+        setBusy(true);
+        setStatus("🔄 请求中");
+        setErrorText("");
+        try {
+          const response = await fetch("/api/compare-bm25", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: customQ, topK: 5 }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setCustomCompare(json.result);
+          setStatus("✅ 完成");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              BM25 / 混合检索（Hybrid Retrieval） · 第五步（step-5） · 手写 vs wink-bm25-text-search
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">{status}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>同一知识库下，手写 BM25 与成熟库 wink-bm25-text-search 并排对照</b>；
+                建索引时把同一套切词（tokenize · keep-dash）注入库，避免「结论不同只因切词不同」。
+                库的 search 只回文档 id + 分数，所以右侧不展示切词 / 命中词（那些不是库返回的）。
+                内置判定列表自动判 Top-1 过 / 不过。分数绝对值可以不同，比的是排名结论。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>先看下方内置用例 → 点「跑全部判定」或单条「跑本条判定」</li>
+                <li>服务端两侧各算一遍 BM25（手写本地公式 · 库走 wink 内存索引）</li>
+                <li>结果区：两侧 Top-K + 判定徽标；也可自己改问句跑对照（不跑规则）</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>教学可以自己写三步公式</b>（切词 → 稀有程度 → 打分排序）；
+                  <b>上线用成熟库</b>（本页是 wink-bm25-text-search）。思想相同；换的是谁帮你建索引。
+                  对照时<b>共用同一套切词</b>，否则分不清是算法差还是切词差。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么看：跑「编号问」两侧 Top-1 都该是 api-key-7741；跑「无共同词英文问」两侧都不该把 webhook-retry 稳稳打成第 1。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runAll}
+                >
+                  跑全部判定（/api/judge-run · all）
+                </button>
+                <span className="text-xs text-gray-500">点了会依次跑完内置列表，汇总过 / 不过。</span>
+              </div>
+              {summary ? (
+                <div className="text-xs text-gray-700 bg-gray-50 border rounded p-2">
+                  汇总（summary）：共 {summary.total} 条 · 两侧都过 {summary.bothPassed} ·
+                  手写过 {summary.handwrittenPassed} · 库过 {summary.winkPassed}
+                </div>
+              ) : null}
+              {errorText ? (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-300 rounded p-2">{errorText}</div>
+              ) : null}
+              {cases.length === 0 ? (
+                <div className="text-xs text-gray-400">判定列表加载中…</div>
+              ) : (
+                cases.map((c) => (
+                  <DemoUI.JudgeCaseCard
+                    key={c.id}
+                    caseItem={c}
+                    onRun={runOne}
+                    busy={busy}
+                    result={judgeById[c.id] || null}
+                  />
+                ))
+              )}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[160px]">
+              <div className="text-sm font-semibold text-gray-700">自定义问句对照（不跑判定规则）</div>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  className="flex-1 min-w-[200px] border border-gray-300 rounded px-2 py-1 text-sm"
+                  value={customQ}
+                  onChange={(e) => setCustomQ(e.target.value)}
+                  placeholder="自己改问句"
+                />
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded bg-white disabled:opacity-50"
+                  disabled={busy || !customQ.trim()}
+                  onClick={runCustom}
+                >
+                  跑对照（/api/compare-bm25）
+                </button>
+              </div>
+              {customCompare ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-600">
+                    Top-1 是否一致（top1Agree）：{customCompare.top1Agree ? "是" : "否"}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <DemoUI.SideRankTable title={customCompare.handwritten.displayName} side={customCompare.handwritten} />
+                    <DemoUI.SideRankTable title={customCompare.wink.displayName} side={customCompare.wink} />
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400">还没跑自定义对照。</div>
+              )}
+
+              <div className="text-sm font-semibold text-gray-700 pt-2">向量库一览（6 条卡）</div>
+              {!corpus ? (
+                <div className="text-xs text-gray-400">加载中…</div>
+              ) : (
+                <ul className="text-xs space-y-1">
+                  {corpus.cards.map((c) => (
+                    <li key={c.id} className="border-b border-gray-100 py-1">
+                      <span className="font-mono text-gray-500">{c.id}</span>
+                      <span className="text-gray-400"> · {c.kind} · </span>
+                      <span className="text-gray-800">{c.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 本地计算 · 不调大模型 · 成熟库 {env.library} · 会调模型 {env.callsModel ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

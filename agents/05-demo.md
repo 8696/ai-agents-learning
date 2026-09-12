@@ -1124,6 +1124,40 @@ apps/{模块文件夹}/
 
 **禁止**：在 `step-N` 基础上「加开关变量 + 条件渲染」做出 `step-(N+1)`；那样回头看 `step-N` 会发现代码里有「未启用分支」。要追加就实打实写一遍新代码——重复几十行是可接受成本；隐藏分支不可接受。
 
+##### `cp -r step-N → step-(N+1)` 必改清单（2026-09-12 立 · 实测踩坑）
+
+`cp -r apps/{模块}/{小节}-step-N apps/{模块}/{小节}-step-(N+1)` 后，**整份文件被原样拷过来**——包括 `<title>` / `<h1>` / README 标题 / 端口 / 教学点文案。**这些都是 step-N 的旧文本，必须逐项改成 step-(N+1) 的**，否则页面看到的是「第N步」标题、内容却是 step-(N+1) 的代码（学习者看不出走到了哪步）。
+
+| # | 必改 | 文件 | 改什么 |
+| --- | --- | --- | --- |
+| 1 | **HTML 标题** | `apps/{demo}/public/index.html` `<title>` | 「第N步」→ 「第(N+1)步」 |
+| 2 | **HTML H1 标题 + 教学点** | `apps/{demo}/public/index.html` `<h1 id="page-title">` | 「第N步（step-N）」→ 「第(N+1)步（step-(N+1)）」；一句话教学点同步换 |
+| 3 | **README 标题** | `apps/{demo}/README.md` H1 | `step-N` → `step-(N+1)` |
+| 4 | **README 跑入口 + 端口行** | `apps/{demo}/README.md` | yarn 脚本名 + 端口号 |
+| 5 | **默认端口** | `apps/{demo}/lib/http/runtime-ctx.ts` | `.default(PORT_N)` → `.default(PORT_N+1)` |
+| 6 | **package.json 脚本** | `apps/package.json` `scripts` | append `app:{MM}-{SS}-{短名}-step-(N+1)` 脚本（PORT inline） |
+| 7 | **apps 占用表** | `apps/README.md` | append 新行（含默认端口） |
+| 8 | **学习模块 MD Demo 子节进度** | `docs/学习模块/{模块}/{小节}.md` | append `🔄 step-(N+1)` 行（不要预填未来步骤） |
+| 9 | **`server.start` 教学要点** | `apps/{demo}/server.ts` `listen` 回调里的 `logger.info("server.start", "listening", "...")` | 「step-N 教学要点」→ 「step-(N+1) 教学要点」（§5.3.16 强制） |
+| 10 | **任何旧 step-N 的内嵌文案** | 比如 `core-takeaway` / `#page-intro` / 按钮文案 / 卡片标题 | 凡是提到「上一步」「step-N」的地方都扫一遍 |
+
+**禁止**：
+
+- 「cp 完先跑起来再看」——上线后才发现标题错（实测 4 次踩坑：step-2 / step-3 / step-4 都漏过一次标题）
+- 只改代码、不改 HTML 标题（页面跟着错）
+- 以为「标题是小事」——学习者打开页面看到「第三步」但内容是第四步的教学点，**这一整条就讲不清**
+
+**验证（cp 完、跑 `check-demo` 之前必走）**：
+
+```bash
+# 1. 三处的「第N步」字样必须空
+grep -rn "第N步\|step-N" apps/{demo}/public/index.html apps/{demo}/README.md apps/{demo}/server.ts
+# 2. 默认端口三处一致
+grep -rn "PORT=\(N\+\|50090\)\|default(5009" apps/package.json apps/{demo}/lib/http/runtime-ctx.ts apps/{demo}/README.md apps/README.md
+```
+
+任一项有残留 → 立刻补改，不要推到「coach complete」。
+
 ##### 同步更新规则（demo 改名 / 路径变 / 脚本名变时）
 
 任何 demo 改名 / 路径变 / 脚本名变（如 `app:01-06-embedding-step-1` → `app:01-06-embedding-step-1`；`02-Embedding/` → `02-Embedding-step-1/`），**必须同步更新所有引用该 demo 的文档**，禁止留旧名残留。范围（不完整清单，每加一种新 demo 类型 / 新文档类型都要扩）：

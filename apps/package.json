@@ -12,7 +12,7 @@
     "gen-manifest": "node ../scripts/gen-manifest.js",
     "static-serve": "node ../scripts/static-server.js",
     "start-all-demo": "node ../scripts/start-all-demo.js",
-    "rebuild-better-sqlite3":"npm rebuild better-sqlite3",
+    "rebuild-better-sqlite3": "npm rebuild better-sqlite3",
     "app:00-01-mini-app-step-1": "PORT=50000 tsx 00-环境准备/01-mini-app-step-1/server.ts",
     "app:00-01-api-key-billing-step-1": "PORT=50001 tsx 00-环境准备/01-API-Key-计费-step-1/server.ts",
     "app:01-02-token-step-1": "PORT=50002 tsx 01-AI与LLM基础认知/02-Token-step-1/server.ts",
@@ -99,7 +99,12 @@
     "app:08-04-rag-vs-fine-tuning-step-4": "PORT=50083 tsx 08-RAG基础/04-RAG-vs-Fine-tuning-step-4/server.ts",
     "app:08-04-rag-vs-fine-tuning-step-5": "PORT=50084 tsx 08-RAG基础/04-RAG-vs-Fine-tuning-step-5/server.ts",
     "app:08-04-rag-vs-fine-tuning-step-6": "PORT=50085 tsx 08-RAG基础/04-RAG-vs-Fine-tuning-step-6/server.ts",
-    "app:08-04-rag-vs-fine-tuning-step-7": "PORT=50086 tsx 08-RAG基础/04-RAG-vs-Fine-tuning-step-7/server.ts"
+    "app:08-04-rag-vs-fine-tuning-step-7": "PORT=50086 tsx 08-RAG基础/04-RAG-vs-Fine-tuning-step-7/server.ts",
+    "app:09-01-bm25-hybrid-step-1": "PORT=50087 tsx 09-RAG进阶/01-BM25-混合检索-step-1/server.ts",
+    "app:09-01-bm25-hybrid-step-2": "PORT=50088 tsx 09-RAG进阶/01-BM25-混合检索-step-2/server.ts",
+    "app:09-01-bm25-hybrid-step-3": "PORT=50089 tsx 09-RAG进阶/01-BM25-混合检索-step-3/server.ts",
+    "app:09-01-bm25-hybrid-step-4": "PORT=50090 tsx 09-RAG进阶/01-BM25-混合检索-step-4/server.ts",
+    "app:09-01-bm25-hybrid-step-5": "PORT=50091 tsx 09-RAG进阶/01-BM25-混合检索-step-5/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -115,6 +120,7 @@
     "koa-static": "^5.0.0",
     "openai": "^4.85.4",
     "pdf-parse": "^2.4.5",
+    "wink-bm25-text-search": "^3.1.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {

@@ -483,11 +483,27 @@
 <body class="nav-open">
   <button type="button" class="skip-link" id="skipLink">跳到正文</button>
   <div class="topbar">
-    <button class="menu-btn" id="menuBtn" aria-label="切换导航" aria-expanded="false" aria-controls="sidebar">☰ 导航</button>
+    <button class="menu-btn" id="menuBtn" aria-label="隐藏导航" aria-expanded="true" aria-controls="sidebar">☰ 导航</button>
     <a class="brand" href="#README.md">AI Agent开发</a>
     <div class="crumb" id="crumb"></div>
     <button type="button" class="source-badge" id="sourceBadge" hidden title="点击切换数据源"></button>
   </div>
+  <script>
+    /* 侧栏进 DOM 前先恢复上次状态，避免先展开再收起闪一下 */
+    (function () {
+      try {
+        if (window.matchMedia('(max-width: 900px)').matches
+          || localStorage.getItem('ai-agents-learning:nav-open') === '0') {
+          document.body.classList.remove('nav-open');
+          var btn = document.getElementById('menuBtn');
+          if (btn) {
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', '显示导航');
+          }
+        }
+      } catch (e) { /* 隐私模式读不了就保持默认展开 */ }
+    })();
+  </script>
 
   <div class="source-modal-mask" id="sourceModal" hidden>
     <div class="source-modal" role="dialog" aria-modal="true" aria-labelledby="sourceModalTitle">
@@ -531,6 +547,8 @@
     const REPO = '8696/ai-agents-learning';
     const BRANCH = 'master';
     const SOURCE_KEY = 'docs-source'; // sessionStorage: 'local' | 'remote'
+    const LS_PREFIX = 'ai-agents-learning:';
+    const NAV_OPEN_KEY = LS_PREFIX + 'nav-open'; // localStorage: '1' | '0'
     let rawBase = null;
     let commitSha = null;
     let NAV = [];
@@ -910,17 +928,36 @@
     });
 
     /* ════════════════════════════════════════════════════════════
-       导航开关：PC 可暂时收起（正文铺满）；移动端仍是遮罩抽屉
+       导航开关：PC 可收起（正文铺满），状态写入 LocalStorage；
+       移动端仍是遮罩抽屉，默认收起，不覆盖桌面记住的状态。
        ════════════════════════════════════════════════════════════ */
     function isMobileNav() {
       return window.matchMedia('(max-width: 900px)').matches;
     }
-    function setSidebarOpen(open) {
+    function readStoredNavOpen() {
+      try {
+        const raw = localStorage.getItem(NAV_OPEN_KEY);
+        if (raw === '1') return true;
+        if (raw === '0') return false;
+      } catch (e) { /* 隐私模式读不了 */ }
+      return null;
+    }
+    function writeStoredNavOpen(open) {
+      try {
+        localStorage.setItem(NAV_OPEN_KEY, open ? '1' : '0');
+      } catch (e) { /* 写满或禁用则忽略 */ }
+    }
+    function desktopNavOpen() {
+      const stored = readStoredNavOpen();
+      return stored === null ? true : stored;
+    }
+    function setSidebarOpen(open, persist) {
       document.getElementById('sidebar').classList.toggle('open', open);
       document.body.classList.toggle('nav-open', open);
       const btn = document.getElementById('menuBtn');
       btn.setAttribute('aria-expanded', String(open));
       btn.setAttribute('aria-label', open ? '隐藏导航' : '显示导航');
+      if (persist && !isMobileNav()) writeStoredNavOpen(open);
     }
     document.getElementById('skipLink').addEventListener('click', () => {
       const article = document.getElementById('markdown');
@@ -929,16 +966,17 @@
     });
     document.getElementById('menuBtn').addEventListener('click', () => {
       const next = !document.getElementById('sidebar').classList.contains('open');
-      setSidebarOpen(next);
+      setSidebarOpen(next, true);
     });
     document.getElementById('sidebarBackdrop').addEventListener('click', () => {
-      setSidebarOpen(false);
+      setSidebarOpen(false, true);
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') setSidebarOpen(false);
+      if (e.key === 'Escape') setSidebarOpen(false, true);
     });
     window.matchMedia('(max-width: 900px)').addEventListener('change', (e) => {
-      setSidebarOpen(!e.matches);
+      if (e.matches) setSidebarOpen(false, false);
+      else setSidebarOpen(desktopNavOpen(), false);
     });
 
     /* ════════════════════════════════════════════════════════════
@@ -976,7 +1014,7 @@
     }
 
     async function bootstrap() {
-      setSidebarOpen(!isMobileNav());
+      setSidebarOpen(isMobileNav() ? false : desktopNavOpen(), false);
       contentSource = await chooseContentSource();
       updateSourceBadge();
       window.addEventListener('hashchange', route);
