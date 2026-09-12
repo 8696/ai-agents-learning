@@ -9223,6 +9223,959 @@
                 "path": "apps/08-RAG基础/02-Chunking-step-7/server.ts"
               }
             ]
+          },
+          {
+            "label": "03-余弦相似度-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "judge-short-vs-long.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/flow/judge-short-vs-long.ts"
+                      },
+                      {
+                        "label": "score-vectors.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/flow/score-vectors.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "json-body.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/http/json-body.ts"
+                      },
+                      {
+                        "label": "read-score-body.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/http/read-score-body.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "log",
+                    "children": [
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/log/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "intro-normalize.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/intro-normalize.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "score-column.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/score-column.js"
+                      },
+                      {
+                        "label": "source-texts.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/source-texts.js"
+                      },
+                      {
+                        "label": "vector-table.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/components/vector-table.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "contrast.html",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/pages/contrast.html"
+                      },
+                      {
+                        "label": "cosine.html",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/pages/cosine.html"
+                      },
+                      {
+                        "label": "cross-model.html",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/pages/cross-model.html"
+                      },
+                      {
+                        "label": "normalize.html",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/pages/normalize.html"
+                      },
+                      {
+                        "label": "threshold.html",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/pages/threshold.html"
+                      },
+                      {
+                        "label": "topk.html",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/pages/topk.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/08-RAG基础/03-余弦相似度-step-1/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/03-余弦相似度-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "score-cosine.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-cosine.ts"
+                  },
+                  {
+                    "label": "score-cross-model.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-cross-model.ts"
+                  },
+                  {
+                    "label": "score-dot.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-dot.ts"
+                  },
+                  {
+                    "label": "score-euclidean.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-euclidean.ts"
+                  },
+                  {
+                    "label": "score-normalize.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-normalize.ts"
+                  },
+                  {
+                    "label": "score-threshold.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-threshold.ts"
+                  },
+                  {
+                    "label": "score-topk.ts",
+                    "path": "apps/08-RAG基础/03-余弦相似度-step-1/routes/score-topk.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/03-余弦相似度-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "answer-with-rag.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/lib/flow/answer-with-rag.ts"
+                      },
+                      {
+                        "label": "answer-without-rag.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/lib/flow/answer-without-rag.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/lib/rag/corpus.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/lib/rag/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "compare-summary.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/compare-summary.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "no-rag-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/no-rag-card.js"
+                      },
+                      {
+                        "label": "rag-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/rag-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "no-rag.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/routes/no-rag.ts"
+                  },
+                  {
+                    "label": "rag.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/routes/rag.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "answer-with-rag.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/lib/flow/answer-with-rag.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/lib/rag/corpus.ts"
+                      },
+                      {
+                        "label": "fewshot-templates.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/lib/rag/fewshot-templates.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/lib/rag/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "compare-summary.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/components/compare-summary.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "prompt-empty-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/components/prompt-empty-card.js"
+                      },
+                      {
+                        "label": "prompt-fewshot-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/components/prompt-fewshot-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "rag-empty.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/routes/rag-empty.ts"
+                  },
+                  {
+                    "label": "rag-fewshot.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/routes/rag-fewshot.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "answer-with-rag.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/lib/flow/answer-with-rag.ts"
+                      },
+                      {
+                        "label": "answer-without-rag.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/lib/flow/answer-without-rag.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/lib/rag/corpus.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/lib/rag/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "compare-summary.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/compare-summary.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "no-rag-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/no-rag-card.js"
+                      },
+                      {
+                        "label": "rag-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/rag-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "no-rag.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/routes/no-rag.ts"
+                  },
+                  {
+                    "label": "rag.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/routes/rag.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "data-shape",
+                    "children": [
+                      {
+                        "label": "doc-corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/data-shape/doc-corpus.ts"
+                      },
+                      {
+                        "label": "qa-corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/data-shape/qa-corpus.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": []
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/rag/corpus.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "compare-summary.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/components/compare-summary.js"
+                      },
+                      {
+                        "label": "doc-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/components/doc-card.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "qa-card.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/components/qa-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "data-shape.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/routes/data-shape.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "answer-with-rag.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/lib/flow/answer-with-rag.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/lib/rag/corpus.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/lib/rag/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "capability-boundary.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/pages/capability-boundary.html"
+                      },
+                      {
+                        "label": "cost-card.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/pages/cost-card.html"
+                      },
+                      {
+                        "label": "fewshot-vs-finetune.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/pages/fewshot-vs-finetune.html"
+                      },
+                      {
+                        "label": "human-in-the-loop.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/pages/human-in-the-loop.html"
+                      },
+                      {
+                        "label": "privacy-irreversible.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/pages/privacy-irreversible.html"
+                      },
+                      {
+                        "label": "style-vs-structured.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/public/pages/style-vs-structured.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus-edit.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/routes/corpus-edit.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "judge-agent.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/flow/judge-agent.ts"
+                      },
+                      {
+                        "label": "judge-routing-rules.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/flow/judge-routing-rules.ts"
+                      },
+                      {
+                        "label": "judge-threshold.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/flow/judge-threshold.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/rag/corpus.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/lib/rag/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "agent-decide.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/public/pages/agent-decide.html"
+                      },
+                      {
+                        "label": "routing-rules.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/public/pages/routing-rules.html"
+                      },
+                      {
+                        "label": "threshold.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/public/pages/threshold.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat-agent.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/routes/chat-agent.ts"
+                  },
+                  {
+                    "label": "chat-routing.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/routes/chat-routing.ts"
+                  },
+                  {
+                    "label": "chat-threshold.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/routes/chat-threshold.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-6/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-RAG-vs-Fine-tuning-step-7",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "full-pipeline.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/lib/flow/full-pipeline.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/lib/logger.ts"
+                  },
+                  {
+                    "label": "rag",
+                    "children": [
+                      {
+                        "label": "corpus.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/lib/rag/corpus.ts"
+                      },
+                      {
+                        "label": "search.ts",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/lib/rag/search.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "full-pipeline.html",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/public/pages/full-pipeline.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus-edit.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/routes/corpus-edit.ts"
+                  },
+                  {
+                    "label": "demo-error.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/routes/demo-error.ts"
+                  },
+                  {
+                    "label": "full-pipeline.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/routes/full-pipeline.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-7/server.ts"
+              }
+            ]
           }
         ]
       },
