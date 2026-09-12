@@ -113,6 +113,7 @@
 | `yarn app:09-01-bm25-hybrid-step-4` | `50090` | 模块 09 · 01 · BM25 / 混合检索 step-4：切词对照（变体 8）· /api/search-bm25-variant · 「保留连字符」vs「撕单字」同问句两次 BM25 → 排名变差 · 在 step-3 基础上加 |
 | `yarn app:09-01-bm25-hybrid-step-5` | `50091` | 模块 09 · 01 · BM25 / 混合检索 step-5：手写 BM25 vs wink-bm25-text-search · 内置判定列表自动判 Top-1 · 纯本地不调模型 |
 | `yarn app:09-02-rerank-step-1` | `50092` | 模块 09 · 02 · Rerank step-1：粗召回（向量+BM25+RRF）→ 精排（真调大模型按"问句+文档"成对打分）→ 两榜并排、名次跳动 |
+| `yarn app:09-02-rerank-step-2` | `50093` | 模块 09 · 02 · Rerank step-2：业务加权 vs 神经精排能拆开 · 在 step-1 神经精排结果上叠一层「按 updatedAt 加权」纯本地计算 · 开关 + 窗口 + bonus 可调 · 名次变化来源可见 |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。

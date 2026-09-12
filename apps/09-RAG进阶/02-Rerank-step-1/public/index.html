@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rerank · 第一步</title>
+  <title>第一步 · 粗召回 + 精排 · 名次怎么变</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
@@ -134,36 +134,64 @@
         <div className="min-h-screen bg-gray-50">
           <header id="page-header" className="border-b p-4 bg-white flex justify-between items-center">
             <h1 id="page-title" className="text-lg font-semibold">
-              Rerank · 第一步（step-1）· 粗召回 → 真调模型精排 · 两榜并排
+              第一步 · 粗召回 + 精排 · 同一问句两条榜对照看名次怎么变
             </h1>
             <span id="status-pill" className={"text-xs px-2 py-1 rounded " + (status.startsWith("❌") ? "bg-red-100 text-red-800" : status.startsWith("🔄") ? "bg-blue-100 text-blue-800" : "bg-gray-200")}>
               {status}
             </span>
           </header>
 
+          <nav id="page-nav" className="border-b bg-white px-4 py-2 text-xs flex gap-3 flex-wrap">
+            <a href="/" className="px-2 py-1 rounded bg-blue-100 text-blue-800 font-semibold">① 第一步：粗召回 + 精排 · 看名次怎么变</a>
+            <a href="/pages/recall-by-n.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">② 第二步：粗召回捞几条？· 看对的那一条能不能进来</a>
+            <a href="/pages/rerank-on-off.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">③ 第三步：精排要不要做？· 看关掉精排会损失什么</a>
+            <a href="/pages/rrf-vs-rerank.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">④ 第四步：粗召回分 vs 精排分 · 看两种分数哪里不一样</a>
+          </nav>
+
           <main id="page-main" className="max-w-6xl mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">
-                本页只演示：<b>同一问句先发两次请求</b>：第一次走向量 + BM25 + RRF 合成<b>粗召回榜</b>（N 条）；第二次把候选送进大模型按"问句 + 文档"成对打 0~1 分，按精排分<b>重排</b>得到<b>精排榜</b>。两榜并排、名次跳动 = 「不是一次 Top-K 定生死」。
+                这一页只演示一件事：<b>把同一句问话发给系统两次，看两次的名单怎么不一样</b>。
               </p>
+
+              <div className="bg-gray-50 border border-gray-300 rounded p-3 text-xs font-mono space-y-1">
+                <div>用户问句（这一页可以改，<b>精排不会改这一句字符串</b>）</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>① 粗召回（Recall）：从知识库里捞一堆候选条目</div>
+                <div className="ml-6 text-gray-500">· 按字面打分（BM25 关键词）</div>
+                <div className="ml-6 text-gray-500">· 按意思打分（向量 Embedding = 文字转成的方向）</div>
+                <div className="ml-6 text-gray-500">· 两边按名次投票（RRF）合成粗名单</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>② 精排（Rerank）：把候选条目送给大模型，让它逐对打分</div>
+                <div className="ml-6 text-gray-500">· 「问句 + 条目正文」拼成一段一起读，按 0~1 给相关分</div>
+                <div className="ml-6 text-gray-500">· 按新分数重新排，得到精排榜</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>最终喂给生成的条目（按精排榜取前 K 条）</div>
+              </div>
+
+              <p className="text-sm text-gray-700">
+                <b>关键一句话：</b>两次名单并排看，至少一条条目的名次会换位 —— 这就是「不是一次排名定最终名单」。
+              </p>
+
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-                <li>输入问句 + 选 N（默认 5），点「跑粗召回」→ 发请求到 /api/search-recall</li>
-                <li>服务端并行调嵌入模型 + 本地 BM25，按名次 RRF 投票合成粗名单</li>
-                <li>粗召回完成后点「继续精排」→ 发请求到 /api/rerank（问句字符串不变）</li>
-                <li>服务端拼 prompt 调大模型一次性给每条 0~1 分，按分降序重排 → 两榜并排展示</li>
+                <li>输入问句 + 选 N（默认 5 = 粗召回先捞 5 条）</li>
+                <li>点「① 跑粗召回」→ 第一次发请求 → 服务端按字面 + 意思捞条目，合成粗名单</li>
+                <li>点「② 继续精排」→ 第二次发请求 → 服务端让大模型读每一条正文打分，重新排</li>
+                <li>两栏并排：左栏粗召回榜 · 右栏精排榜 · 至少一条条目的名次会换</li>
               </ol>
+
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
-                <div className="font-semibold text-yellow-900">本页核心教学点</div>
-                <div>① 粗召回只管"对的在不在候选里"，精排只管"候选里谁该在最前"——两阶段用的是不同打分器；</div>
-                <div>② 第二阶段是真发网络请求的模型调用：把每对"问句 + 文档"塞进 prompt，按 0~1 出一组分；</div>
-                <div>③ 名次跳动是这一页的"画面"：同一问句两张榜，至少一篇从前排掉下去、或者从后面升上来。</div>
+                <div className="font-semibold text-yellow-900">关上文件还能讲出来的三件事</div>
+                <div>① <b>第一阶段和第二阶段用的不是同一种打分器</b>。粗召回看「字面 + 意思」是不是像（便宜、可以扫整个库）；精排看「问句和条目正文是不是同一件事」（贵、只能打短名单）。</div>
+                <div>② <b>第二阶段是真发网络请求的模型调用</b>——大模型读完问句和条目正文才给 0~1 分。</div>
+                <div>③ <b>名次跳动是这一页要看的画面</b>：同一问句两条榜，至少一条条目从前面掉下去，或从后面升上来。</div>
               </div>
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 <label className="text-sm text-gray-700 flex-1 min-w-[200px]">
-                  <span className="block text-xs text-gray-500 mb-1">问句（精排不改这一句字符串）</span>
+                  <span className="block text-xs text-gray-500 mb-1">问句（这一页可以改；精排不会改这一句字符串）</span>
                   <input
                     className="w-full border rounded px-2 py-1 text-sm"
                     value={query}
@@ -171,7 +199,7 @@
                   />
                 </label>
                 <label className="text-sm text-gray-700">
-                  <span className="block text-xs text-gray-500 mb-1">候选 N（粗召回从语料捞几条）</span>
+                  <span className="block text-xs text-gray-500 mb-1">粗召回先捞几条（候选 N）</span>
                   <input
                     type="number"
                     min={1}
@@ -187,7 +215,7 @@
                   className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
                   disabled={busy || !env.hasKey}
                   onClick={runRecall}
-                  title="第一次发请求：调嵌入模型 + 本地 BM25 + RRF 合成粗召回榜"
+                  title="第一次发请求：按字面 + 意思，从库里捞候选条目"
                 >
                   ① 跑粗召回
                 </button>
@@ -195,7 +223,7 @@
                   className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
                   disabled={busy || !recall || !env.hasKey}
                   onClick={runRerank}
-                  title="第二次发请求：把粗召回候选送进大模型打分重排"
+                  title="第二次发请求：把候选送给大模型，让它读正文后逐对打分，重新排"
                 >
                   ② 继续精排
                 </button>
@@ -203,9 +231,9 @@
                   className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
                   disabled={vectorsBusy}
                   onClick={loadVectors}
-                  title="从缓存读语料向量（前 8 维 + 范数）；首次需先跑一次粗召回把缓存建起来"
+                  title="看知识库里每一条被转成的「向量」（前 8 维 + 长度）。向量是文字的方向，意思相近的条目方向也相近。"
                 >
-                  查看语料向量
+                  看条目向量（粗召回的「意思打分」用的就是它）
                 </button>
                 <button
                   className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
@@ -216,7 +244,7 @@
                 </button>
                 {!env.hasKey ? (
                   <span className="text-xs text-red-700">
-                    当前未配 密钥（apps/.env 没填）—— 主按钮 disabled
+                    当前没配密钥（apps/.env 没填）—— 主按钮 disabled
                   </span>
                 ) : null}
               </div>
@@ -233,7 +261,7 @@
               ) : null}
               {!recall && !rerank ? (
                 <div className="text-xs text-gray-400">
-                  还没跑。先点「① 跑粗召回」拿左榜；再点「② 继续精排」拿右榜。
+                  还没跑。先点「① 跑粗召回」拿左边的粗召回榜；再点「② 继续精排」拿右边的精排榜，看哪几条名次换了。
                 </div>
               ) : (
                 <DemoUI.RecallVsRerank recall={recall} rerank={rerank} />
@@ -243,7 +271,7 @@
 
           <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
             <span id="env-info">
-              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 嵌入 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"}
+              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 嵌入模型 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"}
             </span>
           </footer>
         </div>

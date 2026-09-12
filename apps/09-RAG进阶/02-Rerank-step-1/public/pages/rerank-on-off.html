@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第三步 · 精排要不要做 · 关掉会损失什么</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="../components/rerank-on-off-table.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [env, setEnv] = useState({ port: 50092, provider: "—", model: "—", hasKey: false });
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待跑");
+      const [errorText, setErrorText] = useState("");
+      const [recall, setRecall] = useState(null);
+      const [onResult, setOnResult] = useState(null);
+      const [offResult, setOffResult] = useState(null);
+
+      const QUERY = "杯子在路上碎了能退吗";
+      const N = 5; // 这一页只演「走 / 不走精排」对照，N 写死 5（默认）
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((d) => {
+          setEnv({
+            port: d.port,
+            provider: d.provider || "—",
+            model: d.model || "—",
+            hasKey: Boolean(d.hasKey),
+          });
+        }).catch(() => {});
+      }, []);
+
+      async function runRecall() {
+        setBusy(true);
+        setStatus("🔄 粗召回中（第一次发请求 · 准备捞 " + N + " 张）");
+        setErrorText("");
+        setOnResult(null);
+        setOffResult(null);
+        try {
+          const response = await fetch("/api/search-recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: QUERY, n: N }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setRecall(json.result);
+          setStatus("✅ 粗召回完成 · 下一步：分别走 / 不走精排做对照");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runRerank(on) {
+        if (!recall) {
+          setStatus("❌ 错误");
+          setErrorText("先点「① 跑粗召回」拿到候选");
+          return;
+        }
+        setBusy(true);
+        setStatus("🔄 正在" + (on ? "走精排（让大模型打分）" : "不走精排（直接用粗召回名单）") + "...");
+        setErrorText("");
+        try {
+          const candidates = recall.rows.slice(0, N);
+          const response = await fetch("/api/rerank", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: QUERY, candidates, rerankOn: on }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          if (on) setOnResult(json.result);
+          else setOffResult(json.result);
+          setStatus("✅ " + (on ? "走精排" : "不走精排") + " 完成 · 花了 " + json.result.elapsedMs + " 毫秒");
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function reset() {
+        setRecall(null);
+        setOnResult(null);
+        setOffResult(null);
+        setStatus("⏸ 待跑");
+        setErrorText("");
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header id="page-header" className="border-b p-4 bg-white flex justify-between items-center">
+            <h1 id="page-title" className="text-lg font-semibold">
+              第三步 · 精排要不要做？· 看关掉精排会损失什么
+            </h1>
+            <span id="status-pill" className={"text-xs px-2 py-1 rounded " + (status.startsWith("❌") ? "bg-red-100 text-red-800" : status.startsWith("🔄") ? "bg-blue-100 text-blue-800" : status.startsWith("✅") ? "bg-green-100 text-green-800" : "bg-gray-200")}>
+              {status}
+            </span>
+          </header>
+
+          <nav id="page-nav" className="border-b bg-white px-4 py-2 text-xs flex gap-3 flex-wrap">
+            <a href="/" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">① 第一步：粗召回 + 精排 · 看名次怎么变</a>
+            <a href="/pages/recall-by-n.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">② 第二步：粗召回捞几条？· 看对的那一条能不能进来</a>
+            <a href="/pages/rerank-on-off.html" className="px-2 py-1 rounded bg-blue-100 text-blue-800 font-semibold">③ 第三步：精排要不要做？· 看关掉精排会损失什么</a>
+            <a href="/pages/rrf-vs-rerank.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">④ 第四步：粗召回分 vs 精排分 · 看两种分数哪里不一样</a>
+          </nav>
+
+          <main id="page-main" className="max-w-6xl mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                这一页只演示一件事：<b>把精排这步关上会怎样</b>。固定问句「杯子在路上碎了能退吗」，固定粗召回前 5 条。
+                走精排时让大模型按「问句 + 条目正文」逐对打分重新排；不走精排时直接按粗召回结果截几张，不调大模型。
+              </p>
+
+              <div className="bg-gray-50 border border-gray-300 rounded p-3 text-xs font-mono space-y-1">
+                <div className="text-gray-700 mb-1">同一批粗召回候选 → 两条路：</div>
+                <div>① 跑粗召回 → 拿到前 5 条（按 RRF 序）</div>
+                <div className="ml-4 border-l-2 border-gray-400 pl-3 space-y-1">
+                  <div>├─ <span className="text-blue-700 font-semibold">② 走精排</span>：让大模型对每一条逐对打分，按新分数重新排，截前几张  <span className="text-gray-500">(慢 · 名次会动)</span></div>
+                  <div>└─ <span className="text-gray-700 font-semibold">③ 不走精排</span>：直接用粗召回结果截几张喂给生成  <span className="text-gray-500">(快 · 名次 = 粗召回原序)</span></div>
+                </div>
+                <div className="text-gray-700 mt-1">两路输入相同、输出都是「最终喂给生成的几条」；区别只在「中间有没有再用大模型读一遍正文」。</div>
+              </div>
+
+              <p className="text-sm text-gray-700">
+                <b>关键一句话：</b>精排不是免费的——调一次大模型约 6 秒钟。这一页演的是反面：什么时候可以不调精排。
+              </p>
+
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「① 跑粗召回」→ 拿到前 5 条候选（按 RRF 序）</li>
+                <li>点「② 走精排」→ 调大模型打分重排（慢）</li>
+                <li>点「③ 不走精排」→ 直接用粗召回名单（快）</li>
+                <li>两栏并排对照：名次有没有变？花了多少时间？</li>
+              </ol>
+
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
+                <div className="font-semibold text-yellow-900">关上文件还能讲出来的两件事</div>
+                <div>① <b>不走精排 = 直接用粗召回名单</b>。不调大模型，按 RRF 序截前几张；如果粗召回前 5 条已经把对的条目捞进来，不走精排对最终名单顺序无影响（如果走精排也这么排）或损失精度（如果走精排改了名次）。</div>
+                <div>② <b>什么时候可以不调精排</b>：库小 / 延迟紧（客服 800 毫秒内要出字）/ 第一阶段已经够好 / 评测显示加了精排答案正确率几乎不动。本页对照「走 vs 不走」的耗时差就能直观看到。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-gray-700 flex-1 min-w-[300px]">
+                  <span className="block text-xs text-gray-500 mb-1">固定问句（精排不会改这一句字符串）</span>
+                  <input
+                    className="w-full border rounded px-2 py-1 text-sm bg-gray-100"
+                    value={QUERY}
+                    readOnly
+                  />
+                </label>
+                <div className="text-sm text-gray-700">
+                  <span className="block text-xs text-gray-500 mb-1">固定候选 N</span>
+                  <span className="font-mono px-3 py-1 bg-gray-100 rounded">N = {N}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !env.hasKey}
+                  onClick={runRecall}
+                  title="第一次发请求：从知识库里捞候选条目"
+                >
+                  ① 跑粗召回
+                </button>
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !recall || !env.hasKey}
+                  onClick={() => runRerank(true)}
+                  title="走精排 · 让大模型按「问句 + 条目正文」逐对打分重排（慢）"
+                >
+                  ② 走精排（调大模型）
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-400 text-gray-700 rounded disabled:opacity-50"
+                  disabled={busy || !recall || !env.hasKey}
+                  onClick={() => runRerank(false)}
+                  title="不走精排 · 不调大模型，直接用粗召回名单（快）"
+                >
+                  ③ 不走精排（直接截）
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={reset}
+                >
+                  重置
+                </button>
+
+                {!env.hasKey ? (
+                  <span className="text-xs text-red-700">
+                    当前没配密钥（apps/.env 没填）—— 主按钮 disabled
+                  </span>
+                ) : null}
+              </div>
+
+              {errorText ? (
+                <div className="text-xs text-red-700 bg-red-50 border border-red-300 rounded p-2">
+                  {errorText}
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {!recall ? (
+                <div className="text-xs text-gray-400">
+                  还没跑。先点「① 跑粗召回」拿到前 {N} 张；再分别点「② 走精排」和「③ 不走精排」看两栏对照。
+                </div>
+              ) : (
+                <DemoUI.RerankOnOffTable recallOn={onResult} recallOff={offResult} candidates={recall.rows.slice(0, N)} />
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

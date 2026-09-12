@@ -11,7 +11,7 @@ import { logger } from "../lib/logger.js";
 
 const bodySchema = z.object({
   question: z.string().min(1, "问句不能为空"),
-  /** 粗召回从库里捞多少条喂给精排；本 demo 默认 5（语料 17 张时可拉到 30+ 演「B 进候选」） */
+  /** 粗召回从库里捞多少条喂给精排；本 demo 默认 5 */
   n: z.number().int().min(1).max(50).optional().default(5),
 });
 
@@ -29,7 +29,12 @@ export function mountSearchRecall(router: Router): void {
       if (!parsed.success) {
         throw new HttpError(400, parsed.error.issues[0]?.message ?? "入参不对", "检查 question / n");
       }
-      const result = await recallOnce(parsed.data.question, parsed.data.n);
+      const raw = await recallOnce(parsed.data.question, parsed.data.n);
+      // recallOnce 返回的是「向量 Top-N + BM25 Top-N」去重融合后的完整榜（可能 > N），
+      // 本 demo step-2 严格按 N 截断候选，保证「N=几就几条候选」对得上。
+      // step-1 不截断是它自己的教学点（演「B 在第 12 名 / N 太小救不了召回漏」），
+      // step-2 教学点是「业务加权在候选内重排」，按 N 截断更易观察名次跳。
+      const result = { ...raw, rows: raw.rows.slice(0, raw.n) };
       logger.info(
         "search-recall",
         "调用函数结束：POST /api/search-recall",

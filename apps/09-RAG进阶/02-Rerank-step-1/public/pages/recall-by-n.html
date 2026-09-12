@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>第二步 · 粗召回捞几条 · 对的那一条能不能进来</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="../components/recall-by-n-table.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [env, setEnv] = useState({ port: 50092, provider: "—", model: "—", embeddingModel: "—", hasKey: false });
+      const [n, setN] = useState(5);
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待跑");
+      const [errorText, setErrorText] = useState("");
+      const [recall, setRecall] = useState(null);
+      const [rerank, setRerank] = useState(null);
+
+      // 这一页只演「N 这个变量怎么动」，问句固定（不能再当变量）
+      const QUERY = "杯子在路上碎了能退吗";
+      const TARGET_ID = "policy-B";
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((d) => {
+          setEnv({
+            port: d.port,
+            provider: d.provider || "—",
+            model: d.model || "—",
+            embeddingModel: d.embeddingModel || "—",
+            hasKey: Boolean(d.hasKey),
+          });
+        }).catch(() => {});
+      }, []);
+
+      async function runRecall() {
+        setBusy(true);
+        setStatus("🔄 粗召回中（第一次发请求 · 准备捞 " + n + " 张）");
+        setErrorText("");
+        setRerank(null);
+        try {
+          const response = await fetch("/api/search-recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: QUERY, n }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setRecall(json.result);
+          const targetInFull = json.result.rows.findIndex(r => r.cardId === TARGET_ID);
+          const targetInCandidate = json.result.rows.slice(0, n).findIndex(r => r.cardId === TARGET_ID);
+          let msg = "✅ 粗召回完成 · ";
+          if (targetInFull === -1) {
+            msg += "整个粗召回榜里没有对的那一条（极端情况）";
+          } else if (targetInCandidate === -1) {
+            msg += "对的那一条在粗召回榜排第 " + (targetInFull + 1) + " 名 · 不在你选的 " + n + " 张候选里";
+          } else {
+            msg += "对的那一条在你选的 " + n + " 张候选里第 " + (targetInCandidate + 1) + " 名";
+          }
+          setStatus(msg);
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runRerank() {
+        if (!recall) {
+          setStatus("❌ 错误");
+          setErrorText("先点「① 跑粗召回」拿到候选");
+          return;
+        }
+        setBusy(true);
+        setStatus("🔄 精排中（第二次发请求 · 让大模型打分重排）");
+        setErrorText("");
+        try {
+          // 精排的 candidates 只送前 N 条 —— 这就是「精排能不能救对的那一条」的关键
+          const topN = recall.rows.slice(0, n);
+          const response = await fetch("/api/rerank", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: QUERY, candidates: topN }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "未知错误");
+            return;
+          }
+          setRerank(json.result);
+          const bInFinal = json.result.rows.findIndex(r => r.cardId === TARGET_ID);
+          if (bInFinal === -1) {
+            setStatus("❌ 对的那一条不在最终名单里 · 精排也救不了（你捞少了 → 候选里没有它）");
+          } else {
+            setStatus("✅ 精排完成 · 对的那一条进了最终名单 · 排第 " + (bInFinal + 1) + " 名");
+          }
+        } catch (error) {
+          setStatus("❌ 错误");
+          setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function reset() {
+        setRecall(null);
+        setRerank(null);
+        setStatus("⏸ 待跑");
+        setErrorText("");
+      }
+
+      function setPreset(targetN) {
+        setN(targetN);
+        reset();
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header id="page-header" className="border-b p-4 bg-white flex justify-between items-center">
+            <h1 id="page-title" className="text-lg font-semibold">
+              第二步 · 粗召回先捞几条？· 看对的那一条能不能进来
+            </h1>
+            <span id="status-pill" className={"text-xs px-2 py-1 rounded " + (status.startsWith("❌") ? "bg-red-100 text-red-800" : status.startsWith("🔄") ? "bg-blue-100 text-blue-800" : status.startsWith("✅") ? "bg-green-100 text-green-800" : "bg-gray-200")}>
+              {status}
+            </span>
+          </header>
+
+          <nav id="page-nav" className="border-b bg-white px-4 py-2 text-xs flex gap-3 flex-wrap">
+            <a href="/" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">① 第一步：粗召回 + 精排 · 看名次怎么变</a>
+            <a href="/pages/recall-by-n.html" className="px-2 py-1 rounded bg-blue-100 text-blue-800 font-semibold">② 第二步：粗召回捞几条？· 看对的那一条能不能进来</a>
+            <a href="/pages/rerank-on-off.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">③ 第三步：精排要不要做？· 看关掉精排会损失什么</a>
+            <a href="/pages/rrf-vs-rerank.html" className="px-2 py-1 rounded text-gray-700 hover:bg-gray-100">④ 第四步：粗召回分 vs 精排分 · 看两种分数哪里不一样</a>
+          </nav>
+
+          <main id="page-main" className="max-w-6xl mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                这一页只演示一件事：<b>粗召回先捞几条，决定精排看不看得见对的那一条</b>。
+                固定问句「杯子在路上碎了能退吗」，固定对的那一条（policy-B = 运输破损补发）。
+              </p>
+
+              <div className="bg-gray-50 border border-gray-300 rounded p-3 text-xs font-mono space-y-1">
+                <div>用户问句（精排不会改这一句）</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>① 粗召回：从知识库里捞 <b>N</b> 张候选条目</div>
+                <div className="ml-6 text-gray-500">· N 越大 → 越有机会捞到对的那一条</div>
+                <div className="ml-6 text-gray-500">· N 越小 → 调用次数和耗时越少，但可能漏掉对的那一条</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>② 精排：<b>只能对已经送进来的候选条目打分</b></div>
+                <div className="ml-6 text-red-700 font-semibold">· 没捞进来的条目 → 精排根本看不见它</div>
+              </div>
+
+              <p className="text-sm text-gray-700">
+                <b>关键一句话：</b>精排只能对已经送进来的条目打分。
+                <b>粗召回没把对的那一条捞进候选，精排就根本看不见它。</b>
+                这就是「精排救不了召回漏」——硬边界，不是精排器不够强。
+              </p>
+
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>输入 N（默认 5），或点「预设 N=5 / N=8 / N=30」</li>
+                <li>点「① 跑粗召回」→ 拿到完整的粗召回名单（含没捞进候选的条目）</li>
+                <li>看完整粗召回榜里对的那一条排第几名 + 是否落在候选 N 张内</li>
+                <li>点「② 跑精排」→ 把粗召回前 N 张送给大模型逐对打分重排</li>
+                <li>看精排榜里对的那一条在不在最终名单：进得去 = N 够了；进不去 = 精排救不了召回漏</li>
+              </ol>
+
+              <div className="bg-blue-50 border border-blue-300 rounded p-3 text-xs space-y-1">
+                <div className="font-semibold text-blue-900">本页实测数字（不是普适规律）</div>
+                <div>当前语料 25 条条目 + 当前问句下，对的那一条（policy-B）在完整粗召回榜排第 <b>7</b> 名。</div>
+                <div>所以：<b>N &lt; 7 时对的那一条必落在候选外</b>（精排救不了）；<b>N ≥ 7 时进候选</b>（精排后大概率升到前几）。</div>
+                <div className="text-gray-600">「7 是临界」只是这个具体 demo 当前的具体数字——换语料 / 换问句 / 换嵌入模型都会变。
+                  教学目的是让你看出<b>「有这道临界」</b>，具体数字不重要。</div>
+              </div>
+
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
+                <div className="font-semibold text-yellow-900">关上文件还能讲出来的三句话</div>
+                <div>① <b>「粗召回捞几条」是精排的硬上限</b>。N 张以外的条目精排看不见、救不回来。本页点 N=5 → 对的那一条在红框候选外 → 精排榜里就是没有它。</div>
+                <div>② <b>候选越大调用次数和耗时越涨</b>。最终喂给生成的通常只要 5 条；N 过大只增加精排阶段的负担，不一定让答案更好。本页点 N=30 比点 N=8 慢几秒，但画面一样。</div>
+                <div>③ <b>失败归因三态的第二种</b>：用户投诉「答错了」，要分清是对的不在候选、对的在候选但被精排挤掉、还是材料在 K 里但生成没引用它。本页演第二种 → 该修的是 N 或精排器，不是先怪生成「瞎说」。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-gray-700 flex-1 min-w-[300px]">
+                  <span className="block text-xs text-gray-500 mb-1">固定问句（精排不会改这一句字符串）</span>
+                  <input
+                    className="w-full border rounded px-2 py-1 text-sm bg-gray-100"
+                    value={QUERY}
+                    readOnly
+                  />
+                </label>
+                <label className="text-sm text-gray-700">
+                  <span className="block text-xs text-gray-500 mb-1">粗召回先捞几条（候选 N）</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    className="w-20 border rounded px-2 py-1 text-sm"
+                    value={n}
+                    onChange={(e) => setN(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-gray-500 mr-1">快速选：</span>
+                <button
+                  className="text-xs px-2 py-1 border border-red-300 bg-red-50 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={() => setPreset(5)}
+                  title="N=5 · 对的那一条在完整粗召回榜第 7 名 → 落在候选外 → 精排榜里没有它 ❌"
+                >
+                  捞 5 条（救不了 ❌）
+                </button>
+                <button
+                  className="text-xs px-2 py-1 border border-green-300 bg-green-50 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={() => setPreset(8)}
+                  title="N=8 · 刚好盖过对的那一条在第 7 名 → 进候选 → 精排后升到第 1 ✅"
+                >
+                  捞 8 条（救得回 ✅）
+                </button>
+                <button
+                  className="text-xs px-2 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={() => setPreset(30)}
+                  title="N=30 · 对的那一条当然在候选 → 精排后升到第 1；但调用次数和耗时比 N=8 涨几倍，画面一样"
+                >
+                  捞 30 条（也能救 ✅，但慢）
+                </button>
+
+                <span className="mx-2 text-gray-300">|</span>
+
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !env.hasKey}
+                  onClick={runRecall}
+                  title="第一次发请求：从知识库里捞候选条目"
+                >
+                  ① 跑粗召回
+                </button>
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !recall || !env.hasKey}
+                  onClick={runRerank}
+                  title="第二次发请求：把粗召回前 N 张送给大模型逐对打分重排"
+                >
+                  ② 跑精排
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={reset}
+                >
+                  重置
+                </button>
+
+                {!env.hasKey ? (
+                  <span className="text-xs text-red-700">
+                    当前没配密钥（apps/.env 没填）—— 主按钮 disabled
+                  </span>
+                ) : null}
+              </div>
+
+              {errorText ? (
+                <div className="text-xs text-red-700 bg-red-50 border border-red-300 rounded p-2">
+                  {errorText}
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {!recall ? (
+                <div className="text-xs text-gray-400">
+                  还没跑。先点「① 跑粗召回」拿完整粗召回榜（含没捞进候选的条目，绿框 = 在候选内、红框 = 候选外）；再点「② 跑精排」看对的那一条是否进了最终名单。
+                </div>
+              ) : (
+                <DemoUI.RecallByNTable recall={recall} rerank={rerank} n={n} targetId={TARGET_ID} />
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 嵌入模型 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

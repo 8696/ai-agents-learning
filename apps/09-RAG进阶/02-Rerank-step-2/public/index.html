@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>业务加权 vs 神经精排 · 拆开看名次变化的来源</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="text/babel" src="components/recall-vs-rerank.js"></script>
+  <script type="text/babel" src="components/corpus-vectors-table.js"></script>
+  <script type="text/babel" src="components/business-vs-neural-table.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [env, setEnv] = useState({ port: 50093, provider: "—", model: "—", embeddingModel: "—", hasKey: false });
+      const [query, setQuery] = useState("杯子在路上碎了能退吗");
+      const [n, setN] = useState(12);
+      const [businessOn, setBusinessOn] = useState(true);
+      const [recentDays, setRecentDays] = useState(30);
+      const [bonus, setBonus] = useState(0.3);
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待跑");
+      const [errorText, setErrorText] = useState("");
+      const [recall, setRecall] = useState(null);
+      const [neural, setNeural] = useState(null);
+      const [business, setBusiness] = useState(null);
+      const [vectors, setVectors] = useState(null);
+      const [vectorsBusy, setVectorsBusy] = useState(false);
+
+      async function loadVectors() {
+        setVectorsBusy(true);
+        setErrorText("");
+        try {
+          const response = await fetch("/api/corpus-vectors");
+          const json = await response.json();
+          if (!json.ok) { setErrorText(json.error || "未知错误"); return; }
+          setVectors(json.result);
+        } catch (error) {
+          setErrorText(String(error));
+        } finally {
+          setVectorsBusy(false);
+        }
+      }
+
+      useEffect(() => {
+        fetch("/health").then((r) => r.json()).then((d) => {
+          setEnv({
+            port: d.port,
+            provider: d.provider || "—",
+            model: d.model || "—",
+            embeddingModel: d.embeddingModel || "—",
+            hasKey: Boolean(d.hasKey),
+          });
+        }).catch(() => {});
+      }, []);
+
+      async function runRecall() {
+        if (!query.trim()) { setStatus("❌ 错误"); setErrorText("问句不能为空"); return; }
+        setBusy(true);
+        setStatus("🔄 粗召回中（第一次发请求）");
+        setErrorText("");
+        setNeural(null);
+        setBusiness(null);
+        try {
+          const response = await fetch("/api/search-recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: query, n }),
+          });
+          const json = await response.json();
+          if (!json.ok) { setStatus("❌ 错误"); setErrorText(json.error || "未知错误"); return; }
+          setRecall(json.result);
+          setStatus("✅ 粗召回完成 · 下一步：继续精排");
+        } catch (error) {
+          setStatus("❌ 错误"); setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runNeural() {
+        if (!recall) { setStatus("❌ 错误"); setErrorText("先点「① 跑粗召回」拿到候选"); return; }
+        setBusy(true);
+        setStatus("🔄 神经精排中（第二次发请求：调大模型打分）");
+        setErrorText("");
+        setBusiness(null);
+        try {
+          const response = await fetch("/api/rerank", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query, candidates: recall.rows, rerankOn: true }),
+          });
+          const json = await response.json();
+          if (!json.ok) { setStatus("❌ 错误"); setErrorText(json.error || "未知错误"); return; }
+          setNeural(json.result);
+          setStatus("✅ 神经精排完成 · 下一步：跑业务加权");
+        } catch (error) {
+          setStatus("❌ 错误"); setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runBusiness() {
+        if (!neural) { setStatus("❌ 错误"); setErrorText("先点「② 跑神经精排」拿到结果"); return; }
+        setBusy(true);
+        setStatus("🔄 业务加权中（第三次发请求：按规则重排）");
+        setErrorText("");
+        try {
+          const response = await fetch("/api/rerank-business", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: query,
+              candidates: neural.rows,
+              businessWeight: { on: businessOn, recentDays: recentDays, bonus: bonus },
+            }),
+          });
+          const json = await response.json();
+          if (!json.ok) { setStatus("❌ 错误"); setErrorText(json.error || "未知错误"); return; }
+          setBusiness(json.result);
+          setStatus(businessOn ? "✅ 业务加权完成 · 看名次变化来源" : "✅ 业务加权已完成（开关关闭）· 应等同神经精排榜");
+        } catch (error) {
+          setStatus("❌ 错误"); setErrorText(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function reset() {
+        setRecall(null); setNeural(null); setBusiness(null);
+        setStatus("⏸ 待跑"); setErrorText("");
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <header id="page-header" className="border-b p-4 bg-white flex justify-between items-center">
+            <h1 id="page-title" className="text-lg font-semibold">
+              第二步 · 业务加权 vs 神经精排 · 看名次变化的来源是规则还是模型
+            </h1>
+            <span id="status-pill" className={"text-xs px-2 py-1 rounded " + (status.startsWith("❌") ? "bg-red-100 text-red-800" : status.startsWith("🔄") ? "bg-blue-100 text-blue-800" : "bg-gray-200")}>
+              {status}
+            </span>
+          </header>
+
+          <main id="page-main" className="max-w-6xl mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                这一页只演示一件事：<b>把神经精排后的同一份候选，再送进业务加权一栏，开 / 关开关对照名次变化</b>。
+              </p>
+
+              <div className="bg-gray-50 border border-gray-300 rounded p-3 text-xs font-mono space-y-1">
+                <div>用户问句（这一页可以改，<b>业务加权不会改这一句字符串</b>）</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>① 粗召回（向量 + BM25 → RRF 合成粗名单）</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>② 神经精排：把每对「问句 + 文档」送给大模型，按 0~1 给相关分，重排</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>③ 业务加权：按每条卡片的 updatedAt 与今天的距离，符合「近 N 天」规则的卡片 + bonus，再重排</div>
+                <div className="ml-4 text-gray-400">↓</div>
+                <div>最终名单（按「神经分 + 业务加权」综合分排序）</div>
+              </div>
+
+              <p className="text-sm text-gray-700">
+                <b>关键画面：</b>第二栏与第三栏并排看，至少一条条目的名次会换 —— 神经分那一栏没动，变化完全来自业务规则。
+              </p>
+
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>输入问句 + 选 N（粗召回捞几条）</li>
+                <li>点「① 跑粗召回」→ 第一次发请求</li>
+                <li>点「② 跑神经精排」→ 第二次发请求（调大模型按问句+文档打分）</li>
+                <li>调好业务权重开关 / 窗口 / bonus → 点「③ 跑业务加权」→ 第三次发请求</li>
+                <li>第二栏与第三栏并排：第二栏神经分没动，第三栏近 N 天的卡片加了 bonus，至少一条名次换了</li>
+              </ol>
+
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
+                <div className="font-semibold text-yellow-900">关上文件还能讲出来的三件事</div>
+                <div>① <b>业务加权 ≠ 神经精排</b>。神经精排 = 模型读问句和正文之后给相关分；业务加权 = 规则（这里是「近 N 天编辑过」）按非神经信号加分。两者是两条不同的信号源。</div>
+                <div>② <b>本步核心 = 业务加权打分</b>，纯本地计算，<b>不调网络</b>；神经精排那一次才调模型（在第二步）。</div>
+                <div>③ <b>开关可独立</b>。关掉业务加权后，最终榜 = 神经精排榜；开 / 关是两条请求，不是同一份数据硬加。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-gray-700 flex-1 min-w-[200px]">
+                  <span className="block text-xs text-gray-500 mb-1">问句</span>
+                  <input
+                    className="w-full border rounded px-2 py-1 text-sm"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <label className="text-sm text-gray-700">
+                  <span className="block text-xs text-gray-500 mb-1">候选 N</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    className="w-20 border rounded px-2 py-1 text-sm"
+                    value={n}
+                    onChange={(e) => setN(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+                  />
+                </label>
+              </div>
+
+              <div className="border-t pt-3">
+                <div className="text-xs text-gray-500 mb-2">业务加权配置（规则参数）</div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={businessOn}
+                      onChange={(e) => setBusinessOn(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span>启用业务加权</span>
+                  </label>
+                  <label className="text-sm text-gray-700">
+                    <span className="block text-xs text-gray-500 mb-1">近 N 天</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      className="w-20 border rounded px-2 py-1 text-sm"
+                      value={recentDays}
+                      onChange={(e) => setRecentDays(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
+                    />
+                  </label>
+                  <label className="text-sm text-gray-700">
+                    <span className="block text-xs text-gray-500 mb-1">加权分 (bonus)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      className="w-20 border rounded px-2 py-1 text-sm"
+                      value={bonus}
+                      onChange={(e) => setBonus(Math.max(0, Math.min(1, Number(e.target.value) || 0)))}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  规则：候选卡片的 <span className="font-mono">updatedAt</span> 与今天（教学锚点 2026-09-12）相差 ≤ recentDays → 加 bonus；
+                  否则 = 0。最终综合分 = 神经分 + bonus（不开时 bonus = 0）。
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !env.hasKey}
+                  onClick={runRecall}
+                  title="第一次发请求"
+                >
+                  ① 跑粗召回
+                </button>
+                <button
+                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={busy || !recall || !env.hasKey}
+                  onClick={runNeural}
+                  title="第二次发请求：调大模型按问句+文档打分"
+                >
+                  ② 跑神经精排
+                </button>
+                <button
+                  className={"text-sm px-3 py-1 rounded text-white disabled:opacity-50 " + (businessOn ? "bg-purple-600" : "bg-gray-500")}
+                  disabled={busy || !neural || !env.hasKey}
+                  onClick={runBusiness}
+                  title="第三次发请求：按业务规则加分重排"
+                >
+                  ③ 跑业务加权
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={vectorsBusy}
+                  onClick={loadVectors}
+                  title="看语料向量（前 8 维 + 范数）"
+                >
+                  查看语料向量
+                </button>
+                <button
+                  className="text-sm px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={reset}
+                >
+                  重置
+                </button>
+                {!env.hasKey ? (
+                  <span className="text-xs text-red-700">没配密钥（apps/.env 没填）—— 主按钮 disabled</span>
+                ) : null}
+              </div>
+              {errorText ? (
+                <div className="text-xs text-red-700 bg-red-50 border border-red-300 rounded p-2">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {vectors ? React.createElement(DemoUI.CorpusVectorsTable, { data: vectors }) : null}
+
+              {!recall ? (
+                <div className="text-xs text-gray-400">
+                  还没跑。先点「① 跑粗召回」拿粗召回榜；再点「② 跑神经精排」拿神经精排榜；最后调好业务权重 → 点「③ 跑业务加权」。
+                </div>
+              ) : (
+                React.createElement(DemoUI.RecallVsRerank, { recall: recall, rerank: neural })
+              )}
+
+              {neural ? (
+                React.createElement(DemoUI.BusinessVsNeuralTable, { neural: neural, business: business })
+              ) : null}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">
+              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 嵌入模型 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"}
+            </span>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
