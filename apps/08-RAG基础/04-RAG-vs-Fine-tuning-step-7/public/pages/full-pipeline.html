@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 混合 pipeline · step-7</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    const { EnvFooter, PageNav } = window.DemoUI;
+
+    const SYSTEM_OPTIONS = [
+      { value: "empty",   label: "空 system（自由发挥）" },
+      { value: "fewshot", label: "少样本（3 条客服口吻范例）" },
+      { value: "brand",   label: "品牌口吻约定（先道歉 / 再结论 / 列依据）" },
+    ];
+
+    function App() {
+      const [question, setQuestion] = useState("我买的鞋子穿了三天就开胶了，要退货。");
+      const [days, setDays] = useState(7);
+      const [systemTemplate, setSystemTemplate] = useState("brand");
+      const [data, setData] = useState(null);
+      const [editInfo, setEditInfo] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [editLoading, setLoading2] = useState(false);
+      const [errorLoading, setErrorLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [editError, setEditError] = useState(null);
+      const [statusPill, setStatusPill] = useState("⏸ 待连接");
+
+      async function runPipeline() {
+        const setL = (l) => setLoading(l);
+        setL(true); setError(null);
+        try {
+          const res = await fetch("/api/full-pipeline", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, topK: 3, systemTemplate }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+          setData(await res.json());
+        } catch (err) { setError(err.message); }
+        finally { setL(false); }
+      }
+
+      async function editAnnouncement(action) {
+        const setL = (l) => setLoading2(l);
+        setL(true); setEditError(null);
+        try {
+          const res = await fetch("/api/corpus-edit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, days }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+          setEditInfo(await res.json());
+        } catch (err) { setEditError(err.message); }
+        finally { setL(false); }
+      }
+
+      async function runDemoError() {
+        const setL = (l) => setErrorLoading(l);
+        setL(true); setError(null);
+        try {
+          const res = await fetch("/api/demo-error");
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+        } catch (err) { setError(err.message); }
+        finally { setL(false); }
+      }
+
+      React.useEffect(() => {
+        const anyLoading = loading || editLoading || errorLoading;
+        if (anyLoading) setStatusPill("🔄请求中");
+        else if (error || editError) setStatusPill("❌错误");
+        else if (data || editInfo) setStatusPill("✅完成");
+        else setStatusPill("⏸待连接");
+      }, [loading, editLoading, errorLoading, error, editError, data, editInfo]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              混合 pipeline · 检索（事实层） + system（口吻层） · step-7
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">{statusPill}</span>
+          </header>
+
+          <PageNav current="full-pipeline" />
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>同一道题，<b>事实层</b>来自 corpus（可被「改成 N 天」按钮改），<b>口吻层</b>来自 system（3 种模板可选：empty / fewshot / brand）。
+                → 两条路各管各的，可观察对照。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>选 system 模板（空 / 少样本 / 品牌口吻约定）</li>
+                <li>点「改成 N 天」改 corpus → 默认 corpus =「调整为 3 天」，可改成任意 N</li>
+                <li>点「跑 pipeline」→ POST /api/full-pipeline → 检索 + 拼 system + 调模型</li>
+                <li>看「事实层（corpus 原文）+ 口吻层（system 模板描述）+ 答复 + 依据」</li>
+                <li>换 system 模板不改 corpus → 口吻变，事实不变</li>
+                <li>改 corpus 不换 system → 事实变，口吻不变</li>
+                <li>点「演示上游失败」→ GET /api/demo-error → 5xx + #status-pill 变 ❌</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>混合 = 事实层（corpus）+ 口吻层（system）各管各的。</b>
+                  改 corpus → 事实跟变；换 system → 口吻跟变；两路互不干扰。
+                </div>
+                <div className="text-xs text-gray-800">
+                  <b>对照：</b>step-1（左栏只靠模型 · step-2（口吻用 system） · step-3（库里没有按指令弃权） · step-5 mix（corpus 可变 + 单一 system） · step-7（本步：3 种 system 模板可切）。
+                </div>
+                <div className="text-xs text-gray-600">怎么观察：连续跑 2 次 + 改 corpus 1 次 + 切 system 1 次 —— 看哪些字段跟变。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div>
+                <label className="text-xs text-gray-600" htmlFor="question-input">用户问句</label>
+                <input id="question-input" type="text" value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1 mt-1 text-sm" />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-600">system 模板（口吻层）</label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {SYSTEM_OPTIONS.map((o) => (
+                    <label key={o.value} className="flex items-center gap-1 text-xs">
+                      <input type="radio" name="system" value={o.value} checked={systemTemplate === o.value}
+                        onChange={() => setSystemTemplate(o.value)} />
+                      {o.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-gray-600">改 corpus：改成</label>
+                <input type="number" min={1} max={30} value={days}
+                  onChange={(e) => setDays(parseInt(e.target.value || "7"))}
+                  className="w-16 border border-gray-300 rounded px-2 py-1 text-sm" />
+                <span className="text-xs text-gray-600">天</span>
+                <button id="btn-edit" onClick={() => editAnnouncement("set")}
+                  disabled={editLoading}
+                  className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50">
+                  {editLoading ? "改中…" : `改成 ${days} 天`}
+                </button>
+                <button id="btn-reset" onClick={() => editAnnouncement("reset")}
+                  disabled={editLoading}
+                  className="border border-gray-300 px-3 py-1 rounded disabled:opacity-50 text-sm">
+                  {editLoading ? "改中…" : "重置"}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button id="btn-pipeline" onClick={runPipeline}
+                  disabled={loading || !question.trim()}
+                  className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50">
+                  {loading ? "请求中…" : "跑 pipeline（检索 + system）"}
+                </button>
+                <button id="btn-demo-error" onClick={runDemoError}
+                  disabled={errorLoading}
+                  className="border border-gray-300 px-3 py-1 rounded disabled:opacity-50 text-sm"
+                  title="演示第二类错误：让 #status-pill 变 ❌">
+                  {errorLoading ? "请求中…" : "演示上游失败（5xx · 第二类错误）"}
+                </button>
+              </div>
+
+              {(error || editError) && (
+                <div className="text-red-600 text-sm">
+                  {error ? `Pipeline 失败：${error}` : `改 corpus 失败：${editError}`}
+                </div>
+              )}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-3">
+              <div>
+                <div className="text-xs text-gray-500">事实层（corpus · 当前 refund-v2-001 原文）</div>
+                <div className="bg-blue-50 border border-blue-300 rounded p-2 text-xs text-gray-800 font-mono">
+                  {editInfo ? editInfo.after : "本政策自 2026 年 9 月 1 日起施行。无理由退货期限由原 7 天调整为 3 天（自签收日起算，含法定节假日）。"}
+                </div>
+                {editInfo && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    最近改动：action={editInfo.action} · days={editInfo.days}
+                  </div>
+                )}
+              </div>
+
+              {data && (
+                <>
+                  <div>
+                    <div className="text-xs text-gray-500">口吻层（system 模板 · {data.systemTemplate}）</div>
+                    <div className="bg-purple-50 border border-purple-300 rounded p-2 text-xs text-gray-800">
+                      {data.tone}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">模型答复（绿系强调 · 当前 corpus + 当前 system）</div>
+                    <div className="bg-green-50 border border-green-300 rounded p-3 text-sm text-gray-800 whitespace-pre-wrap">
+                      {data.answer || "（空）"}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      检索命中 {data.sources.length} 条 · system={data.systemTemplate} · 依据：见下
+                    </div>
+                    {data.sources && data.sources.length > 0 && (
+                      <ul className="text-xs space-y-1 mt-1">
+                        {data.sources.map((s, i) => (
+                          <li key={s.chunkId} className="bg-gray-50 rounded p-2">
+                            <div className="text-gray-700">[{i + 1}] {s.source} / {s.section} / {s.chunkId}（相关度 {s.score}）</div>
+                            <div className="text-gray-500 whitespace-pre-wrap">{s.preview}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

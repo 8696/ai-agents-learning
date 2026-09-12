@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 两者都不够：人在回路 · 需求 14 · 决策卡</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { EnvFooter, PageNav } = window.DemoUI;
+
+    function App() {
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              需求 14 · 两者都不够：人在回路 · 决策卡
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">📖 决策卡</span>
+          </header>
+
+          <PageNav current="human-in-the-loop" />
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>转账 / 删库 / 改生产配置——这些动作不能由 RAG 或微调单独收口。
+                RAG / 微调能给信息、给建议，<b>最终动作仍要人点头</b>。
+              </p>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>不可逆 / 高风险动作 = 人在回路（Human-in-the-loop）。</b>
+                  检索增强生成 / 微调可以做「决策建议」，不能做「自动执行」。
+                </div>
+                <div className="text-xs text-gray-600">怎么观察：下面典型场景清单。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">典型场景（必须人在回路）</h2>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 text-xs">
+                  <tr>
+                    <th className="text-left p-2">场景</th>
+                    <th className="text-left p-2">风险</th>
+                    <th className="text-left p-2">怎么要</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs">
+                  <tr className="border-t">
+                    <td className="p-2">转账（涉及钱）</td>
+                    <td className="p-2">资金错付、无法撤销</td>
+                    <td className="p-2 text-red-700 font-semibold">人确认（短信 / 二次密码）</td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-2">删库 / drop table</td>
+                    <td className="p-2">数据不可恢复</td>
+                    <td className="p-2 text-red-700 font-semibold">人确认 + 备份校验</td>
+                  </tr>
+                  <tr className="border-t">
+                    <td className="p-2">改生产配置</td>
+                    <td className="p-2">影响线上用户</td>
+                    <td className="p-2 text-red-700 font-semibold">人确认 + 灰度发布</td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-2">开权限 / 改权限</td>
+                    <td className="p-2">越权 / 安全事故</td>
+                    <td className="p-2 text-red-700 font-semibold">人确认 + 审批流程</td>
+                  </tr>
+                  <tr className="border-t">
+                    <td className="p-2">发全员邮件 / 通知</td>
+                    <td className="p-2">一旦发出无法撤回</td>
+                    <td className="p-2 text-red-700 font-semibold">人确认 + 预览</td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-2">对外合同 / 报价</td>
+                    <td className="p-2">法务 / 商业承诺</td>
+                    <td className="p-2 text-red-700 font-semibold">人审核 + 数字签</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="bg-red-50 border border-red-300 rounded p-3 mt-3 text-xs">
+                <div className="font-semibold text-red-900 mb-1">常见失败模式（把转账做成 Tool）</div>
+                <div className="text-gray-800">
+                  「转账」做成 Tool 让模型自己调——<br />
+                  用户：「把这 50 块退给那个客户」→ 模型编一个金额、对象、理由 → 你就转了。<br />
+                  后果：钱没了；客户没收到；合规问题。
+                </div>
+                <div className="text-gray-800 mt-2">
+                  修正：高风险 Tool 必须「二次确认」+「金额 / 对象校验」+「人审批」（详细机制见后面模块 07-04 工具网关）。
+                </div>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[80px] text-xs text-gray-500">
+              <b className="text-gray-700">一句话：</b>不可逆 / 高风险动作必须人确认；RAG / 微调只给建议，不能自动执行。
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

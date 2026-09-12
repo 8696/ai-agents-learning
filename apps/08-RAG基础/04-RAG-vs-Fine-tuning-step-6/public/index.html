@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 「该不该检索」三种流程 · step-6 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { EnvFooter, PageNav } = window.DemoUI;
+
+    const PAGES = [
+        { path: "/pages/routing-rules.html", id: "routing-rules",   md: "决策 1",  title: "路由层规则 · 关键词判断",   category: "流程 1 · 简单可预测" },
+        { path: "/pages/threshold.html",     id: "threshold",       md: "决策 2",  title: "命中阈值 · top1 score > N",   category: "流程 2 · 分数可控" },
+        { path: "/pages/agent-decide.html",  id: "agent-decide",    md: "决策 3",  title: "模型自己决定 · agent loop",  category: "流程 3 · 最灵活" },
+      ];
+
+    function App() {
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              RAG vs 微调 · 「该不该检索」三种流程 · 第六步（step-6）· 总览
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">
+              ⏸ 待连接
+            </span>
+          </header>
+
+          <PageNav current="overview" />
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>同一道题走三种「该不该检索」的判断流程 —— 路由层规则 / 命中阈值 / agent loop（模型自己决定）。每条 sub-page 是一个端点、一个核心、一个判断逻辑。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>路由层规则：工程师写正则，命中即检索</li>
+                <li>命中阈值：总是检索，看分数够不够</li>
+                <li>agent loop：先让模型自己答 yes/no</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  「检索增强生成」不是「每次必检索」—— 它是 Tool（工具），要不要调要看场景。三种流程各有取舍：路由层规则 = 最简单最可预测；命中阈值 = 中等灵活；agent loop = 最灵活但代价高。
+                </div>
+                <div className="text-xs text-gray-600">怎么观察：同一道题进三个 sub-page，看 branch 是不是都能讲清「为什么走这条路」。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">3 个 sub-page 入口</h2>
+              <ul className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {PAGES.map((p) => (
+                  <li key={p.path}>
+                    <a href={p.path}
+                      className="block bg-gray-50 border border-gray-300 rounded p-3 hover:bg-blue-50 hover:border-blue-300">
+                      <div className="text-xs text-gray-500 font-mono">{p.md} · {p.category}</div>
+                      <div className="text-sm font-semibold text-gray-800">{p.title}</div>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[40px] text-xs text-gray-500">
+              点上面任何一个子页进入 → 顶部会有 PageNav 能跨 3 个流程跳走。
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

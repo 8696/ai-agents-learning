@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 数据形态 · 第四步</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- 共享 JSX 组件 -->
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/doc-card.js"></script>
+  <script type="text/babel" src="/components/qa-card.js"></script>
+  <script type="text/babel" src="/components/compare-summary.js"></script>
+
+  <!-- 本页内联 JSX 块（最后） -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { EnvFooter, DocCard, QaCard, CompareSummary } = window.DemoUI;
+
+    function App() {
+      const [docs, setDocs] = useState([]);
+      const [qas, setQas] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [demoErrorLoading, setDemoErrorLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [statusPill, setStatusPill] = useState("⏸ 待连接");
+
+      async function loadData() {
+        setLoading(true); setError(null);
+        try {
+          const res = await fetch("/api/data-shape");
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${errBody.error ? " · " + errBody.error : ""}`);
+          }
+          const data = await res.json();
+          setDocs(data.docs || []);
+          setQas(data.qas || []);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function runDemoError() {
+        setDemoErrorLoading(true); setError(null);
+        try {
+          const res = await fetch("/api/demo-error");
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${errBody.error ? " · " + errBody.error : ""}`);
+          }
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setDemoErrorLoading(false);
+        }
+      }
+
+      useEffect(() => {
+        loadData();
+      }, []);
+
+      // §5.3.4 #status-pill 四态：⏸待连接 / 🔄请求中 / ✅完成 / ❌错误
+      useEffect(() => {
+        if (loading || demoErrorLoading) setStatusPill("🔄请求中");
+        else if (error) setStatusPill("❌错误");
+        else if (docs.length || qas.length) setStatusPill("✅完成");
+        else setStatusPill("⏸待连接");
+      }, [loading, demoErrorLoading, error, docs.length, qas.length]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              RAG vs 微调 · 数据形态对照 · 第四步（step-4） · 喂 RAG 给文档 · 喂微调给问答对
+            </h1>
+            <span
+              id="status-pill"
+              className="text-xs px-2 py-1 rounded bg-gray-200"
+            >
+              {statusPill}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section
+              id="page-intro"
+              className="bg-white shadow rounded p-4 space-y-2"
+            >
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>左栏「文档段落」vs 右栏「客服问答对」并排展示 —— 一眼看出两种数据形态的差异。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>页面加载时 fetch /api/data-shape → 拉两套示例数据</li>
+                <li>左栏：4 段 refund-v2.md 文档段落（陈述事实的原文）</li>
+                <li>右栏：5 条「用户问 → 理想答」问答对（带客服口吻）</li>
+                <li>对照 —— 文档是「来源 / 章节 / 段落」结构，问答对是「用户 + 理想答」结构</li>
+                <li>点「演示上游失败」→ GET /api/demo-error → 5xx + #status-pill 变红</li>
+              </ol>
+
+              <div
+                id="core-takeaway"
+                className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2"
+              >
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>检索增强生成喂「手册 / FAQ / PDF」</b>（陈述事实的原文） →
+                  <b>微调喂「聊天记录 → 问答对」</b>（带口吻、带处理流程）。
+                  两种数据形态完全不同，<b>不能互相代替</b>。
+                </div>
+                <div className="text-xs text-gray-800">
+                  <b>反例 1：把手册直接当微调数据</b> → 模型只学到「复述手册」，接到「我鞋子开胶了」只说「按手册七天」，不会道歉 / 不给处理流程 —— 你训练它说官方话，它就只说官方话。
+                </div>
+                <div className="text-xs text-gray-800">
+                  <b>反例 2：把客服聊天记录当检索文档</b> → 检索时命中一堆「好的亲」「没问题亲」+「上次退过 50 块」这种<b>单次承诺</b> —— 模型按材料说话 = 按「亲」说话，承诺成了「政策」。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：左栏每条 =「来源 / 章节 / 段落全文」结构；右栏每条 =「用户原话 + 理想答」结构 —— 喂给哪一种，文档长得就不一样。
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="controls"
+              className="bg-white shadow rounded p-4 space-y-3"
+            >
+              <CompareSummary
+                docsCount={docs.length}
+                qasCount={qas.length}
+                onReload={loadData}
+                onDemoError={runDemoError}
+                demoErrorLoading={demoErrorLoading}
+              />
+              {error && <div className="text-red-600 text-sm">失败：{error}</div>}
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DocCard docs={docs} />
+              <QaCard qas={qas} />
+            </div>
+
+            <section
+              id="output"
+              className="bg-white shadow rounded p-4 min-h-[40px] text-xs text-gray-500"
+            >
+              {docs.length || qas.length
+                ? `已加载 docs=${docs.length} · qas=${qas.length}。对照上面两栏：左栏喂 RAG，右栏喂微调。`
+                : "加载中…"}
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

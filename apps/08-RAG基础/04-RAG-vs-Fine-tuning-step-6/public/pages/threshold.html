@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>决策模式 2 · 命中阈值（top1 score > N）· step-6</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    const { EnvFooter, PageNav } = window.DemoUI;
+
+;
+
+    function App() {
+      const [question, setQuestion] = useState("现在还能七天无理由退货吗？");
+      const [threshold, setThreshold] = useState(0.3);
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [statusPill, setStatusPill] = useState("⏸ 待连接");
+
+      async function runChat() {
+        const setL = (l) => setLoading(l);
+        setL(true); setError(null);
+        try {
+          const res = await fetch("/api/chat-threshold", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, topK: 3, threshold: Number(threshold) }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+          setData(await res.json());
+        } catch (err) { setError(err.message); }
+        finally { setL(false); }
+      }
+
+      React.useEffect(() => {
+        if (loading) setStatusPill("🔄请求中");
+        else if (error) setStatusPill("❌错误");
+        else if (data) setStatusPill("✅完成");
+        else setStatusPill("⏸待连接");
+      }, [loading, error, data]);
+
+      const overThreshold = data?.top1Score !== undefined && data.threshold !== undefined && data.top1Score > data.threshold;
+      const branchColor = overThreshold ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              决策模式 2 · 命中阈值（top1 score > N）
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">{statusPill}</span>
+          </header>
+
+          <PageNav current="threshold" />
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>总是检索，看 <code className="bg-gray-100 px-1 rounded">top1 score > threshold</code> —— 过阈值 → 按材料答；不过 → 弃权（按指令答「库里没有」）。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>输入框里改问题（同一问题可以改 threshold 多跑几次）</li>
+                <li>点「发问」→ POST /api/chat-threshold</li>
+                <li>看 branch + top1 score + threshold + reason</li>
+                <li>同一道题调高 / 调低 threshold，看 branch 翻转</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>分数阈值：</b>模型自己决定的「相关度」能不能被用作「该不该答」的判断 —— 用分数阈值控制，能避免「勉强相关」导致的胡说。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：调高 threshold → 简单问题反而被当成「找不到」；调低 → 闲聊题被当成「业务问题」检索。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div>
+                <label className="text-xs text-gray-600" htmlFor="question-input">用户问句</label>
+                <input id="question-input" type="text" value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1 mt-1 text-sm" />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-gray-600">阈值（threshold）</label>
+                <input id="threshold-input" type="number" step="0.05" min="0" max="1" value={threshold}
+                  onChange={(e) => setThreshold(parseFloat(e.target.value || "0.3"))}
+                  className="w-20 border border-gray-300 rounded px-2 py-1 text-sm" />
+                <span className="text-xs text-gray-500">（top1 score 大于这个值才用检索结果）</span>
+              </div>
+              <button id="btn-chat" onClick={runChat}
+                disabled={loading || !question.trim()}
+                className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50">
+                {loading ? "请求中…" : "发问（阈值判断）"}
+              </button>
+              {error && <div className="text-red-600 text-sm">失败：{error}</div>}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[160px] space-y-2">
+              {data ? (
+                <>
+                  <div className={`text-xs font-mono px-2 py-1 rounded border inline-block ${branchColor}`}>
+                    branch = <b>{data.branch}</b> · top1 score = <b>{data.top1Score}</b> · threshold = <b>{data.threshold}</b>
+                    · {overThreshold ? "过阈值 → 按材料答" : "未过阈值 → 弃权"}
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono">reason: {data.reason}</div>
+                  <div className={`text-sm whitespace-pre-wrap p-3 rounded border ${branchColor}`}>
+                    {data.answer || "（空）"}
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-gray-500">还没发问 —— 点上面「发问」按钮。</div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

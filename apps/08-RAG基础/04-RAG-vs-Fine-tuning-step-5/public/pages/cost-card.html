@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 成本对照：改 10 次 vs 训 10 次 · 变体 9 · 决策卡</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { EnvFooter, PageNav } = window.DemoUI;
+
+    function App() {
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              变体 9 · 成本对照：改 10 次 vs 训 10 次 · 决策卡
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">📖 决策卡</span>
+          </header>
+
+          <PageNav current="cost-card" />
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>「比成本」不是比「单次 Token 单价」，是比「改 100 次知识的总成本」——
+                知识还在改的领域，检索增强生成比微调便宜一个数量级。
+              </p>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  「微调后单次推理便宜 30%」在「每周改 1 次政策」的场景里<b>不成立</b>——
+                  你要为这一周 + 之前 50 周的训练成本买单。
+                </div>
+                <div className="text-xs text-gray-600">怎么观察：下面两张对照表。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">场景 A：本周要改 10 次价格</h2>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 text-xs">
+                  <tr>
+                    <th className="text-left p-2">方法</th>
+                    <th className="text-left p-2">单次动作</th>
+                    <th className="text-left p-2">10 次累计</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs">
+                  <tr className="border-t">
+                    <td className="p-2">RAG（改文档 + 重新入库）</td>
+                    <td className="p-2 font-mono">分钟级</td>
+                    <td className="p-2 font-semibold text-blue-700">约 1 小时</td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-2">微调（重新训一次模型）</td>
+                    <td className="p-2 font-mono">小时 ~ 天（几十 ~ 几百美元）</td>
+                    <td className="p-2 font-semibold text-red-700">约 1 ~ 2 周 + 几千美元</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <h2 className="text-sm font-semibold text-gray-700 mt-4 mb-3">场景 B：政策稳定 1 年</h2>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 text-xs">
+                  <tr>
+                    <th className="text-left p-2">方法</th>
+                    <th className="text-left p-2">初始投入</th>
+                    <th className="text-left p-2">日常推理</th>
+                  </tr>
+                </thead>
+                <tbody className="text-xs">
+                  <tr className="border-t">
+                    <td className="p-2">RAG（一次入库）</td>
+                    <td className="p-2 font-mono">小时级</td>
+                    <td className="p-2 font-mono">每次查询多一次检索 + 嵌入</td>
+                  </tr>
+                  <tr className="border-t bg-gray-50">
+                    <td className="p-2">微调（一次训）</td>
+                    <td className="p-2 font-mono">小时 ~ 天</td>
+                    <td className="p-2 font-mono">无检索，单次可能更便宜</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="bg-yellow-50 border border-yellow-300 rounded p-3 mt-3 text-xs">
+                <div className="font-semibold text-yellow-900 mb-1">怎么选</div>
+                <div className="text-gray-800">
+                  问自己：<b>这份政策 / 这些知识多久改一次？</b>
+                  <br />· 每月改 ≤ 1 次 → RAG 几乎一定便宜
+                  <br />· 一年都不改 → 微调初始贵、但日摊低，可能划算
+                  <br />· 完全不改（法律条款、历史档案）→ 微调合理（仍然要 RAG 补出处）
+                </div>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[80px] text-xs text-gray-500">
+              <b className="text-gray-700">一句话：</b>比成本 = 比「改 N 次知识的总成本」，不是「单次 Token 单价」。知识还在改的领域，检索增强生成更便宜。
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

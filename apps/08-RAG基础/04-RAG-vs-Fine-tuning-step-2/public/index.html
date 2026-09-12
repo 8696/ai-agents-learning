@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 先试提示词 · 第二步</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap） -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- 共享 JSX 组件（挂 window.DemoUI） -->
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/prompt-empty-card.js"></script>
+  <script type="text/babel" src="/components/prompt-fewshot-card.js"></script>
+  <script type="text/babel" src="/components/compare-summary.js"></script>
+
+  <!-- 本页内联 JSX 块（最后） -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { EnvFooter, PromptEmptyCard, PromptFewshotCard, CompareSummary } = window.DemoUI;
+
+    function App() {
+      // ── 输入与左/右栏状态 ──
+      const [question, setQuestion] = useState("我买的鞋子穿了三天开胶了，要退货。");
+      const [leftData, setLeftData] = useState(null);
+      const [rightData, setRightData] = useState(null);
+
+      // ── 各按钮的 loading / error ──
+      const [leftLoading, setLeftLoading] = useState(false);
+      const [rightLoading, setRightLoading] = useState(false);
+      const [bothLoading, setBothLoading] = useState(false);
+      const [leftForceLoading, setLeftForceLoading] = useState(false);
+      const [rightForceLoading, setRightForceLoading] = useState(false);
+      const [leftError, setLeftError] = useState(null);
+      const [rightError, setRightError] = useState(null);
+      const [bothError, setBothError] = useState(null);
+
+      // §5.3.4 强制 id 命名约定：page-header / page-title / status-pill
+      const [statusPill, setStatusPill] = useState("⏸ 待连接");
+
+      async function runEmpty() {
+        setLeftLoading(true); setLeftError(null);
+        try {
+          const res = await fetch("/api/rag-empty", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, topK: 3, promptVariant: "empty" }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+          setLeftData(await res.json());
+        } catch (err) {
+          setLeftError(err.message);
+        } finally {
+          setLeftLoading(false);
+        }
+      }
+
+      async function runFewshot() {
+        setRightLoading(true); setRightError(null);
+        try {
+          const res = await fetch("/api/rag-fewshot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, topK: 3, promptVariant: "fewshot" }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+          setRightData(await res.json());
+        } catch (err) {
+          setRightError(err.message);
+        } finally {
+          setRightLoading(false);
+        }
+      }
+
+      async function runEmptyForceError() {
+        setLeftForceLoading(true); setLeftError(null);
+        try {
+          const res = await fetch("/api/rag-empty", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, topK: 3, promptVariant: "empty", forceError: true }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+        } catch (err) {
+          setLeftError(err.message);
+        } finally {
+          setLeftForceLoading(false);
+        }
+      }
+
+      async function runFewshotForceError() {
+        setRightForceLoading(true); setRightError(null);
+        try {
+          const res = await fetch("/api/rag-fewshot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question, topK: 3, promptVariant: "fewshot", forceError: true }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`HTTP ${res.status}${body.error ? " · " + body.error : ""}`);
+          }
+        } catch (err) {
+          setRightError(err.message);
+        } finally {
+          setRightForceLoading(false);
+        }
+      }
+
+      async function runBoth() {
+        setBothLoading(true); setBothError(null);
+        try {
+          const [resL, resR] = await Promise.all([
+            fetch("/api/rag-empty", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question, topK: 3, promptVariant: "empty" }),
+            }),
+            fetch("/api/rag-fewshot", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question, topK: 3, promptVariant: "fewshot" }),
+            }),
+          ]);
+          if (!resL.ok) throw new Error(`左栏 HTTP ${resL.status}`);
+          if (!resR.ok) throw new Error(`右栏 HTTP ${resR.status}`);
+          setLeftData(await resL.json());
+          setRightData(await resR.json());
+        } catch (err) {
+          setBothError(err.message);
+        } finally {
+          setBothLoading(false);
+        }
+      }
+
+      // §5.3.4 #status-pill 四态：⏸待连接 / 🔄请求中 / ✅完成 / ❌错误
+      useEffect(() => {
+        const anyLoading = leftLoading || rightLoading || bothLoading || leftForceLoading || rightForceLoading;
+        if (anyLoading) setStatusPill("🔄请求中");
+        else if (leftError || rightError || bothError) setStatusPill("❌错误");
+        else if (leftData || rightData) setStatusPill("✅完成");
+        else setStatusPill("⏸待连接");
+      }, [leftLoading, rightLoading, bothLoading, leftForceLoading, rightForceLoading, leftError, rightError, bothError, leftData, rightData]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              RAG vs 微调 · 先试提示词（第三条路）· 第二步（step-2） · 口吻稳 → 先试系统提示词 + 少样本
+            </h1>
+            <span
+              id="status-pill"
+              className="text-xs px-2 py-1 rounded bg-gray-200"
+            >
+              {statusPill}
+            </span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section
+              id="page-intro"
+              className="bg-white shadow rounded p-4 space-y-2"
+            >
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>同一问句、同一份检索材料，两条独立请求对照 —— 左栏「空系统提示词 + RAG」vs 右栏「带 3 条品牌范例 + RAG」。
+                <br />
+                用同一个投诉连点两次（左右各一次）或点「同时跑两栏」，看到答复口吻差异，就能讲清「口吻稳 → 先试系统提示词 + 少样本，不用立刻上微调」。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>输入框里改一道投诉，或用默认「我买的鞋子穿了三天开胶了，要退货。」</li>
+                <li>点「跑『空系统提示词 + RAG』」→ POST /api/rag-empty → 检索命中切块 + 空 system + 调模型（自由发挥）</li>
+                <li>点「跑『带 3 条品牌范例 + RAG』」→ POST /api/rag-fewshot → 同份检索材料 + 品牌口吻约定 + 3 条范例 + 调模型</li>
+                <li>点「同时跑两栏」→ 浏览器并发 Promise.all（不是 /api/rag-compare 打包）</li>
+                <li>对照两栏答复 —— 看右栏是不是更接近「先道歉 / 再结论 / 再依据」</li>
+              </ol>
+
+              <div
+                id="core-takeaway"
+                className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2"
+              >
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  口吻差 ≠ 模型差。客服口吻不一样，<b>不是模型不一样，是系统提示词不一样</b>。
+                  同份检索材料、同一个模型，右栏答复开头是「先道歉 / 再结论 / 再依据」—— 这是「第三条路」：改这一次输入，权重没动。
+                </div>
+                <div className="text-xs text-gray-800">
+                  <b>反直觉点（MD 变体 4）：</b>
+                  （1）官方建议的第一刀：调口吻先改 system 加 3 条范例，不要直接排期微调（FT）；
+                  （2）这是最容易漏的变体 —— 太多人一上来就排期训练，结果 8 行系统提示词就够。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：右栏答复开头是不是先道歉、中间是不是给具体结论、末尾是不是列依据 —— 这就是「品牌客服流程」。
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="controls"
+              className="bg-white shadow rounded p-4 space-y-3"
+            >
+              <div>
+                <label className="text-xs text-gray-600" htmlFor="question-input">
+                  投诉题（question · 默认「我买的鞋子穿了三天开胶了，要退货。」）
+                </label>
+                <input
+                  id="question-input"
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1 mt-1 text-sm"
+                  placeholder="改一道投诉，或用默认"
+                />
+              </div>
+              <CompareSummary
+                question={question}
+                bothLoading={bothLoading}
+                bothError={bothError}
+                onRunBoth={runBoth}
+              />
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <PromptEmptyCard
+                question={question}
+                data={leftData}
+                loading={leftLoading}
+                error={leftError}
+                forceErrorLoading={leftForceLoading}
+                onRunEmpty={runEmpty}
+                onRunEmptyForceError={runEmptyForceError}
+              />
+              <PromptFewshotCard
+                question={question}
+                data={rightData}
+                loading={rightLoading}
+                error={rightError}
+                forceErrorLoading={rightForceLoading}
+                onRunFewshot={runFewshot}
+                onRunFewshotForceError={runFewshotForceError}
+              />
+            </div>
+
+            <section
+              id="output"
+              className="bg-white shadow rounded p-4 min-h-[40px] text-xs text-gray-500"
+            >
+              {leftData || rightData
+                ? "对照看上面两栏：左栏自由发挥 / 右栏范例口吻。"
+                : "还没跑过 —— 在上面输入框改一道投诉，点「空系统提示词 + RAG」或「带 3 条品牌范例 + RAG」或「同时跑两栏」。"}
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -100,6 +100,13 @@
 | `yarn app:08-02-chunking-step-6` | `50077` | 模块 08 · 02 · 切块（Chunking）step-6：综合对比收尾 · step-1 ~ step-5 各 demo 能力回顾；纯本地展示，不调 LLM |
 | `yarn app:08-02-chunking-step-7` | `50078` | 模块 08 · 02 · 切块（Chunking）step-7：atomic 块保护（表格 / 代码围栏 / 编号条款整块保留 + 超上限兜底说明）；纯本地文本操作，不调 LLM |
 | `yarn app:08-03-cosine-similarity-step-1` | `50079` | 模块 08 · 03 · 余弦相似度 step-1：六 page 一站（① 余弦对照 / ② Top-K 截断 / ③ Top-K + 阈值弃权 / ④ 跨模型重标定 / ⑤ 距离排序对照 / ⑥ 归一化）；同向不同长的二维教学向量（含真近义句 + 冲突政策），三把尺子分请求对照；纯本地计算，不调 LLM |
+| `yarn app:08-04-rag-vs-fine-tuning-step-1` | `50080` | 模块 08 · 04 · RAG vs 微调 step-1：同一问句两条独立 URL 并排对照，左栏只靠模型 vs 右栏检索增强生成（toy 词袋 + 余弦 + 内置 refund-v2 语料 · 真调大模型 · 微调侧本步不真训） |
+| `yarn app:08-04-rag-vs-fine-tuning-step-2` | `50081` | 模块 08 · 04 · RAG vs 微调 step-2：同份检索材料 + 不同系统提示词对照，左栏空提示词 vs 右栏带 3 条品牌范例（第三条路 · 少样本 · 权重未改 · 不是微调） |
+| `yarn app:08-04-rag-vs-fine-tuning-step-3` | `50082` | 模块 08 · 04 · RAG vs 微调 step-3：同一道「库里没有」的题，左栏只靠模型 vs 右栏检索增强生成（幻觉 vs 弃权 · 检索能给一条弃权指令让模型别编） |
+| `yarn app:08-04-rag-vs-fine-tuning-step-4` | `50083` | 模块 08 · 04 · RAG vs 微调 step-4：左栏文档段落（喂 RAG）vs 右栏客服问答对（喂微调）—— 数据形态对照，不调 LLM |
+| `yarn app:08-04-rag-vs-fine-tuning-step-5` | `50084` | 模块 08 · 04 · RAG vs 微调 step-5：决策卡 + 反例集，8 个 sub-page 共享同一端口（A5 混合 / A6 不该检索 真调模型，其他 6 个决策卡） |
+| `yarn app:08-04-rag-vs-fine-tuning-step-6` | `50085` | 模块 08 · 04 · RAG vs 微调 step-6：「该不该检索」三种流程：路由层规则 / 命中阈值 / agent loop（模型自己决定），3 个 sub-page 共享同端口 |
+| `yarn app:08-04-rag-vs-fine-tuning-step-7` | `50086` | 模块 08 · 04 · RAG vs 微调 step-7：混合 pipeline 综合 demo —— 事实层（corpus 可变） + 口吻层（system 3 种模板） 各管各的 |
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 
 HTTP Demo 一律 §5.3 全栈版（**包括不调 LLM 的本地计算**）：`server.ts` 只装配；业务在 `routes/` + 分层 `lib/`；浏览器 `GET /` 是总览，独立场景在 `/pages/`；页脚 `#env-info` 来自 `GET /health`。不调模型的条加 `callsModel: false`，主按钮不因缺 Key 而 disabled。各条 README 写该条页面清单。禁止小节 CLI。

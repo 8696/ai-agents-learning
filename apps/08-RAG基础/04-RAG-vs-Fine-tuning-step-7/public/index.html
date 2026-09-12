@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAG vs Fine-tuning · 混合 pipeline · step-7 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { EnvFooter, PageNav } = window.DemoUI;
+
+    const PAGES = [
+        { path: "/pages/full-pipeline.html", id: "full-pipeline", md: "step-7 核心",  title: "混合 pipeline · 检索（事实层） + system（口吻层）",   category: "同一道题 · 三种 system 模板" },
+      ];
+
+    function App() {
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              RAG vs 微调 · 混合 pipeline · 第七步（step-7） · 总览
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">
+              ⏸ 待连接
+            </span>
+          </header>
+
+          <PageNav current="overview" />
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                <b>本页只演示：</b>step-7 = <b>混合 pipeline 综合 demo</b>。同一道题、同一模型，
+                <b>事实层</b>来自 corpus（可被「改成 N 天」按钮改），<b>口吻层</b>来自 system（3 种模板可选：empty / fewshot / brand）。
+              </p>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>混合 = 事实层（corpus）+ 口吻层（system）各管各的。</b>
+                  改 corpus → 事实跟变；换 system → 口吻跟变；两路互不干扰。
+                </div>
+                <div className="text-xs text-gray-800">
+                  <b>承接 step-5 mix sub-page：</b>step-5 mix 是单一 system 演示；step-7 是 3 种 system 模板可切的综合 demo。
+                </div>
+                <div className="text-xs text-gray-600">怎么观察：连续跑 2 次 + 改 corpus 1 次 + 切 system 1 次 —— 看哪些字段跟变。</div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">1 个 sub-page 入口</h2>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {PAGES.map((p) => (
+                  <li key={p.path}>
+                    <a href={p.path}
+                      className="block bg-gray-50 border border-gray-300 rounded p-3 hover:bg-blue-50 hover:border-blue-300">
+                      <div className="text-xs text-gray-500 font-mono">{p.md} · {p.category}</div>
+                      <div className="text-sm font-semibold text-gray-800">{p.title}</div>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[40px] text-xs text-gray-500">
+              点上面 sub-page 进入 → 顶部 PageNav 跳回总览。同一道题进 sub-page 后：选 system 模板 + 改 corpus + 跑 pipeline → 看「事实层 / 口吻层 / 答复 / 依据」四条信息。
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
