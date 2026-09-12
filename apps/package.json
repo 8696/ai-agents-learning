@@ -91,7 +91,8 @@
     "app:08-02-chunking-step-4": "PORT=50075 tsx 08-RAG基础/02-Chunking-step-4/server.ts",
     "app:08-02-chunking-step-5": "PORT=50076 tsx 08-RAG基础/02-Chunking-step-5/server.ts",
     "app:08-02-chunking-step-6": "PORT=50077 tsx 08-RAG基础/02-Chunking-step-6/server.ts",
-    "app:08-02-chunking-step-7": "PORT=50078 tsx 08-RAG基础/02-Chunking-step-7/server.ts"
+    "app:08-02-chunking-step-7": "PORT=50078 tsx 08-RAG基础/02-Chunking-step-7/server.ts",
+    "app:08-03-cosine-similarity-step-1": "PORT=50079 tsx 08-RAG基础/03-余弦相似度-step-1/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

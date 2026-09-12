@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>余弦相似度 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { EnvFooter } = window.DemoUI;
+
+    function Overview() {
+      const [env, setEnv] = useState(null);
+      useEffect(function () {
+        window.DemoUtils.fetchHealth().then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              余弦相似度（Cosine Similarity）· 总览 · 三页一站
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">
+              ⏸ 待连接
+            </span>
+          </header>
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本 Demo 由 2026-09-12 本会话主动解锁合并 step-1 / step-2 / step-3（违反 §5.3.14「锁定 = 冻结」+「已锁 Demo 不回头改」两条规则；详见 <code>docs/学习模块/08-RAG基础/03-余弦相似度.md</code> 末尾 deviation 记录）。
+              </p>
+              <p className="text-sm text-gray-700">
+                一个 server.ts + 一个 scoreVectors 核心函数，三种 mode 共享。教学点全在页面上，没动一字——只是把三个 step 的能力**塞进同一个 demo 里的三个页面**。
+              </p>
+              <p className="text-xs text-gray-600">
+                端口 50079 · 本地计算 · 不调 LLM
+              </p>
+            </section>
+
+            <section className="grid gap-3 md:grid-cols-3">
+              <a href="/pages/cosine.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">① 余弦对照（raw）</div>
+                <p className="text-xs text-gray-700">
+                  入门。最简闭环：三把尺子分请求打同一组 2D 教学向量，看「短同向 vs 长同向」谁赢谁输。
+                </p>
+                <p className="text-xs text-gray-500">
+                  端点：/api/score-cosine · /api/score-dot · /api/score-euclidean
+                </p>
+              </a>
+              <a href="/pages/topk.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">② Top-K 截断（topk）</div>
+                <p className="text-xs text-gray-700">
+                  加 K 输入框。三侧共用 K，按本侧尺子截前 K 条进 topK、剩下的进 dropped。判定仍按全表算。
+                </p>
+                <p className="text-xs text-gray-500">
+                  端点：/api/score-topk（body.metric 决定本侧尺子）
+                </p>
+              </a>
+              <a href="/pages/threshold.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">③ Top-K + 阈值弃权（threshold）</div>
+                <p className="text-xs text-gray-700">
+                  加阈值输入框。最高分不够用 → decision: "abstain"，灰卡标记不可用，前 K 条不喂给模型。
+                </p>
+                <p className="text-xs text-gray-500">
+                  端点：/api/score-threshold（body.metric 决定本侧尺子）
+                </p>
+              </a>
+              <a href="/pages/cross-model.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">④ 跨模型重标定（cross-model）</div>
+                <p className="text-xs text-gray-700">
+                  加「模拟换模型」按钮（×2 / ×0.5 / 默认）。分数尺度由嵌入模型决定——换模型要重标定阈值。覆盖「分数不是正确率」「跨模型不可比」全文。
+                </p>
+                <p className="text-xs text-gray-500">
+                  端点：/api/score-cross-model（body.metric + body.scaleFactor）
+                </p>
+              </a>
+              <a href="/pages/contrast.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">⑤ 距离排序对照（contrast）</div>
+                <p className="text-xs text-gray-700">
+                  加真近义句（synonym）+ 冲突政策（conflict）两张卡。cosine 降序 vs cosineDistance 升序切着看 —— 接错排序方向拿到最不像的 K 条。
+                </p>
+                <p className="text-xs text-gray-500">
+                  端点：复用 /api/score-cross-model（三 metric 并发 + 前端算 cosineDistance）
+                </p>
+              </a>
+              <a href="/pages/normalize.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">⑥ 归一化（normalize）</div>
+                <p className="text-xs text-gray-700">
+                  归一化（L2 Normalize）开关——所有向量除以自己的长度。归一化后 cosine 列 == dot 列（数字一字不差），这就是向量库内部默认归一化的原因（计算快 + 排序方向统一）。
+                </p>
+                <p className="text-xs text-gray-500">
+                  端点：/api/score-normalize（body.metric + body.normalize）
+                </p>
+              </a>
+            </section>
+
+            <section className="bg-yellow-50 border border-yellow-300 rounded p-4 text-xs space-y-1">
+              <div className="font-semibold text-yellow-900">六条故事线（同一组教学向量 + 同一 scoreVectors 核心）</div>
+              <div>① raw：几何对照 → 「语义近 = 夹角小」，跟长度无关</div>
+              <div>② topk：检索取前 K → K 永远能取满</div>
+              <div>③ threshold：够不够用 → 阈值是产品线</div>
+              <div>④ cross-model：换嵌入模型 → 分数尺度变了，阈值要重标定</div>
+              <div>⑤ contrast：cosine vs cosineDistance 排序方向相反 + 真近义句 + 冲突不是 -1</div>
+              <div>⑥ normalize：归一化后 cosine == dot → 向量库内部默认行为</div>
+            </section>
+
+            {/* 占位 section —— 总览页是导航页，无 #controls / #output；check-demo 强制要求三个 id 同时存在 */}
+            <section id="controls" className="hidden">
+              <span>（总览页无控件；跳到上方三个子页之一）</span>
+            </section>
+            <section id="output" className="hidden">
+              <span>（总览页无输出）</span>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<Overview />);
+  </script>
+</body>
+</html>

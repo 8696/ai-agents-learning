@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>余弦相似度 · ① 余弦对照（raw）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/source-texts.js"></script>
+  <script type="text/babel" src="/components/vector-table.js"></script>
+  <script type="text/babel" src="/components/score-column.js"></script>
+  <script type="text/babel" src="/components/output-cards.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { StatusPill, PageIntroRaw, EnvFooter, PageNav } = window.DemoUI;
+    const { SourceTexts, VectorTable, ScoreColumn, OutputCards } = window.DemoUI;
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [cosine, setCosine] = useState(null);
+      const [dot, setDot] = useState(null);
+      const [euclidean, setEuclidean] = useState(null);
+      const [last, setLast] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.fetchHealth().then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      async function run(url, setter, body) {
+        setBusy(true);
+        setStatus("loading");
+        try {
+          const res = await window.DemoUtils.postJson(url, body);
+          const payload = res.ok ? res.data : { ok: false, error: (res.data && res.data.error) || "请求失败" };
+          setter(payload);
+          setLast({ url: url, body: body, status: res.status, ok: res.ok, data: res.data });
+          setStatus(res.ok ? "done" : "error");
+        } catch (error) {
+          const message = error && error.message ? error.message : String(error);
+          setter({ ok: false, error: message });
+          setLast({ url: url, body: body, status: 0, ok: false, data: { error: message } });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              余弦相似度（Cosine Similarity）· ① 余弦对照（raw）· 三把尺子怎么排
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="raw" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntroRaw />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <SourceTexts />
+              <div className="text-sm text-gray-700">对应的教学坐标（手写，不是从原文算出来的）</div>
+              <VectorTable />
+              <div className="grid gap-3 md:grid-cols-3">
+                <ScoreColumn
+                  mode="raw"
+                  metric="cosine"
+                  hint="点了：只请求余弦这一侧。期望短同向和长同向并列。"
+                  buttonLabel="按余弦打分（/api/score-cosine）"
+                  busy={busy}
+                  result={cosine}
+                  onRun={function () { run("/api/score-cosine", setCosine, {}); }}
+                />
+                <ScoreColumn
+                  mode="raw"
+                  metric="dot"
+                  hint="点了：只请求点积这一侧。期望长同向赢。"
+                  buttonLabel="按点积打分（/api/score-dot）"
+                  busy={busy}
+                  result={dot}
+                  onRun={function () { run("/api/score-dot", setDot, {}); }}
+                />
+                <ScoreColumn
+                  mode="raw"
+                  metric="euclidean"
+                  hint="点了：只请求欧氏这一侧。期望长同向更远。"
+                  buttonLabel="按欧氏打分（/api/score-euclidean）"
+                  busy={busy}
+                  result={euclidean}
+                  onRun={function () { run("/api/score-euclidean", setEuclidean, {}); }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("/api/score-cosine", setCosine, { cards: [] }); }}
+                >
+                  空卡片打分（4xx · 第一类错误）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("/api/demo-error", function () {}, {}); }}
+                >
+                  演示上游失败（5xx · 第二类错误 · /api/demo-error）
+                </button>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <OutputCards last={last} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

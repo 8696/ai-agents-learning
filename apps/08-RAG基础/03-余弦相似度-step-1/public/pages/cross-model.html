@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>余弦相似度 · ④ 跨模型重标定（cross-model）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/source-texts.js"></script>
+  <script type="text/babel" src="/components/vector-table.js"></script>
+  <script type="text/babel" src="/components/score-column.js"></script>
+  <script type="text/babel" src="/components/output-cards.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { StatusPill, PageIntroCrossModel, EnvFooter, PageNav } = window.DemoUI;
+    const { SourceTexts, VectorTable, ScoreColumn, OutputCards } = window.DemoUI;
+
+    const TOTAL_CARDS = 4;
+    const DEFAULT_K = 3;
+    const DEFAULT_THRESHOLD = 0.5;
+    const SCALE_PRESETS = [
+      { key: "default", label: "×1（默认）",          value: 1.0 },
+      { key: "double",  label: "×2（模拟 B 模型）",    value: 2.0 },
+      { key: "half",    label: "×0.5（模拟 C 模型）",  value: 0.5 },
+    ];
+
+    function clampK(raw) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return DEFAULT_K;
+      return Math.min(TOTAL_CARDS, Math.max(1, Math.floor(n)));
+    }
+
+    function clampThreshold(raw) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return DEFAULT_THRESHOLD;
+      return n;
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [k, setK] = useState(DEFAULT_K);
+      const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
+      const [scaleKey, setScaleKey] = useState("default");
+      const [cosine, setCosine] = useState(null);
+      const [dot, setDot] = useState(null);
+      const [euclidean, setEuclidean] = useState(null);
+      const [last, setLast] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.fetchHealth().then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      const scaleFactor = (SCALE_PRESETS.find(function (p) { return p.key === scaleKey; }) || SCALE_PRESETS[0]).value;
+
+      async function run(metric, setter) {
+        setBusy(true);
+        setStatus("loading");
+        const body = { metric: metric, k: k, threshold: threshold, scaleFactor: scaleFactor };
+        const url = "/api/score-cross-model";
+        try {
+          const res = await window.DemoUtils.postJson(url, body);
+          const payload = res.ok ? res.data : { ok: false, error: (res.data && res.data.error) || "请求失败" };
+          setter(payload);
+          setLast({ url: url, body: body, status: res.status, ok: res.ok, data: res.data });
+          setStatus(res.ok ? "done" : "error");
+        } catch (error) {
+          const message = error && error.message ? error.message : String(error);
+          setter({ ok: false, error: message });
+          setLast({ url: url, body: body, status: 0, ok: false, data: { error: message } });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const scaleHint =
+        scaleKey === "double"
+          ? "当前 scaleFactor=2（模拟 B 模型）：所有分数 ×2，余弦并列 2.0（已越界），点积 20，欧氏距离 ×2。"
+          : scaleKey === "half"
+            ? "当前 scaleFactor=0.5（模拟 C 模型）：所有分数 ×0.5，余弦并列 0.5，点积 5，欧氏距离 ×0.5。"
+            : "当前 scaleFactor=1（原模型）：默认尺度，余弦并列 1.0，点积 10，欧氏 0/9/0.63/1.41。";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              余弦相似度（Cosine Similarity）· ④ 跨模型重标定（cross-model）· 分数尺度是嵌入模型决定的
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="crossmodel" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntroCrossModel />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <SourceTexts />
+              <div className="text-sm text-gray-700">对应的教学坐标（手写，不是从原文算出来的）</div>
+              <VectorTable />
+              <div className="flex flex-wrap gap-2">
+                {SCALE_PRESETS.map(function (preset) {
+                  const active = preset.key === scaleKey;
+                  return (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      className={
+                        active
+                          ? "bg-blue-600 text-white text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                          : "border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50 hover:bg-gray-50"
+                      }
+                      disabled={busy}
+                      onClick={function () { setScaleKey(preset.key); }}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { setScaleKey("default"); }}
+                >
+                  重置 ×1
+                </button>
+                <span className="text-xs text-gray-600 self-center">{scaleHint}</span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <ScoreColumn
+                  mode="threshold"
+                  metric="cosine"
+                  hint={`点了：scaleFactor=${scaleFactor} + K=${k} + 阈值=${threshold}。余弦理论上 ∈ [-1, 1]，被 scaleFactor 乘后可能越界——这恰好说明「分数尺度不属于几何」。`}
+                  buttonLabel="按余弦打分（/api/score-cross-model · metric=cosine）"
+                  busy={busy}
+                  result={cosine}
+                  k={k}
+                  threshold={threshold}
+                  totalCards={TOTAL_CARDS}
+                  onKChange={function (v) { setK(clampK(v)); }}
+                  onThresholdChange={function (v) { setThreshold(clampThreshold(v)); }}
+                  onRun={function () { run("cosine", setCosine); }}
+                />
+                <ScoreColumn
+                  mode="threshold"
+                  metric="dot"
+                  hint={`点了：scaleFactor=${scaleFactor}。点积 ×scaleFactor，maxScore 跟着变；阈值 0.5 在 scaleFactor=2 时所有分数 ×2 都过阈值。`}
+                  buttonLabel="按点积打分（/api/score-cross-model · metric=dot）"
+                  busy={busy}
+                  result={dot}
+                  k={k}
+                  threshold={threshold}
+                  totalCards={TOTAL_CARDS}
+                  onKChange={function (v) { setK(clampK(v)); }}
+                  onThresholdChange={function (v) { setThreshold(clampThreshold(v)); }}
+                  onRun={function () { run("dot", setDot); }}
+                />
+                <ScoreColumn
+                  mode="threshold"
+                  metric="euclidean"
+                  hint={`点了：scaleFactor=${scaleFactor}。欧氏距离 ×scaleFactor，maxScore 跟着变。`}
+                  buttonLabel="按欧氏打分（/api/score-cross-model · metric=euclidean）"
+                  busy={busy}
+                  result={euclidean}
+                  k={k}
+                  threshold={threshold}
+                  totalCards={TOTAL_CARDS}
+                  onKChange={function (v) { setK(clampK(v)); }}
+                  onThresholdChange={function (v) { setThreshold(clampThreshold(v)); }}
+                  onRun={function () { run("euclidean", setEuclidean); }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { window.DemoUtils.postJson("/api/score-cross-model", { metric: "cosine", k: 0 }).catch(function () {}); }}
+                >
+                  K=0 触发（4xx · 第一类错误）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { window.DemoUtils.postJson("/api/score-cross-model", { metric: "cosine", scaleFactor: -1 }).catch(function () {}); }}
+                >
+                  scaleFactor=-1 触发（4xx · 第二类错误：scaleFactor 必须 >0）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { window.DemoUtils.postJson("/api/score-cross-model", { metric: "cosine", cards: [] }).catch(function () {}); }}
+                >
+                  空卡片打分（4xx · 第三类错误）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("/api/demo-error", function () {}, {}); }}
+                >
+                  演示上游失败（5xx · 第四类错误 · /api/demo-error）
+                </button>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <OutputCards last={last} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

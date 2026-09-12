@@ -1209,6 +1209,58 @@ cd apps && yarn typecheck
 
 **`coach complete` 过关检查补一句**：本条可运行时，`apps/{模块文件夹}/` 下至少要有 1 个 `{小节文件夹}-step-{N}/` **已锁定（✅）+ check-demo 过**。未锁定的 step-N 不算完成。**这解决「demo 完整度」过关检查；目标↔代码整合还须过 §5.4**（目标→代码覆盖 / 文档→代码对齐两段）。
 
+##### 什么时候不开新 step-N+1（在当前 step 内加页面 + 导航承接 · 2026-09-12 立）
+
+**默认**：每个新教学点 = 新 step-N+1（独立文件夹 + 新端口 + copy + 增量）。这是增量构建的基础。
+
+**例外（改动很小时）**：下一个 step 跟前一个 step **改动很小**，**不开**新 step 文件夹，在当前 step 内**新增一个页面 + 导航条**承接——同一 demo、同一个端口、同一个 `lib/flow/` 核心，按 `mode` / `sub-page` 拆分。
+
+| 改动很小 = | 在当前 step 加页面 |
+| --- | --- |
+| 同一份核心 lib/ 流程不换（比如 `scoreVectors` 只加可选入参） | ✓ |
+| 教学点是「在前一步基础上加一个 UI 控件」或「加一个判定分支」 | ✓ |
+| 加同一核心函数的另一组 endpoint（`/api/score-cosine` + `/api/score-topk` + `/api/score-threshold` 走同一 `scoreVectors`） | ✓ |
+| 学习者主动说「跟前面很像 / 改动很小 / 不要新开 step」 | ✓ |
+| 端口已经够多（学习者觉得切三个 tab 烦） | ✓ |
+| 教学点是同一闭环的子 mode（raw / topk / threshold 三 mode 同属「余弦打分」一个闭环） | ✓ |
+
+**对比默认（仍要开新 step-N+1）**：
+
+| 改动很大 = | 仍开新 step-N+1 |
+| --- | --- |
+| 教学点是**新核心对象**（比如从「本地二维向量」跳到「真嵌入模型调 LLM」——§5.3.0 硬规则） | ✓ |
+| 核心 lib/ 换实现（比如 `scoreVectors` → 真嵌入模型 SDK） | ✓ |
+| 加新错误通道（比如从 4xx / 5xx 跳到 6 类错误） | ✓ |
+| 加新协议 / 新数据格式（比如从 JSON body 跳到 SSE / multipart） | ✓ |
+| 加新依赖（向量库 / 智谱专属 SDK / LangChain / Playwright 等） | ✓ |
+| 加新持久化（SQLite / 文件系统——§5.3.17） | ✓ |
+
+**做法对比**：
+
+| 项 | 默认（开新 step-N+1） | 例外（当前 step 加页面） |
+| --- | --- | --- |
+| 文件夹 | 新建 `step-N+1` 兄弟目录 | 不新建 |
+| 端口 | 新端口 = `max(占用表)+1` | 不开端口 |
+| `yarn app:*` 脚本 | 新增一条 | 不加 |
+| `apps/README.md` 占用表 | append 新行 | 不变（同一 demo 占一行） |
+| `lib/flow/` 核心 | copy + 增量（或共享同一核心 + 加 optional 入参） | **共享同一核心 + 加 optional 入参**（如 `k?` / `threshold?`） |
+| `routes/` | 新 endpoint（如果新流程） | **加同一核心的另一组 endpoint**（如 `/api/score-cosine` + `/api/score-topk` + `/api/score-threshold` 三 endpoint 共享 `scoreVectors`） |
+| `public/` 入口 | `public/index.html`（一个教学页） | `public/index.html`（总览）+ `public/pages/{场景}.html`（每 mode 一页） |
+| `public/components/page-nav.js` | 各自 step 的导航（如果做） | **当前 step 加 `<PageNav current={...}>` 跨多个页面**（顶部 tab + 高亮当前） |
+| MD 「Demo 子节进度」表 | 加 step-N+1 🔄 行 | **改当前 step 那一行 + 加 sub-mode / sub-page 说明**（同一行 ✅） |
+| MD `## ⚠ Deviation` 段 | 不需要 | **不需要**（这模式按本规则走，不是 deviation） |
+
+**为什么这样切**：每开一个新 step 占一个端口 + 一份 yarn 脚本 + 一份 README + 占用「step-N = 工作区」独立迭代节奏。**改动很小时开新 step = 端口浪费 + 教学点打散 = 偏离「每个 step 是教学点最佳表达」的设计哲学**。
+
+**触发判别（按先后问）**：
+
+1. 新教学点是「同一闭环的延伸 / 子 mode」吗？→ 例外，加页面
+2. 新教学点跟前面 step 共享同一 `lib/flow/` 核心吗？→ 例外，加页面
+3. 学习者明确说「改动很小 / 不要新开 step」吗？→ 例外，加页面
+4. 否则 → 默认开新 step-N+1
+
+**参考落地**：[docs/学习模块/08-RAG基础/03-余弦相似度.md](docs/学习模块/08-RAG基础/03-余弦相似度.md) — 余弦对照 + Top-K + 阈值弃权三个 mode 合并进同一 step-1 的三个 page（cosine / topk / threshold），端口 50079，是本规则首次落地。
+
 #### 5.3.15 验证服务生命周期（起完必须关）
 
 2026-09-03 维护模式起生效。

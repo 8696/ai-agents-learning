@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>余弦相似度 · ⑥ 归一化（normalize）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/intro-normalize.js"></script>
+  <script type="text/babel" src="/components/source-texts.js"></script>
+  <script type="text/babel" src="/components/vector-table.js"></script>
+  <script type="text/babel" src="/components/score-column.js"></script>
+  <script type="text/babel" src="/components/output-cards.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { StatusPill, PageIntroNormalize, EnvFooter, PageNav } = window.DemoUI;
+    const { SourceTexts, VectorTable, ScoreColumn, OutputCards } = window.DemoUI;
+
+    const TOTAL_CARDS = 6;
+    const DEFAULT_K = 4;
+
+    function clampK(raw) { const n = Number(raw); if (!Number.isFinite(n)) return DEFAULT_K; return Math.min(TOTAL_CARDS, Math.max(1, Math.floor(n))); }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [k, setK] = useState(DEFAULT_K);
+      const [normalize, setNormalize] = useState(true);
+      const [cosine, setCosine] = useState(null);
+      const [dot, setDot] = useState(null);
+      const [euclidean, setEuclidean] = useState(null);
+      const [last, setLast] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.fetchHealth().then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      async function runAll() {
+        setBusy(true);
+        setStatus("loading");
+        const body = { k: k, normalize: normalize };
+        const tasks = [
+          { url: "/api/score-normalize", metric: "cosine",    setter: setCosine },
+          { url: "/api/score-normalize", metric: "dot",       setter: setDot },
+          { url: "/api/score-normalize", metric: "euclidean", setter: setEuclidean },
+        ];
+        try {
+          const responses = await Promise.all(tasks.map(function (t) {
+            return window.DemoUtils.postJson(t.url, Object.assign({}, body, { metric: t.metric }));
+          }));
+          let lastInfo = null;
+          responses.forEach(function (res, i) {
+            const payload = res.ok ? res.data : { ok: false, error: (res.data && res.data.error) || "请求失败" };
+            tasks[i].setter(payload);
+            if (i === 0) {
+              lastInfo = { url: tasks[i].url, body: Object.assign({}, body, { metric: tasks[i].metric }), status: res.status, ok: res.ok, data: res.data };
+            }
+          });
+          setLast(lastInfo);
+          setStatus(responses.every(function (r) { return r.ok; }) ? "done" : "error");
+        } catch (error) {
+          const message = error && error.message ? error.message : String(error);
+          tasks.forEach(function (t) { t.setter({ ok: false, error: message }); });
+          setLast({ url: "/api/score-normalize", body: body, status: 0, ok: false, data: { error: message } });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      // 计算 cosine == dot 验证
+      const cosineMatchesDot =
+        cosine && dot && cosine.cards && dot.cards
+          ? cosine.cards.every(function (c, i) {
+              const d = dot.cards[i];
+              return d && Math.abs(c.score - d.score) < 1e-9;
+            })
+          : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              余弦相似度（Cosine Similarity）· ⑥ 归一化（normalize）· cosine == dot 的几何依据
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="normalize" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntroNormalize />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <SourceTexts />
+              <div className="text-sm text-gray-700">对应的教学坐标（手写）</div>
+              <VectorTable />
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs text-gray-700">normalize：</span>
+                <button
+                  type="button"
+                  className={normalize
+                    ? "bg-blue-600 text-white text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                    : "border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50 hover:bg-gray-50"}
+                  disabled={busy}
+                  onClick={function () { setNormalize(true); }}
+                >
+                  归一化（true）
+                </button>
+                <button
+                  type="button"
+                  className={!normalize
+                    ? "bg-blue-600 text-white text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                    : "border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50 hover:bg-gray-50"}
+                  disabled={busy}
+                  onClick={function () { setNormalize(false); }}
+                >
+                  不归一化（false）
+                </button>
+                <span className="text-xs text-gray-700 ml-4">K：</span>
+                <input
+                  type="number" min={1} max={TOTAL_CARDS} value={k}
+                  disabled={busy}
+                  onChange={function (e) { setK(clampK(e.target.value)); }}
+                  className="border border-gray-300 rounded px-1 py-0.5 w-12 text-xs"
+                />
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded disabled:opacity-50 ml-2"
+                  disabled={busy}
+                  onClick={runAll}
+                >
+                  跑三尺
+                </button>
+              </div>
+              {cosineMatchesDot !== null ? (
+                <div className={"text-xs rounded p-2 " + (cosineMatchesDot ? "bg-green-50 border border-green-300 text-green-900" : "bg-red-50 border border-red-300 text-red-900")}>
+                  {cosineMatchesDot
+                    ? "✓ 归一化开启时：cosine 列 == dot 列（数字一字不差）—— 验证了「cosine = dot in normalized space」"
+                    : "✗ cosine 列与 dot 列不一致（理论上归一化开启时应该完全相同）"}
+                </div>
+              ) : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {(cosine || dot || euclidean) ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <ScoreColumn
+                    mode="raw"
+                    metric="cosine"
+                    hint={normalize ? "归一化后 cosine == dot（同数值）" : "未归一化"}
+                    buttonLabel="cosine"
+                    busy={busy}
+                    result={cosine}
+                    onRun={function () { runAll(); }}
+                  />
+                  <ScoreColumn
+                    mode="raw"
+                    metric="dot"
+                    hint={normalize ? "归一化后 dot == cosine" : "未归一化"}
+                    buttonLabel="dot"
+                    busy={busy}
+                    result={dot}
+                    onRun={function () { runAll(); }}
+                  />
+                  <ScoreColumn
+                    mode="raw"
+                    metric="euclidean"
+                    hint={normalize ? "归一化后欧氏 = 单位球面弦长" : "未归一化"}
+                    buttonLabel="euclidean"
+                    busy={busy}
+                    result={euclidean}
+                    onRun={function () { runAll(); }}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">还没跑——选好「归一化 / 不归一化」+ 点「跑三尺」开始。</p>
+              )}
+              <OutputCards last={last} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

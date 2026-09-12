@@ -221,6 +221,22 @@
 - **反模式**：调试脚本留 demo 根目录加职责注释过 check-demo；移进 `lib/debug/`（仍是 CLI 违反 §5.3）；保留脚本并希望学习者以后自己看结构
 - **关联**：AGENTS.md §5.7、scripts/check-demo/check-structure.cjs:64-67、commit f870b97（dev CLI 调试脚本随 PDF 解析一起入库）
 
+### P-019  ·  lib/http 到 apps 根少一层
+
+- **症状**：`check-demo` 报 `lib/http/runtime-ctx.ts : 跨小节 import ../../../llm.js`
+- **触发**：从 `apps/{模块}/{小节}-step-N/lib/http/runtime-ctx.ts` 写 `../../../llm.js` / `../../../load-root-env.js`
+- **根因**：`lib/http` 比 Demo 根再深两层，到 `apps/llm.ts` 要四层 `../`；三层只爬到模块文件夹，被当成跨小节 import
+- **修复**：该文件改成 `import { getLlmOptional } from "../../../../llm.js"` 和 `from "../../../../load-root-env.js"`
+- **反模式**：从 `lib/http/` 写 `../../../llm.js`（那是模块夹，不是 `apps/`）
+- **关联**：§5.3.12 共享白名单只有 `apps/llm` 与 `apps/load-root-env`；2026-09-12 模块 08 · 03 step-1
+
+### P-020  ·  改动很小仍开新 step-N+1（端口/认知浪费）
+- **触发**：§5.3.14 增量构建规则的字面解读——「每个新教学点 = 新 step-N+1」被当成无例外准则；没判别「改动大小」就开新 step
+- **根因**：§5.3.14 旧版只写「N 动态」「copy + delta」，没明说「改动很小 → 在当前 step 内加页面 + 导航承接」的例外。Agent 缺这条判别，每加东西就开新 step，端口/认知都浪费
+- **修复**：[agents/05-demo.md §5.3.14 「什么时候不开新 step-N+1」](agents/05-demo.md#什么时候不开新-step-n1在当前-step-内加页面--导航承接--2026-09-12-立) — 同一 `lib/flow/` 核心只加可选入参 / 加 UI 控件 / 加判定分支 / 学习者主动说「不要新开 step」→ **不开**新 step 文件夹，在当前 step 内**新增 `public/pages/{场景}.html` + `<PageNav>`** 承接。同一 demo、同一个端口、同一个核心
+- **反模式**：三四个 step 全是「在前一步基础上加一个控件」；每 step 独立端口 + 独立 README + 独立 `scoreVectors` 副本；学习者说「跟前面很像」还硬开新 step；把这种合并当 deviation 写进 MD（应是按新规则走，不是反规则）
+- **关联**：agents/05-demo.md §5.3.14「什么时候不开新 step-N+1」（2026-09-12 立）、AGENTS.md §5.3.3、新规则首次落地模块 08 · 03 余弦相似度（raw + topk + threshold 三 mode 同 step-1 三 page）
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

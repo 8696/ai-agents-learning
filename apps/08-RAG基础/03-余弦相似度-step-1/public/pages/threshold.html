@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>余弦相似度 · ③ Top-K + 阈值弃权（threshold）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/source-texts.js"></script>
+  <script type="text/babel" src="/components/vector-table.js"></script>
+  <script type="text/babel" src="/components/score-column.js"></script>
+  <script type="text/babel" src="/components/output-cards.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { StatusPill, PageIntroThreshold, EnvFooter, PageNav } = window.DemoUI;
+    const { SourceTexts, VectorTable, ScoreColumn, OutputCards } = window.DemoUI;
+
+    const TOTAL_CARDS = 4;
+    const DEFAULT_K = 3;
+    const DEFAULT_THRESHOLD = 0.5;
+    const HIGH_THRESHOLD = 1.5;
+
+    function clampK(raw) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return DEFAULT_K;
+      return Math.min(TOTAL_CARDS, Math.max(1, Math.floor(n)));
+    }
+
+    function clampThreshold(raw) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return DEFAULT_THRESHOLD;
+      return n;
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [k, setK] = useState(DEFAULT_K);
+      const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
+      const [mode, setMode] = useState("default");
+      const [cosine, setCosine] = useState(null);
+      const [dot, setDot] = useState(null);
+      const [euclidean, setEuclidean] = useState(null);
+      const [last, setLast] = useState(null);
+
+      useEffect(function () {
+        window.DemoUtils.fetchHealth().then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      function setModeAndThreshold(next) {
+        setMode(next);
+        if (next === "highThreshold") {
+          setThreshold(HIGH_THRESHOLD);
+        } else if (next === "default") {
+          setThreshold(DEFAULT_THRESHOLD);
+        }
+      }
+
+      async function run(metric, setter) {
+        setBusy(true);
+        setStatus("loading");
+        const body = { metric: metric, k: k, threshold: threshold };
+        const url = "/api/score-threshold";
+        try {
+          const res = await window.DemoUtils.postJson(url, body);
+          const payload = res.ok ? res.data : { ok: false, error: (res.data && res.data.error) || "请求失败" };
+          setter(payload);
+          setLast({ url: url, body: body, status: res.status, ok: res.ok, data: res.data });
+          setStatus(res.ok ? "done" : "error");
+        } catch (error) {
+          const message = error && error.message ? error.message : String(error);
+          setter({ ok: false, error: message });
+          setLast({ url: url, body: body, status: 0, ok: false, data: { error: message } });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const modeHint = mode === "highThreshold"
+        ? `query=[1,0] + 阈值=${HIGH_THRESHOLD}。预期：cosine maxScore=1.0 < ${HIGH_THRESHOLD} 弃权；dot maxScore=10 > ${HIGH_THRESHOLD} 仍 answer；euclidean maxScore=0 < ${HIGH_THRESHOLD} 仍 answer。`
+        : `query=[1,0] + 阈值=${DEFAULT_THRESHOLD}。预期：三侧 maxScore 都过阈值，全 answer。`;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              余弦相似度（Cosine Similarity）· ③ Top-K + 阈值弃权（threshold）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="threshold" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntroThreshold />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <SourceTexts />
+              <div className="text-sm text-gray-700">对应的教学坐标（手写，不是从原文算出来的）</div>
+              <VectorTable />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { setModeAndThreshold("default"); }}
+                >
+                  默认阈值 0.5
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { setModeAndThreshold("highThreshold"); }}
+                >
+                  调高阈值到 1.5（演示弃权）
+                </button>
+                <span className="text-xs text-gray-600 self-center">当前：{modeHint}</span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <ScoreColumn
+                  mode="threshold"
+                  metric="cosine"
+                  hint="点了：query + K + 阈值都生效；余弦并列 1.0 时都过阈值，调高阈值到 1.5 时 maxScore=1.0 < 1.5 弃权。"
+                  buttonLabel="按余弦打分（/api/score-threshold · metric=cosine）"
+                  busy={busy}
+                  result={cosine}
+                  k={k}
+                  threshold={threshold}
+                  totalCards={TOTAL_CARDS}
+                  onKChange={function (v) { setK(clampK(v)); }}
+                  onThresholdChange={function (v) { setThreshold(clampThreshold(v)); }}
+                  onRun={function () { run("cosine", setCosine); }}
+                />
+                <ScoreColumn
+                  mode="threshold"
+                  metric="dot"
+                  hint="点了：点积不除长度；默认阈值时三侧全 answer；阈值 1.5 时 maxScore=10 > 1.5 仍 answer。"
+                  buttonLabel="按点积打分（/api/score-threshold · metric=dot）"
+                  busy={busy}
+                  result={dot}
+                  k={k}
+                  threshold={threshold}
+                  totalCards={TOTAL_CARDS}
+                  onKChange={function (v) { setK(clampK(v)); }}
+                  onThresholdChange={function (v) { setThreshold(clampThreshold(v)); }}
+                  onRun={function () { run("dot", setDot); }}
+                />
+                <ScoreColumn
+                  mode="threshold"
+                  metric="euclidean"
+                  hint="点了：欧氏阈值是上限；阈值 1.5 时 maxScore=0 < 1.5 仍 answer。"
+                  buttonLabel="按欧氏打分（/api/score-threshold · metric=euclidean）"
+                  busy={busy}
+                  result={euclidean}
+                  k={k}
+                  threshold={threshold}
+                  totalCards={TOTAL_CARDS}
+                  onKChange={function (v) { setK(clampK(v)); }}
+                  onThresholdChange={function (v) { setThreshold(clampThreshold(v)); }}
+                  onRun={function () { run("euclidean", setEuclidean); }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { window.DemoUtils.postJson("/api/score-threshold", { metric: "cosine", k: 0 }).catch(function () {}); }}
+                >
+                  K=0 触发（4xx · 第一类错误）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { window.DemoUtils.postJson("/api/score-threshold", { metric: "cosine", cards: [] }).catch(function () {}); }}
+                >
+                  空卡片打分（4xx · 第二类错误）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-xs px-3 py-1.5 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("/api/demo-error", function () {}, {}); }}
+                >
+                  演示上游失败（5xx · 第三类错误 · /api/demo-error）
+                </button>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <OutputCards last={last} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
