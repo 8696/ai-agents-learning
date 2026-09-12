@@ -825,6 +825,7 @@ router.get("/health", (ctx: Context) => {
 - 括号里塞长句子（括注是「一眼能扫到的术语」，不是完整翻译）
 - 关键英文术语不带括注直接消失：`triggered` / `dropped` / `messages` 数组 / `summary` / `history` / `budget` / `output` 这类**概念词必须留英文括注**
 - 「可以保留」清单里的东西被强行翻译：`Key ❌` → `密钥 ❌` ✅；`protocol A` → `协议 A（openai Chat Completions）` ✅；`hasKey` → `密钥`（用户的语义）✅
+- **发明教学分类名当术语（2026-09-12）**：页面上禁止出现「听起来像知识点、其实只是本 Demo 自造」的标签（例：「编号问 / 口语问」——应写成「带货号的问句」「日常说法、库里未必同词的问句」）。假英文括注（`口语问（Spoken Query）`）同样禁止。代码 id 可用 `with-sku` / `paraphrase`；**给人看的字只说场景**。对照根 [AGENTS.md 白话强制](../AGENTS.md)。
 
 **JS 变量名 / API 字段名 / CSS className / HTML id**：**不**改。代码层的 `result.trim.hasKeyFact` / `data.replyTokens` / `id="page-title"` 必须和 API 字段一致才能对得上 — 只在**显示给用户的字符串**里加括注。
 

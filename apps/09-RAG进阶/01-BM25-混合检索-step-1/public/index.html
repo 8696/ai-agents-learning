@@ -4,320 +4,201 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BM25 / 混合检索 · 第一步</title>
-
-  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入 -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-
-  <!-- §5.3.4 强制：React 18.3.1 UMD -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4（classic runtime） -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
-
-  <!-- §5.3.4 强制：共享 JSX 组件（按 utils→components→本页 顺序） -->
   <script type="text/babel" src="components/corpus-list.js"></script>
   <script type="text/babel" src="components/result-row.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // ── 内置语料（与后端 CORPUS 一致，前端用于讲解 ID → 文本映射）──
-    const CORPUS_TEXT = {
-      "sku-8821":      "SKU-8821 路由器专属保修：自激活之日起保修 2 年。配件（电源、网线）保修 1 年。",
-      "sku-8822":      "SKU-8822 路由器专属保修：自激活之日起保修 1 年。属入门款，不在延保范围。",
-      "router-policy": "通用路由器保修政策：所有 SKU 自激活之日起享 1 年基础保修，注册会员后延长至 2 年。",
-      "shipping-damage": "运输破损可补发或退货。签收 48 小时内拍照举证（外包装 + 破损细节）即可办理，无需提供物流证明。",
-      "err-4401":      "ERR-4401：库存锁定失败。请重试一次；若仍失败，请更换支付方式或稍后再试。",
-      "invoice":       "发票默认开个人抬头。如需公司抬头，请在订单备注填写公司全称与税号。",
-    };
-    const EXPECTED = {
-      numbered: "sku-8821",
-      spoken:   "shipping-damage",
-    };
+    const EXAMPLES = [
+      { id: "a", label: "例子 A（带货号）", q: "SKU-8821 保修几年？", expect: "sku-8821", tip: "向量容易漏；BM25 容易中" },
+      { id: "b", label: "例子 B（日常说法）", q: "杯子裂了怎么退？", expect: "shipping-damage", tip: "向量容易中；BM25 容易漏" },
+    ];
 
-    // ── 预设问句（点击填入输入框）──
-    const PRESETS = {
-      numbered: "SKU-8821 保修几年？",
-      spoken:   "杯子裂了怎么退？",
-    };
-
-    // ── 单卡渲染：1 行文本 + 分数 + rank + 该中没中徽标 ──
-    function ResultRow({ row, isHit, scoreLabel }) {
-      return (
-        <li className="border-b last:border-b-0 border-gray-200 py-2">
-          <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
-            <span className="px-2 py-0.5 rounded bg-gray-200">第 {row.rank} 名</span>
-            <span className="font-mono">{row.cardId}</span>
-            {isHit ? (
-              <span className="px-2 py-0.5 rounded bg-green-100 text-green-800">该中的卡 ✓</span>
-            ) : null}
-            <span className="ml-auto font-mono text-gray-700">{scoreLabel}{row.score.toFixed(4)}</span>
-          </div>
-          <div className="text-sm text-gray-800">{CORPUS_TEXT[row.cardId] ?? row.text}</div>
-          {row.matchedTerms && row.matchedTerms.length > 0 ? (
-            <div className="text-xs text-gray-500 mt-1">
-              命中词（matchedTerms）：{row.matchedTerms.join("、")}
-            </div>
-          ) : null}
-        </li>
-      );
-    }
-
-    // ── 一张并排卡（向量侧 或 BM25 侧）──
-    function SideCard({ title, scoreLabel, status, result, expectedCardId, side }) {
+    function Side({ title, scoreLabel, status, result, expect, side }) {
       return (
         <div className="bg-white border border-gray-300 rounded p-3 space-y-2">
-          <div className="text-sm font-semibold text-gray-700">{title}</div>
-          <div className="text-xs text-gray-500">状态：{status}</div>
+          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-xs text-gray-500">{status}</div>
           {!result ? (
             <div className="text-xs text-gray-400">（还没跑）</div>
           ) : (
-            <>
-              <div className="text-xs text-gray-600">
-                请求参数（question）：<span className="font-mono">{result.query}</span>　·
-                截 Top-K（topK）：{result.topK}
-                {result.embeddingModel ? ` · 嵌入模型（embeddingModel）：${result.embeddingModel}` : null}
-              </div>
-              {result.tokens ? (
-                <div className="text-xs text-gray-600">
-                  切出来的词（tokens）：<span className="font-mono">{result.tokens.join(" / ")}</span>
-                </div>
-              ) : null}
-              <ol className="text-sm">
-                {result.rows.map((row) => (
-                  <DemoUI.ResultRow
-                    key={row.cardId}
-                    row={row}
-                    scoreLabel={scoreLabel}
-                    side={side}
-                    isHit={row.cardId === expectedCardId}
-                    queryTokens={result.tokens || []}
-                  />
-                ))}
-              </ol>
-              <div className="text-xs text-gray-500 mt-1">
-                {result.rows.find((r) => r.cardId === expectedCardId)
-                  ? `期望命中的卡「${expectedCardId}」出现在第 ${result.rows.find((r) => r.cardId === expectedCardId).rank} 名`
-                  : `期望命中的卡「${expectedCardId}」未进入 Top-K（${result.topK}）`}
-              </div>
-            </>
+            <ol className="list-none space-y-0">
+              {result.rows.map((row) => (
+                <DemoUI.ResultRow
+                  key={row.cardId}
+                  row={row}
+                  scoreLabel={scoreLabel}
+                  side={side}
+                  isHit={row.cardId === expect}
+                  queryTokens={result.tokens || []}
+                />
+              ))}
+            </ol>
           )}
         </div>
       );
     }
 
-    // ── 一个对照实验（问句 + 两个按钮 + 两张并排卡）──
-    function ExperimentBlock({ title, presetKey, defaultQuery, expectedCardId }) {
-      const [question, setQuestion] = useState(defaultQuery);
-      const [vectorResult, setVectorResult] = useState(null);
-      const [bm25Result, setBm25Result] = useState(null);
-      const [vectorStatus, setVectorStatus] = useState("⏸ 待连接");
-      const [bm25Status, setBm25Status] = useState("⏸ 待连接");
-
-      async function run(side) {
-        if (side === "vector") {
-          setVectorStatus("🔄 请求中");
-          try {
-            const response = await fetch("/api/search-vector", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ question }),
-            });
-            const json = await response.json();
-            if (!json.ok) {
-              setVectorStatus(`❌ 错误 · ${json.error || "未知"}`);
-              return;
-            }
-            setVectorResult(json.result);
-            setVectorStatus("✅ 完成");
-          } catch (error) {
-            setVectorStatus(`❌ 错误 · ${String(error)}`);
-          }
-        } else {
-          setBm25Status("🔄 请求中");
-          try {
-            const response = await fetch("/api/search-bm25", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ question }),
-            });
-            const json = await response.json();
-            if (!json.ok) {
-              setBm25Status(`❌ 错误 · ${json.error || "未知"}`);
-              return;
-            }
-            setBm25Result(json.result);
-            setBm25Status("✅ 完成");
-          } catch (error) {
-            setBm25Status(`❌ 错误 · ${String(error)}`);
-          }
-        }
-      }
-
-      return (
-        <section className="bg-gray-50 border border-gray-200 rounded p-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-            <button
-              className="text-xs px-2 py-1 border border-gray-300 rounded bg-white hover:bg-gray-100"
-              onClick={() => { setQuestion(PRESETS[presetKey]); setVectorResult(null); setBm25Result(null); setVectorStatus("⏸ 待连接"); setBm25Status("⏸ 待连接"); }}
-            >
-              用预设问句（{presetKey === "numbered" ? "编号" : "口语"}）
-            </button>
-            <input
-              className="flex-1 min-w-[180px] border border-gray-300 rounded px-2 py-1 text-sm"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="改问句（两按钮各自再点一次重跑）"
-            />
-            <button
-              className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
-              onClick={() => run("vector")}
-            >
-              跑向量检索（Dense Retrieval · /api/search-vector）
-            </button>
-            <button
-              className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
-              onClick={() => run("bm25")}
-            >
-              跑 BM25（关键词 · /api/search-bm25）
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <SideCard
-              title="向量侧 · 余弦相似度（Cosine Similarity）"
-              scoreLabel="余弦（cosine）="
-              status={vectorStatus}
-              result={vectorResult}
-              expectedCardId={expectedCardId}
-              side="vector"
-            />
-            <SideCard
-              title="BM25 侧 · 关键词打分"
-              scoreLabel="BM25 分="
-              status={bm25Status}
-              result={bm25Result}
-              expectedCardId={expectedCardId}
-              side="bm25"
-            />
-          </div>
-        </section>
-      );
-    }
-
-    // ── 主组件 ──
     function App() {
       const [env, setEnv] = useState({ port: 50087, provider: "—", model: "—", embeddingModel: "—", hasKey: false, callsModel: true });
       const [corpus, setCorpus] = useState(null);
+      const [exampleId, setExampleId] = useState("a");
+      const [question, setQuestion] = useState(EXAMPLES[0].q);
+      const [expect, setExpect] = useState(EXAMPLES[0].expect);
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待跑");
+      const [errorText, setErrorText] = useState("");
+      const [vector, setVector] = useState(null);
+      const [bm25, setBm25] = useState(null);
 
       useEffect(() => {
-        fetch("/health").then((r) => r.json()).then((data) => {
+        fetch("/health").then((r) => r.json()).then((d) => {
           setEnv({
-            port: data.port,
-            provider: data.provider ?? "—",
-            model: data.model ?? "—",
-            embeddingModel: data.embeddingModel ?? "—",
-            hasKey: Boolean(data.hasKey),
-            callsModel: Boolean(data.callsModel),
+            port: d.port,
+            provider: d.provider ?? "—",
+            model: d.model ?? "—",
+            embeddingModel: d.embeddingModel ?? "—",
+            hasKey: Boolean(d.hasKey),
+            callsModel: Boolean(d.callsModel),
           });
         }).catch(() => {});
-        fetch("/api/corpus").then((r) => r.json()).then((data) => {
-          if (data.ok) setCorpus(data.result);
+        fetch("/api/corpus").then((r) => r.json()).then((d) => {
+          if (d.ok) setCorpus(d.result);
         }).catch(() => {});
       }, []);
 
+      function pickExample(ex) {
+        setExampleId(ex.id);
+        setQuestion(ex.q);
+        setExpect(ex.expect);
+        setVector(null);
+        setBm25(null);
+        setErrorText("");
+        setStatus("⏸ 待跑");
+      }
+
+      async function run(which) {
+        if (!question.trim()) {
+          setStatus("❌ 错误");
+          setErrorText("问句不能为空");
+          return;
+        }
+        setBusy(true);
+        setStatus("🔄 请求中");
+        setErrorText("");
+        const url = which === "vector" ? "/api/search-vector" : "/api/search-bm25";
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question }),
+          });
+          const json = await response.json();
+          if (!json.ok) {
+            setStatus("❌ 错误");
+            setErrorText(json.error || "请求失败");
+            return;
+          }
+          if (which === "vector") setVector(json.result);
+          else setBm25(json.result);
+          setStatus("✅ 完成");
+        } catch (e) {
+          setStatus("❌ 错误");
+          setErrorText(String(e));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const tip = EXAMPLES.find((e) => e.id === exampleId)?.tip || "";
+
       return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
-            <h1 id="page-title" className="text-xl font-semibold">
-              BM25 / 混合检索（Hybrid Retrieval） · 第一步（step-1） · 同一问句，向量与 BM25 分请求对照
+        <div className="min-h-screen bg-gray-50">
+          <header id="page-header" className="border-b p-4 bg-white flex justify-between items-center">
+            <h1 id="page-title" className="text-lg font-semibold">
+              BM25 / 混合检索 · 第一步（step-1）· 向量 vs BM25
             </h1>
-            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">
-              {env.hasKey ? "🔑 密钥 ✅" : "❌ 密钥 ❌"}
+            <span id="status-pill" className={"text-xs px-2 py-1 rounded " + (status.startsWith("❌") ? "bg-red-100 text-red-800" : "bg-gray-200")}>
+              {status}
             </span>
           </header>
 
-          <main id="page-main" className="container mx-auto p-4 space-y-4">
+          <main id="page-main" className="max-w-5xl mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">
-                本页只演示：<b>同一库、同一问句、向量侧与 BM25 侧各发一次请求，对照 Top-K 差异</b>。
-                编号问（Numbered Query）应该看到「向量漏、BM25 中」；口语问（Spoken Query）应该看到「向量中、BM25 漏」。
+                同一库、同一问题，分别走<strong>向量</strong>和 <strong>BM25</strong>，看谁能捞到该中的卡。
               </p>
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-                <li>改问句或用预设 → 点「跑向量检索」/「跑 BM25」（两个独立 HTTP 请求）</li>
-                <li>服务端：向量侧真发嵌入模型拿 query 向量，算余弦相似度；BM25 侧纯本地 tokenize + 打分</li>
-                <li>两栏并排卡片：卡片含 Top-K 排名 + 分数 + 匹配方式徽标（cos=…·方向接近 / 命中词）+ 该中的卡是否进了名单</li>
+                <li>选一个例子（或自己改问题）</li>
+                <li>分别点「跑向量」「跑 BM25」（两次独立请求）</li>
+                <li>看两边 Top-K：绿标「该中的卡」进没进名单</li>
               </ol>
-
-              {/* §5.3.11.b 核心教学点卡片（强制） */}
-              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
-                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
-                <div className="text-xs text-gray-800">
-                  <b>向量不擅长必须对上的字</b>（编号 / 专名 / 错误码），会把差异抹平；<b>BM25 靠稀有词把那张卡捞进名单</b>。
-                  口语同义没有共同词，只留 BM25 会空手。
-                </div>
-                <div className="text-xs text-gray-600">
-                  怎么看：编号问「SKU-8821 保修几年？」向量 Top-K 第一名应该<b>不是</b> sku-8821；BM25 Top-1 应该是 sku-8821。
-                  口语问「杯子裂了怎么退？」向量 Top-1 应该是 shipping-damage；BM25 应该接近 0、shipping-damage 不进 Top-K。
-                </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
+                <div className="font-semibold text-yellow-900">本页核心</div>
+                <div>货号必须对上字 → 向量常漏、BM25 常中。日常说法字面不同 → 反过来。</div>
               </div>
             </section>
 
-            <section id="corpus-panel" className="bg-white shadow rounded p-4 space-y-2">
-              <div className="text-sm font-semibold text-gray-700">向量库一览（6 条语料卡 · 内存中，重启即丢）</div>
-              <div className="text-xs text-gray-500">
-                加载时拉 <span className="font-mono">GET /api/corpus</span>。第一次点「跑向量检索」前 cached=false（还没人嵌过）；点一次后变 cached=true，每行显示向量前 8 维 + L2 norm（向量长度）。
-              </div>
+            <section className="bg-white shadow rounded p-4 space-y-2">
+              <div className="text-sm font-semibold">知识库（6 张卡）</div>
               <DemoUI.CorpusList corpus={corpus} />
             </section>
 
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <div className="text-sm text-gray-500">
-                实验区（两个对照实验，<b>共 4 次独立请求</b>——两个实验 × 两个按钮）：
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex.id}
+                    className={"text-xs px-2 py-1 rounded border " + (exampleId === ex.id ? "bg-blue-600 text-white border-blue-600" : "bg-white")}
+                    onClick={() => pickExample(ex)}
+                  >
+                    {ex.label}
+                  </button>
+                ))}
               </div>
-              <ExperimentBlock
-                title="实验 1 · 编号问（Numbered Query · 含 SKU-8821）"
-                presetKey="numbered"
-                defaultQuery={PRESETS.numbered}
-                expectedCardId={EXPECTED.numbered}
+              <div className="text-xs text-gray-500">当前例子预期：{tip}</div>
+              <input
+                className="w-full border rounded px-2 py-1 text-sm"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="输入要搜的问题"
               />
-              <ExperimentBlock
-                title="实验 2 · 口语问（Spoken Query · 不含共同词）"
-                presetKey="spoken"
-                defaultQuery={PRESETS.spoken}
-                expectedCardId={EXPECTED.spoken}
-              />
+              <div className="flex flex-wrap gap-2">
+                <button className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50" disabled={busy} onClick={() => run("vector")}>
+                  跑向量（/api/search-vector）
+                </button>
+                <button className="text-sm px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50" disabled={busy} onClick={() => run("bm25")}>
+                  跑 BM25（/api/search-bm25）
+                </button>
+              </div>
+              {errorText ? <div className="text-xs text-red-700">{errorText}</div> : null}
             </section>
 
-            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-3">
-              <div className="text-sm font-semibold text-gray-700">结果区（上方两个实验卡片里已并排显示每侧的 Top-K）</div>
-              <div className="text-xs text-gray-600">
-                绿色徽标「该中的卡 ✓」= 当前实验下你期望命中的那张卡进了 Top-K。编号问期望命中 sku-8821；口语问期望命中 shipping-damage。
-              </div>
-              <div className="text-xs text-gray-500">
-                失败语义：4xx（空输入 / JSON 错）+ 5xx（嵌入接口失败 / 服务异常）—— 页面右上角的状态徽标 + 卡片状态栏标 ❌。
-              </div>
+            <section id="output" className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Side title="向量侧" scoreLabel="余弦=" status={vector ? "✅" : "⏸"} result={vector} expect={expect} side="vector" />
+              <Side title="BM25 侧" scoreLabel="BM25=" status={bm25 ? "✅" : "⏸"} result={bm25} expect={expect} side="bm25" />
             </section>
           </main>
 
           <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
             <span id="env-info">
-              端口 {env.port} · 协议 A · 模型服务商 {env.provider} · 模型 {env.model} · 嵌入模型 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"} · 会调模型 {env.callsModel ? "✅" : "❌"}
+              端口 {env.port} · {env.provider} · {env.model} · 嵌入 {env.embeddingModel} · 密钥 {env.hasKey ? "✅" : "❌"} · 调模型 {env.callsModel ? "✅" : "❌"}
             </span>
           </footer>
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
   </script>
 </body>
 </html>

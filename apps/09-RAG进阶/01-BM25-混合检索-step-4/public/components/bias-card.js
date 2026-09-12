@@ -5,9 +5,9 @@
 window.DemoUI = window.DemoUI || {};
 
 function categoryBadge(category) {
-  if (category === "numbered") return { text: "纯编号问", className: "bg-purple-100 text-purple-800" };
-  if (category === "spoken") return { text: "纯口语问", className: "bg-blue-100 text-blue-800" };
-  if (category === "mixed") return { text: "编号 + 口语", className: "bg-green-100 text-green-800" };
+  if (category === "numbered") return { text: "偏货号类", className: "bg-purple-100 text-purple-800" };
+  if (category === "spoken") return { text: "偏日常说法", className: "bg-blue-100 text-blue-800" };
+  if (category === "mixed") return { text: "两类都有", className: "bg-green-100 text-green-800" };
   return { text: "未分类", className: "bg-gray-200 text-gray-700" };
 }
 

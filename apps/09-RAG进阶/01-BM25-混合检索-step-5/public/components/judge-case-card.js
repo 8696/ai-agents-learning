@@ -46,22 +46,20 @@ window.DemoUI.JudgeCaseCard = function JudgeCaseCard({ caseItem, onRun, busy, re
             onRun(caseItem.id);
           },
         },
-        "跑本条判定（/api/judge-run · one）",
+        "跑本条",
       ),
     ),
     React.createElement(
       "div",
       { className: "text-xs text-gray-700" },
-      "问句（question）：",
+      "问题：",
       React.createElement("span", { className: "font-mono" }, caseItem.question),
     ),
     React.createElement("div", { className: "text-xs text-gray-600" }, caseItem.explain),
     React.createElement(
       "div",
       { className: "text-xs text-gray-500" },
-      "规则（rule）：",
-      caseItem.rule,
-      " · 期望（expectTop1）：",
+      "期望 Top-1：",
       React.createElement("span", { className: "font-mono" }, String(caseItem.expectTop1)),
     ),
     result
