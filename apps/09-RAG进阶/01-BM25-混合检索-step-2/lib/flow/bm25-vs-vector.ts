@@ -148,7 +148,8 @@ export async function searchByBm25(input: { query: string; topK?: number }): Pro
     args: { query, topK },
     code: "searchByBm25({ query, topK })",
     run: async () => {
-      const scored = bm25Score(query, CORPUS as KnowledgeCard[]);
+      // step-2 改用 jieba 模式：中文按语义词切（生产 BM25 中文场景的标准做法）
+      const scored = bm25Score(query, CORPUS as KnowledgeCard[], { mode: "jieba" });
       return {
         query,
         topK,

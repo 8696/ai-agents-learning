@@ -125,19 +125,22 @@ window.DemoUI.TokenizeCompare = function TokenizeCompare({
     React.createElement(
       "div",
       { className: "text-xs text-gray-600" },
-      "教学点：「",
+      "教学点：同一问句、同一 BM25 公式，只换切词：",
       React.createElement("code", { className: "font-mono" }, "keep-dash"),
-      "」把 ",
+      " 把 ",
       React.createElement("code", { className: "font-mono" }, "SKU-8821"),
-      " 当 1 个 token（IDF 极高 → BM25 中）；「",
+      " 当 1 个 token（编号整词保留），但中文按字切；",
       React.createElement("code", { className: "font-mono" }, "split-chars"),
-      "」撕成 8 个单字（编号被撕碎 → BM25 通道退化）。同一问句、同 BM25公式，排名变了。",
+      " 撕成单字（编号 + 中文都废）；",
+      React.createElement("code", { className: "font-mono" }, "jieba"),
+      " 按语义词切中文（如「保修」「几年」一个词），且保留英文编号整词——这一档是真实生产 BM25 中文场景的标准做法。",
     ),
     React.createElement(
       "div",
-      { className: "grid grid-cols-1 md:grid-cols-2 gap-3" },
-      renderSide("保留连字符（keep-dash）", result ? result.keepDash : null),
+      { className: "grid grid-cols-1 md:grid-cols-3 gap-3" },
+      renderSide("按整词保留（keep-dash）", result ? result.keepDash : null),
       renderSide("撕成单字（split-chars）", result ? result.splitChars : null),
+      renderSide("按 jieba 语义切（jieba）", result ? result.jieba : null),
     ),
   );
 };

@@ -118,6 +118,7 @@
     "koa": "^2.15.3",
     "koa-body": "^8.0.1",
     "koa-static": "^5.0.0",
+    "nodejieba": "^3.5.8",
     "openai": "^4.85.4",
     "pdf-parse": "^2.4.5",
     "wink-bm25-text-search": "^3.1.2",

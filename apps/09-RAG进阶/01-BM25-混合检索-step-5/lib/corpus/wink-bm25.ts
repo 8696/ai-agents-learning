@@ -1,6 +1,6 @@
 /**
  * 职责：用成熟库 wink-bm25-text-search 建内存索引、按问句搜 Top-K。
- *       切词故意复用本条手写 tokenize（keep-dash），避免「两边结论不同只因切词不同」。
+ *       切词故意复用本条手写 tokenize（jieba 语义切），避免「两边结论不同只因切词不同」。
  *
  * 数据流：CORPUS → addDoc → consolidate → search(query) → [{cardId, score, rank}]
  *
@@ -54,7 +54,8 @@ function ensureEngine(): WinkEngine {
     fldWeights: { text: 1 },
     bm25Params: { k1: 1.5, b: 0.75, k: 1 },
   });
-  engine.definePrepTasks([(text: string) => tokenize(text, "keep-dash")]);
+  // step-5 改用 jieba 语义切：与手写侧 tokenize 保持一致（同一库、同一问句、同一套切词）
+  engine.definePrepTasks([(text: string) => tokenize(text, "jieba")]);
   for (const card of CORPUS) {
     engine.addDoc({ text: card.text }, card.id);
   }

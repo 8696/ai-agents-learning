@@ -19,7 +19,7 @@ export function mountSearchBm25Variant(router: Router): void {
     logger.info(
       "search-bm25-variant",
       "调用函数开始：POST /api/search-bm25-variant",
-      "提问入口。里面两次 BM25（mode=keep-dash vs split-chars）→ 两份 Top-K。",
+      "提问入口。里面三次 BM25（mode=keep-dash vs split-chars vs jieba）→ 三份 Top-K。jieba 是按语义切，对应生产 BM25 中文场景的标准做法。",
       { 入参: jsonBody(ctx), __code: "bm25Variant({ question, topK })" },
     );
     try {
@@ -34,7 +34,7 @@ export function mountSearchBm25Variant(router: Router): void {
       logger.info(
         "search-bm25-variant",
         "调用函数结束：POST /api/search-bm25-variant",
-        "切词对照结果已出；前端将两表并排展示。",
+        "切词对照结果已出；前端将三表并排展示（按整词保留 / 撕成单字 / 按 jieba 语义切）。",
         { 返回值: result, 耗时ms: Date.now() - started },
       );
       ctx.body = { ok: true, result };

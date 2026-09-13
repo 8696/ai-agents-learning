@@ -48,6 +48,8 @@ export type HybridSearchResult = {
   /** 两侧召回的 Top-N（用于对照展示） */
   vectorTopN: SearchRow[];
   bm25TopN: SearchRow[];
+  /** BM25 侧切词后的 tokens（jieba 语义切；教学点：让学习者看见 BM25 通道的输入） */
+  bm25Tokens: string[];
   rows: HybridRow[];
 };
 
@@ -167,6 +169,7 @@ export async function searchHybrid(input: HybridInput): Promise<HybridSearchResu
         normalize,
         vectorTopN,
         bm25TopN,
+        bm25Tokens: bm25Out.tokens,
         rows: rows.slice(0, topK),
       };
     },

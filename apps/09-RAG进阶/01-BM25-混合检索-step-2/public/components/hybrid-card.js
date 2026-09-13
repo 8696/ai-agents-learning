@@ -41,6 +41,17 @@ window.DemoUI.HybridCard = function HybridCard({ title, status, result, expected
             " · 拉齐（normalize）：",
             result.normalize ? "✅" : "❌（未拉齐）",
           ),
+          result.bm25Tokens && result.bm25Tokens.length > 0
+            ? React.createElement(
+                "div",
+                { className: "text-xs text-gray-600 mt-1" },
+                "BM25 侧切词（jieba 语义切）：",
+                React.createElement("span", { className: "font-mono ml-1" }, result.bm25Tokens.join(" / ")),
+                " · 共 ",
+                result.bm25Tokens.length,
+                " 个",
+              )
+            : null,
           React.createElement(
             "div",
             { className: "text-xs text-gray-600 mt-1" },

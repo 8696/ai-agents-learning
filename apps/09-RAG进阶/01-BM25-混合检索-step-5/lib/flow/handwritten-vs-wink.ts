@@ -94,15 +94,15 @@ export async function compareOnce(query: string, topK = 5): Promise<CompareResul
     name: "bm25Score（手写）",
     explain: "为什么写这条日志：手写教学版 BM25，对照库侧用。当前：本地对 CORPUS 打分。",
     args: { query, topK, cards: CORPUS.map((c) => c.id) },
-    code: "const out = bm25Score(query, CORPUS);",
-    run: async () => bm25Score(query, CORPUS),
+    code: "const out = bm25Score(query, CORPUS, { mode: \"jieba\" });",
+    run: async () => bm25Score(query, CORPUS, { mode: "jieba" }),
   });
 
   const winkRaw = await withCall({
     scope: "│ 调用函数-searchByWink",
     kind: "函数",
     name: "searchByWink（wink-bm25-text-search）",
-    explain: "为什么写这条日志：成熟库侧搜索；建索引时用 definePrepTasks 注入同一套 keep-dash，但 search 只回 id+分数。当前：内存索引已 consolidate。",
+    explain: "为什么写这条日志：成熟库侧搜索；建索引时用 definePrepTasks 注入同一套 jieba 切词，但 search 只回 id+分数。当前：内存索引已 consolidate。",
     args: { query, topK },
     code: "const out = searchByWink(query, topK);",
     run: async () => searchByWink(query, topK),

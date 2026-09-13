@@ -1,37 +1,60 @@
 /**
- * 职责：BM25 关键词打分 + 切词模式（变体 8：保留连字符 vs 撕单字）。
- *       教学版：k1=1.5, b=0.75；不算文档长度也行，本 demo 卡都短，长度归一影响很小。
+ * 职责：BM25 关键词打分 + 三档切词模式（变体 8：按整词保留 / 撕成单字 / 按语义切）。
+ *       教学版：k1=1.5, b=0.75；本 demo 卡都短，文档长度归一影响很小。
  *
- * 为什么这样切：
- *   - 英文空格天然词边界；中文按字符切会把 `SKU-8821` 撕碎；
- *   - 本 demo 只演示「编号能不能被对上」，所以保留连字符 / 点号作为词的延续；
- *   - 中文连续字不做分词库切（jieba 等要预装依赖，教学上不必要）。
- *
- * 切词模式：
- *   - `keep-dash`（默认）：保留连字符 / 点号作为词的延续（如 `SKU-8821` 整体一个 token）
- *   - `split-chars`：连字符 / 点号都拆成单字符（如 `SKU-8821` → `S,K,U,-,8,8,2,1`，编号被撕碎）
+ * 三档切词模式（同一问句、同一 CORPUS、同一 BM25 公式，只换切词 → 排名会变）：
+ *   - `keep-dash`（按整词保留）：英文 / 数字 / 连字符 / 点号作为整段（如 `SKU-8821` 一个 token）；
+ *     中文按单字切（教学极端对照用）。
+ *   - `split-chars`（撕成单字）：英文 / 数字 / 连字符 / 中文都按单字切
+ *     （如 `SKU-8821` → 8 个单字、`保修` → `保`、`修`）。
+ *   - `jieba`（按语义切）：用 nodejieba 切中文（如「保修」「几年」一个词），
+ *     英文 / 数字 / 连字符作为整段。这一档是真实生产 BM25 中文场景的标准做法。
  *
  * 数据流：query + mode → tokenize → 对每张卡算 BM25 → 排序 → Top-K
  */
 import type { KnowledgeCard } from "./knowledge-base.js";
+// nodejieba 是 CJS 原生模块（d.ts 写的 ESM 风格是声明与运行时不一致）。
+// ESM 下用 default import 拿整个模块对象，再走 jieba.cut。
+import jieba from "nodejieba";
 
-export type TokenizeMode = "keep-dash" | "split-chars";
+export type TokenizeMode = "keep-dash" | "split-chars" | "jieba";
 
 /** 教学版 BM25 参数（经典默认） */
 const K1 = 1.5;
 const B = 0.75;
 
+/** 仅匹配空白与中文标点的分隔符（jieba 模式不用它——jieba 自己处理空白与标点） */
+const WHITESPACE_AND_CJK_PUNCT = /[\s　、。，！？《》（）：；]+/;
+/** keep-dash 不拆连字符 / 点号；split-chars 连字符 / 点号 / 下划线都拆 */
+const WHITESPACE_AND_PUNCT_SPLIT_DASH = /[\s　、。，！？《》（）：；\-._]+/;
+
 /**
- * 切词：
- *   - mode="keep-dash"：保留连字符 / 点号 / 字母数字混合（如 SKU-8821 / ERR-4401 / v1.2.3）。
- *     中文按单字切。英文 / 数字按空白 / 标点切。
- *   - mode="split-chars"：把连字符 / 点号 / 下划线也单独拆出来（如 `SKU-8821` → `S,K,U,-,8,8,2,1`）。
+ * 切词。
+ *
+ * - mode="keep-dash"：英文 / 数字 / 连字符 / 点号作为整段；中文按单字。
+ * - mode="split-chars"：所有字符按单字切（包括 `SKU-8821` → 8 个单字、中文每个字一个 token）。
+ * - mode="jieba"：整段交给 nodejieba 切——中文按语义词（如「保修」「几年」一个词），
+ *   英文 / 数字 / 连字符作为整段保留；过滤掉纯空白 / 纯中文标点的 token。
  */
 export function tokenize(text: string, mode: TokenizeMode = "keep-dash"): string[] {
+  if (mode === "jieba") {
+    // jieba 默认会把英文/数字按字符切（不是按词），所以：
+    //   ① 先用正则把英文 / 数字 / 连字符 / 点号 / 下划线作为整段抽出来
+    //   ② 中文段交给 jieba 按语义词切（如「保修」「几年」）
+    //   ③ 合并；过滤掉纯空白 / 纯中文标点
+    const engTokens = text.match(/[A-Za-z0-9._-]+/g) ?? [];
+    const cnOnly = text.replace(/[A-Za-z0-9._-]+/g, " ");
+    const jiebaTokens: string[] = jieba.cut(cnOnly, false);
+    const cnFiltered = jiebaTokens.filter((tk) => {
+      if (!tk) return false;
+      return !/^[\s　、。，！？《》（）：；]+$/.test(tk);
+    });
+    return [...engTokens, ...cnFiltered];
+  }
+
   const tokens: string[] = [];
-  const splitRegex = mode === "split-chars"
-    ? /[\s　、。，！？《》（）：；\-._]+/
-    : /[\s　、。，！？《》（）：；]+/;
+  const splitRegex =
+    mode === "split-chars" ? WHITESPACE_AND_PUNCT_SPLIT_DASH : WHITESPACE_AND_CJK_PUNCT;
   const parts = text.split(splitRegex);
   for (const part of parts) {
     if (!part) continue;
@@ -51,11 +74,11 @@ export function tokenize(text: string, mode: TokenizeMode = "keep-dash"): string
   return tokens;
 }
 
-/** 文档频率（df）：某个词出现在多少张卡（基于默认 tokenize） */
-function docFreq(cards: KnowledgeCard[], term: string): number {
+/** 文档频率（df）：某个词出现在多少张卡（按当前 mode 切——这样三档切词的 IDF 各自正确） */
+function docFreq(cards: KnowledgeCard[], term: string, mode: TokenizeMode): number {
   let n = 0;
   for (const card of cards) {
-    if (tokenize(card.text).includes(term)) n += 1;
+    if (tokenize(card.text, mode).includes(term)) n += 1;
   }
   return n;
 }
@@ -99,7 +122,7 @@ export function bm25Score(
   const N = cards.length;
   const idf = new Map<string, number>();
   for (const term of queryTokens) {
-    const df = docFreq(cards, term);
+    const df = docFreq(cards, term, mode);
     // IDF = ln((N - df + 0.5) / (df + 0.5) + 1)  —— 加 1 防负（经典 BM25+ 写法）
     idf.set(term, Math.log((N - df + 0.5) / (df + 0.5) + 1));
   }
