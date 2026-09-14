@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>重排序 · 第三步 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="utils/api-client.js"></script>
+  <script type="text/babel" src="components/layout.js"></script>
+  <script type="text/babel" src="components/page-nav.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    // 本页教学点：step-3 总览。评测集 + 命中率主流程。
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter } = window.DemoUI;
+    const { fetchJson } = window.DemoUtils;
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      useEffect(function () {
+        fetchJson("/health").then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              重排序（Rerank） · 第三步（step-3） · 总览
+            </h1>
+            <StatusPill status={env ? "idle" : "loading"} />
+          </header>
+
+          <main id="page-main" className="max-w-7xl mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>评测集 + 命中率 —— 同一份 20 条问句跑三种 pipeline，看平均命中率对照</b>。
+                单问句演示（step-1 / step-2）讲「这一个问句答得好不好」；评测集讲「<b>这一批问句平均答得好不好</b>」——产品决策靠均值，不靠单点。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>打开页面：服务端把 20 条评测问句准备好。</li>
+                <li>点进「评测集 + 命中率」：选 pipeline + K，跑 20 条，看命中率汇总 + 每条详情。</li>
+                <li>对照三种 pipeline：召回 only / 召回 + Pointwise mock / 召回 + Listwise mock。</li>
+              </ol>
+              <div className="border border-amber-300 bg-amber-50 rounded p-3 text-xs text-amber-900">
+                <span className="font-semibold">⚠ 精排是 mock：</span>
+                本步教学点是「评测框架 + 命中率对照」，不是「精排模型」。mock 故意偏向特例 <code>unopened-exception</code>，保证召回 vs 精排有清晰对照。
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <p className="text-sm font-semibold text-gray-900">
+                  单问句演示讲「这一个答得好不好」，评测集讲「这一批平均答得好不好」——后者才是产品决策依据。
+                </p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">进评测页</h2>
+              <a
+                href="pages/eval.html"
+                className="block border border-gray-300 rounded p-4 bg-gray-50 hover:bg-blue-50 hover:border-blue-400"
+              >
+                <div className="text-sm font-semibold text-gray-900">① 评测集 + 命中率</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  跑 20 条问句 → 三种 pipeline 对照命中率 → 三档难度（简单 / 中等 / 难）分桶统计
+                </div>
+              </a>
+            </section>
+
+            {/* §5.3.4 / §5.3.10：导航总览也要有 #output */}
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2">
+              <h2 className="text-sm font-semibold">数据流</h2>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap bg-gray-50 border border-gray-200 rounded p-3">
+{`打开页面
+  → GET /health              取环境
+  → GET /api/eval-set        取 20 条评测问句 + 标注
+  → 选 pipeline + K → POST /api/eval-run
+       ├─ recall           召回 only，按 coarseScore 取 Top-K
+       ├─ recall+pointwise mock：特例 0.95，其他按粗召回分
+       └─ recall+listwise  mock：按粗召回分降序出 orderedIds
+  → 返 { summary, rows }
+       summary：hitRate + byDifficulty（simple/medium/hard）
+       rows：每条的 recallRank / finalRank / hit / missReason`}
+              </pre>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

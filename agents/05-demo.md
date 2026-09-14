@@ -536,6 +536,31 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
   ```
 - **类型**：HTML 内联 JS 不走 TS；无类型检查。状态/事件处理写注释解释意图。
 
+- **JSX attribute 三种合法写法**（避坑 · 2026-09-14 立）：
+
+  | 写法 | 含义 |
+  |---|---|
+  | `attr="literal"` | 只能是字符串字面量。**不能**写 `attr="a" + b.cls` —— parser 把 `"a"` 当 attribute 值结束，再看 `+ b.cls` 就报 `Unexpected token` |
+  | `attr={expression}` | 任意 JS 表达式（拼接 / 函数调用 / 三元都行） |
+  | `attr={"literal"}` | 用表达式包裹字符串 |
+
+- **JSX 报错直接调 `@babel/parser` 定位**（避坑 · 2026-09-14 立 · 不要反复 Edit 绕路）：
+
+  `check-demo` 失败给的是 `Unexpected token (行:列)`，不要凭这个猜。**直接用 `apps/node_modules/@babel/parser` 跑同一个配置拿精确位置**，30 秒定位：
+
+  ```bash
+  cd apps && node -e '
+  const fs = require("fs");
+  const parser = require("@babel/parser");
+  const html = fs.readFileSync("../apps/<demo>/public/<path>.html", "utf8");
+  const code = html.match(/<script type="text\/babel">([\s\S]*?)<\/script>/)[1];
+  try { parser.parse(code, { sourceType: "script", plugins: ["jsx"] }); console.log("OK"); }
+  catch (e) { console.log("ERR:", e.message); }
+  '
+  ```
+
+  报错如 `Unexpected token (200:79)` = 第 200 行第 79 列。用 `awk` / `lines.slice(69, 100)` 读那一行精确内容。
+
 #### 5.3.7 已写出地清单不写在本文件
 
 新建 / 改端口 / 加 yarn 脚本时：同步 [apps/README.md](../apps/README.md) 表格 + `apps/package.json`。**不要**把条目抄回本节。**不要**写「参照某某 Demo」。

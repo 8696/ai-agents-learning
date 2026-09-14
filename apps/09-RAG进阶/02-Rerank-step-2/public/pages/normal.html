@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>正常对照 · 第一步 · 重排序</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="../utils/api-client.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/corpus-panel.js"></script>
+  <script type="text/babel" src="../components/query-panel.js"></script>
+  <script type="text/babel" src="../components/pipeline-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    // 本页教学点：① 正常对照。粗召回从整库捞 6 条，特例上桌但通常不第一；
+    // 精排看见「没拆 + 超过」两个约束，把特例抬上来。
+    const { useState, useEffect } = React;
+    const { StatusPill, PageIntro, EnvFooter, PageNav } = window.DemoUI;
+    const { CorpusPanel, QueryPanel, PipelineBoard } = window.DemoUI;
+    const { fetchJson } = window.DemoUtils;
+
+    function formatError(error) {
+      const status = error.status ? error.status + " " : "";
+      const hint = error.hint ? " · " + error.hint : "";
+      return status + error.message + hint;
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [chunks, setChunks] = useState([]);
+      const [corpusLoading, setCorpusLoading] = useState(true);
+      const [corpusError, setCorpusError] = useState("");
+      const [query, setQuery] = useState("超过 7 天了，盒子没拆，还能退吗？");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [request, setRequest] = useState(null);
+      const [recall, setRecall] = useState(null);
+      const [rerank, setRerank] = useState(null);
+
+      useEffect(function () {
+        fetchJson("/health")
+          .then(function (body) { setEnv(body); setStatus("idle"); })
+          .catch(function () { setEnv(null); });
+        fetchJson("/api/corpus")
+          .then(function (body) {
+            setChunks(body.chunks || []);
+            if (body.defaultQuery) setQuery(body.defaultQuery);
+            setCorpusLoading(false);
+          })
+          .catch(function (err) {
+            setCorpusError(formatError(err));
+            setCorpusLoading(false);
+          });
+      }, []);
+
+      function onQueryChange(next) {
+        setQuery(next);
+        setRecall(null);
+        setRerank(null);
+      }
+
+      async function onRecall() {
+        setStatus("loading");
+        setError("");
+        setRerank(null);
+        const payload = { query: query, limit: 6 };
+        setRequest({ path: "POST /api/recall", body: payload });
+        try {
+          const body = await fetchJson("/api/recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          setRecall(body);
+          setStatus("done");
+        } catch (err) {
+          setRecall(null);
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      async function onRerank() {
+        if (!recall) return;
+        setStatus("loading");
+        setError("");
+        const recallRankById = {};
+        const coarseScoreById = {};
+        recall.rows.forEach(function (row) {
+          recallRankById[row.chunk.id] = row.recallRank;
+          coarseScoreById[row.chunk.id] = row.coarseScore;
+        });
+        const payload = {
+          query: query,
+          candidateIds: recall.rows.map(function (row) { return row.chunk.id; }),
+          recallRankById: recallRankById,
+          coarseScoreById: coarseScoreById,
+        };
+        setRequest({ path: "POST /api/rerank", body: payload });
+        try {
+          const body = await fetchJson("/api/rerank", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          setRerank(body);
+          setStatus("done");
+        } catch (err) {
+          setRerank(null);
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      async function onEmptyError() {
+        setStatus("loading");
+        setError("");
+        setRequest({ path: "POST /api/recall", body: { query: "" } });
+        try {
+          await fetchJson("/api/recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: "" }),
+          });
+          setStatus("done");
+        } catch (err) {
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      async function onForceError() {
+        setStatus("loading");
+        setError("");
+        setRequest({ path: "GET /api/force-error" });
+        try {
+          await fetchJson("/api/force-error");
+          setStatus("done");
+        } catch (err) {
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              重排序（Rerank） · 第一步（step-1） · ① 正常对照
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="max-w-7xl mx-auto p-4 space-y-4">
+            <PageNav current="normal" base="../" />
+            <PageIntro />
+            <CorpusPanel chunks={chunks} loading={corpusLoading} error={corpusError} />
+            <section id="controls">
+              <QueryPanel
+                query={query}
+                env={env}
+                status={status}
+                recall={recall}
+                onQueryChange={onQueryChange}
+                onRecall={onRecall}
+                onRerank={onRerank}
+                onEmptyError={onEmptyError}
+                onForceError={onForceError}
+              />
+            </section>
+            <section id="output">
+              <PipelineBoard request={request} error={error} recall={recall} rerank={rerank} />
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

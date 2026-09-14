@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>重排序 · 第二步 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="utils/api-client.js"></script>
+  <script type="text/babel" src="components/layout.js"></script>
+  <script type="text/babel" src="components/page-nav.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    // 本页教学点：step-2 总览。第二阶段的另外三种实现形状：Listwise、专用接口 vs 对话模型、Pairwise。
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter } = window.DemoUI;
+    const { fetchJson } = window.DemoUtils;
+
+    const MODES = [
+      {
+        key: "listwise",
+        title: "① Listwise + id 校验",
+        href: "pages/listwise.html",
+        desc: "一次把候选摘要拼进 messages，让模型吐 orderedIds。校验不过 = 失败，不静默采用。",
+        variant: "变体 10 + 踩坑「整份重排不校验 id」",
+      },
+      {
+        key: "shape-vs-llm",
+        title: "② 接口形状 vs 对话模型",
+        href: "pages/shape-vs-llm.html",
+        desc: "同问句同名单，对照「专用接口形状」和「对话模型 Listwise」的请求 / 响应 / 调用次数。",
+        variant: "变体 13",
+      },
+      {
+        key: "pairwise",
+        title: "③ Pairwise",
+        href: "pages/pairwise.html",
+        desc: "一次只出一道题：选 A 还是选 B。**不**出两个 0～1 假装在比。",
+        variant: "变体 9",
+      },
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      useEffect(function () {
+        fetchJson("/health").then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              重排序（Rerank） · 第二步（step-2） · 总览
+            </h1>
+            <StatusPill status={env ? "idle" : "loading"} />
+          </header>
+
+          <main id="page-main" className="max-w-7xl mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>第二阶段的另外三种实现形状 —— Listwise / 接口形状 vs 对话模型 / Pairwise</b>。
+                step-1 已锁定，那四个 mode 在 <code>apps/09-RAG进阶/02-Rerank-step-1/</code>。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>打开页面：服务端把 8 个切块准备好。</li>
+                <li>选一个 mode 进：每个 mode 演示第二阶段的一种实现。</li>
+                <li>对照 Listwise 的 id 校验 / 接口形状对照 / Pairwise 的成对判断 —— 三件事。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <p className="text-sm font-semibold text-gray-900">
+                  三种实现都是第二阶段，**不是**三种检索。Listwise 省调用次数但要校验 id；专用接口和对话模型形状不同；Pairwise 一次只出一道题。
+                </p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold">选一个 mode 进</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {MODES.map(function (mode) {
+                  return (
+                    <a
+                      key={mode.key}
+                      href={mode.href}
+                      className="block border border-gray-300 rounded p-4 bg-gray-50 hover:bg-blue-50 hover:border-blue-400"
+                    >
+                      <div className="text-sm font-semibold text-gray-900">{mode.title}</div>
+                      <div className="text-xs text-gray-600 mt-1">{mode.desc}</div>
+                      <div className="text-xs text-gray-400 mt-2">{mode.variant}</div>
+                    </a>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* §5.3.4 / §5.3.10：导航总览也要有 #output */}
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2">
+              <h2 className="text-sm font-semibold">数据流（三个 mode 共享）</h2>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap bg-gray-50 border border-gray-200 rounded p-3">
+{`打开页面
+  → GET /health              取环境（provider / model / 密钥）
+  → GET /api/corpus          取服务端 8 个切块
+  → 选 mode 进：
+      ① listwise            POST /api/listwise-llm（对话模型 + id 校验）
+      ② shape-vs-llm        POST /api/listwise-shape（专用接口形状 mock）
+                          或 POST /api/listwise-llm（对话模型 Listwise）
+      ③ pairwise            POST /api/pairwise（成对比较 A vs B）`}
+              </pre>
+              <p className="text-xs text-gray-500">
+                三个 mode 走的是不同 <code>lib/flow/</code> 主流程 —— 不是同一份核心；它们是第二阶段的三种实现。
+              </p>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

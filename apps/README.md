@@ -112,6 +112,9 @@
 | `yarn app:09-01-bm25-hybrid-step-3` | `50089` | 模块 09 · 01 · BM25 / 混合检索 step-3：RRF（变体 6）+ 按问句偏置 α（变体 7）· /api/search-rrf + /api/search-bias + 「RRF vs 加权」对照 · 在 step-2 基础上加 |
 | `yarn app:09-01-bm25-hybrid-step-4` | `50090` | 模块 09 · 01 · BM25 / 混合检索 step-4：切词对照（变体 8）· /api/search-bm25-variant · 「保留连字符」vs「撕单字」同问句两次 BM25 → 排名变差 · 在 step-3 基础上加 |
 | `yarn app:09-01-bm25-hybrid-step-5` | `50091` | 模块 09 · 01 · BM25 / 混合检索 step-5：手写 BM25 vs wink-bm25-text-search · 内置判定列表自动判 Top-1 · 纯本地不调模型 |
+| `yarn app:09-02-rerank-step-1` | `50092` | 模块 09 · 02 · 重排序 step-1：先展示服务端切块，再粗召回上桌，再精排改顺序 · 真调模型打分 |
+| `yarn app:09-02-rerank-step-2` | `50093` | 模块 09 · 02 · 重排序 step-2：第二阶段的另外三种实现形状 —— ① Listwise + id 校验（对话模型）· ② 专用接口形状 mock vs 对话模型 · ③ Pairwise · 三种主流程各自独立 lib/flow/ |
+| `yarn app:09-02-rerank-step-3` | `50094` | 模块 09 · 02 · 重排序 step-3：评测集 + 命中率 —— 同一份 20 条人工标注问句跑三种 pipeline（召回 / 召回+Pointwise mock / 召回+Listwise mock），对照命中率；Top-K 可选 1/3/5；mock 故意偏向特例保证对照清晰 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

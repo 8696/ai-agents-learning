@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pairwise · 第二步 · 重排序</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="../utils/api-client.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/corpus-panel.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    // 本页教学点：Pairwise 一次请求只回 A 或 B，不出两个 0～1 假装在比。
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { CorpusPanel } = window.DemoUI;
+    const { fetchJson } = window.DemoUtils;
+
+    function formatError(error) {
+      const status = error.status ? error.status + " " : "";
+      const hint = error.hint ? " · " + error.hint : "";
+      return status + error.message + hint;
+    }
+
+    function ChunkCard(props) {
+      const chunk = props.chunk;
+      const winner = props.winner;
+      const cls = winner === "yes"
+        ? "border-green-400 bg-green-50"
+        : winner === "no"
+        ? "border-gray-300 bg-gray-50"
+        : "border-gray-300 bg-white";
+      return (
+        <article className={"border rounded p-4 space-y-2 " + cls}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-lg font-semibold">{chunk.title}</span>
+            <span className="text-xs text-gray-500">id={chunk.id}</span>
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">{chunk.text}</p>
+          {winner === "yes" ? <p className="text-xs text-green-800 font-semibold">本轮胜出</p> : null}
+          {winner === "no" ? <p className="text-xs text-gray-500">本轮未胜出</p> : null}
+        </article>
+      );
+    }
+
+    const PRESETS = [
+      { key: "seven-vs-unopened",   label: "七天无理由 vs 未拆封超期", a: "seven-day",          b: "unopened-exception" },
+      { key: "shipping-vs-quality", label: "退货运费 vs 质量问题十五天", a: "shipping-fee",     b: "quality-15" },
+      { key: "exchange-vs-points",  label: "同款换货 vs 会员积分",     a: "exchange",          b: "points" },
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [chunks, setChunks] = useState([]);
+      const [corpusLoading, setCorpusLoading] = useState(true);
+      const [corpusError, setCorpusError] = useState("");
+      const [query, setQuery] = useState("超过 7 天了，盒子没拆，还能退吗？");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [request, setRequest] = useState(null);
+      const [preset, setPreset] = useState(PRESETS[0].key);
+      const [result, setResult] = useState(null);
+
+      useEffect(function () {
+        fetchJson("/health")
+          .then(function (body) { setEnv(body); setStatus("idle"); })
+          .catch(function () { setEnv(null); });
+        fetchJson("/api/corpus")
+          .then(function (body) {
+            setChunks(body.chunks || []);
+            if (body.defaultQuery) setQuery(body.defaultQuery);
+            setCorpusLoading(false);
+          })
+          .catch(function (err) {
+            setCorpusError(formatError(err));
+            setCorpusLoading(false);
+          });
+      }, []);
+
+      function onQueryChange(next) {
+        setQuery(next);
+        setResult(null);
+      }
+
+      async function onCompare() {
+        const pair = PRESETS.find(function (p) { return p.key === preset; });
+        if (!pair) return;
+        setStatus("loading");
+        setError("");
+        const payload = { query: query, idA: pair.a, idB: pair.b };
+        setRequest({ path: "POST /api/pairwise", body: payload });
+        try {
+          const body = await fetchJson("/api/pairwise", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          setResult(body);
+          setStatus("done");
+        } catch (err) {
+          setResult(null);
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      const chunkA = chunks.find(function (c) { return c.id === (PRESETS.find(function (p) { return p.key === preset; }) || {}).a; });
+      const chunkB = chunks.find(function (c) { return c.id === (PRESETS.find(function (p) { return p.key === preset; }) || {}).b; });
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              重排序（Rerank） · 第二步（step-2） · ③ Pairwise
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="max-w-7xl mx-auto p-4 space-y-4">
+            <PageNav current="pairwise" base="../" />
+
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>一次请求只回 A 赢或 B 赢，不出两个 0～1 假装在比</b>。
+                适合难分伯仲的两条政策；只比前几名。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>改问句、选一对预设（A / B 是库里的两条切块）。</li>
+                <li>点「让模型判一次」：服务端发 1 次请求，回 <code>winner: "A" | "B"</code> + 一句话理由。</li>
+                <li>看胜出卡片：胜出的卡绿色边框 + 「本轮胜出」字样。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <p className="text-sm font-semibold text-gray-900">
+                  Pairwise 一次只出一道题，**不要**伪装成「又出了两个分」。分数不可直接当概率；强项是「难分伯仲的两条挑一条」。
+                </p>
+              </div>
+            </section>
+
+            <CorpusPanel chunks={chunks} loading={corpusLoading} error={corpusError} />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block space-y-1">
+                <span className="text-sm text-gray-800">问句（query）</span>
+                <textarea
+                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={status === "loading"}
+                  onChange={function (event) { onQueryChange(event.target.value); }}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-sm text-gray-800">选一对</span>
+                <select
+                  className="border border-gray-300 rounded p-2 text-sm"
+                  value={preset}
+                  disabled={status === "loading"}
+                  onChange={function (event) { setPreset(event.target.value); setResult(null); }}
+                >
+                  {PRESETS.map(function (p) {
+                    return <option key={p.key} value={p.key}>{p.label}</option>;
+                  })}
+                </select>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={status === "loading" || (env && env.hasKey === false)}
+                  onClick={onCompare}
+                >
+                  让模型判一次（A vs B）
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                这一步 <code>POST /api/pairwise</code>。1 次发网络，只回 <code>winner: "A" | "B"</code>。
+              </p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {request ? (
+                <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                  <div>请求参数</div>
+                  <pre className="whitespace-pre-wrap max-h-32 overflow-auto">{JSON.stringify(request, null, 2)}</pre>
+                </div>
+              ) : null}
+
+              {error ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 rounded p-3 text-sm">
+                  {error}
+                </div>
+              ) : null}
+
+              {!result && !error ? (
+                <p className="text-sm text-gray-500">还没判过。先选一对，点按钮。</p>
+              ) : null}
+
+              {chunkA && chunkB ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <ChunkCard
+                    chunk={chunkA}
+                    winner={result ? (result.winner === "A" ? "yes" : "no") : null}
+                  />
+                  <ChunkCard
+                    chunk={chunkB}
+                    winner={result ? (result.winner === "B" ? "yes" : "no") : null}
+                  />
+                </div>
+              ) : null}
+
+              {result ? (
+                <div className={
+                  "border rounded p-3 text-sm " +
+                  (result.winner === "A"
+                    ? "border-green-400 bg-green-50 text-green-900"
+                    : "border-green-400 bg-green-50 text-green-900")
+                }>
+                  <div className="font-semibold">
+                    {result.winner === "A" ? "✓ A 胜出" : "✓ B 胜出"}
+                  </div>
+                  <div className="text-xs text-gray-700 mt-1">
+                    模型理由：{result.reason || "（无）"}
+                  </div>
+                  <details className="text-xs text-gray-600 mt-2">
+                    <summary className="cursor-pointer">看模型原样输出（rawModelOutput）</summary>
+                    <pre className="whitespace-pre-wrap max-h-40 overflow-auto bg-white border border-gray-200 rounded p-2 mt-1">{result.rawModelOutput}</pre>
+                  </details>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>候选窗外 · 第一步 · 重排序</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="../utils/api-client.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/corpus-panel.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel">
+    // 本页教学点：② 候选窗外。把候选窗缩到 3，特例「未拆封超期」必掉到窗外；
+    // 精排怎么改顺序都救不回。
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { CorpusPanel } = window.DemoUI;
+    const { fetchJson } = window.DemoUtils;
+
+    function formatError(error) {
+      const status = error.status ? error.status + " " : "";
+      const hint = error.hint ? " · " + error.hint : "";
+      return status + error.message + hint;
+    }
+
+    function WindowOfShameCard(props) {
+      const row = props.row;
+      return (
+        <article className="border border-gray-300 rounded p-4 bg-white space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-2xl font-semibold text-gray-900">召回第 {row.recallRank} 名</span>
+            <span className="text-xs text-gray-500">粗召回分（coarseScore）{row.coarseScore}</span>
+          </div>
+          <div className="text-sm font-semibold">{row.chunk.title}</div>
+          <p className="text-sm text-gray-700 leading-relaxed">{row.chunk.text}</p>
+        </article>
+      );
+    }
+
+    function OutsideCard(props) {
+      const item = props.item;
+      return (
+        <article className="border border-red-300 bg-red-50 rounded p-3 space-y-1">
+          <div className="text-sm font-semibold text-red-900">
+            ✗ 窗外：{item.title}
+          </div>
+          <div className="text-xs text-red-700">
+            库里有这条，但 limit=3 把它截掉了。精排看不见它，结果永远排不进前 K。
+          </div>
+        </article>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [chunks, setChunks] = useState([]);
+      const [corpusLoading, setCorpusLoading] = useState(true);
+      const [corpusError, setCorpusError] = useState("");
+      const [query, setQuery] = useState("超过 7 天了，盒子没拆，还能退吗？");
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [request, setRequest] = useState(null);
+      const [recall, setRecall] = useState(null);
+      const [rerank, setRerank] = useState(null);
+
+      useEffect(function () {
+        fetchJson("/health")
+          .then(function (body) { setEnv(body); setStatus("idle"); })
+          .catch(function () { setEnv(null); });
+        fetchJson("/api/corpus")
+          .then(function (body) {
+            setChunks(body.chunks || []);
+            if (body.defaultQuery) setQuery(body.defaultQuery);
+            setCorpusLoading(false);
+          })
+          .catch(function (err) {
+            setCorpusError(formatError(err));
+            setCorpusLoading(false);
+          });
+      }, []);
+
+      function onQueryChange(next) {
+        setQuery(next);
+        setRecall(null);
+        setRerank(null);
+      }
+
+      async function onRecall() {
+        setStatus("loading");
+        setError("");
+        setRerank(null);
+        const payload = { query: query, limit: 3 };
+        setRequest({ path: "POST /api/recall", body: payload });
+        try {
+          const body = await fetchJson("/api/recall", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          setRecall(body);
+          setStatus("done");
+        } catch (err) {
+          setRecall(null);
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      async function onRerank() {
+        if (!recall) return;
+        setStatus("loading");
+        setError("");
+        const recallRankById = {};
+        const coarseScoreById = {};
+        recall.rows.forEach(function (row) {
+          recallRankById[row.chunk.id] = row.recallRank;
+          coarseScoreById[row.chunk.id] = row.coarseScore;
+        });
+        const payload = {
+          query: query,
+          candidateIds: recall.rows.map(function (row) { return row.chunk.id; }),
+          recallRankById: recallRankById,
+          coarseScoreById: coarseScoreById,
+        };
+        setRequest({ path: "POST /api/rerank", body: payload });
+        try {
+          const body = await fetchJson("/api/rerank", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          setRerank(body);
+          setStatus("done");
+        } catch (err) {
+          setRerank(null);
+          setError(formatError(err));
+          setStatus("error");
+        }
+      }
+
+      const hasShouldCiteOutside = recall && recall.leftOut.some(function (item) { return item.id === "unopened-exception"; });
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              重排序（Rerank） · 第一步（step-1） · ② 候选窗外
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="max-w-7xl mx-auto p-4 space-y-4">
+            <PageNav current="window-of-shame" base="../" />
+
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>候选窗缩到 3，「未拆封超期」被截到窗外，精排怎么打都救不回</b>。
+                桌面上没有的切块，模型根本看不见。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「捞 3 条上桌」：召回窗只放 3 条。</li>
+                <li>看「窗外」红字：默认问句该引用的「未拆封超期」被截在这里。</li>
+                <li>点「给桌上的 3 条打分」：精排只能在这 3 条里改顺序，结果里仍然没有特例。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <p className="text-sm font-semibold text-gray-900">
+                  精排的天花板 = 候选窗。桌上没有的，模型再贵也变不出来。
+                </p>
+                <p className="text-xs text-gray-700">
+                  这时该回去修召回（加大 N、改切块、换混合）而不是换更贵的精排模型。
+                </p>
+              </div>
+            </section>
+
+            <CorpusPanel chunks={chunks} loading={corpusLoading} error={corpusError} />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block space-y-1">
+                <span className="text-sm text-gray-800">问句（query）</span>
+                <textarea
+                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={status === "loading"}
+                  onChange={function (event) { onQueryChange(event.target.value); }}
+                />
+                <span className="text-xs text-gray-500">
+                  改问句后要重新走第一步。可以试别的问句 —— 看粗召回把谁捞上桌 / 漏掉谁。
+                </span>
+              </label>
+
+              <div className="text-sm text-gray-500">候选窗大小（recall.limit）：3</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={status === "loading"}
+                  onClick={onRecall}
+                >
+                  第一步：捞 3 条上桌（limit=3）
+                </button>
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={status === "loading" || !recall || (env && env.hasKey === false)}
+                  onClick={onRerank}
+                >
+                  第二步：给桌上的 3 条打精排分（rerank）
+                </button>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {request ? (
+                <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                  <div>请求参数</div>
+                  <pre className="whitespace-pre-wrap max-h-32 overflow-auto">{JSON.stringify(request, null, 2)}</pre>
+                </div>
+              ) : null}
+
+              {error ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 rounded p-3 text-sm">
+                  {error}
+                </div>
+              ) : null}
+
+              {!recall && !error ? (
+                <p className="text-sm text-gray-500">还没跑流程。先点第一步捞 3 条上桌。</p>
+              ) : null}
+
+              {recall ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <div className="space-y-3 min-w-0">
+                    <h3 className="text-sm font-semibold">
+                      阶段 1 · 桌上有 {recall.rows.length} 条
+                    </h3>
+                    <div className="space-y-3">
+                      {recall.rows.map(function (row) {
+                        return <WindowOfShameCard key={row.chunk.id} row={row} />;
+                      })}
+                    </div>
+
+                    <h3 className="text-sm font-semibold mt-6">
+                      窗外（recall.leftOut） · 精排看不见
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {hasShouldCiteOutside
+                        ? "⚠ 默认问句该引用的「未拆封超期」在这里。精排怎么改顺序都救不回。"
+                        : "默认问句该引用的切块仍在桌上。这一组不是「窗外失败」场景，但仍是窗外的可见通道。"}
+                    </p>
+                    <div className="space-y-2">
+                      {recall.leftOut.map(function (item) {
+                        return <OutsideCard key={item.id} item={item} />;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 min-w-0 md:border-l md:pl-6 border-gray-200">
+                    {rerank ? (
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold">阶段 2 · 精排后新顺序</h3>
+                        <p className="text-xs text-gray-500">
+                          精排只对桌面上 {rerank.rows.length} 条打分。窗外那条没机会被抬上来。
+                        </p>
+                        <div className="space-y-3">
+                          {rerank.rows.map(function (row) {
+                            return (
+                              <article
+                                key={row.chunk.id}
+                                className={
+                                  "border rounded p-4 space-y-2 " +
+                                  (row.rerankRank === 1 ? "border-green-400 bg-green-50" : "border-gray-300 bg-white")
+                                }
+                              >
+                                <div className="flex items-baseline justify-between gap-3">
+                                  <span className="text-2xl font-semibold text-gray-900">精排第 {row.rerankRank} 名</span>
+                                  <span className="text-xs text-gray-500">精排分（rerankScore）{row.rerankScore}</span>
+                                </div>
+                                <div className="text-sm font-semibold">{row.chunk.title}</div>
+                                <p className="text-sm text-gray-700 leading-relaxed">{row.chunk.text}</p>
+                                <p className="text-xs text-gray-600">召回第 {row.recallRank} 名 → 精排第 {row.rerankRank} 名</p>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold">阶段 2 · 精排</h3>
+                        <p className="text-xs text-gray-500">还没精排。点第二步，只给左边这 {recall.rows.length} 条打分。</p>
+                        <div className="border border-dashed border-gray-300 rounded p-4 text-sm text-gray-500 min-h-[160px]">
+                          精排不会再搜整库；窗外那条不会出现在结果里。
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
