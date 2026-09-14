@@ -3239,10 +3239,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-1/public/index.html"
-                  },
-                  {
-                    "label": "utils",
-                    "children": []
                   }
                 ]
               },
@@ -3368,10 +3364,6 @@
                 "label": "lib",
                 "children": [
                   {
-                    "label": "flow",
-                    "children": []
-                  },
-                  {
                     "label": "http",
                     "children": [
                       {
@@ -3488,10 +3480,6 @@
               {
                 "label": "lib",
                 "children": [
-                  {
-                    "label": "flow",
-                    "children": []
-                  },
                   {
                     "label": "http",
                     "children": [
@@ -4619,10 +4607,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/index.html"
-                  },
-                  {
-                    "label": "utils",
-                    "children": []
                   }
                 ]
               },
@@ -4910,10 +4894,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/index.html"
-                  },
-                  {
-                    "label": "utils",
-                    "children": []
                   }
                 ]
               },
@@ -5318,10 +5298,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/public/index.html"
-                  },
-                  {
-                    "label": "utils",
-                    "children": []
                   }
                 ]
               },
@@ -7840,15 +7816,6 @@
             "label": "01-RAG-流水线-step-1",
             "children": [
               {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "chunks.db",
-                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/data/chunks.db"
-                  }
-                ]
-              },
-              {
                 "label": "knowledge",
                 "children": [
                   {
@@ -8008,15 +7975,6 @@
           {
             "label": "01-RAG-流水线-step-2",
             "children": [
-              {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "chunks.db",
-                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/data/chunks.db"
-                  }
-                ]
-              },
               {
                 "label": "knowledge",
                 "children": [
@@ -8181,15 +8139,6 @@
           {
             "label": "01-RAG-流水线-step-3",
             "children": [
-              {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "chunks.db",
-                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/data/chunks.db"
-                  }
-                ]
-              },
               {
                 "label": "knowledge",
                 "children": [
@@ -8380,15 +8329,6 @@
           {
             "label": "01-RAG-流水线-step-4",
             "children": [
-              {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "chunks.db",
-                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/data/chunks.db"
-                  }
-                ]
-              },
               {
                 "label": "knowledge",
                 "children": [
@@ -8583,15 +8523,6 @@
           {
             "label": "01-RAG-流水线-step-5",
             "children": [
-              {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "chunks.db",
-                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/data/chunks.db"
-                  }
-                ]
-              },
               {
                 "label": "knowledge",
                 "children": [
@@ -10205,10 +10136,6 @@
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/data-shape/qa-corpus.ts"
                       }
                     ]
-                  },
-                  {
-                    "label": "flow",
-                    "children": []
                   },
                   {
                     "label": "http",
@@ -12427,6 +12354,410 @@
                 "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/server.ts"
               }
             ]
+          },
+          {
+            "label": "04-切块与查询变体-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "embed-client.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/corpus/embed-client.ts"
+                      },
+                      {
+                        "label": "handbook.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/corpus/handbook.ts"
+                      },
+                      {
+                        "label": "score-children.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/corpus/score-children.ts"
+                      },
+                      {
+                        "label": "vector-index.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/corpus/vector-index.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "parent-child-retrieve.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/flow/parent-child-retrieve.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "child-coverage.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/child-coverage.js"
+                      },
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "flow-step-card.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/flow-step-card.js"
+                      },
+                      {
+                        "label": "flow-timeline.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/flow-timeline.js"
+                      },
+                      {
+                        "label": "flow-trace.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/flow-trace.js"
+                      },
+                      {
+                        "label": "hit-and-feed.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/hit-and-feed.js"
+                      },
+                      {
+                        "label": "index-status.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/index-status.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "build-index.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/routes/build-index.ts"
+                  },
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/routes/corpus.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "index-status.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/routes/index-status.ts"
+                  },
+                  {
+                    "label": "parent-child.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/routes/parent-child.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/04-切块与查询变体-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "04-切块与查询变体-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "embed-client.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/corpus/embed-client.ts"
+                      },
+                      {
+                        "label": "handbook.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/corpus/handbook.ts"
+                      },
+                      {
+                        "label": "rrf.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/corpus/rrf.ts"
+                      },
+                      {
+                        "label": "score-children.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/corpus/score-children.ts"
+                      },
+                      {
+                        "label": "vector-index.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/corpus/vector-index.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "llm-calls.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/flow/llm-calls.ts"
+                      },
+                      {
+                        "label": "multi-query-retrieve.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/flow/multi-query-retrieve.ts"
+                      },
+                      {
+                        "label": "parent-child-retrieve.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/flow/parent-child-retrieve.ts"
+                      },
+                      {
+                        "label": "types.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/flow/types.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "child-coverage.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/child-coverage.js"
+                      },
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "flow-step-card.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/flow-step-card.js"
+                      },
+                      {
+                        "label": "flow-timeline.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/flow-timeline.js"
+                      },
+                      {
+                        "label": "flow-trace.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/flow-trace.js"
+                      },
+                      {
+                        "label": "hit-and-feed.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/hit-and-feed.js"
+                      },
+                      {
+                        "label": "index-status.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/index-status.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "multi-query-panel.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/multi-query-panel.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "build-index.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/routes/build-index.ts"
+                  },
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/routes/corpus.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "index-status.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/routes/index-status.ts"
+                  },
+                  {
+                    "label": "multi-query.ts",
+                    "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/routes/multi-query.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/04-切块与查询变体-step-2/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "10-Memory",
+        "children": [
+          {
+            "label": "01-记忆分类-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "classify-memory.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-1/lib/flow/classify-memory.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "memory-boxes.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-1/public/components/memory-boxes.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/01-记忆分类-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/01-记忆分类-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "classify.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-1/routes/classify.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/01-记忆分类-step-1/server.ts"
+              }
+            ]
           }
         ]
       },
@@ -12456,6 +12787,10 @@
           {
             "label": "add-page-nav.mjs",
             "path": "apps/scripts/add-page-nav.mjs"
+          },
+          {
+            "label": "fix-page-nav-destructure.mjs",
+            "path": "apps/scripts/fix-page-nav-destructure.mjs"
           }
         ]
       },
