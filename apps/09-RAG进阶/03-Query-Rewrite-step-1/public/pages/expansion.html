@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>扩展（Query Expansion） · 一条查询补词 · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/rank-list.js"></script>
+  <script type="text/babel" src="/components/request-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageHeader, PageNav, EnvFooter, RankList, RequestCard, ErrorCard } = window.DemoUI;
+    const fetchJson = window.DemoUtils.fetchJson;
+
+    function App() {
+      const [query, setQuery] = useState("盒子没拆，都八天了，还能退吗？");
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [lastRequest, setLastRequest] = useState(null);
+      const [result, setResult] = useState(null);
+
+      useEffect(function () {
+        let cancelled = false;
+        (async function () {
+          const health = await fetchJson("/health");
+          if (cancelled) return;
+          setEnv(health.json || {});
+          setStatus("ok");
+        })().catch(function (err) {
+          if (cancelled) return;
+          setStatus("error");
+          setError("打开页面时请求失败：" + (err && err.message ? err.message : String(err)));
+        });
+        return function () { cancelled = true; };
+      }, []);
+
+      async function run() {
+        setError("");
+        setStatus("loading");
+        try {
+          const body = { query: query };
+          setLastRequest({ method: "POST", url: "/api/expand-and-search", body: body });
+          const res = await fetchJson("/api/expand-and-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.json || !res.json.ok) {
+            setStatus("error");
+            setError("扩展检索失败 HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          setResult(res.json);
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      const busy = status === "loading";
+      const retrieve = result ? result.retrieve : null;
+      const targetRow = retrieve && retrieve.ranked.find(function (r) { return r.id === retrieve.target.id; });
+      const targetHit = Boolean(targetRow && targetRow.onTable);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              扩展（Query Expansion） · 一条查询补词 · 一次检索
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="expansion" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>扩展（Query Expansion）= 原句保留，往同一句后面补库用语，仍是一次检索</b>。
+                改写会整句换词；扩展不换原句。多路检索（一次生成多条问句分别检索再合并）属于下一节范围，不是本页。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>填用户原话（默认「盒子没拆，都八天了，还能退吗？」）。</li>
+                <li>点「跑扩展」：服务端按本地同义词表（不调模型）补词，仍走 step-1 那一套词重叠检索。</li>
+                <li>看「原句 / 扩展句 / addedTerms / 名单」四件是否齐全；目标切块是否从没进检索名单 → 进检索名单。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  扩展 ≠ 改写。改写整句换词；扩展是「原句 + 补词」，仍是一条检索请求、一次名单。本页补词用本地同义词表（不调模型）；规则 vs 模型产出对照另开 sub-page。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：addedTerms 是空 = 规则表全 miss（不会改原句）；addedTerms 非空 = 扩展句 = 原句 + 补词；和原句名单对照，目标切块是否新进检索名单。
+                </div>
+              </div>
+            </section>
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户原话（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={busy}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">改这个框再点按钮，会按新原句走。期望：补进「七天无理由 / 未拆封」后目标切块进检索名单。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={run}
+                >
+                  跑扩展（不调模型）
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">扩展用本地规则表补词：不调大模型、密钥可有可无、单次检索请求。规则表只覆盖少量关键词；addedTerms 空就是全 miss。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <ErrorCard error={error} />
+              <RequestCard request={lastRequest} />
+              <div className="border rounded p-3 space-y-2 bg-gray-50">
+                <div className="text-xs font-medium text-gray-700">扩展前 vs 扩展后（四件）</div>
+                {result ? (
+                  <div className="text-xs text-gray-700 space-y-1">
+                    <div>用户原句：<span className="font-medium">{result.originalQuery}</span></div>
+                    <div>扩展句：<span className="font-medium">{result.expandedQuery}</span></div>
+                    <div>
+                      补进来的库用语（addedTerms）：
+                      {result.addedTerms.length
+                        ? result.addedTerms.join("、")
+                        : <span className="text-red-700">（空：规则表全 miss，原句未变）</span>}
+                    </div>
+                    <div>
+                      一次检索请求：<code className="bg-white px-1 rounded border">POST /api/expand-and-search</code>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">还没跑。点按钮后这里出现原句、扩展句、补词列表、本次请求 URL。</div>
+                )}
+              </div>
+              <RankList side="expanded" retrieve={retrieve} emptyHint="还没跑扩展。点了之后这里出现扩展句的检索名单。" />
+              {result && retrieve ? (
+                <div className={"rounded p-3 text-sm " + (targetHit ? "bg-green-50 border border-green-300 text-green-900" : "bg-red-50 border border-red-300 text-red-900")}>
+                  目标切块 id={retrieve.target.id} · 是否进检索名单（onTable）={String(retrieve.target.onTable)} · 名次（rank）={retrieve.target.rank == null ? "无" : retrieve.target.rank} ·
+                  命中词（matchedTerms）：{targetRow && targetRow.matchedTerms.length ? targetRow.matchedTerms.join("、") : "无"}
+                </div>
+              ) : null}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

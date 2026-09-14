@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>查询改写 · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/corpus-panel.js"></script>
+  <script type="text/babel" src="/components/rank-list.js"></script>
+  <script type="text/babel" src="/components/request-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageIntro, PageNav, EnvFooter, CorpusPanel, RankList, RequestCard, FlowCard, ErrorCard, ModelCallCard } = window.DemoUI;
+    const fetchJson = window.DemoUtils.fetchJson;
+
+    function App() {
+      // query：输入框里的用户原话。chunks：服务端切块。status：页头四态。
+      const [query, setQuery] = useState("");
+      const [chunks, setChunks] = useState([]);
+      const [hasKey, setHasKey] = useState(false);
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [lastRequest, setLastRequest] = useState(null);
+      const [flowSteps, setFlowSteps] = useState([]);
+      const [original, setOriginal] = useState(null);
+      const [rewritten, setRewritten] = useState(null);
+
+      useEffect(function () {
+        let cancelled = false;
+        (async function () {
+          const health = await fetchJson("/health");
+          if (cancelled) return;
+          setEnv(health.json || {});
+          setHasKey(Boolean(health.json && health.json.hasKey));
+          const corpus = await fetchJson("/api/corpus");
+          if (cancelled) return;
+          if (!corpus.json || !corpus.json.ok) {
+            setStatus("error");
+            setError("拉切块失败 HTTP " + corpus.httpStatus);
+            return;
+          }
+          setChunks(corpus.json.chunks || []);
+          setQuery(corpus.json.defaultQuery || "");
+          setStatus("ok");
+        })().catch(function (err) {
+          if (cancelled) return;
+          setStatus("error");
+          setError("打开页面时请求失败：" + (err && err.message ? err.message : String(err)));
+        });
+        return function () { cancelled = true; };
+      }, []);
+
+      async function run(kind) {
+        setError("");
+        setStatus("loading");
+        try {
+          if (kind === "original") {
+            const body = { query: query };
+            setLastRequest({ method: "POST", url: "/api/search-original", body: body });
+            setFlowSteps([
+              "浏览器 POST /api/search-original，body 只有用户原句",
+              "服务端 retrieveByQuery：拆词 → 和 8 个切块做子串命中",
+              "不调模型。score 大于 0 才进检索名单",
+            ]);
+            const res = await fetchJson("/api/search-original", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!res.json || !res.json.ok) {
+              setStatus("error");
+              setError("原句检索失败（4xx 通道）HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+              return;
+            }
+            setOriginal(res.json.retrieve);
+            setStatus("ok");
+            return;
+          }
+          if (kind === "rewrite") {
+            const body = { query: query };
+            setLastRequest({ method: "POST", url: "/api/rewrite-and-search", body: body });
+            setFlowSteps([
+              "浏览器 POST /api/rewrite-and-search，body 仍是用户原句",
+              "服务端把模型（model）、温度（temperature）、系统消息（system）、用户消息（user）发给协议 A 对话补全（Chat Completions）",
+              "解析 rewrittenQuery 后，再用改写句走同一套词重叠检索",
+            ]);
+            const res = await fetchJson("/api/rewrite-and-search", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!res.json || !res.json.ok) {
+              setStatus("error");
+              const code = res.httpStatus >= 500 ? "5xx / 上游" : "4xx";
+              setError("改写后检索失败（" + code + "）HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+              return;
+            }
+            setRewritten(res.json);
+            setStatus("ok");
+            return;
+          }
+          if (kind === "empty") {
+            const body = { query: "" };
+            setLastRequest({ method: "POST", url: "/api/search-original", body: body });
+            setFlowSteps(["故意提交空问句，期望 400。这是第一类错误：页面能看见的 4xx。"]);
+            const res = await fetchJson("/api/search-original", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            setStatus("error");
+            setError("空问句演示（4xx）HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          if (kind === "boom") {
+            setLastRequest({ method: "POST", url: "/api/force-error", body: {} });
+            setFlowSteps(["故意打 /api/force-error，期望 500。这是第二类错误：和空问句不是同一条通道。"]);
+            const res = await fetchJson("/api/force-error", { method: "POST" });
+            setStatus("error");
+            setError("后端 5xx 演示 HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+          }
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      const busy = status === "loading";
+      const targetHint = (function () {
+        if (!original || !rewritten || !rewritten.retrieve) return null;
+        const before = original.target;
+        const after = rewritten.retrieve.target;
+        return (
+          "同一 id=" + before.id +
+          "：原句 onTable=" + String(before.onTable) + " rank=" + (before.rank == null ? "无" : before.rank) +
+          " → 改写后 onTable=" + String(after.onTable) + " rank=" + (after.rank == null ? "无" : after.rank)
+        );
+      })();
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              查询改写（Query Rewrite） · 第一步（step-1） · 原句检索 vs 改写后再检索
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户原话（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={busy}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">改这个框再点按钮，会按新原句走。默认句是「盒子没拆，都八天了，还能退吗？」</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("original"); }}
+                >
+                  第一步：用用户原句检索
+                </button>
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey}
+                  onClick={function () { run("rewrite"); }}
+                >
+                  第二步：改写成库用语后再检索
+                </button>
+                <button
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("empty"); }}
+                >
+                  演示空问句 4xx
+                </button>
+                <button
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run("boom"); }}
+                >
+                  演示后端 5xx
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">第一步：点了只发原句检索，期望目标切块没进检索名单。第二步：点了才调模型换词，期望同一 id 进检索名单。空问句走 400；后端 5xx 是另一条失败通道。缺密钥时第二步禁用。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <ErrorCard error={error} />
+              <RequestCard request={lastRequest} />
+              <FlowCard steps={flowSteps} />
+              <div className="border rounded p-3 space-y-2">
+                <CorpusPanel chunks={chunks} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border rounded p-3 space-y-2">
+                  <div className="text-sm font-medium">左栏 · 原句检索（未改写）</div>
+                  <p className="text-xs text-gray-600">同一套词重叠检索，问句仍是用户原话。期望：一个切块都匹配不上。</p>
+                  <RankList side="original" retrieve={original} emptyHint="还没点第一步。点了之后这里出现原句名单。" />
+                </div>
+                <div className="border rounded p-3 space-y-2">
+                  <div className="text-sm font-medium">右栏 · 改写后再检索</div>
+                  <p className="text-xs text-gray-600">还是同一套检索，只换了问句。期望：目标切块进检索名单。换词请求的提示词和参数在下面这张卡。</p>
+                  <ModelCallCard modelCall={rewritten && rewritten.modelCall} />
+                  {rewritten ? (
+                    <div className="bg-gray-50 rounded p-2 text-xs text-gray-700">
+                      用户原句：{rewritten.originalQuery}
+                      <br />
+                      内部检索词（rewrittenQuery）：{rewritten.rewrittenQuery}
+                    </div>
+                  ) : null}
+                  <RankList side="rewritten" retrieve={rewritten && rewritten.retrieve} emptyHint="还没点第二步。点了之后这里出现改写句和名单。" />
+                </div>
+              </div>
+              {targetHint ? (
+                <div className="bg-green-50 border border-green-300 rounded p-3 text-sm text-green-900">{targetHint}</div>
+              ) : (
+                <div className="text-sm text-gray-500">两步都跑完后，这里用同一 id 对照 onTable / rank。</div>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

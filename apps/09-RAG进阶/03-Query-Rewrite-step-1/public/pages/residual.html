@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>残句先写全（Residual Resolution） · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/rank-list.js"></script>
+  <script type="text/babel" src="/components/request-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageHeader, PageNav, EnvFooter, RankList, RequestCard, ErrorCard } = window.DemoUI;
+    const fetchJson = window.DemoUtils.fetchJson;
+
+    function App() {
+      const [query, setQuery] = useState("这个呢");
+      const [history, setHistory] = useState("user：SKU-88 七天无理由怎么算");
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [lastRequest, setLastRequest] = useState(null);
+      const [result, setResult] = useState(null);
+
+      useEffect(function () {
+        let cancelled = false;
+        (async function () {
+          const health = await fetchJson("/health");
+          if (cancelled) return;
+          setEnv(health.json || {});
+          setStatus("ok");
+        })().catch(function (err) {
+          if (cancelled) return;
+          setStatus("error");
+          setError("打开页面时请求失败：" + (err && err.message ? err.message : String(err)));
+        });
+        return function () { cancelled = true; };
+      }, []);
+
+      function parseHistory(text) {
+        return text
+          .split("\n")
+          .map(function (line) { return line.trim(); })
+          .filter(function (line) { return line.length > 0; })
+          .map(function (line) {
+            const idx = line.indexOf("：");
+            if (idx < 0) return null;
+            const role = line.slice(0, idx).trim();
+            const content = line.slice(idx + 1).trim();
+            if (role !== "user" && role !== "assistant") return null;
+            return { role: role, content: content };
+          })
+          .filter(function (row) { return row !== null; });
+      }
+
+      async function run() {
+        setError("");
+        setStatus("loading");
+        try {
+          const historyArr = parseHistory(history);
+          const body = { query: query, history: historyArr };
+          setLastRequest({ method: "POST", url: "/api/residual-and-search", body: body });
+          const res = await fetchJson("/api/residual-and-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.json || !res.json.ok) {
+            setStatus("error");
+            setError("残句检索失败 HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          setResult(res.json);
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      const busy = status === "loading";
+      const isResidual = result ? result.residual.isResidual : false;
+      const standalone = result ? result.standalone : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              残句先写全（Residual Resolution） · 多轮指代改写
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="residual" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>多轮对话里的指代 / 短句（这个 / 那个 / 还能吗 / 呢）必须先结合对话历史补全成独立问句，再去搜</b>。
+                检索模块不知道「这个」指什么，必须显式补全。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>填当前问句（默认「这个呢」—— 残句）和上一轮对话（默认「user：SKU-88 七天无理由怎么算」）。</li>
+                <li>点「跑残句补全」：服务端按「长度 ≤6 字 / 指代词」检测残句 → 调模型结合 history 生成 standalone。</li>
+                <li>看原句 / 残句检测 / 补全后的 standalone / 改写句 / 名单 五件是否齐全。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  检索模块不知道「这个」指什么，必须先把残句改写成独立问句（standalone query）。对话历史是改写的输入，不是输出；用户气泡仍显示残句。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：isResidual=true 时页面展示「补全后的 standalone」（如「SKU-88 未拆封超过七天能否退货」）；拿这个 standalone 检索才能命中目标切块。
+                </div>
+              </div>
+            </section>
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                当前问句（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={busy}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <label className="block text-sm text-gray-700">
+                对话历史（history · 一行一条，role：content，role ∈ user / assistant）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm font-mono"
+                  rows={3}
+                  value={history}
+                  disabled={busy}
+                  onChange={function (event) { setHistory(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">改这个框再点按钮，会按新问句走。期望：「这个呢」+ history「user：SKU-88 七天无理由怎么算」→ 补全成「SKU-88 未拆封超过七天能否退货」并命中目标切块。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={run}
+                >
+                  跑残句补全
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">残句补全走 LLM（getLlm）。需要密钥；残句检测本身是本地规则（长度 + 指代词）。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <ErrorCard error={error} />
+              <RequestCard request={lastRequest} />
+              {result ? (
+                <div className="rounded p-3 text-sm space-y-1 bg-blue-50 border border-blue-300 text-blue-900">
+                  <div className="font-medium">残句补全结果</div>
+                  <div>原句（query）：{result.query}</div>
+                  <div>残句检测（residual.isResidual）：{String(isResidual)}</div>
+                  <div>残句检测原因（reason）：{result.residual.reason}</div>
+                  <div>补全后的独立问句（standalone）：{standalone || <span className="text-gray-700">（不是残句，无需补全）</span>}</div>
+                  <div>改写句（rewrittenQuery）：{result.rewritten.rewrittenQuery}</div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">还没跑。点按钮后这里出现原句 / 残句检测 / 补全后的独立问句 / 改写句 五件。</div>
+              )}
+              <RankList side="residual" retrieve={result ? result.rewritten.retrieve : null} emptyHint="还没跑残句补全。点了之后这里出现改写后的检索名单。" />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

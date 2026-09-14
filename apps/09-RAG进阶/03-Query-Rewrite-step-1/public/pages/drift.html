@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>改偏可回退（Drift Fallback） · 故意改坏对照 + 一键回退 · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/rank-list.js"></script>
+  <script type="text/babel" src="/components/request-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageHeader, PageNav, EnvFooter, RankList, RequestCard, ErrorCard } = window.DemoUI;
+    const fetchJson = window.DemoUtils.fetchJson;
+
+    function App() {
+      const [query, setQuery] = useState("超过 7 天了，盒子没拆，还能退吗？");
+      const [forcedRewritten, setForcedRewritten] = useState("如何申请退款、退款多久到账");
+      const [driftReason, setDriftReason] = useState("模型把「能不能退」改成了「怎么走退款流程」—— 资格没查，流程查了一堆");
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [lastRequest, setLastRequest] = useState(null);
+      const [result, setResult] = useState(null);
+
+      useEffect(function () {
+        let cancelled = false;
+        (async function () {
+          const health = await fetchJson("/health");
+          if (cancelled) return;
+          setEnv(health.json || {});
+          setStatus("ok");
+        })().catch(function (err) {
+          if (cancelled) return;
+          setStatus("error");
+          setError("打开页面时请求失败：" + (err && err.message ? err.message : String(err)));
+        });
+        return function () { cancelled = true; };
+      }, []);
+
+      async function runDrift() {
+        setError("");
+        setStatus("loading");
+        try {
+          const body = { query: query, forcedRewrittenQuery: forcedRewritten, driftReason: driftReason };
+          setLastRequest({ method: "POST", url: "/api/drift-and-search", body: body });
+          const res = await fetchJson("/api/drift-and-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.json || !res.json.ok) {
+            setStatus("error");
+            setError("改偏对照失败 HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          setResult(res.json);
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      async function runOriginalSearch() {
+        setError("");
+        setStatus("loading");
+        try {
+          const body = { query: query };
+          setLastRequest({ method: "POST", url: "/api/search-original", body: body });
+          const res = await fetchJson("/api/search-original", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.json || !res.json.ok) {
+            setStatus("error");
+            setError("原句检索失败 HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          setResult({
+            query: query,
+            forcedRewrittenQuery: "(本次按回退按钮：未调改写)",
+            driftReason: "用户主动按「用原句重搜」回退。",
+            originalRetrieve: res.json.retrieve,
+            driftedRetrieve: res.json.retrieve,
+          });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              改偏可回退（Drift Fallback） · 故意改坏对照 + 一键回退
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="drift" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页只演示：<b>改写改偏（意图漂移）必须能对照、能回退</b>。
+                改写模型真改偏 = 资格没查，流程查了一堆。页面同时展示原句名单 + 改偏名单；提供「用原句重搜」一键回退。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>填用户原话 + 「故意改偏后的查询」（默认：用户问能不能退 → 改成「如何申请退款 / 多久到账」）。</li>
+                <li>点「跑改偏对照」：服务端按这两串字分别检索，返回两份名单。</li>
+                <li>看对照：目标切块「未拆封超期特例」在原句名单不上桌，在改偏名单也不上桌——说明改偏没用，必须回退。</li>
+                <li>点「用原句重搜」一键回退（重新调 /api/search-original 拿原句名单）。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  改写改偏 = 资格没查，流程查了一堆。改偏路径不能只展示改偏结果；必须能对照原句名单、能一键回退原句检索。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：原句名单 vs 改偏名单并排；命中切块是不是同一类文档（资格类 vs 流程类）；「用原句重搜」按钮验证回退真的能恢复原句名单。
+                </div>
+              </div>
+            </section>
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户原话（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={busy}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <label className="block text-sm text-gray-700">
+                故意改偏后的查询（forcedRewrittenQuery）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={forcedRewritten}
+                  disabled={busy}
+                  onChange={function (event) { setForcedRewritten(event.target.value); }}
+                />
+              </label>
+              <label className="block text-sm text-gray-700">
+                改偏原因（driftReason）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={driftReason}
+                  disabled={busy}
+                  onChange={function (event) { setDriftReason(event.target.value); }}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runDrift}
+                >
+                  跑改偏对照
+                </button>
+                <button
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runOriginalSearch}
+                >
+                  用原句重搜（回退）
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">本页不调模型（forcedRewrittenQuery 直接由你填）。生产里这是「改写模型真改偏」的镜像：人填一个坏改写，对照原句名单看漂了多远。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <ErrorCard error={error} />
+              <RequestCard request={lastRequest} />
+              {result ? (
+                <div className="rounded p-3 text-sm space-y-1 bg-yellow-50 border border-yellow-300 text-yellow-900">
+                  <div className="font-medium">改偏对照</div>
+                  <div>原句：{result.query}</div>
+                  <div>改偏后的查询：{result.forcedRewrittenQuery}</div>
+                  <div>改偏原因：{result.driftReason}</div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">还没跑。点按钮后这里出现原句 + 改偏后的查询 + 改偏原因。</div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border rounded p-3 space-y-2">
+                  <div className="text-sm font-medium">左栏 · 原句检索</div>
+                  <p className="text-xs text-gray-600">按用户原句检索。词汇鸿沟存在，目标切块常不上桌。</p>
+                  <RankList side="original-drift" retrieve={result ? result.originalRetrieve : null} emptyHint="还没跑。" />
+                </div>
+                <div className="border rounded p-3 space-y-2">
+                  <div className="text-sm font-medium">右栏 · 改偏后检索</div>
+                  <p className="text-xs text-gray-600">按 forcedRewrittenQuery 检索。看命中是不是「资格类」文档，还是漂到「流程类」。</p>
+                  <RankList side="drifted" retrieve={result ? result.driftedRetrieve : null} emptyHint="还没跑。" />
+                </div>
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
