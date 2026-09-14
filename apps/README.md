@@ -118,6 +118,8 @@
 | `yarn app:09-03-query-rewrite-step-1` | `50095` | 模块 09 · 03 · 查询改写 step-1：服务端返回切块 · 原句检索 vs 改写后再检索 · 真调模型换词 |
 | `yarn app:09-03-query-rewrite-step-2` | `50096` | 模块 09 · 03 · 查询改写 step-2：HyDE 假想文档嵌入 · 假想段生成 + 嵌入 + 余弦检索 vs 原句直接嵌入对照 |
 | `yarn app:09-03-query-rewrite-step-3` | `50097` | 模块 09 · 03 · 查询改写 step-3：评测集 + 命中率对照（原句 vs 改写）+ 生成侧（拼 prompt + 调模型，user 侧 = 原句、retrieval = 改写句）|
+| `yarn app:09-04-chunk-query-variants-step-1` | `50098` | 模块 09 · 04 · 切块与查询变体 step-1：父子切块 · 子块检索、父块生成 · 同父去重 · 真调模型答复 |
+| `yarn app:09-04-chunk-query-variants-step-2` | `50099` | 模块 09 · 04 · 切块与查询变体 step-2：多路查询 · 模型生成 N 条问句变体 · 各搜 · RRF 合并 · 同父去重 · 真调模型答复 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

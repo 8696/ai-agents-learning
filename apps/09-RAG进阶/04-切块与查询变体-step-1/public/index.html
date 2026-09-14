@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切块与查询变体 · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/corpus-panel.js"></script>
+  <script type="text/babel" src="/components/hit-and-feed.js"></script>
+  <script type="text/babel" src="/components/flow-trace.js"></script>
+  <script type="text/babel" src="/components/child-coverage.js"></script>
+  <script type="text/babel" src="/components/index-status.js"></script>
+  <script type="text/babel" src="/components/flow-step-card.js"></script>
+  <script type="text/babel" src="/components/flow-timeline.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, CorpusPanel, HitAndFeed, FlowTrace, ChildCoverage, IndexStatus, FlowTimelineParentChild } = window.DemoUI || {};
+
+    const DEFAULT_QUERY = "杯子运输途中裂了怎么办";
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [topK, setTopK] = useState(3);
+      const [corpus, setCorpus] = useState({ parents: [], children: [] });
+      const [indexStatus, setIndexStatus] = useState({ built: false, childCount: 0, vectorsDim: 0 });
+      const [errorText, setErrorText] = useState("");
+      const [result, setResult] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+        fetch("/api/corpus")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setCorpus(data); })
+          .catch(function () { setCorpus({ parents: [], children: [] }); });
+        fetch("/api/index-status")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setIndexStatus(data); })
+          .catch(function () { setIndexStatus({ built: false, childCount: 0, vectorsDim: 0 }); });
+      }, []);
+
+      const hasKey = Boolean(env && env.hasKey);
+      const busy = status === "loading";
+
+      function runRetrieve() {
+        setStatus("loading");
+        setErrorText("");
+        setResult(null);
+        fetch("/api/parent-child", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, topK: topK }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      function runBuildIndex() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/build-index", { method: "POST" })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setIndexStatus(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      function runForceError() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/force-error", { method: "POST" })
+          .then(function (res) { return res.json().then(function (body) { return { status: res.status, body: body }; }); })
+          .then(function (pack) {
+            setStatus("error");
+            setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              切块与查询变体（Chunk & Query Variants） · 第一步（step-1） · 父子切块：小块检索、大块生成
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <IndexStatus status={indexStatus} />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户问句（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <label className="block text-sm text-gray-700">
+                前 K 条（topK，1 到 6，默认 3）
+                <input
+                  id="topk-input"
+                  type="number"
+                  min={1}
+                  max={6}
+                  className="mt-1 w-32 border rounded p-2 text-sm"
+                  value={topK}
+                  onChange={function (event) {
+                    const v = Number(event.target.value);
+                    if (Number.isFinite(v) && v >= 1 && v <= 6) setTopK(v);
+                  }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">
+                改问句或 topK 再点按钮：服务端会用同一套子块重新打分。默认这句会同时打中「途中碎裂」和「要拍什么」，它们属于同一个父块，右栏应只出现一次。topK 改成 1 看得见漏召回；改成 3 是默认对照。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !indexStatus.built}
+                  onClick={runRetrieve}
+                >
+                  检索并生成（问句转向量 → 索引搜 → 取父块 → 调模型 · /api/parent-child）
+                </button>
+                <button
+                  type="button"
+                  id="build-index-btn"
+                  className="bg-indigo-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey}
+                  onClick={runBuildIndex}
+                >
+                  建库（6 个子块都转向量 → 存内存 · /api/build-index）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runForceError}
+                >
+                  演示后端 5xx（5xx · 第二类错误 · /api/force-error）
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                应用启动时会自动建库一次（异步、不阻塞 listen）；如果想换 .env 后重建，点「建库」按钮。
+                点「检索并生成」会看见左栏子块、右栏父块、底部绿色答复；空问句会得到 4xx。点「演示后端 5xx」走另一条失败通道。
+              </p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                <p className="font-medium">请求参数</p>
+                <p>问句（query）：{query || "（空）"}</p>
+                <p>前 K 条（topK）：{topK} · 接口 POST /api/parent-child</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                <p className="font-medium">调用流程（分两段：建库 + 检索）</p>
+                <div>
+                  <p className="font-semibold text-blue-800">建库（应用启动时一次性）</p>
+                  <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                    <li>把 6 个子块正文拼成「标题 + 正文」</li>
+                    <li>调协议 A 的 embeddings 接口（按 provider 分支：MiniMax 走 texts+type；其他走 input+encoding_format=float）</li>
+                    <li>每个文本变成一组浮点数（向量），存到内存 Map&lt;childId, vector&gt;（本步的「向量库」）</li>
+                    <li>父块（PARENTS，3 条）<span className="font-medium text-red-700">不进向量库</span>——父子切块的根就是不让父块进库</li>
+                  </ol>
+                </div>
+                <div>
+                  <p className="font-semibold text-blue-800">检索（每次点「检索并生成」）</p>
+                  <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                    <li>用户问句 → 调嵌入接口，<span className="font-medium">只算这 1 个向量</span></li>
+                    <li>在已建好的向量库上跑余弦相似度（cos = A·B / |A|·|B|）算问句和每个子块的相似度，按分数从高到低排</li>
+                    <li>取前 K 条（默认 3）标「入选 topK」；按 parentId 去重，同一父亲只留一份</li>
+                    <li>把去重后的父块全文拼进 messages（system + user），协议 A（OpenAI Chat Completions）调一次对话补全；本步期望 finish_reason = stop</li>
+                  </ol>
+                </div>
+              </div>
+              <CorpusPanel parents={corpus.parents} children={corpus.children} />
+              <div
+                id="flow-timeline-panel"
+                className="border border-gray-300 bg-white rounded p-3 space-y-2"
+              >
+                <p className="text-sm font-semibold">流程跟踪 · 父子切块（5 步）</p>
+                <p className="text-xs text-gray-600">
+                  每步一张卡，状态（完成 / 待执行）+ 原始请求（Request） + 原始响应（Response） + 耗时。点击「原始请求 / 原始响应」展开查看。
+                </p>
+                <FlowTimelineParentChild result={result} indexStatus={indexStatus} />
+              </div>
+              {result ? (
+                <div className="space-y-3">
+                  <div
+                    id="query-embed-summary"
+                    className="border border-indigo-300 bg-indigo-50 rounded p-3 space-y-1"
+                  >
+                    <p className="text-sm font-semibold text-indigo-900">
+                      检索这一步 · 问句转向量（Query Embedding）
+                    </p>
+                    <div className="text-xs text-indigo-900 grid grid-cols-2 gap-x-4 gap-y-1">
+                      <p>
+                        提供商（provider）：<span className="font-mono">{result.queryEmbed.provider}</span>
+                      </p>
+                      <p>
+                        嵌入模型（model）：<span className="font-mono">{result.queryEmbed.model}</span>
+                      </p>
+                      <p>
+                        向量维度（vectorDim）：<span className="font-mono">{result.queryEmbed.vectorDim}</span>
+                      </p>
+                      <p>
+                        这次只算 1 个向量耗时：<span className="font-mono">{result.queryEmbed.durationMs} ms</span>
+                      </p>
+                    </div>
+                    <p className="text-xs text-indigo-800">
+                      问句向量前 8 维（预览）：<span className="font-mono">[{result.queryEmbed.firstEightDims.map(function (n) { return n.toFixed(4); }).join(", ")}]</span>
+                    </p>
+                    <p className="text-xs text-indigo-700">
+                      注意：检索这一步<span className="font-medium">只算问句这一个向量</span>；6 个子块的向量是建库时算好的，存在内存里。
+                    </p>
+                  </div>
+                  <ChildCoverage children={result.allChildren} />
+                  <HitAndFeed
+                    childHits={result.childHits}
+                    parentsFed={result.parentsFed}
+                    duplicateChildIdsDropped={result.duplicateChildIdsDropped}
+                  />
+                  <FlowTrace
+                    modelRequest={result.modelRequest}
+                    modelResponse={result.modelResponse}
+                  />
+                  <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                    <p className="text-sm font-semibold">模型答复（reply · 最终落到用户那一行）</p>
+                    <p className="text-xs text-gray-500">生成只用了右栏父块，不是左栏子块。本卡只显示最终答复一句；完整的 messages 与 completion 见上面「调大模型 · 请求参数 / 响应结果」两块。</p>
+                    <pre className="text-sm whitespace-pre-wrap">{result.reply}</pre>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">还没有检索结果。点「检索并生成」之后，下面会并排出现子块和父块，再下面贴出模型实际收到的 messages 和响应（流程跟踪上面已经有）。</p>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

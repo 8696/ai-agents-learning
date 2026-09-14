@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切块与查询变体 · 第二步（多路查询）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/corpus-panel.js"></script>
+  <script type="text/babel" src="/components/index-status.js"></script>
+  <script type="text/babel" src="/components/multi-query-panel.js"></script>
+  <script type="text/babel" src="/components/flow-step-card.js"></script>
+  <script type="text/babel" src="/components/flow-timeline.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, CorpusPanel, IndexStatus, MultiQueryPanel, FlowTimelineMultiQuery } = window.DemoUI || {};
+
+    const DEFAULT_QUERY = "冬天杯子隔夜水还能喝吗";
+    const DEFAULT_NUM_QUERIES = 3;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [topK, setTopK] = useState(3);
+      const [numQueries, setNumQueries] = useState(DEFAULT_NUM_QUERIES);
+      const [corpus, setCorpus] = useState({ parents: [], children: [] });
+      const [indexStatus, setIndexStatus] = useState({ built: false, childCount: 0, vectorsDim: 0 });
+      const [errorText, setErrorText] = useState("");
+      const [result, setResult] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+        fetch("/api/corpus")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setCorpus(data); })
+          .catch(function () { setCorpus({ parents: [], children: [] }); });
+        fetch("/api/index-status")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setIndexStatus(data); })
+          .catch(function () { setIndexStatus({ built: false, childCount: 0, vectorsDim: 0 }); });
+      }, []);
+
+      const hasKey = Boolean(env && env.hasKey);
+      const busy = status === "loading";
+
+      function runMultiQuery() {
+        setStatus("loading");
+        setErrorText("");
+        setResult(null);
+        fetch("/api/multi-query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, topK: topK, numQueries: numQueries }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      function runBuildIndex() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/build-index", { method: "POST" })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setIndexStatus(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              切块与查询变体（Chunk & Query Variants） · 第二步（step-2） · 多路查询：一条问句 → N 条不同说法 → 各搜 → RRF 合并
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="multi-query" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <IndexStatus status={indexStatus} />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户问句（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <div className="flex flex-wrap gap-4">
+                <label className="block text-sm text-gray-700">
+                  前 K 条（topK，1 到 6，默认 3）
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    className="mt-1 w-32 border rounded p-2 text-sm"
+                    value={topK}
+                    onChange={function (event) {
+                      const v = Number(event.target.value);
+                      if (Number.isFinite(v) && v >= 1 && v <= 6) setTopK(v);
+                    }}
+                  />
+                </label>
+                <label className="block text-sm text-gray-700">
+                  多路条数（numQueries，1 到 5，默认 3）
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    className="mt-1 w-32 border rounded p-2 text-sm"
+                    value={numQueries}
+                    onChange={function (event) {
+                      const v = Number(event.target.value);
+                      if (Number.isFinite(v) && v >= 1 && v <= 5) setNumQueries(v);
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">
+                改问句、topK 或 numQueries 再点按钮。默认问句「冬天杯子隔夜水还能喝吗」会同时打中「保温」和「七天无理由」两条邻域，单条问句容易漏召回。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !indexStatus.built}
+                  onClick={runMultiQuery}
+                >
+                  多路查询（生成 N 条问句 → 各搜 → RRF → 调模型 · /api/multi-query）
+                </button>
+                <button
+                  type="button"
+                  className="bg-indigo-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey}
+                  onClick={runBuildIndex}
+                >
+                  建库（6 个子块都转向量 → 存内存 · /api/build-index）
+                </button>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                <p className="font-medium">请求参数</p>
+                <p>问句（query）：{query || "（空）"}</p>
+                <p>前 K 条（topK）：{topK} · 多路条数（numQueries）：{numQueries} · 接口 POST /api/multi-query</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                <p className="font-medium">调用流程（建库 + 多路 + 合并）</p>
+                <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                  <li><span className="font-medium">建库</span>（应用启动时一次性）：6 个子块正文 → 嵌入接口 → 存内存向量库。父块不进库。</li>
+                  <li><span className="font-medium">多路问句生成</span>（1 次 chat completions）：用户原句 → 模型一次输出 N 条不同说法的检索问句（同义词、政策名、相关概念）。</li>
+                  <li><span className="font-medium">每路检索</span>（N 次 scoreIndexed）：每条变体都算 embedding，在向量库上各自跑余弦相似度取 topK。</li>
+                  <li><span className="font-medium">RRF 合并</span>：rrfScore(d) = Σ 1 / (60 + rank_in_route)；被多路共同捞到的切块往上抬。</li>
+                  <li><span className="font-medium">同父去重</span>：按 parentId 去重，取父块全文。</li>
+                  <li><span className="font-medium">生成答复</span>（第 2 次 chat completions）：把去重后的父块拼进 messages，调对话补全。</li>
+                </ol>
+              </div>
+              <CorpusPanel parents={corpus.parents} children={corpus.children} />
+              <div
+                id="flow-timeline-panel"
+                className="border border-gray-300 bg-white rounded p-3 space-y-2"
+              >
+                <p className="text-sm font-semibold">流程跟踪 · 多路查询（6 步）</p>
+                <p className="text-xs text-gray-600">
+                  每步一张卡，状态（完成 / 待执行）+ 原始请求（Request）+ 原始响应（Response）+ 耗时。点「原始请求 / 原始响应」展开查看。
+                </p>
+                <FlowTimelineMultiQuery result={result} indexStatus={indexStatus} />
+              </div>
+              {result ? (
+                <div className="space-y-3">
+                  <MultiQueryPanel result={result} />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">还没有检索结果。点「多路查询」之后，下面会显示 N 条问句变体、每路命中、RRF 合并、去重后的父块、模型答复（流程跟踪上面已经有）。</p>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
