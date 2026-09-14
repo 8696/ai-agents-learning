@@ -112,7 +112,8 @@
     "app:09-03-query-rewrite-step-2": "PORT=50096 tsx 09-RAG进阶/03-Query-Rewrite-step-2/server.ts",
     "app:09-03-query-rewrite-step-3": "PORT=50097 tsx 09-RAG进阶/03-Query-Rewrite-step-3/server.ts",
     "app:09-04-chunk-query-variants-step-1": "PORT=50098 tsx 09-RAG进阶/04-切块与查询变体-step-1/server.ts",
-    "app:09-04-chunk-query-variants-step-2": "PORT=50099 tsx 09-RAG进阶/04-切块与查询变体-step-2/server.ts"
+    "app:09-04-chunk-query-variants-step-2": "PORT=50099 tsx 09-RAG进阶/04-切块与查询变体-step-2/server.ts",
+    "app:10-01-memory-types-step-1": "PORT=50100 tsx 10-Memory/01-记忆分类-step-1/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
