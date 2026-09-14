@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/result-cards.js"></script>
 
   <script type="text/babel">
@@ -101,7 +102,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="compare" base="../" />
                   <div className="flex flex-wrap gap-2">
                     {samples.map(function (s) {
                       return (

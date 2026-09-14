@@ -16,6 +16,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/unified-cards.js"></script>
   <script type="text/babel">
     const { useState } = React;
@@ -95,7 +96,7 @@
               <main id="page-main" className="container mx-auto p-4 space-y-4">
                 <PageIntro summary="业务 for await 拿 UnifiedDelta，不知道也不需要知道是 A 还是 B。" steps={INTRO_STEPS} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="stream" base="../" />
                   <label className="block text-sm">协议
                     <select className="mt-1 border rounded p-2" value={protocol} disabled={busy} onChange={function (e) { setProtocol(e.target.value); }}>
                       <option value="A">A · Chat Completions 字符串帧</option>

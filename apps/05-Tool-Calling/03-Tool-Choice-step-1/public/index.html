@@ -13,6 +13,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
@@ -20,7 +21,7 @@
   <script type="text/babel">
     // 本页教学点：三档 tool_choice 前端切换；每档跑完写入独立槽位，三档对照常驻 #output。
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter } = window.DemoUI;
+    const {PageNav, StatusPill, PageIntro, EnvFooter } = window.DemoUI;
 
     const CHOICES = ["auto", "none", "required"];
     const DEFAULT_QUERY = "我的快递单号 67890 到哪了？";
@@ -303,6 +304,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4 flex-1">
             <PageIntro />

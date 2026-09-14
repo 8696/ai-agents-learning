@@ -1,17 +1,31 @@
 /**
- * 职责：当前 step 顶部 tab 导航。两个 sub-page：评测集 + 生成侧。
- * 颜色：当前页蓝色边框 + 白底；其它页灰底。
- *
- * base 由调用方传：""（index.html 在 public/）或 "../"（pages/*.html 在 public/pages/）。
+ * 职责：标准 PageNav 组件。挂在 window.DemoUI.PageNav。
+ * 当前页面用 <PageNav current="..." base="" /> 即可拿到所有 sub-page 入口 + 高亮当前。
+ * 标准样式：卡片容器（bg-white border border-gray-200 rounded p-3）；
+ *          当前页 = 白底蓝边 + 浅蓝底（border-blue-500 bg-blue-50 text-blue-700 font-semibold）；
+ *          其他页 = 灰边白底（border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100）。
+ * 注意：本组件没有"← 回总览"链接 —— 总览放在 PAGES 第一项即可。
  */
 (function () {
   const DemoUI = window.DemoUI || (window.DemoUI = {});
 
   const PAGES = [
-    { key: "overview",  label: "总览 · 评测 + 生成",  href: "index.html" },
-    { key: "evaluate",  label: "评测集 · 命中率对照", href: "pages/evaluate.html" },
-    { key: "generate",  label: "生成侧 · 拼 prompt + 调模型", href: "pages/generate.html" },
-  ];
+  {
+    "key": "overview",
+    "label": "总览 · 查询改写",
+    "href": "index.html"
+  },
+  {
+    "key": "evaluate",
+    "label": "评测集 · 命中率对照 · 第三步",
+    "href": "pages/evaluate.html"
+  },
+  {
+    "key": "generate",
+    "label": "生成侧 · 完整 RAG 链路 · 第三步",
+    "href": "pages/generate.html"
+  }
+];
 
   DemoUI.PageNav = function PageNav(props) {
     const current = props.current;

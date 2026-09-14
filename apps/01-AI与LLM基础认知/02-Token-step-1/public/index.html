@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 
   <script type="text/babel">
     /**
@@ -84,7 +85,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   {env.vocab && <p className="text-xs text-gray-500">词表 {env.vocab}</p>}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {SCENES.map(function (s) {

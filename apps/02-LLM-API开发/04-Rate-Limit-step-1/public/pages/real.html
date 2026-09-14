@@ -16,6 +16,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/timeline.js"></script>
   <script type="text/babel">
     const { useState } = React;
@@ -79,7 +80,7 @@
                 <PageIntro summary="同一套 retry 套在真模型外面。burst 会烧多次 Token，按需点。"
                   steps={["单次 → GET /api/real，看真实延迟和错误形状", "burst → GET /api/real-burst，并发里可能出现真 429", "没 Key 时按钮 disabled"]} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="real" base="../" />
                   <div className="flex flex-wrap gap-2">
                     <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={runSingle}>真 API 单次</button>
                     <button className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled={blocked} onClick={runBurst}>并发 8（可能撞 429）</button>

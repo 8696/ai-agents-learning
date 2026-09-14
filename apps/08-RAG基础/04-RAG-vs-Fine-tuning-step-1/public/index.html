@@ -23,6 +23,7 @@
   <!-- 1) utils：无 JSX 的公共方法（这里没有） -->
   <!-- 2) components：共享 JSX，各用 type="text/babel" src，挂 window.DemoUI -->
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/no-rag-card.js"></script>
   <script type="text/babel" src="/components/rag-card.js"></script>
   <script type="text/babel" src="/components/compare-summary.js"></script>
@@ -30,7 +31,7 @@
   <!-- 3) 本页内联 JSX 块（最后） -->
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { EnvFooter, NoRagCard, RagCard, CompareSummary } = window.DemoUI;
+    const {PageNav, EnvFooter, NoRagCard, RagCard, CompareSummary } = window.DemoUI;
 
     function App() {
       // ── 输入与左/右栏状态 ──
@@ -160,6 +161,7 @@
               {statusPill}
             </span>
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             {/* §5.3.11：本页演示什么 + 数据流步骤 */}

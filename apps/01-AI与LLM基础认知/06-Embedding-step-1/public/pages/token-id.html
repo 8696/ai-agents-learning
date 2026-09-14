@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/vec-cards.js"></script>
 
   <script type="text/babel">
@@ -88,7 +89,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="token-id" base="../" />
                   <label className="block text-sm">
                     query
                     <span className="block text-xs text-gray-500">点了只做 id 相减，不会算余弦。</span>

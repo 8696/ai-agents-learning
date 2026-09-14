@@ -18,9 +18,10 @@
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { RoundCard, PlanPanel, MetricsStrip } = window.DemoUI;
+    const {PageNav, RoundCard, PlanPanel, MetricsStrip } = window.DemoUI;
     const FALLBACK_PORT = 50054;
 
     function App() {
@@ -92,6 +93,7 @@
               {pillStatus === "loading" ? "🔄 请求中" : pillStatus === "ok" ? "✅ 完成" : pillStatus === "err" ? "❌ 错误" : "⏸ 待连接"}
             </span>
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <section id="problem-card" className="bg-orange-50 border-2 border-orange-400 rounded p-4 space-y-2">

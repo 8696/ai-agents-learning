@@ -19,6 +19,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/presets.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/mode-cards.js"></script>
 
   <script type="text/babel">
@@ -145,7 +146,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="text" base="../" />
                   {!env.hasKey && (
                     <p className="text-xs text-red-600">
                       未检测到 Key，按钮已禁用。先在 apps/.env 配置 LLM_PROVIDER 对应的 Key。

@@ -18,6 +18,7 @@
   <script src="/utils/sse-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/dialect-table.js"></script>
 
   <script type="text/babel">
@@ -88,7 +89,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   <p className="text-sm text-gray-600">
                     总览页不发起模型请求。方言表是文档口径；要看这一轮 HTTP 到底把思考放哪，去流式对照页。
                   </p>

@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 
   <script type="text/babel">
     /**
@@ -83,7 +84,7 @@ token / frame / content 三层不要混
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   <p className="text-sm text-gray-600">
                     总览页不发起模型请求，也不跑模拟流。选一个场景进去跑。页脚的 Key 状态来自 GET /health。
                   </p>

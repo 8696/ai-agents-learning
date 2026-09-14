@@ -18,6 +18,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/stream-cards.js"></script>
 
   <script type="text/babel">
@@ -117,7 +118,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="chat" base="../" />
                   <label className="block text-sm text-gray-700">
                     用户消息
                     <span className="block text-xs text-gray-500 mt-0.5">点发送会 POST /api/chat。期望绿卡片逐字变长，页脚 Key ❌ 时按钮会锁住。</span>

@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/schema-cards.js"></script>
 
   <script type="text/babel">
@@ -92,7 +93,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="repair" base="../" />
                   <label className="block text-sm">
                     raw（JSON 文本）
                     <span className="block text-xs text-gray-500">期望 action 不在枚举里、query 为空，才会出现两条 issues。</span>

@@ -22,6 +22,7 @@
 
   <!-- 共享 JSX 组件（挂 window.DemoUI） -->
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/prompt-empty-card.js"></script>
   <script type="text/babel" src="/components/prompt-fewshot-card.js"></script>
   <script type="text/babel" src="/components/compare-summary.js"></script>
@@ -29,7 +30,7 @@
   <!-- 本页内联 JSX 块（最后） -->
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { EnvFooter, PromptEmptyCard, PromptFewshotCard, CompareSummary } = window.DemoUI;
+    const {PageNav, EnvFooter, PromptEmptyCard, PromptFewshotCard, CompareSummary } = window.DemoUI;
 
     function App() {
       // ── 输入与左/右栏状态 ──
@@ -179,6 +180,7 @@
               {statusPill}
             </span>
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <section

@@ -15,9 +15,10 @@
   <div id="root"></div>
   <script src="/utils/api.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     const { useEffect, useState } = React;
-    const { EnvFooter } = window.DemoUI;
+    const {PageNav, EnvFooter } = window.DemoUI;
 
     function Overview() {
       const [env, setEnv] = useState(null);
@@ -34,6 +35,7 @@
               ⏸ 待连接
             </span>
           </header>
+          <PageNav current="overview" base="" />
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">

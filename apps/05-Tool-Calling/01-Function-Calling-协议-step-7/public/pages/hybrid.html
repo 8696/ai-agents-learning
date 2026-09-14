@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/gantt.js"></script>
 
   <script type="text/babel">
@@ -112,7 +113,7 @@
           </header>
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <PageNav />
+            <PageNav current="hybrid" base="../" />
             <PageIntro
               summary="混合编排：POST /api/hybrid → classifyQuery 判定路径（A 仅 weather / B weather+硬接 suggest / C 直接打包被拒→退回）→ while 循环 + 路由层 hard-code 两条约束（拒绝越权 + 路径 B 硬接）。"
               steps={[

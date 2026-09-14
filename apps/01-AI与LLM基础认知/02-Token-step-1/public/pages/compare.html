@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/token-cards.js"></script>
 
   <script type="text/babel">
@@ -83,7 +84,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="compare" base="../" />
                   {env.samples && (
                     <p className="text-xs text-gray-500">
                       英文 {JSON.stringify(env.samples.english)} · 中文 {JSON.stringify(env.samples.chinese)}

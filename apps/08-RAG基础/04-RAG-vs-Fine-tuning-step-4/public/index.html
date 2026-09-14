@@ -22,6 +22,7 @@
 
   <!-- 共享 JSX 组件 -->
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/doc-card.js"></script>
   <script type="text/babel" src="/components/qa-card.js"></script>
   <script type="text/babel" src="/components/compare-summary.js"></script>
@@ -29,7 +30,7 @@
   <!-- 本页内联 JSX 块（最后） -->
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { EnvFooter, DocCard, QaCard, CompareSummary } = window.DemoUI;
+    const {PageNav, EnvFooter, DocCard, QaCard, CompareSummary } = window.DemoUI;
 
     function App() {
       const [docs, setDocs] = useState([]);
@@ -100,6 +101,7 @@
               {statusPill}
             </span>
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <section

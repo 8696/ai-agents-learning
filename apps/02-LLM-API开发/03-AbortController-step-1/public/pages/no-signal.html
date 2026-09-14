@@ -16,6 +16,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/abort-cards.js"></script>
   <script type="text/babel">
     const { useState, useRef } = React;
@@ -78,7 +79,7 @@
                 <PageIntro summary="页面可以 abort fetch，但服务端没把 signal 传给 SDK，生成仍会跑完并计费。"
                   steps={["点跑 → POST /api/no-signal-abort", "服务端故意不传 signal", "可点立即取消：浏览器停了，终端仍可能继续打帧", "对照取消页：那边 SDK 真的停"]} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="no-signal" base="../" />
                   <label className="block text-sm">message
                     <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={2} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
                   </label>

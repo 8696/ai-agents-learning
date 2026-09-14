@@ -16,6 +16,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     /**
      * 本页教学点：字段映射速查。本页不调模型，对照发生在 /pages/*。
@@ -104,7 +105,7 @@
                 }
               />
               <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                <PageNav />
+                <PageNav current="overview" base="" />
                 <p className="text-sm text-gray-600">
                   总览页不发起模型请求。选一个场景进去跑。点「故意网络错误」只为对照 fetch reject 和 HTTP 4xx 长得不一样。
                 </p>

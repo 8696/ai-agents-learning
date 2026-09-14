@@ -1,37 +1,68 @@
 /**
- * 职责：step-2 顶部 tab 导航。三个 mode 共享同一份 lib/flow/ 主流程。
- * 当前 mode 高亮；切换 = 跳到对应 page（多页之间用 <a>，不是单页 tab）。
- *
- * 同文件被 index.html 和 pages/*.html 同时引入；
- * base 由调用方传：""（index.html 在 public/）或 "../"（pages/*.html 在 public/pages/）。
+ * 职责：标准 PageNav 组件。挂在 window.DemoUI.PageNav。
+ * 当前页面用 <PageNav current="..." base="" /> 即可拿到所有 sub-page 入口 + 高亮当前。
+ * 标准样式：卡片容器（bg-white border border-gray-200 rounded p-3）；
+ *          当前页 = 白底蓝边 + 浅蓝底（border-blue-500 bg-blue-50 text-blue-700 font-semibold）；
+ *          其他页 = 灰边白底（border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100）。
+ * 注意：本组件没有"← 回总览"链接 —— 总览放在 PAGES 第一项即可。
  */
 (function () {
-  const DemoUI = (window.DemoUI = window.DemoUI || {});
+  const DemoUI = window.DemoUI || (window.DemoUI = {});
 
-  const MODES = [
-    { key: "listwise",     label: "① Listwise + id 校验", file: "listwise.html" },
-    { key: "shape-vs-llm", label: "② 接口形状 vs 对话模型", file: "shape-vs-llm.html" },
-    { key: "pairwise",     label: "③ Pairwise",           file: "pairwise.html" },
-  ];
+  const PAGES = [
+  {
+    "key": "overview",
+    "label": "总览 · 重排序",
+    "href": "index.html"
+  },
+  {
+    "key": "listwise",
+    "label": "Listwise + id 校验 · 第二步 · 重排序",
+    "href": "pages/listwise.html"
+  },
+  {
+    "key": "normal",
+    "label": "正常对照 · 第一步 · 重排序",
+    "href": "pages/normal.html"
+  },
+  {
+    "key": "pairwise",
+    "label": "Pairwise · 第二步 · 重排序",
+    "href": "pages/pairwise.html"
+  },
+  {
+    "key": "rerank-off",
+    "label": "关闭精排 · 第一步 · 重排序",
+    "href": "pages/rerank-off.html"
+  },
+  {
+    "key": "shape-vs-llm",
+    "label": "接口形状 vs 对话模型 · 第二步 · 重排序",
+    "href": "pages/shape-vs-llm.html"
+  },
+  {
+    "key": "token-budget",
+    "label": "Token 量级 · 第一步 · 重排序",
+    "href": "pages/token-budget.html"
+  },
+  {
+    "key": "window-of-shame",
+    "label": "候选窗外 · 第一步 · 重排序",
+    "href": "pages/window-of-shame.html"
+  }
+];
 
   DemoUI.PageNav = function PageNav(props) {
     const current = props.current;
     const base = props.base || "";
     return (
       <nav className="bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm">
-        <a
-          href={base + "index.html"}
-          className="text-gray-500 px-2 py-1 rounded hover:bg-gray-100"
-        >
-          ← 回总览
-        </a>
-        <span className="text-gray-300">|</span>
-        {MODES.map(function (item) {
+        {PAGES.map(function (item) {
           const active = item.key === current;
           return (
             <a
               key={item.key}
-              href={base + "pages/" + item.file}
+              href={base + item.href}
               className={
                 "px-3 py-1 rounded border " +
                 (active

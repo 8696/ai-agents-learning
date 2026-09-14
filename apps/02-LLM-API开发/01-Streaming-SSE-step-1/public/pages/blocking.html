@@ -18,6 +18,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/stream-cards.js"></script>
 
   <script type="text/babel">
@@ -178,7 +179,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="blocking" base="../" />
                   <p className="text-xs text-gray-500">
                     「对照跑一次」会同时打两条接口。期望：左边很快出第一个字，右边空白等到结束才整句出现。不需要 Key。
                   </p>

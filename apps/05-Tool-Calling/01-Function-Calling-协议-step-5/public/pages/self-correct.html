@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/gantt.js"></script>
 
   <script type="text/babel">
@@ -115,7 +116,7 @@
           </header>
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <PageNav />
+            <PageNav current="self-correct" base="../" />
             <PageIntro
               summary="模型自编排：POST /api/self-correct → while 循环 + decideNextAction（mock LLM 看 tool_result 决定下一步）→ 自纠触发 + MAX_ROUNDS 边界。"
               steps={[

@@ -17,6 +17,7 @@
   <script src="/utils/doc-types.js"></script>
   <script src="/utils/chunking-api.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/chunk-panels.js"></script>
   <script type="text/babel" src="/components/budget-bar.js"></script>
   <script type="text/babel" src="/components/right-panel.js"></script>
@@ -27,7 +28,7 @@
   <script type="text/babel" src="/components/judge-panel.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar, QualityCard, DocTypeSelector, CompareParamsPanel, ChunkingControlPanel, JudgePanel } = window.DemoUI;
+    const {PageNav, StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar, QualityCard, DocTypeSelector, CompareParamsPanel, ChunkingControlPanel, JudgePanel } = window.DemoUI;
     const { DOC_TYPES, ChunkingAPI } = window.DemoUtils;
 
     // 默认售后 Markdown（同 step-2）
@@ -237,6 +238,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <PageIntro />
 

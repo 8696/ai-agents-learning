@@ -17,6 +17,7 @@
   <script src="/utils/sse-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/stream-cards.js"></script>
   <script type="text/babel">
     /**
@@ -164,7 +165,7 @@
                   steps={INTRO_STEPS}
                 />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="stream-a" base="../" />
                   {!env.hasKey && <p className="text-xs text-red-600">Key ❌，主按钮已禁用。</p>}
                   <label className="block text-sm">
                     消息

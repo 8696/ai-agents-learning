@@ -22,8 +22,10 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
+    const { PageNav } = window.DemoUI || {};
 
     // ── 粗估 token（前端口径；服务端 gpt-tokenizer 是权威，这里只是给旋钮即时反馈）──
     function approxTokens(text) {
@@ -173,6 +175,7 @@
                                           "bg-gray-200")
             }>{status.text}</span>
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">

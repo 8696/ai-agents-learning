@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/group-cards.js"></script>
 
   <script type="text/babel">
@@ -90,7 +91,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="temperature" base="../" />
                   <label className="block text-sm">
                     prompt
                     <span className="block text-xs text-gray-500">点了会连跑 6 次真实调用（3 档 × 2）。答案短才容易逐字比对。</span>

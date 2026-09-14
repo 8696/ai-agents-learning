@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/billing-cards.js"></script>
 
   <script type="text/babel">
@@ -84,7 +85,7 @@ usage.total_tokens       = 两者相加，不能直接当账单看`}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   <PricingTable pricing={env.pricing} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {SCENES.map(function (s) {

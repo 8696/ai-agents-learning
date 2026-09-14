@@ -1790,6 +1790,98 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 - 不强制每个 demo 都有 `lib/db.ts`（无持久化 demo 不需要）
 - 不规定 data/ 用 `.gitignore`（本仓库惯例进 git；学习者 clone 后看到种子数据是预期）
 
+### 5.3.18 PageNav 标准（顶部跨页导航，2026-09-14 立 · 强制）
+
+**目的**：把所有 demo 跨多页的导航钉死成**唯一一种**样式。98 个 demo 在 2026-09-14 之前散落着 4 种不同写法（卡片裸 nav / 顶 bar `border-b` / 顶 bar 左回总览 / 块级卡白底蓝字），新写 / 改 demo 一律按本节走。
+
+**位置**：每个 demo 自己一个 `apps/{demo}/public/components/page-nav.js`。**禁止**写到顶层 `apps/components/`、**禁止**跨 demo import（与 §5.3.12 独立性一致）。
+
+**路径约定**（脚本批处理时一条规则）：
+
+| HTML 位置 | `<script>` src |
+| --- | --- |
+| `public/index.html` | `/components/page-nav.js`（**绝对路径**） |
+| `public/pages/*.html` | `../components/page-nav.js`（**相对路径**） |
+
+**JSX 调用**（写在 `</header>` 之后、`<main>` 之前）：
+
+```jsx
+// index.html：base 为空
+<PageNav current="overview" base="" />
+
+// pages/*.html：base 是 ../
+<PageNav current="evaluate" base="../" />
+```
+
+`base` 在 page-nav.js 内部 `props.base || ""` 兜底。
+
+**destructure 必带 PageNav**（避坑 · 2026-09-14 立 · 实测踩坑）：inline JSX 用 `<PageNav>` 之前必须把 `PageNav` 从 `window.DemoUI` 解构出来，否则 Babel 转译后 `React.createElement(PageNav, ...)` 找不到标识符 → 运行时 `ReferenceError: PageNav is not defined`。
+
+| 情况 | 怎么写 |
+| --- | --- |
+| 已有 `const { ... } = window.DemoUI;` | 把 `PageNav` 加进同一行（加在最前） |
+| 没有 `window.DemoUI` 解构 | 在 `const { useState, ... } = React;` 后**新增一行**：`const { PageNav } = window.DemoUI \|\| {};` |
+
+**组件标准代码**（贴在 `public/components/page-nav.js`）：
+
+```jsx
+(function () {
+  const DemoUI = window.DemoUI || (window.DemoUI = {});
+
+  const PAGES = /* 按下方 PAGES 数组 规则填 */;
+
+  DemoUI.PageNav = function PageNav(props) {
+    const current = props.current;
+    const base = props.base || "";
+    return (
+      <nav className="bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm">
+        {PAGES.map(function (item) {
+          const active = item.key === current;
+          return (
+            <a
+              key={item.key}
+              href={base + item.href}
+              className={
+                "px-3 py-1 rounded border " +
+                (active
+                  ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
+                  : "border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100")
+              }
+            >
+              {item.label}
+            </a>
+          );
+        })}
+      </nav>
+    );
+  };
+})();
+```
+
+样式含义（**钉死的色卡**）：
+- 容器：`bg-white border border-gray-200 rounded p-3`（卡状，不是顶部 bar）
+- 当前页：`border-blue-500 bg-blue-50 text-blue-700 font-semibold`（白底蓝边 + 浅蓝底）
+- 其他页：`border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100`（灰边白底）
+
+**PAGES 数组**（每个 demo 自己填）：
+
+| demo 类型 | PAGES 写法 | 各页 current |
+| --- | --- | --- |
+| **单页 demo**（只有 `index.html`） | `[{ key: "main", label: "<该 demo 的 <title> 或 <h1> 文本>", href: "index.html" }]` | `current="main"` |
+| **多页 demo**（`index.html` + `pages/*.html`） | `[{ key: "overview", label: "总览 · <该 demo 的主题>", href: "index.html" }, ...一项对应一个 `pages/*.html`]` | index 用 `current="overview"`；每个 sub-page 用 `current="<文件名去 .html>"`（例：`evaluate.html` → `current="evaluate"`） |
+
+**禁止**：
+- 写顶部 `border-b` 风格的 bar（旧样式 B / C）
+- 单独一个"← 回总览"链接（旧样式 D 的写法）—— 总览就是 PAGES 第一项
+- `active` 用「蓝底白字」(`bg-blue-600 text-white`) —— 标准是「白底蓝边」
+- 跨 demo 共享 `page-nav.js`（独立性）
+- 把 items 数组写到 `page-nav.js` 之外的全局 / 配置中心
+- 在 PageNav 里再加"分隔符 `|`"或回退链
+
+**一次性迁移脚本**（已跑过 · 一次性）：`apps/scripts/add-page-nav.mjs` 在 2026-09-14 把 98 个 demo 都加上了 / 覆盖成了标准 PageNav。**新写 demo 不要重跑这个脚本**——按本节手写一份 `public/components/page-nav.js` + 在 HTML 里加 `<script>` 和 `<PageNav>` 调用。
+
+**已锁定旧 demo 的特殊处理**：2026-09-14 之前打钩的旧 demo，**当时 PageNav 写在哪（layout.js 内 / 独立 page-nav.js / 不同样式）都先按本节标准覆盖一次**——功能不受影响（page-nav.js 加载顺序在后，`window.DemoUI.PageNav` 被新组件覆盖）。旧 layout.js 里的 `function PageNav()` 与 `window.DemoUI.PageNav = PageNav` 是死代码（无害），后续如要清，按 §5.3.14「cp -r step-N → step-(N+1) 必改清单」思路单独做一轮清理。
+
 ### 5.4 目标 ↔ 代码整合打钩前检查（先抽清单再逐项核对）·新
 
 2026-09-04 维护模式起生效。

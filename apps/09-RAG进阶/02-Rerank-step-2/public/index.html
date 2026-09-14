@@ -12,14 +12,14 @@
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
   <script src="utils/api-client.js"></script>
   <script type="text/babel" src="components/layout.js"></script>
-  <script type="text/babel" src="components/page-nav.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
   <script type="text/babel">
     // 本页教学点：step-2 总览。第二阶段的另外三种实现形状：Listwise、专用接口 vs 对话模型、Pairwise。
     const { useState, useEffect } = React;
-    const { StatusPill, EnvFooter } = window.DemoUI;
+    const {PageNav, StatusPill, EnvFooter } = window.DemoUI;
     const { fetchJson } = window.DemoUtils;
 
     const MODES = [
@@ -60,6 +60,7 @@
             </h1>
             <StatusPill status={env ? "idle" : "loading"} />
           </header>
+          <PageNav current="overview" base="" />
 
           <main id="page-main" className="max-w-7xl mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">

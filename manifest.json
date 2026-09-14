@@ -832,6 +832,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/00-环境准备/01-API-Key-计费-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/00-环境准备/01-API-Key-计费-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -948,6 +952,10 @@
                         "path": "apps/00-环境准备/01-mini-app-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/00-环境准备/01-mini-app-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "stream-cards.js",
                         "path": "apps/00-环境准备/01-mini-app-step-1/public/components/stream-cards.js"
                       }
@@ -1062,6 +1070,10 @@
                         "path": "apps/01-AI与LLM基础认知/02-Token-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/01-AI与LLM基础认知/02-Token-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "token-cards.js",
                         "path": "apps/01-AI与LLM基础认知/02-Token-step-1/public/components/token-cards.js"
                       }
@@ -1173,6 +1185,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/01-AI与LLM基础认知/06-Embedding-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/01-AI与LLM基础认知/06-Embedding-step-1/public/components/page-nav.js"
                       },
                       {
                         "label": "vec-cards.js",
@@ -1315,6 +1331,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/01-AI与LLM基础认知/07-Temperature-Top-P-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -1446,6 +1466,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/02-LLM-API开发/01-Streaming-SSE-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/02-LLM-API开发/01-Streaming-SSE-step-1/public/components/page-nav.js"
                       },
                       {
                         "label": "stream-cards.js",
@@ -1623,6 +1647,10 @@
                         "path": "apps/02-LLM-API开发/02-协议-A-vs-B-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/02-LLM-API开发/02-协议-A-vs-B-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "stream-cards.js",
                         "path": "apps/02-LLM-API开发/02-协议-A-vs-B-step-1/public/components/stream-cards.js"
                       }
@@ -1783,6 +1811,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/02-LLM-API开发/03-AbortController-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/02-LLM-API开发/03-AbortController-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -1936,6 +1968,10 @@
                         "path": "apps/02-LLM-API开发/03-adapter-demo-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/02-LLM-API开发/03-adapter-demo-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "unified-cards.js",
                         "path": "apps/02-LLM-API开发/03-adapter-demo-step-1/public/components/unified-cards.js"
                       }
@@ -2069,6 +2105,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/02-LLM-API开发/04-Rate-Limit-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/02-LLM-API开发/04-Rate-Limit-step-1/public/components/page-nav.js"
                       },
                       {
                         "label": "timeline.js",
@@ -2219,6 +2259,10 @@
                         "path": "apps/02-LLM-API开发/05-思考-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/02-LLM-API开发/05-思考-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "stream-cards.js",
                         "path": "apps/02-LLM-API开发/05-思考-step-1/public/components/stream-cards.js"
                       }
@@ -2367,6 +2411,10 @@
                         "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "side-cards.js",
                         "path": "apps/03-Prompt-Engineering/01-System-User-Assistant-优先级-step-1/public/components/side-cards.js"
                       }
@@ -2509,6 +2557,10 @@
                         "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "result-cards.js",
                         "path": "apps/03-Prompt-Engineering/02-Few-shot-Zero-shot-step-1/public/components/result-cards.js"
                       }
@@ -2631,6 +2683,10 @@
                         "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理-step-1/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "result-cards.js",
                         "path": "apps/03-Prompt-Engineering/04-Prompt-版本管理-step-1/public/components/result-cards.js"
                       }
@@ -2735,6 +2791,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/04-Structured-Output/01-JSON-Schema-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/04-Structured-Output/01-JSON-Schema-step-1/public/components/page-nav.js"
                       },
                       {
                         "label": "schema-cards.js",
@@ -2885,6 +2945,10 @@
                       {
                         "label": "mode-cards.js",
                         "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/public/components/mode-cards.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Structured-Output-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -3035,6 +3099,10 @@
                       {
                         "label": "mode-cards.js",
                         "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/public/components/mode-cards.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/04-Structured-Output/02-JSON-Mode-vs-Tool-Use-ProtoB-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -3161,7 +3229,12 @@
                 "children": [
                   {
                     "label": "components",
-                    "children": []
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-1/public/components/page-nav.js"
+                      }
+                    ]
                   },
                   {
                     "label": "index.html",
@@ -3251,6 +3324,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-2/public/index.html"
                   }
@@ -3338,6 +3420,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-3/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -3451,6 +3537,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-4/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -3560,6 +3650,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-5/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -3665,6 +3759,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-6/public/index.html"
                   }
@@ -3744,6 +3847,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-7/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -3849,6 +3956,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-8/public/index.html"
                   }
@@ -3919,6 +4035,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/02-Tool-Description-step-1/public/index.html"
@@ -3991,6 +4116,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/02-Tool-Description-step-2/public/index.html"
                   }
@@ -4061,6 +4195,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/02-Tool-Description-step-3/public/index.html"
@@ -4133,6 +4276,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/02-Tool-Description-step-4/public/index.html"
                   }
@@ -4203,6 +4355,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/02-Tool-Description-step-5/public/index.html"
@@ -4278,6 +4439,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/02-Tool-Description-step-6/public/index.html"
@@ -4355,6 +4525,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4435,6 +4609,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4528,6 +4706,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/03-Tool-Choice-step-3/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4630,6 +4812,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-1/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4714,6 +4900,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4802,6 +4992,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-3/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4886,6 +5080,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-4/public/components/page-nav.js"
                       }
                     ]
                   },
@@ -4947,6 +5145,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-1/public/index.html"
@@ -5030,6 +5237,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/01-Context-vs-Memory-step-2/public/index.html"
                   }
@@ -5092,7 +5308,12 @@
                 "children": [
                   {
                     "label": "components",
-                    "children": []
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/public/components/page-nav.js"
+                      }
+                    ]
                   },
                   {
                     "label": "index.html",
@@ -5156,6 +5377,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-2/public/index.html"
                   }
@@ -5212,6 +5442,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-3/public/index.html"
@@ -5270,6 +5509,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-4/public/index.html"
                   }
@@ -5326,6 +5574,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-5/public/index.html"
@@ -5384,6 +5641,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/03-Token-Budget-step-1/public/index.html"
                   }
@@ -5440,6 +5706,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/03-Token-Budget-step-2/public/index.html"
@@ -5502,6 +5777,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/03-Token-Budget-step-3/public/index.html"
                   }
@@ -5558,6 +5842,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/03-Token-Budget-step-4/public/index.html"
@@ -5653,6 +5946,10 @@
                   {
                     "label": "components",
                     "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/components/page-nav.js"
+                      },
                       {
                         "label": "side-effect.js",
                         "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-1/public/components/side-effect.js"
@@ -5770,6 +6067,10 @@
                   {
                     "label": "components",
                     "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/components/page-nav.js"
+                      },
                       {
                         "label": "parallel-card.js",
                         "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-2/public/components/parallel-card.js"
@@ -5894,6 +6195,10 @@
                       {
                         "label": "fail-observe-card.js",
                         "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/fail-observe-card.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-3/public/components/page-nav.js"
                       },
                       {
                         "label": "parallel-card.js",
@@ -6025,6 +6330,10 @@
                         "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/cancel-badge.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/page-nav.js"
+                      },
+                      {
                         "label": "side-effect.js",
                         "path": "apps/07-手写Agent/01-Agent-Loop-ReAct-step-4/public/components/side-effect.js"
                       },
@@ -6146,6 +6455,10 @@
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/components/metrics-strip.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "plan-panel.js",
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-1/public/components/plan-panel.js"
                       },
@@ -6257,6 +6570,10 @@
                       {
                         "label": "metrics-strip.js",
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-2/public/components/page-nav.js"
                       },
                       {
                         "label": "plan-panel.js",
@@ -6376,6 +6693,10 @@
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/components/metrics-strip.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/components/page-nav.js"
+                      },
+                      {
                         "label": "plan-panel.js",
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-3/public/components/plan-panel.js"
                       },
@@ -6493,6 +6814,10 @@
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/components/metrics-strip.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/components/page-nav.js"
+                      },
+                      {
                         "label": "plan-panel.js",
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-4/public/components/plan-panel.js"
                       },
@@ -6608,6 +6933,10 @@
                       {
                         "label": "metrics-strip.js",
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/components/metrics-strip.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-5/public/components/page-nav.js"
                       },
                       {
                         "label": "plan-panel.js",
@@ -6735,6 +7064,10 @@
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/components/metrics-strip.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/components/page-nav.js"
+                      },
+                      {
                         "label": "plan-panel.js",
                         "path": "apps/07-手写Agent/02-先规划再执行-vs-一步步走-step-6/public/components/plan-panel.js"
                       },
@@ -6824,6 +7157,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-1/public/index.html"
                   }
@@ -6889,6 +7231,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-2/public/index.html"
@@ -6963,6 +7314,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-3/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-3/public/index.html"
@@ -7041,6 +7401,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-4/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-4/public/index.html"
@@ -7136,6 +7505,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-5/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-5/public/index.html"
                   }
@@ -7222,6 +7600,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-6/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-6/public/index.html"
                   }
@@ -7304,6 +7691,15 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-7/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-7/public/index.html"
                   }
@@ -7385,6 +7781,15 @@
               {
                 "label": "public",
                 "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/07-手写Agent/03-死循环防护-step-8/public/components/page-nav.js"
+                      }
+                    ]
+                  },
                   {
                     "label": "index.html",
                     "path": "apps/07-手写Agent/03-死循环防护-step-8/public/index.html"
@@ -7535,6 +7940,10 @@
                       {
                         "label": "output-cards.js",
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-1/public/components/page-nav.js"
                       },
                       {
                         "label": "store-panel.js",
@@ -7700,6 +8109,10 @@
                       {
                         "label": "output-cards.js",
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-2/public/components/page-nav.js"
                       },
                       {
                         "label": "store-panel.js",
@@ -7891,6 +8304,10 @@
                       {
                         "label": "output-cards.js",
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-3/public/components/page-nav.js"
                       },
                       {
                         "label": "store-panel.js",
@@ -8092,6 +8509,10 @@
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/output-cards.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/page-nav.js"
+                      },
+                      {
                         "label": "store-panel.js",
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-4/public/components/store-panel.js"
                       }
@@ -8265,6 +8686,10 @@
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/output-cards.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/page-nav.js"
+                      },
+                      {
                         "label": "store-panel.js",
                         "path": "apps/08-RAG基础/01-RAG-流水线-step-5/public/components/store-panel.js"
                       }
@@ -8375,6 +8800,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-1/public/components/page-nav.js"
                       },
                       {
                         "label": "right-panel.js",
@@ -8499,6 +8928,10 @@
                       {
                         "label": "overlap-compare-card.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/overlap-compare-card.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-2/public/components/page-nav.js"
                       },
                       {
                         "label": "right-panel.js",
@@ -8639,6 +9072,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-3/public/components/page-nav.js"
                       },
                       {
                         "label": "quality-card.js",
@@ -8797,6 +9234,10 @@
                         "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/page-nav.js"
+                      },
+                      {
                         "label": "pdf-chunk-panel.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-4/public/components/pdf-chunk-panel.js"
                       },
@@ -8949,6 +9390,10 @@
                         "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/layout.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/page-nav.js"
+                      },
+                      {
                         "label": "right-panel.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-5/public/components/right-panel.js"
                       }
@@ -9051,6 +9496,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-6/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-6/public/components/page-nav.js"
                       },
                       {
                         "label": "right-panel.js",
@@ -9159,6 +9608,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/08-RAG基础/02-Chunking-step-7/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/02-Chunking-step-7/public/components/page-nav.js"
                       },
                       {
                         "label": "right-panel.js",
@@ -9476,6 +9929,10 @@
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/no-rag-card.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/page-nav.js"
+                      },
+                      {
                         "label": "rag-card.js",
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-1/public/components/rag-card.js"
                       }
@@ -9574,6 +10031,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-2/public/components/page-nav.js"
                       },
                       {
                         "label": "prompt-empty-card.js",
@@ -9684,6 +10145,10 @@
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/no-rag-card.js"
                       },
                       {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/page-nav.js"
+                      },
+                      {
                         "label": "rag-card.js",
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-3/public/components/rag-card.js"
                       }
@@ -9786,6 +10251,10 @@
                       {
                         "label": "layout.js",
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/public/components/page-nav.js"
                       },
                       {
                         "label": "qa-card.js",
@@ -10180,6 +10649,1788 @@
         ]
       },
       {
+        "label": "09-RAG进阶",
+        "children": [
+          {
+            "label": "01-BM25-混合检索-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "bm25.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/corpus/bm25.ts"
+                      },
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "bm25-vs-vector.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/flow/bm25-vs-vector.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/http/send-error.ts"
+                      },
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/http/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-list.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/public/components/corpus-list.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "result-row.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/public/components/result-row.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/routes/corpus.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "search-bm25.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/routes/search-bm25.ts"
+                  },
+                  {
+                    "label": "search-vector.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/routes/search-vector.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-BM25-混合检索-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "bm25.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/corpus/bm25.ts"
+                      },
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "bm25-vs-vector.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/flow/bm25-vs-vector.ts"
+                      },
+                      {
+                        "label": "hybrid-search.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/flow/hybrid-search.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/http/send-error.ts"
+                      },
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/http/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "compare-normalize.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/components/compare-normalize.js"
+                      },
+                      {
+                        "label": "corpus-list.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/components/corpus-list.js"
+                      },
+                      {
+                        "label": "hybrid-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/components/hybrid-card.js"
+                      },
+                      {
+                        "label": "hybrid-params.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/components/hybrid-params.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "result-row.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/components/result-row.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/routes/corpus.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "search-bm25.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/routes/search-bm25.ts"
+                  },
+                  {
+                    "label": "search-hybrid.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/routes/search-hybrid.ts"
+                  },
+                  {
+                    "label": "search-vector.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/routes/search-vector.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-BM25-混合检索-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "bm25.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/corpus/bm25.ts"
+                      },
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "alpha-bias.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/flow/alpha-bias.ts"
+                      },
+                      {
+                        "label": "bm25-vs-vector.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/flow/bm25-vs-vector.ts"
+                      },
+                      {
+                        "label": "hybrid-search.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/flow/hybrid-search.ts"
+                      },
+                      {
+                        "label": "rrf.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/flow/rrf.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/http/send-error.ts"
+                      },
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/http/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "bias-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/bias-card.js"
+                      },
+                      {
+                        "label": "bias-panel.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/bias-panel.js"
+                      },
+                      {
+                        "label": "compare-normalize.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/compare-normalize.js"
+                      },
+                      {
+                        "label": "corpus-list.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/corpus-list.js"
+                      },
+                      {
+                        "label": "hybrid-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/hybrid-card.js"
+                      },
+                      {
+                        "label": "hybrid-params.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/hybrid-params.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "rank-compare.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/rank-compare.js"
+                      },
+                      {
+                        "label": "result-row.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/result-row.js"
+                      },
+                      {
+                        "label": "rrf-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/components/rrf-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/corpus.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "search-bias.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/search-bias.ts"
+                  },
+                  {
+                    "label": "search-bm25.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/search-bm25.ts"
+                  },
+                  {
+                    "label": "search-hybrid.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/search-hybrid.ts"
+                  },
+                  {
+                    "label": "search-rrf.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/search-rrf.ts"
+                  },
+                  {
+                    "label": "search-vector.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/routes/search-vector.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-BM25-混合检索-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "bm25.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/corpus/bm25.ts"
+                      },
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "alpha-bias.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/flow/alpha-bias.ts"
+                      },
+                      {
+                        "label": "bm25-variant.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/flow/bm25-variant.ts"
+                      },
+                      {
+                        "label": "bm25-vs-vector.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/flow/bm25-vs-vector.ts"
+                      },
+                      {
+                        "label": "hybrid-search.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/flow/hybrid-search.ts"
+                      },
+                      {
+                        "label": "rrf.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/flow/rrf.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/http/send-error.ts"
+                      },
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/http/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "bias-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/bias-card.js"
+                      },
+                      {
+                        "label": "bias-panel.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/bias-panel.js"
+                      },
+                      {
+                        "label": "compare-normalize.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/compare-normalize.js"
+                      },
+                      {
+                        "label": "corpus-list.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/corpus-list.js"
+                      },
+                      {
+                        "label": "hybrid-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/hybrid-card.js"
+                      },
+                      {
+                        "label": "hybrid-params.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/hybrid-params.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "rank-compare.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/rank-compare.js"
+                      },
+                      {
+                        "label": "result-row.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/result-row.js"
+                      },
+                      {
+                        "label": "rrf-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/rrf-card.js"
+                      },
+                      {
+                        "label": "tokenize-compare.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/components/tokenize-compare.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/corpus.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "search-bias.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/search-bias.ts"
+                  },
+                  {
+                    "label": "search-bm25-variant.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/search-bm25-variant.ts"
+                  },
+                  {
+                    "label": "search-bm25.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/search-bm25.ts"
+                  },
+                  {
+                    "label": "search-hybrid.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/search-hybrid.ts"
+                  },
+                  {
+                    "label": "search-rrf.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/search-rrf.ts"
+                  },
+                  {
+                    "label": "search-vector.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/routes/search-vector.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-BM25-混合检索-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "bm25.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/corpus/bm25.ts"
+                      },
+                      {
+                        "label": "judge-cases.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/corpus/judge-cases.ts"
+                      },
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/corpus/knowledge-base.ts"
+                      },
+                      {
+                        "label": "wink-bm25.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/corpus/wink-bm25.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "handwritten-vs-wink.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/flow/handwritten-vs-wink.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/http/send-error.ts"
+                      },
+                      {
+                        "label": "with-call.ts",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/http/with-call.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "judge-case-card.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/public/components/judge-case-card.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "side-rank-table.js",
+                        "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/public/components/side-rank-table.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "compare-bm25.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/routes/compare-bm25.ts"
+                  },
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/routes/corpus.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/routes/health.ts"
+                  },
+                  {
+                    "label": "judge-cases.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/routes/judge-cases.ts"
+                  },
+                  {
+                    "label": "judge-run.ts",
+                    "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/routes/judge-run.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/01-BM25-混合检索-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Rerank-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "recall.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/lib/flow/recall.ts"
+                      },
+                      {
+                        "label": "rerank.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/lib/flow/rerank.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pipeline-board.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/components/pipeline-board.js"
+                      },
+                      {
+                        "label": "query-panel.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/components/query-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "normal.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/pages/normal.html"
+                      },
+                      {
+                        "label": "rerank-off.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/pages/rerank-off.html"
+                      },
+                      {
+                        "label": "token-budget.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/pages/token-budget.html"
+                      },
+                      {
+                        "label": "window-of-shame.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/pages/window-of-shame.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-1/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/02-Rerank-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/routes/corpus.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/routes/recall.ts"
+                  },
+                  {
+                    "label": "rerank.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/routes/rerank.ts"
+                  },
+                  {
+                    "label": "token-estimate.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-1/routes/token-estimate.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/02-Rerank-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Rerank-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "listwise-shape.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/flow/listwise-shape.ts"
+                      },
+                      {
+                        "label": "listwise.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/flow/listwise.ts"
+                      },
+                      {
+                        "label": "pairwise.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/flow/pairwise.ts"
+                      },
+                      {
+                        "label": "recall.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/flow/recall.ts"
+                      },
+                      {
+                        "label": "rerank.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/flow/rerank.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pipeline-board.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/components/pipeline-board.js"
+                      },
+                      {
+                        "label": "query-panel.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/components/query-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "listwise.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/listwise.html"
+                      },
+                      {
+                        "label": "normal.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/normal.html"
+                      },
+                      {
+                        "label": "pairwise.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/pairwise.html"
+                      },
+                      {
+                        "label": "rerank-off.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/rerank-off.html"
+                      },
+                      {
+                        "label": "shape-vs-llm.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/shape-vs-llm.html"
+                      },
+                      {
+                        "label": "token-budget.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/token-budget.html"
+                      },
+                      {
+                        "label": "window-of-shame.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/pages/window-of-shame.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-2/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/02-Rerank-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/corpus.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "listwise-llm.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/listwise-llm.ts"
+                  },
+                  {
+                    "label": "listwise-shape.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/listwise-shape.ts"
+                  },
+                  {
+                    "label": "pairwise.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/pairwise.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/recall.ts"
+                  },
+                  {
+                    "label": "rerank.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/rerank.ts"
+                  },
+                  {
+                    "label": "token-estimate.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-2/routes/token-estimate.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/02-Rerank-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-Rerank-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "eval-set.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/corpus/eval-set.ts"
+                      },
+                      {
+                        "label": "knowledge-base.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/corpus/knowledge-base.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "eval.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/flow/eval.ts"
+                      },
+                      {
+                        "label": "listwise-shape.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/flow/listwise-shape.ts"
+                      },
+                      {
+                        "label": "listwise.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/flow/listwise.ts"
+                      },
+                      {
+                        "label": "pairwise.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/flow/pairwise.ts"
+                      },
+                      {
+                        "label": "recall.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/flow/recall.ts"
+                      },
+                      {
+                        "label": "rerank.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/flow/rerank.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pipeline-board.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/components/pipeline-board.js"
+                      },
+                      {
+                        "label": "query-panel.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/components/query-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "eval.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/eval.html"
+                      },
+                      {
+                        "label": "listwise.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/listwise.html"
+                      },
+                      {
+                        "label": "normal.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/normal.html"
+                      },
+                      {
+                        "label": "pairwise.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/pairwise.html"
+                      },
+                      {
+                        "label": "rerank-off.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/rerank-off.html"
+                      },
+                      {
+                        "label": "shape-vs-llm.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/shape-vs-llm.html"
+                      },
+                      {
+                        "label": "token-budget.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/token-budget.html"
+                      },
+                      {
+                        "label": "window-of-shame.html",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/pages/window-of-shame.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/09-RAG进阶/02-Rerank-step-3/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/02-Rerank-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/corpus.ts"
+                  },
+                  {
+                    "label": "eval-run.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/eval-run.ts"
+                  },
+                  {
+                    "label": "eval-set.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/eval-set.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "listwise-llm.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/listwise-llm.ts"
+                  },
+                  {
+                    "label": "listwise-shape.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/listwise-shape.ts"
+                  },
+                  {
+                    "label": "pairwise.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/pairwise.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/recall.ts"
+                  },
+                  {
+                    "label": "rerank.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/rerank.ts"
+                  },
+                  {
+                    "label": "token-estimate.ts",
+                    "path": "apps/09-RAG进阶/02-Rerank-step-3/routes/token-estimate.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/02-Rerank-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Query-Rewrite-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "chunks.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/corpus/chunks.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "anchor-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/anchor-and-retrieve.ts"
+                      },
+                      {
+                        "label": "drift-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/drift-and-retrieve.ts"
+                      },
+                      {
+                        "label": "dual-expansion.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/dual-expansion.ts"
+                      },
+                      {
+                        "label": "expand-query.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/expand-query.ts"
+                      },
+                      {
+                        "label": "fallback-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/fallback-and-retrieve.ts"
+                      },
+                      {
+                        "label": "residual-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/residual-and-retrieve.ts"
+                      },
+                      {
+                        "label": "residual-resolve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/residual-resolve.ts"
+                      },
+                      {
+                        "label": "rewrite-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/rewrite-and-retrieve.ts"
+                      },
+                      {
+                        "label": "subquestion-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/flow/subquestion-and-retrieve.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "rank-list.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/components/rank-list.js"
+                      },
+                      {
+                        "label": "request-card.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/components/request-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "anchor.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/anchor.html"
+                      },
+                      {
+                        "label": "drift.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/drift.html"
+                      },
+                      {
+                        "label": "dual-expansion.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/dual-expansion.html"
+                      },
+                      {
+                        "label": "expansion.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/expansion.html"
+                      },
+                      {
+                        "label": "fallback.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/fallback.html"
+                      },
+                      {
+                        "label": "residual.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/residual.html"
+                      },
+                      {
+                        "label": "subquestion.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/pages/subquestion.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "anchor-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/anchor-and-search.ts"
+                  },
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/corpus.ts"
+                  },
+                  {
+                    "label": "drift-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/drift-and-search.ts"
+                  },
+                  {
+                    "label": "dual-expansion-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/dual-expansion-and-search.ts"
+                  },
+                  {
+                    "label": "expand-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/expand-and-search.ts"
+                  },
+                  {
+                    "label": "fallback-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/fallback-and-search.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "residual-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/residual-and-search.ts"
+                  },
+                  {
+                    "label": "rewrite-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/rewrite-and-search.ts"
+                  },
+                  {
+                    "label": "search-original.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/search-original.ts"
+                  },
+                  {
+                    "label": "subquestion-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/routes/subquestion-and-search.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/03-Query-Rewrite-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Query-Rewrite-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "chunks.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/corpus/chunks.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "embed",
+                    "children": [
+                      {
+                        "label": "create-embeddings.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/embed/create-embeddings.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "hyde-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/flow/hyde-and-retrieve.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "store",
+                    "children": [
+                      {
+                        "label": "vector-store.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/lib/store/vector-store.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "hypothetical-card.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/components/hypothetical-card.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "rank-list.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/components/rank-list.js"
+                      },
+                      {
+                        "label": "request-card.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/components/request-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/routes/corpus.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "hyde-and-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/routes/hyde-and-search.ts"
+                  },
+                  {
+                    "label": "original-vector-search.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/routes/original-vector-search.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/03-Query-Rewrite-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Query-Rewrite-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "corpus",
+                    "children": [
+                      {
+                        "label": "chunks.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/corpus/chunks.ts"
+                      },
+                      {
+                        "label": "eval-set.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/corpus/eval-set.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "evaluate.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/flow/evaluate.ts"
+                      },
+                      {
+                        "label": "generate.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/flow/generate.ts"
+                      },
+                      {
+                        "label": "rewrite-and-retrieve.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/flow/rewrite-and-retrieve.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "corpus-panel.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/components/corpus-panel.js"
+                      },
+                      {
+                        "label": "eval-set-panel.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/components/eval-set-panel.js"
+                      },
+                      {
+                        "label": "evaluate-result.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/components/evaluate-result.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "request-card.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/components/request-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "evaluate.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/pages/evaluate.html"
+                      },
+                      {
+                        "label": "generate.html",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/pages/generate.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "corpus.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/routes/corpus.ts"
+                  },
+                  {
+                    "label": "eval-set.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/routes/eval-set.ts"
+                  },
+                  {
+                    "label": "evaluate.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/routes/evaluate.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/routes/force-error.ts"
+                  },
+                  {
+                    "label": "generate.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/routes/generate.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/09-RAG进阶/03-Query-Rewrite-step-3/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "label": "llm.ts",
         "path": "apps/llm.ts"
       },
@@ -10198,6 +12449,15 @@
       {
         "label": "README.md",
         "path": "apps/README.md"
+      },
+      {
+        "label": "scripts",
+        "children": [
+          {
+            "label": "add-page-nav.mjs",
+            "path": "apps/scripts/add-page-nav.mjs"
+          }
+        ]
       },
       {
         "label": "tsconfig.base.json",

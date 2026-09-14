@@ -15,12 +15,13 @@
   <div id="root"></div>
   <script src="/utils/api.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/chunk-panels.js"></script>
   <script type="text/babel" src="/components/budget-bar.js"></script>
   <script type="text/babel" src="/components/right-panel.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar } = window.DemoUI;
+    const {PageNav, StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel, BudgetBar } = window.DemoUI;
 
     // step-5 · I 件：混合示例——同时触发 4 档降级（## / 段落 / 句号 / 按字数切兜底）
     const MIXED_DOC = (function () {
@@ -228,6 +229,7 @@ const LONG_DOC = (function () {
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">

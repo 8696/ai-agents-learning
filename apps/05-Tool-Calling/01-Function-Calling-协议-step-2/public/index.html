@@ -20,6 +20,7 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     /**
      * 本页教学点（step-2 比 step-1 多了两件事）：
@@ -37,6 +38,7 @@
      *   前端不再打 #log —— 页面已经展示请求参数 / 流程 / 响应，重复。
      */
     const { useState, useEffect } = React;
+    const { PageNav } = window.DemoUI || {};
 
     // ── #status-pill 四态（§5.3.4） ──
     function StatusPill({ status }) {
@@ -256,6 +258,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <PageIntro />

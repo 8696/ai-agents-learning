@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/group-cards.js"></script>
 
   <script type="text/babel">
@@ -96,7 +97,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="top-p" base="../" />
                   <label className="block text-sm">
                     prompt
                     <span className="block text-xs text-gray-500">点了同样是 3 档 × 2 次真实调用。卡片标题会写清被固定的温度。</span>

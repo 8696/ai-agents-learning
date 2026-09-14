@@ -15,11 +15,12 @@
   <div id="root"></div>
   <script src="/utils/api.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/chunk-panels.js"></script>
   <script type="text/babel" src="/components/right-panel.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel } = window.DemoUI;
+    const {PageNav, StatusPill, PageIntro, EnvFooter, Panel, LeftPanel, RightPanel } = window.DemoUI;
 
     // 默认文档：售后 Markdown，含三段不同密度的内容便于看 size / overlap 的影响
     const DEFAULT_DOC = [
@@ -183,6 +184,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <PageIntro />
 

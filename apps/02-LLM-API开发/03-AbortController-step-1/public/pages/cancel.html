@@ -16,6 +16,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/abort-cards.js"></script>
   <script type="text/babel">
     const { useState, useRef } = React;
@@ -81,7 +82,7 @@
                 <PageIntro summary="SDK 带 AbortSignal。服务端收到 N 帧后 abort；你也可以提前掐 fetch。"
                   steps={["点跑 → POST /api/cancel-after-frames", "服务端把 signal 传给 openai SDK", "到 N 帧 → AbortError → 发 event=aborted", "点立即取消会关浏览器 fetch，服务端 req.close 也会 abort"]} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="cancel" base="../" />
                   <label className="block text-sm">message
                     <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={2} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
                   </label>

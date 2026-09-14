@@ -20,6 +20,7 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     /**
      * 本页教学点：
@@ -30,6 +31,7 @@
      * step-1 是 sketch（§5.3.14）："模型决定"还是 mock；锁定后才接真 LLM。
      */
     const { useState, useEffect } = React;
+    const { PageNav } = window.DemoUI || {};
 
     // ── #status-pill 四态（§5.3.4） ──
     function StatusPill({ status }) {
@@ -216,6 +218,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <PageIntro />

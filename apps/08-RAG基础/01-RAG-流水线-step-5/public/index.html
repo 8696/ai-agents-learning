@@ -15,12 +15,13 @@
   <div id="root"></div>
   <script src="/utils/api.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel" src="/components/output-cards.js"></script>
   <script type="text/babel" src="/components/ask-panel.js"></script>
   <script type="text/babel" src="/components/store-panel.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, ErrorCard, AskPanel, StorePanel } = window.DemoUI;
+    const {PageNav, StatusPill, PageIntro, EnvFooter, ErrorCard, AskPanel, StorePanel } = window.DemoUI;
 
     function App() {
       const [env, setEnv] = useState(null);
@@ -152,6 +153,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
           <main id="page-main" className="max-w-[1600px] mx-auto p-4 space-y-4">
             <PageIntro />
             <input

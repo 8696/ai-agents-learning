@@ -22,8 +22,10 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
+    const { PageNav } = window.DemoUI || {};
 
     // ── 粗估 token（前端口径；服务端 gpt-tokenizer 是权威）──
     function approxTokens(text) {
@@ -164,6 +166,7 @@
                 模型输出 ≈ <span className="font-mono">{data.replyTokens}</span> 个 token（replyTokens）
               </div>
             </header>
+          <PageNav current="main" base="" />
             <BudgetTable label={budgetLabel} budget={data.budget} totalLimit={result.config.totalBudget} />
             <details className="text-xs">
               <summary className="cursor-pointer text-gray-600">展开查看拼装后发给模型的全部消息（{data.messages.length} 条 · messages 数组）</summary>

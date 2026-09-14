@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/billing-cards.js"></script>
 
   <script type="text/babel">
@@ -87,7 +88,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="compare" base="../" />
                   <p className="text-xs text-gray-500">
                     点了会连续调两次模型。prompt 不在页面改——对照实验的条件必须两边一致。
                   </p>

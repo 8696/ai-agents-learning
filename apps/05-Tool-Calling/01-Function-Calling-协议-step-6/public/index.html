@@ -16,6 +16,7 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     /**
      * step-6 页面：用户输入 → 真 LLM（协议 A）→ 展示完整两轮请求/响应 + 编造检测。
@@ -32,6 +33,7 @@
      * 页面上 4 张数据卡 + 1 个编造检测栏，把"协议层到底发了什么"和"模型有没有编"两件事直接摆出来。
      */
     const { useState, useEffect } = React;
+    const { PageNav } = window.DemoUI || {};
 
     function StatusPill({ status }) {
       const label = {
@@ -157,6 +159,7 @@
             </h1>
             <StatusPill status={status} />
           </header>
+          <PageNav current="main" base="" />
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <PageIntro />

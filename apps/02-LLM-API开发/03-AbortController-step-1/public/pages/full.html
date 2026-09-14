@@ -16,6 +16,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/abort-cards.js"></script>
   <script type="text/babel">
     const { useState } = React;
@@ -66,7 +67,7 @@
                 <PageIntro summary="不取消。用来对照「完整跑完时长 / 帧数 / usage」。"
                   steps={["点发送 → POST /api/full", "服务端不传 AbortSignal，一直推流到 [DONE]", "期望绿卡片跑完，usage 有 total_tokens"]} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="full" base="../" />
                   <label className="block text-sm">message
                     <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={2} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />
                   </label>

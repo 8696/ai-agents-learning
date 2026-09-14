@@ -18,6 +18,7 @@
   <script src="/utils/wait-demo-ui.js"></script>
   <script src="/utils/sse-client.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/stream-cards.js"></script>
 
   <script type="text/babel">
@@ -144,7 +145,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="simulated" base="../" />
                   <p className="text-xs text-gray-500">
                     点「开始模拟流」：期望绿卡片逐字变成「你好，我是 AI 助手。」，下面出现 11 张 delta 卡 + 一张 [DONE]。不需要 Key。
                   </p>

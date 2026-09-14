@@ -16,6 +16,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/side-cards.js"></script>
   <script type="text/babel">
     /**
@@ -103,7 +104,7 @@
                   }}
                 />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="priority" base="../" />
                   {!env.hasKey && (
                     <p className="text-xs text-red-600">未检测到 Key，主按钮已禁用。先在 apps/.env 配置对应 Key。</p>
                   )}

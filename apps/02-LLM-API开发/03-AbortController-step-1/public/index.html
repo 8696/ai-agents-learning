@@ -15,6 +15,7 @@
   <div id="root"></div>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     const { useState } = React;
     window.DemoUtils.waitDemoUI(["PageNav", "StatusPill", "PageIntro", "EnvFooter", "useEnvInfo"], function () {
@@ -43,7 +44,7 @@
 POST /api/cancel-after-frames  { message, abortAfterFrames }
 POST /api/no-signal-abort`}</pre>} />
               <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                <PageNav />
+                <PageNav current="overview" base="" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <a href="/pages/full.html" className="border border-gray-300 hover:border-blue-500 rounded p-3">
                     <div className="font-semibold text-sm">流到底</div>

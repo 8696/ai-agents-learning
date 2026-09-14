@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 
   <script type="text/babel">
     /**
@@ -71,7 +72,7 @@ Few   k=4   system + 4 对假对话 + 当前 user
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   <p className="text-xs text-gray-500">
                     产品：豆谷评价分类
                     {env.fewShotTurns ? " · Few-shot 教案 " + env.fewShotTurns + " 对" : ""}

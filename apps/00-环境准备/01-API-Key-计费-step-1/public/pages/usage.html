@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/billing-cards.js"></script>
 
   <script type="text/babel">
@@ -88,7 +89,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="usage" base="../" />
                   <label className="block text-sm">
                     prompt
                     <span className="block text-xs text-gray-500">点发送会真调模型。默认「只回复一个字」是为了让输出 Token 很少、对照更清楚。</span>

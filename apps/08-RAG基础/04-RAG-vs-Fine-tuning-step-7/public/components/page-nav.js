@@ -1,40 +1,50 @@
-// 职责：跨 sub-page 的顶部导航 tab，挂在 window.DemoUI.PageNav。
-// 当前页面用 `<PageNav current="..." />` 即可拿到 8 个变体的入口 + 标高亮当前。
-// 数据流：硬编码 8 个变体的标题 + 路径（不调 API）；高亮由 current prop 决定。
-const { useState, useEffect } = React;
+/**
+ * 职责：标准 PageNav 组件。挂在 window.DemoUI.PageNav。
+ * 当前页面用 <PageNav current="..." base="" /> 即可拿到所有 sub-page 入口 + 高亮当前。
+ * 标准样式：卡片容器（bg-white border border-gray-200 rounded p-3）；
+ *          当前页 = 白底蓝边 + 浅蓝底（border-blue-500 bg-blue-50 text-blue-700 font-semibold）；
+ *          其他页 = 灰边白底（border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100）。
+ * 注意：本组件没有"← 回总览"链接 —— 总览放在 PAGES 第一项即可。
+ */
+(function () {
+  const DemoUI = window.DemoUI || (window.DemoUI = {});
 
-const NAV_ITEMS = [
-  { id: "full-pipeline",  path: "/pages/full-pipeline.html",  title: "混合 pipeline · 检索 + system" },
+  const PAGES = [
+  {
+    "key": "overview",
+    "label": "总览 · RAG vs Fine-tuning",
+    "href": "index.html"
+  },
+  {
+    "key": "full-pipeline",
+    "label": "RAG vs Fine-tuning · 混合 pipeline · step-7",
+    "href": "pages/full-pipeline.html"
+  }
 ];
 
-function PageNav({ current }) {
-  return (
-    <nav className="border-b bg-white px-4 py-2 text-xs">
-      <div className="container mx-auto flex flex-wrap items-center gap-2">
-        <a href="/" className="font-semibold text-gray-700 mr-2">
-          ← step-7 总览
-        </a>
-        {NAV_ITEMS.map((it) => {
-          const active = it.id === current;
+  DemoUI.PageNav = function PageNav(props) {
+    const current = props.current;
+    const base = props.base || "";
+    return (
+      <nav className="bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm">
+        {PAGES.map(function (item) {
+          const active = item.key === current;
           return (
             <a
-              key={it.id}
-              href={it.path}
+              key={item.key}
+              href={base + item.href}
               className={
-                "px-2 py-1 rounded " +
+                "px-3 py-1 rounded border " +
                 (active
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200")
+                  ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
+                  : "border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100")
               }
             >
-              {it.title}
+              {item.label}
             </a>
           );
         })}
-      </div>
-    </nav>
-  );
-}
-
-window.DemoUI = window.DemoUI || {};
-window.DemoUI.PageNav = PageNav;
+      </nav>
+    );
+  };
+})();

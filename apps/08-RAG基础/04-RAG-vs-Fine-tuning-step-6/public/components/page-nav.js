@@ -1,41 +1,60 @@
-// 职责：跨 sub-page 的顶部导航 tab，挂在 window.DemoUI.PageNav。
-// 当前页面用 `<PageNav current="..." />` 即可拿到 3 个决策模式 + 总览的入口 + 标高亮当前。
-const { useState, useEffect } = React;
+/**
+ * 职责：标准 PageNav 组件。挂在 window.DemoUI.PageNav。
+ * 当前页面用 <PageNav current="..." base="" /> 即可拿到所有 sub-page 入口 + 高亮当前。
+ * 标准样式：卡片容器（bg-white border border-gray-200 rounded p-3）；
+ *          当前页 = 白底蓝边 + 浅蓝底（border-blue-500 bg-blue-50 text-blue-700 font-semibold）；
+ *          其他页 = 灰边白底（border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100）。
+ * 注意：本组件没有"← 回总览"链接 —— 总览放在 PAGES 第一项即可。
+ */
+(function () {
+  const DemoUI = window.DemoUI || (window.DemoUI = {});
 
-const NAV_ITEMS = [
-  { id: "routing-rules",   path: "/pages/routing-rules.html",   title: "路由层规则 · 关键词判断" },
-  { id: "threshold",       path: "/pages/threshold.html",       title: "命中阈值 · top1 score > N" },
-  { id: "agent-decide",    path: "/pages/agent-decide.html",    title: "模型自己决定 · agent loop" },
+  const PAGES = [
+  {
+    "key": "overview",
+    "label": "总览 · RAG vs Fine-tuning",
+    "href": "index.html"
+  },
+  {
+    "key": "agent-decide",
+    "label": "决策模式 3 · 模型自己决定（agent loop）· step-6",
+    "href": "pages/agent-decide.html"
+  },
+  {
+    "key": "routing-rules",
+    "label": "决策模式 1 · 路由层规则（关键词判断）· step-6",
+    "href": "pages/routing-rules.html"
+  },
+  {
+    "key": "threshold",
+    "label": "决策模式 2 · 命中阈值（top1 score > N）· step-6",
+    "href": "pages/threshold.html"
+  }
 ];
 
-function PageNav({ current }) {
-  return (
-    <nav className="border-b bg-white px-4 py-2 text-xs">
-      <div className="container mx-auto flex flex-wrap items-center gap-2">
-        <a href="/" className="font-semibold text-gray-700 mr-2">
-          ← step-6 总览
-        </a>
-        {NAV_ITEMS.map((it) => {
-          const active = it.id === current;
+  DemoUI.PageNav = function PageNav(props) {
+    const current = props.current;
+    const base = props.base || "";
+    return (
+      <nav className="bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm">
+        {PAGES.map(function (item) {
+          const active = item.key === current;
           return (
             <a
-              key={it.id}
-              href={it.path}
+              key={item.key}
+              href={base + item.href}
               className={
-                "px-2 py-1 rounded " +
+                "px-3 py-1 rounded border " +
                 (active
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200")
+                  ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
+                  : "border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100")
               }
             >
-              {it.title}
+              {item.label}
             </a>
           );
         })}
-      </div>
-    </nav>
-  );
-}
-
-window.DemoUI = window.DemoUI || {};
-window.DemoUI.PageNav = PageNav;
+      </nav>
+    );
+  };
+})();

@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/gantt.js"></script>
 
   <script type="text/babel">
@@ -72,7 +73,7 @@
           </header>
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <PageNav />
+            <PageNav current="single" base="../" />
             <PageIntro
               summary="单跑：选 mode → POST /api/plan → 看 gantt 时序图与 3 条 tool_result。"
               steps={[

@@ -16,6 +16,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/compare-cards.js"></script>
   <script type="text/babel">
     /**
@@ -79,7 +80,7 @@
               <main id="page-main" className="container mx-auto p-4 space-y-4">
                 <PageIntro summary="同 prompt 一次性跑两侧：完整 JSON 并排，或四组 thinking 差异表。" steps={INTRO_STEPS} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="once" base="../" />
                   <label className="block text-sm">message
                     <span className="block text-xs text-gray-500">点了按钮会原样放进 A 的 user content 和 B 的 messages[0]。</span>
                     <textarea className="mt-1 w-full border rounded p-2 text-sm" rows={3} value={message} disabled={busy} onChange={function (e) { setMessage(e.target.value); }} />

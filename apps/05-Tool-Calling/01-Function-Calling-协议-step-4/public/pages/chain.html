@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/gantt.js"></script>
 
   <script type="text/babel">
@@ -86,7 +87,7 @@
           </header>
 
           <main id="page-main" className="container mx-auto p-4 space-y-4">
-            <PageNav />
+            <PageNav current="chain" base="../" />
             <PageIntro
               summary="串行依赖：POST /api/chain → 服务端 await 链式跑 search_doc → summarize（B 用 A 的输出当参数）→ 渲链式 gantt + 2 tool_result + final summary。"
               steps={[

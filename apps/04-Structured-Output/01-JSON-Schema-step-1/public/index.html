@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 
   <script type="text/babel">
     /**
@@ -89,7 +90,7 @@ qty 不在 required 里 → JSON Schema 默认可选。`}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     {SCENES.map(function (s) {
                       return (

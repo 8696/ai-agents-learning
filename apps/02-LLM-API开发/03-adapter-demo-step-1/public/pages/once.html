@@ -16,6 +16,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/unified-cards.js"></script>
   <script type="text/babel">
     const { useState } = React;
@@ -75,7 +76,7 @@
               <main id="page-main" className="container mx-auto p-4 space-y-4">
                 <PageIntro summary="业务拿到的永远是 UnifiedResponse。换协议只改一个下拉框。" steps={INTRO_STEPS} />
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="once" base="../" />
                   <label className="block text-sm">协议
                     <span className="block text-xs text-gray-500">A 走 openai；B 走 Anthropic。页面字段名不变。</span>
                     <select className="mt-1 border rounded p-2" value={protocol} disabled={busy} onChange={function (e) { setProtocol(e.target.value); }}>

@@ -15,6 +15,7 @@
   <div id="root"></div>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
   <script type="text/babel">
     /**
      * 本页教学点：三条 case 怎么连在一起。本页不调模型。
@@ -80,7 +81,7 @@
                 }
               />
               <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                <PageNav />
+                <PageNav current="overview" base="" />
                 <p className="text-sm text-gray-600">
                   总览页不发起模型请求。选一个 Case 进去跑，每页只演示一个教学点。
                 </p>

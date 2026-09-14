@@ -18,6 +18,7 @@
   <script src="/utils/api-client.js"></script>
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
   <script type="text/babel" src="/components/token-cards.js"></script>
 
   <script type="text/babel">
@@ -90,7 +91,7 @@
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="encode" base="../" />
                   <label className="block text-sm">
                     text
                     <span className="block text-xs text-gray-500">点了会走 POST /api/encode。不调 LLM，缺 Key 也能跑。</span>

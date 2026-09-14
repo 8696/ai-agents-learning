@@ -17,6 +17,7 @@
 
   <script src="/utils/wait-demo-ui.js"></script>
   <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
 
   <script type="text/babel">
     /**
@@ -91,7 +92,7 @@ top_p=1 不过滤；越小候选越少。T=0 时扫 top_p，三档应一样`}
                 />
 
                 <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-                  <PageNav />
+                  <PageNav current="overview" base="" />
                   {ladders && (
                     <p className="text-xs text-gray-500">
                       温度梯子 {ladders.temperature.join(" / ")} · Top-P 梯子 {ladders.topP.join(" / ")}
