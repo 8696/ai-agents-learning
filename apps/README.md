@@ -116,6 +116,8 @@
 | `yarn app:09-02-rerank-step-2` | `50093` | 模块 09 · 02 · 重排序 step-2：第二阶段的另外三种实现形状 —— ① Listwise + id 校验（对话模型）· ② 专用接口形状 mock vs 对话模型 · ③ Pairwise · 三种主流程各自独立 lib/flow/ |
 | `yarn app:09-02-rerank-step-3` | `50094` | 模块 09 · 02 · 重排序 step-3：评测集 + 命中率 —— 同一份 20 条人工标注问句跑三种 pipeline（召回 / 召回+Pointwise mock / 召回+Listwise mock），对照命中率；Top-K 可选 1/3/5；mock 故意偏向特例保证对照清晰 |
 | `yarn app:09-03-query-rewrite-step-1` | `50095` | 模块 09 · 03 · 查询改写 step-1：服务端返回切块 · 原句检索 vs 改写后再检索 · 真调模型换词 |
+| `yarn app:09-03-query-rewrite-step-2` | `50096` | 模块 09 · 03 · 查询改写 step-2：HyDE 假想文档嵌入 · 假想段生成 + 嵌入 + 余弦检索 vs 原句直接嵌入对照 |
+| `yarn app:09-03-query-rewrite-step-3` | `50097` | 模块 09 · 03 · 查询改写 step-3：评测集 + 命中率对照（原句 vs 改写）+ 生成侧（拼 prompt + 调模型，user 侧 = 原句、retrieval = 改写句）|
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

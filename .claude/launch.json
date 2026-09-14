@@ -280,6 +280,22 @@
       "port": 50086,
       "url": "http://127.0.0.1:50086/",
       "autoPort": false
+    },
+    {
+      "name": "09-03-query-rewrite-step-2",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:09-03-query-rewrite-step-2"],
+      "port": 50096,
+      "url": "http://127.0.0.1:50096/",
+      "autoPort": false
+    },
+    {
+      "name": "09-03-query-rewrite-step-3",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:09-03-query-rewrite-step-3"],
+      "port": 50097,
+      "url": "http://127.0.0.1:50097/",
+      "autoPort": false
     }
   ]
 }

@@ -108,7 +108,9 @@
     "app:09-02-rerank-step-1": "PORT=50092 tsx 09-RAG进阶/02-Rerank-step-1/server.ts",
     "app:09-02-rerank-step-2": "PORT=50093 tsx 09-RAG进阶/02-Rerank-step-2/server.ts",
     "app:09-02-rerank-step-3": "PORT=50094 tsx 09-RAG进阶/02-Rerank-step-3/server.ts",
-    "app:09-03-query-rewrite-step-1": "PORT=50095 tsx 09-RAG进阶/03-Query-Rewrite-step-1/server.ts"
+    "app:09-03-query-rewrite-step-1": "PORT=50095 tsx 09-RAG进阶/03-Query-Rewrite-step-1/server.ts",
+    "app:09-03-query-rewrite-step-2": "PORT=50096 tsx 09-RAG进阶/03-Query-Rewrite-step-2/server.ts",
+    "app:09-03-query-rewrite-step-3": "PORT=50097 tsx 09-RAG进阶/03-Query-Rewrite-step-3/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

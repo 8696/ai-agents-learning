@@ -43,7 +43,7 @@ export function mountResidualAndSearchRoutes(router: Router): void {
       ctx.body = { ok: true, stage: "residual", ...result };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      sendError(ctx, 502, "残句补全 / 改写失败：" + message);
+      sendError(ctx, 502, "residual-and-search 失败：" + message);
     }
   });
 }

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>查询改写 · 第三步（step-3）· 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/corpus-panel.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageHeader, EnvFooter, CorpusPanel, PageNav } = window.DemoUI;
+    const fetchJson = window.DemoUtils.fetchJson;
+
+    function App() {
+      const [chunks, setChunks] = useState([]);
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+
+      useEffect(function () {
+        let cancelled = false;
+        (async function () {
+          const health = await fetchJson("/health");
+          if (cancelled) return;
+          setEnv(health.json || {});
+          const corpus = await fetchJson("/api/corpus");
+          if (cancelled) return;
+          if (corpus.json && corpus.json.ok) setChunks(corpus.json.chunks || []);
+          setStatus("ok");
+        })().catch(function (err) {
+          if (cancelled) return;
+          setStatus("error");
+          setError("打开页面失败：" + (err && err.message ? err.message : String(err)));
+        });
+        return function () { cancelled = true; };
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              查询改写 · 第三步（step-3）· 总览
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            {/* 1. 这个 step 在做什么 */}
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-base font-semibold text-gray-800">step-3 在做什么</h2>
+              <p className="text-sm text-gray-700">
+                笔记「查询改写」里 13 个变体，step-1 演示了 10 个，step-2 演示了 HyDE。本步（step-3）演示最后 2 个：
+              </p>
+              <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
+                <li><b>变体 11 评测集 + 命中率对照</b>：30 道题在「原句检索」vs「改写检索」下命中几道 → 验证改写到底有没有用</li>
+                <li><b>变体 12 生成侧保留原话</b>：检索用改写句（内部探针）、生成侧 user 字段 = 原句 → 完整 RAG 链路</li>
+              </ul>
+            </section>
+
+            {/* 2. 切块列表是什么 */}
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-base font-semibold text-gray-800">切块列表（8 个）= 知识库的内容</h2>
+              <p className="text-sm text-gray-700">
+                本步所有检索的目标都来自这 8 个切块。
+                <b>评测集每道题的「期望命中」</b>从这 8 个切块的 id 中选；
+                <b>生成侧的 prompt</b>也喂这些切块给模型。
+                切块正文不在浏览器里写死，每次打开页面从 <code>GET /api/corpus</code> 拿。
+              </p>
+              <CorpusPanel chunks={chunks} />
+            </section>
+
+            {/* 3. 三个页面的区别 */}
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-base font-semibold text-gray-800">三个页面</h2>
+              <table className="w-full text-sm">
+                <thead className="text-left text-gray-600">
+                  <tr><th className="py-1 pr-3">页面</th><th className="py-1 pr-3">URL</th><th className="py-1">用途</th></tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-gray-200">
+                    <td className="py-1 pr-3 font-medium">总览（当前页）</td>
+                    <td className="py-1 pr-3 font-mono text-xs">/</td>
+                    <td className="py-1 text-gray-700">告诉你 step-3 是什么 + 展示切块列表</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="py-1 pr-3 font-medium">评测页</td>
+                    <td className="py-1 pr-3 font-mono text-xs">/pages/evaluate.html</td>
+                    <td className="py-1 text-gray-700">30 题 × 2 mode 跑命中率对照（变体 11）</td>
+                  </tr>
+                  <tr className="border-t border-gray-200">
+                    <td className="py-1 pr-3 font-medium">生成页</td>
+                    <td className="py-1 pr-3 font-mono text-xs">/pages/generate.html</td>
+                    <td className="py-1 text-gray-700">完整 RAG 链路：检索 + 拼 prompt + 调模型答（变体 12）</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <a href="pages/evaluate.html" className="bg-blue-600 text-white text-sm px-3 py-2 rounded">去评测页（变体 11）</a>
+                <a href="pages/generate.html" className="bg-green-600 text-white text-sm px-3 py-2 rounded">去生成页（变体 12）</a>
+              </div>
+            </section>
+
+            {error ? (
+              <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{error}</div>
+            ) : null}
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

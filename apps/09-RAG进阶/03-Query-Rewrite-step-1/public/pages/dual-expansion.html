@@ -95,7 +95,7 @@
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
                 <div className="text-xs text-gray-800">
-                  两种补词器不是一个黑盒。规则便宜、可解释、货号不会丢；模型能处理没见过的口语，但会改偏。生产里常见「先规则后模型」—— 能抽到货号就钉住货号，剩下的口语再交给模型。
+                  两种补词器不是一个黑盒。规则便宜、可解释、货号不会丢；模型能处理没见过的口语，但会改偏。生产里常见「先规则后模型」—— 能抽到货号就把货号**锁住**，剩下的口语再交给模型。
                 </div>
                 <div className="text-xs text-gray-600">
                   怎么观察：左栏「规则补词」addedTerms 来自本地同义词表（可解释）；右栏「模型补词」addedTerms 来自 LLM 输出（可能更丰富也可能改偏）；两份名单对照看。

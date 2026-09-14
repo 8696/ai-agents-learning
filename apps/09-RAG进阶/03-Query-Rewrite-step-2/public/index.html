@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HyDE（假想文档嵌入） · 第二步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/corpus-panel.js"></script>
+  <script type="text/babel" src="/components/rank-list.js"></script>
+  <script type="text/babel" src="/components/request-card.js"></script>
+  <script type="text/babel" src="/components/hypothetical-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageHeader, PageIntro, EnvFooter, CorpusPanel, RankList, RequestCard, FlowCard, ErrorCard, ModelCallCard, HypotheticalCard } = window.DemoUI;
+    const fetchJson = window.DemoUtils.fetchJson;
+
+    function App() {
+      // query：输入框里的用户原话。chunks：服务端切块。status：页头四态。
+      const [query, setQuery] = useState("");
+      const [chunks, setChunks] = useState([]);
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [lastRequest, setLastRequest] = useState(null);
+      const [flowSteps, setFlowSteps] = useState([]);
+      const [hyde, setHyde] = useState(null);
+      const [originalVec, setOriginalVec] = useState(null);
+
+      useEffect(function () {
+        let cancelled = false;
+        (async function () {
+          const health = await fetchJson("/health");
+          if (cancelled) return;
+          setEnv(health.json || {});
+          const corpus = await fetchJson("/api/corpus");
+          if (cancelled) return;
+          if (!corpus.json || !corpus.json.ok) {
+            setStatus("error");
+            setError("拉切块失败 HTTP " + corpus.httpStatus);
+            return;
+          }
+          setChunks(corpus.json.chunks || []);
+          setQuery(corpus.json.defaultQuery || "");
+          setStatus("ok");
+        })().catch(function (err) {
+          if (cancelled) return;
+          setStatus("error");
+          setError("打开页面时请求失败：" + (err && err.message ? err.message : String(err)));
+        });
+        return function () { cancelled = true; };
+      }, []);
+
+      async function runHyde() {
+        setError("");
+        setStatus("loading");
+        try {
+          const body = { query: query };
+          setLastRequest({ method: "POST", url: "/api/hyde-and-search", body: body });
+          setFlowSteps([
+            "浏览器 POST /api/hyde-and-search，body 只有用户原句",
+            "服务端调模型生成「假想政策段」（system 写明『检索前的假想文档生成器，不是客服』）",
+            "嵌入假想段（type=query）→ 与预嵌入的 8 个切块做余弦 → top-K",
+            "假想段只用于检索探针，不展示给用户",
+          ]);
+          const res = await fetchJson("/api/hyde-and-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.json || !res.json.ok) {
+            setStatus("error");
+            setError("HyDE 失败（" + (res.httpStatus >= 500 ? "5xx" : "4xx") + "）HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          setHyde(res.json);
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      async function runOriginalVector() {
+        setError("");
+        setStatus("loading");
+        try {
+          const body = { query: query };
+          setLastRequest({ method: "POST", url: "/api/original-vector-search", body: body });
+          setFlowSteps([
+            "浏览器 POST /api/original-vector-search，body 只有用户原句",
+            "服务端把原句做 type=query 嵌入（跳过生成假想段）→ 余弦 vs 预嵌入切块 → top-K",
+          ]);
+          const res = await fetchJson("/api/original-vector-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.json || !res.json.ok) {
+            setStatus("error");
+            setError("原句嵌入检索失败（" + (res.httpStatus >= 500 ? "5xx" : "4xx") + "）HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+            return;
+          }
+          setOriginalVec(res.json);
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      async function runEmpty() {
+        setError("");
+        setStatus("loading");
+        try {
+          const body = { query: "" };
+          setLastRequest({ method: "POST", url: "/api/hyde-and-search", body: body });
+          setFlowSteps(["故意提交空问句，期望 400。这是第一类错误：页面能看见的 4xx。"]);
+          const res = await fetchJson("/api/hyde-and-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          setStatus("error");
+          setError("空问句演示（4xx）HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      async function runBoom() {
+        setError("");
+        setStatus("loading");
+        try {
+          setLastRequest({ method: "POST", url: "/api/force-error", body: {} });
+          setFlowSteps(["故意打 /api/force-error，期望 500。这是第二类错误：和空问句不是同一条通道。"]);
+          const res = await fetchJson("/api/force-error", { method: "POST" });
+          setStatus("error");
+          setError("后端 5xx 演示 HTTP " + res.httpStatus + "：" + ((res.json && res.json.error) || "未知错误"));
+        } catch (err) {
+          setStatus("error");
+          setError("请求被拒绝：" + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      const busy = status === "loading";
+      const hasKey = env && env.hasKey;
+      const hasEmbed = env && env.hasEmbeddingModel;
+
+      const targetHint = (function () {
+        if (!hyde || !originalVec || !hyde.hydeRetrieve || !originalVec.retrieve) return null;
+        const a = hyde.hydeRetrieve.target;
+        const b = originalVec.retrieve.target;
+        return (
+          "同一 id=" + a.id + " · HyDE：onTable=" + String(a.onTable) +
+          " rank=" + (a.rank == null ? "无" : a.rank) + " cosine=" + a.score.toFixed(4) +
+          "  vs  原句嵌入：onTable=" + String(b.onTable) +
+          " rank=" + (b.rank == null ? "无" : b.rank) + " cosine=" + b.score.toFixed(4)
+        );
+      })();
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              HyDE（假想文档嵌入） · 第二步（step-2） · 假想段当探针
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                用户原话（query）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  disabled={busy}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">改这个框再点按钮，会按新原句走。默认句是「盒子没拆，都八天了，还能退吗？」—— 短问句、太瘦，正是 HyDE 的目标场景。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !hasEmbed}
+                  onClick={runHyde}
+                >
+                  跑 HyDE（假想段 + 向量检索）
+                </button>
+                <button
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !hasEmbed}
+                  onClick={runOriginalVector}
+                >
+                  跑原句直接嵌入检索（对照）
+                </button>
+                <button
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runEmpty}
+                >
+                  演示空问句 4xx
+                </button>
+                <button
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runBoom}
+                >
+                  演示后端 5xx
+                </button>
+              </div>
+              <p className="text-xs text-gray-600">HyDE / 对照都缺密钥或嵌入模型时按钮禁用。空问句走 4xx；后端 5xx 是另一条失败通道。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <ErrorCard error={error} />
+              <RequestCard request={lastRequest} />
+              <FlowCard steps={flowSteps} />
+              <div className="border rounded p-3 space-y-2">
+                <CorpusPanel chunks={chunks} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border rounded p-3 space-y-2">
+                  <div className="text-sm font-medium">左栏 · HyDE（假想段 + 向量检索）</div>
+                  <p className="text-xs text-gray-600">调模型生成假想段 → 嵌入假想段 → 余弦 → top-K。期望：假想段是政策正文风格，对条款口吻比问句更近。</p>
+                  <ModelCallCard modelCall={hyde && hyde.hypotheticalCall} />
+                  <HypotheticalCard hypothetical={hyde && hyde.hypothetical} hypVectorDim={hyde && hyde.hypVectorDim} />
+                  <RankList side="hyde" retrieve={hyde && hyde.hydeRetrieve} emptyHint="还没点 HyDE。点了之后这里出现假想段 + top-K + cosine 分数。" />
+                </div>
+                <div className="border rounded p-3 space-y-2">
+                  <div className="text-sm font-medium">右栏 · 原句直接嵌入检索（对照）</div>
+                  <p className="text-xs text-gray-600">跳过假想段，原句直接做 type=query 嵌入 + 余弦。期望：和左栏的 top-K、cosine 形成对照。</p>
+                  <RankList side="original-vec" retrieve={originalVec && originalVec.retrieve} emptyHint="还没点对照按钮。点了之后这里出现原句 top-K + cosine 分数。" />
+                </div>
+              </div>
+              {targetHint ? (
+                <div className="bg-green-50 border border-green-300 rounded p-3 text-sm text-green-900">{targetHint}</div>
+              ) : (
+                <div className="text-sm text-gray-500">两步都跑完后，这里用同一 id 对照 HyDE vs 原句嵌入的 onTable / rank / cosine。</div>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -164,11 +164,27 @@
                   <div>原句（query）：{result.query}</div>
                   <div>残句检测（residual.isResidual）：{String(isResidual)}</div>
                   <div>残句检测原因（reason）：{result.residual.reason}</div>
-                  <div>补全后的独立问句（standalone）：{standalone || <span className="text-gray-700">（不是残句，无需补全）</span>}</div>
+                  <div>history 截断：{result.historyUsed.length} / {result.history.length} 轮（MAX_HISTORY_TURNS={5}，historyUsed 是实际喂模型的）</div>
+                  <div>多轮摘要：{result.summaryModelCall ? "已触发（" + (result.historyUsed ? result.historyUsed.length : 0) + " 轮 ≥ 8 阈值，调 LLM 压成摘要）" : "未触发（historyUsed < 8 轮）"}</div>
+                  <div>mode：<b>{result.mode}</b>
+                    {result.mode === "resolved" ? "（残句补全成功）" : result.mode === "fallback" ? "（残句补全挂了 → 用原句继续检索）" : "（不是残句 → 跳过补全）"}</div>
+                  {result.resolveFailureReason ? (
+                    <div className="text-amber-800">失败原因（resolveFailureReason）：{result.resolveFailureReason}</div>
+                  ) : null}
+                  {result.candidates && result.candidates.length > 0 ? (
+                    <div>补全后的 top {result.candidates.length} 候选（按 confidence 降序）：<ul className="list-disc pl-5">
+                      {result.candidates.map(function (c, idx) {
+                        return (
+                          <li key={idx}><b>[{idx + 1}] confidence={c.confidence.toFixed(2)}</b> standalone：{c.standalone}{idx === 0 ? "（已采用）" : ""}</li>
+                        );
+                      })}
+                    </ul></div>
+                  ) : null}
+                  <div>最终送给改写模型：{result.standalone || result.query}</div>
                   <div>改写句（rewrittenQuery）：{result.rewritten.rewrittenQuery}</div>
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">还没跑。点按钮后这里出现原句 / 残句检测 / 补全后的独立问句 / 改写句 五件。</div>
+                <div className="text-sm text-gray-500">还没跑。点按钮后这里出现原句 / 残句检测 / history 截断 / 多轮摘要 / mode / 多候选 / 改写句 七件。</div>
               )}
               <RankList side="residual" retrieve={result ? result.rewritten.retrieve : null} emptyHint="还没跑残句补全。点了之后这里出现改写后的检索名单。" />
             </section>
