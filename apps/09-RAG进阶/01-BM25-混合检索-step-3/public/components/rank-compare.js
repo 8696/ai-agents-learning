@@ -1,5 +1,5 @@
 /**
- * 职责：「RRF vs 加权」对照卡 —— 同一问句调两次（一次 /api/search-hybrid 一次 /api/search-rrf），
+ * 职责：「RRF vs 加权」对照面板 —— 同一问句调两次（一次 /api/search-hybrid 一次 /api/search-rrf），
  *       把两份 Top-K 并排展示，让人看见「加权 + 拉齐」和「RRF 名次投票」出来的排名差异。
  * 挂载：window.DemoUI.RankCompare
  */

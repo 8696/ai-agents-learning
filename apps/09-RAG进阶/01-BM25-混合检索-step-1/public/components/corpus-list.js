@@ -1,6 +1,6 @@
 /**
- * 职责：把 6 条语料卡 + 各自的「向量前 8 维」 + 「向量长度（L2 norm）」画成一张表。
- *       让学习者一眼看见「向量 = 一长串小数」，并能比较「同方向不同长度的卡」norm 差多少。
+ * 职责：把 6 个语料切块 + 各自的「向量前 8 维」 + 「向量长度（L2 norm）」画成一张表。
+ *       让学习者一眼看见「向量 = 一长串小数」，并能比较「同方向不同长度的切块」norm 差多少。
  * 挂载：window.DemoUI.CorpusList
  */
 window.DemoUI = window.DemoUI || {};
@@ -33,7 +33,7 @@ window.DemoUI.CorpusList = function CorpusList({ corpus }) {
       React.createElement(
         "div",
         { className: "text-sm font-semibold text-gray-700" },
-        "向量库一览（6 条语料卡 · 内存中，重启即丢）",
+        "向量库一览（6 个语料切块 · 内存中，重启即丢）",
       ),
       cachedBadge,
       React.createElement(
@@ -106,7 +106,7 @@ window.DemoUI.CorpusList = function CorpusList({ corpus }) {
     React.createElement(
       "div",
       { className: "text-xs text-gray-500" },
-      "怎么读这表：每行就是一张「卡」；「向量前 8 维」是嵌入模型把这条文本压成的 1024 维里挑前 8 维给你看（完整向量算余弦时用全部维度）；「L2 norm」= 向量长度——同方向不同长度的卡 norm 差很大（余弦会拉齐方向，长度影响被压掉）。",
+      "怎么读这表：每行就是一个切块；「向量前 8 维」是嵌入模型把这条文本压成的 1024 维里挑前 8 维给你看（完整向量算余弦时用全部维度）；「L2 norm」= 向量长度——同方向不同长度的切块 norm 差很大（余弦会拉齐方向，长度影响被压掉）。",
     ),
   );
 };

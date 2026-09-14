@@ -144,12 +144,12 @@
           <main id="page-main" className="max-w-5xl mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
               <p className="text-sm text-gray-700">
-                同一库、同一问题，分别走<strong>向量</strong>和 <strong>BM25</strong>，看谁能捞到该中的卡。
+                同一库、同一问题，分别走<strong>向量</strong>和 <strong>BM25</strong>，看谁能捞到该命中的切块。
               </p>
               <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
                 <li>选一个例子（或自己改问题）</li>
                 <li>分别点「跑向量」「跑 BM25」（两次独立请求）</li>
-                <li>看两边 Top-K：绿标「该中的卡」进没进名单</li>
+                <li>看两边 Top-K：绿标「该命中的切块」进没进名单</li>
               </ol>
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 text-xs space-y-1">
                 <div className="font-semibold text-yellow-900">本页核心</div>
@@ -158,7 +158,7 @@
             </section>
 
             <section className="bg-white shadow rounded p-4 space-y-2">
-              <div className="text-sm font-semibold">知识库（6 张卡）</div>
+              <div className="text-sm font-semibold">知识库（6 个切块）</div>
               <DemoUI.CorpusList corpus={corpus} />
             </section>
 

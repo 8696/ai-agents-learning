@@ -26,7 +26,7 @@ cd apps && yarn app:09-01-bm25-hybrid-step-5
 
 ## 当前能做什么
 
-- **手写 vs 成熟库**：同一 CORPUS（云 API 售后 6 卡）、同一套 keep-dash 切词，两侧并排 Top-K。
+- **手写 vs 成熟库**：同一 CORPUS（云 API 售后 6 个切块）、同一套 keep-dash 切词，两侧并排 Top-K。
 - **内置判定列表**：生产密钥 ID / ERR-9020 / 公司发票 / 近邻测试密钥 / 无共同词英文问 —— 自动判过 / 不过。
 - **分数可以不同，比的是 Top-1 结论**（IDF 细节两边不完全一样）。
 - 纯本地，不调大模型（`callsModel: false`）。

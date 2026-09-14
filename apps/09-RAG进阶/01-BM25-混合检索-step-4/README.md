@@ -17,7 +17,7 @@ cd apps && yarn app:09-01-bm25-hybrid-step-4
 ```text
 浏览器输入问句
    ├─ 沿用 step-1 / step-2 / step-3 所有按钮（向量 / BM25 / 加权 / RRF / 偏置）
-   └─ #output 区切词对照卡 → POST /api/search-bm25-variant（step-4 新增）
+   └─ #output 区切词对照面板 → POST /api/search-bm25-variant（step-4 新增）
          └─ routes/search-bm25-variant → lib/flow/bm25-variant.bm25Variant
              ├─ 同问句两次 BM25（mode="keep-dash" vs mode="split-chars"）
              ├─ keep-dash：SKU-8821 → ["SKU-8821","保","修","几","年"]
@@ -28,9 +28,9 @@ cd apps && yarn app:09-01-bm25-hybrid-step-4
 ## 当前能做什么（step-4 在 step-3 基础上加的）
 
 - **切词对照（变体 8）**：同一问句用两种切词法 → 同一 BM25 算法 → 排名变差。
-  - `keep-dash`（保留连字符）：`SKU-8821` 作为整体一个 token，IDF 高，能命中编号卡
+  - `keep-dash`（保留连字符）：`SKU-8821` 作为整体一个 token，IDF 高，能命中含货号的切块
   - `split-chars`（撕成单字）：连字符也拆成单字符，编号被撕碎，BM25 通道退化
-- **#output 加「切词对照卡」**：跑一次 → 显示 tokens 列表 + 两张 Top-K 表并排。
+- **#output 加「切词对照面板」**：跑一次 → 显示 tokens 列表 + 两份 Top-K 表并排。
 - **失败可读**：4xx（mode 错 / JSON 错）+ 5xx。
 
 ## 对应学习沉淀

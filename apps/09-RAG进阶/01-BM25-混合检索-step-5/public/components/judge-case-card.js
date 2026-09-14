@@ -1,5 +1,5 @@
 /**
- * 职责：一条判定用例的卡片——说明 + 跑按钮 + 两侧对照。
+ * 职责：一条判定用例的面板——说明 + 跑按钮 + 两侧对照。
  * 挂载：window.DemoUI.JudgeCaseCard
  */
 window.DemoUI = window.DemoUI || {};

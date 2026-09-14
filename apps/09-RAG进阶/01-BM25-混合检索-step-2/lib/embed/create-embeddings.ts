@@ -8,7 +8,7 @@
  * 智谱 / 千问走 OpenAI 兼容 embeddings.create，必须显式 encoding_format=float
  *   （OpenAI SDK 默认按 base64 解码，智谱返回小数数组会被解成全 0）。
  *
- * 数据流：单条 query → embedTexts → number[]（与 CORPUS 各卡预嵌入向量比对）
+ * 数据流：单条 query → embedTexts → number[]（与 CORPUS 各个切块预嵌入向量比对）
  */
 import type { Llm } from "../../../../llm.js";
 import { HttpError } from "../http/send-error.js";

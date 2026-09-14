@@ -1,5 +1,5 @@
 /**
- * 职责：GET /api/corpus —— 返回内置知识库卡片（只读）。
+ * 职责：GET /api/corpus —— 返回内置知识库切块（只读）。
  */
 import type { Context } from "koa";
 import Router from "@koa/router";

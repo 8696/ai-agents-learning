@@ -1,5 +1,5 @@
 /**
- * 职责：把「切词对照」画成一张卡 —— 同问句两次 BM25 → 两张 Top-K 表并排。
+ * 职责：把「切词对照」画成一块面板 —— 同问句两次 BM25 → 两份 Top-K 表并排。
  *       显示 tokens 列表（让人看见「SKU-8821」在 keep-dash 是 1 个 token，在 split-chars 是 8 个单字）。
  * 挂载：window.DemoUI.TokenizeCompare
  */

@@ -24,7 +24,7 @@ export const JUDGE_CASES: JudgeCase[] = [
     question: "API-KEY-7741 怎么轮换",
     rule: "top1-equals",
     expectTop1: "api-key-7741",
-    explain: "稀有整词 API-KEY-7741 一对上，两侧 Top-1 都该是生产密钥卡。",
+    explain: "稀有整词 API-KEY-7741 一对上，两侧 Top-1 都该是生产密钥切块。",
   },
   {
     id: "error-code",
@@ -32,7 +32,7 @@ export const JUDGE_CASES: JudgeCase[] = [
     question: "ERR-9020 什么意思",
     rule: "top1-equals",
     expectTop1: "err-9020",
-    explain: "错误码几乎只出现一次，BM25 应把签名失败那张卡打到最前。",
+    explain: "错误码几乎只出现一次，BM25 应把签名失败那个切块打到最前。",
   },
   {
     id: "billing",
@@ -40,7 +40,7 @@ export const JUDGE_CASES: JudgeCase[] = [
     question: "公司抬头发票怎么开",
     rule: "top1-equals",
     expectTop1: "billing-invoice",
-    explain: "「公司 / 抬头 / 发票」对上账单发票卡。",
+    explain: "「公司 / 抬头 / 发票」对上账单发票切块。",
   },
   {
     id: "neighbor-key",
@@ -48,7 +48,7 @@ export const JUDGE_CASES: JudgeCase[] = [
     question: "API-KEY-7742 过期怎么办",
     rule: "top1-equals",
     expectTop1: "api-key-7742",
-    explain: "7741 与 7742 字面极像；必须认准稀有整词，不能串到生产密钥卡。",
+    explain: "7741 与 7742 字面极像；必须认准稀有整词，不能串到生产密钥切块。",
   },
   {
     id: "english-no-overlap",

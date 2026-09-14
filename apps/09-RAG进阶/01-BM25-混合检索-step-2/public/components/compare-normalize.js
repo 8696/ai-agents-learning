@@ -1,5 +1,5 @@
 /**
- * 职责：「未拉齐 vs 拉齐后」对照卡 —— 同一问句调两次 searchHybrid（normalize=false / true）
+ * 职责：「未拉齐 vs 拉齐后」对照面板 —— 同一问句调两次 searchHybrid（normalize=false / true）
  *       把两份 Top-K 并排展示，让人看见「不拉齐时 α=0.8 仍然偏 BM25」（因为 BM25 原始分大一个数量级）。
  * 挂载：window.DemoUI.NormalizeCompare
  */
@@ -141,7 +141,7 @@ window.DemoUI.NormalizeCompare = function NormalizeCompare({
     React.createElement(
       "div",
       { className: "text-xs text-gray-600" },
-      "怎么读：左边那张表是「直接加权」的结果；右边那张表是「先拉齐再加权」的结果。黄底 = 期望命中的卡。",
+      "怎么读：左边那张表是「直接加权」的结果；右边那张表是「先拉齐再加权」的结果。黄底 = 期望命中的切块。",
     ),
   );
 };

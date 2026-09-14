@@ -107,7 +107,7 @@
 | `yarn app:08-04-rag-vs-fine-tuning-step-5` | `50084` | 模块 08 · 04 · RAG vs 微调 step-5：决策卡 + 反例集，8 个 sub-page 共享同一端口（A5 混合 / A6 不该检索 真调模型，其他 6 个决策卡） |
 | `yarn app:08-04-rag-vs-fine-tuning-step-6` | `50085` | 模块 08 · 04 · RAG vs 微调 step-6：「该不该检索」三种流程：路由层规则 / 命中阈值 / agent loop（模型自己决定），3 个 sub-page 共享同端口 |
 | `yarn app:08-04-rag-vs-fine-tuning-step-7` | `50086` | 模块 08 · 04 · RAG vs 微调 step-7：混合 pipeline 综合 demo —— 事实层（corpus 可变） + 口吻层（system 3 种模板） 各管各的 |
-| `yarn app:09-01-bm25-hybrid-step-1` | `50087` | 模块 09 · 01 · BM25 / 混合检索 step-1：同一库 6 条卡 · 带货号的问句 + 日常说法、库里未必同词的问句 × 向量 / BM25 分请求对照 · 真调嵌入模型算向量 · BM25 本地算 |
+| `yarn app:09-01-bm25-hybrid-step-1` | `50087` | 模块 09 · 01 · BM25 / 混合检索 step-1：同一库 6 个切块 · 带货号的问句 + 日常说法、库里未必同词的问句 × 向量 / BM25 分请求对照 · 真调嵌入模型算向量 · BM25 本地算 |
 | `yarn app:09-01-bm25-hybrid-step-2` | `50088` | 模块 09 · 01 · BM25 / 混合检索 step-2：混合两边召回（变体 4）+ 加权融合 + min-max 拉齐（变体 5）· α 滑块 + 「未拉齐 vs 拉齐后」对照 · 在 step-1 基础上加 /api/search-hybrid |
 | `yarn app:09-01-bm25-hybrid-step-3` | `50089` | 模块 09 · 01 · BM25 / 混合检索 step-3：RRF（变体 6）+ 按问句偏置 α（变体 7）· /api/search-rrf + /api/search-bias + 「RRF vs 加权」对照 · 在 step-2 基础上加 |
 | `yarn app:09-01-bm25-hybrid-step-4` | `50090` | 模块 09 · 01 · BM25 / 混合检索 step-4：切词对照（变体 8）· /api/search-bm25-variant · 「保留连字符」vs「撕单字」同问句两次 BM25 → 排名变差 · 在 step-3 基础上加 |

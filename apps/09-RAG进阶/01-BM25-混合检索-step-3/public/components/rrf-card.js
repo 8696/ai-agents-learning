@@ -1,5 +1,5 @@
 /**
- * 职责：把 RRF Top-K 画成一张卡 —— 每个卡显示「来源徽标（vector / bm25 / both）」
+ * 职责：把 RRF Top-K 画成一块面板 —— 每个切块显示「来源徽标（vector / bm25 / both）」
  *       + RRF 总分 + 两侧名次 + 两侧贡献 + 算式 `1/(k + rank)` 回显。
  * 挂载：window.DemoUI.RrfCard
  */
@@ -71,7 +71,7 @@ window.DemoUI.RrfCard = function RrfCard({ title, status, result, expectedCardId
                     ? React.createElement(
                         "span",
                         { className: "px-2 py-0.5 rounded bg-green-100 text-green-800" },
-                        "该中的卡 ✓",
+                        "该命中的切块 ✓",
                       )
                     : null,
                   React.createElement(
@@ -112,7 +112,7 @@ window.DemoUI.RrfCard = function RrfCard({ title, status, result, expectedCardId
             ? React.createElement(
                 "div",
                 { className: "text-xs text-gray-500 mt-1" },
-                "期望命中的卡「" +
+                "期望命中的切块「" +
                   expectedCardId +
                   "」出现在第 " +
                   result.rows.find((r) => r.cardId === expectedCardId).rank +
@@ -121,7 +121,7 @@ window.DemoUI.RrfCard = function RrfCard({ title, status, result, expectedCardId
             : React.createElement(
                 "div",
                 { className: "text-xs text-gray-500 mt-1" },
-                "期望命中的卡「" + expectedCardId + "」未进入 Top-K（" + result.topK + "）",
+                "期望命中的切块「" + expectedCardId + "」未进入 Top-K（" + result.topK + "）",
               ),
         ),
   );

@@ -31,7 +31,7 @@ export type RrfRow = {
   vectorContribution: number;
   /** BM25 侧贡献 = 1/(k + bm25Rank) */
   bm25Contribution: number;
-  /** 这张卡出现在哪一侧 */
+  /** 这个切块出现在哪一侧 */
   source: "vector" | "bm25" | "both";
 };
 
@@ -62,7 +62,7 @@ const inputSchema = z.object({
   n: z.number().int().positive().optional().default(DEFAULT_N),
 });
 
-/** 计算单张卡的 RRF 总分。vectorRank/bm25Rank = 0 表示该侧没出现 → 该侧贡献 0。 */
+/** 计算单个切块的 RRF 总分。vectorRank/bm25Rank = 0 表示该侧没出现 → 该侧贡献 0。 */
 function rrfContribution(rank: number, k: number): number {
   if (rank === 0) return 0;
   return 1 / (k + rank);
@@ -94,7 +94,7 @@ export async function searchRrf(input: RrfInput): Promise<RrfSearchResult> {
       const vectorTopN = vecOut.rows;
       const bm25TopN = bm25Out.rows;
 
-      // ② 按名次投票：每张卡累计两侧 1/(k+rank)
+      // ② 按名次投票：每个切块累计两侧 1/(k+rank)
       const merged = new Map<string, { vectorRank: number; bm25Rank: number }>();
       for (const row of vectorTopN) {
         merged.set(row.cardId, { vectorRank: row.rank, bm25Rank: 0 });

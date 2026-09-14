@@ -3,7 +3,7 @@
  *           分请求对照——证明「向量不擅长什么、BM25 补什么」。
  *
  * 职责：
- *   - searchByVector：用嵌入模型算 query 向量，与语料各卡的向量算余弦相似度（Cosine Similarity），
+ *   - searchByVector：用嵌入模型算 query 向量，与语料各个切块的向量算余弦相似度（Cosine Similarity），
  *                    按分数降序排 rank，截 Top-K。
  *   - searchByBm25  ：按词打 BM25，按分数降序排 rank，截 Top-K。
  *

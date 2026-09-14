@@ -75,7 +75,7 @@ function verdictFor(rule: JudgeCase["rule"], expectTop1: string | null, rows: Ra
         : `期望 Top-1 = ${expectTop1}，实际 = ${top1 ?? "（空）"}`,
     };
   }
-  // top1-miss：不该把 expectTop1 打成第 1（名单空或 Top-1 是别的卡都算过）
+  // top1-miss：不该把 expectTop1 打成第 1（名单空或 Top-1 是别的切块都算过）
   const passed = top1 !== expectTop1;
   return {
     passed,

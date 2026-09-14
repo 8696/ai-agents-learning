@@ -1,5 +1,5 @@
 /**
- * 职责：单卡结果行 +「匹配方式」徽标。
+ * 职责：单条结果行 +「匹配方式」徽标。
  *   - 向量侧：算余弦相似度 → 显示「cos=0.78 · 方向接近」或「cos=0.32 · 方向偏离」。
  *   - BM25 侧：把命中词拆出来 →「稀有词命中：SKU-8821（IDF 高，拉分强）」或「常见词命中：保修（IDF 低，几乎不加分）」。
  * 挂载：window.DemoUI.ResultRow
@@ -122,7 +122,7 @@ window.DemoUI.ResultRow = function ResultRow({
         ? React.createElement(
             "span",
             { className: "px-2 py-0.5 rounded bg-green-100 text-green-800" },
-            "该中的卡 ✓",
+            "该命中的切块 ✓",
           )
         : null,
       React.createElement("span", { className: "ml-auto" }, scoreBadge),

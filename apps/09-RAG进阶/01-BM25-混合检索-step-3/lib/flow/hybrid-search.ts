@@ -36,7 +36,7 @@ export type HybridRow = {
   vectorNorm: number;
   /** min-max 归一化后的 BM25 分 ∈ [0, 1]；normalize=false 时 = bm25Score */
   bm25Norm: number;
-  /** 这张卡出现在哪一侧的名单里 */
+  /** 这个切块出现在哪一侧的名单里 */
   source: HybridSource;
 };
 
@@ -82,7 +82,7 @@ function minMaxNormalize(scores: number[]): number[] {
   return scores.map((s) => (s - min) / (max - min));
 }
 
-/** 卡片 id → 文本（用于返回行的 text） */
+/** 切块 id → 文本（用于返回行的 text） */
 function cardTextById(id: string): string {
   return (CORPUS as KnowledgeCard[]).find((c) => c.id === id)?.text ?? "";
 }

@@ -34,7 +34,7 @@ type WinkEngine = {
 
 let engineCache: WinkEngine | null = null;
 let cardById: Map<string, KnowledgeCard> | null = null;
-/** 语料换了必须重建索引；用 CORPUS 长度 + 首卡 id 当粗指纹 */
+/** 语料换了必须重建索引；用 CORPUS 长度 + 首个切块 id 当粗指纹 */
 let corpusFingerprint: string | null = null;
 
 function currentFingerprint(): string {
