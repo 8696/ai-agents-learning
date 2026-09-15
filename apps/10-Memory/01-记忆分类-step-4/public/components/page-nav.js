@@ -6,7 +6,7 @@
   const DemoUI = window.DemoUI || (window.DemoUI = {});
 
   const PAGES = [
-    { key: "main", label: "记忆分类 · 第三步 · 检索 / 召回 + 调大模型", href: "index.html" },
+    { key: "main", label: "记忆分类 · 第四步 · 核心画像常驻 + 情景按问句召回", href: "index.html" },
   ];
 
   DemoUI.PageNav = function PageNav(props) {

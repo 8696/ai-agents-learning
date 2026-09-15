@@ -1,25 +1,25 @@
 /**
- * 职责：完整 4 步串成一次请求的链路（对应 MD §5.4.B「一次请求数据怎么走」）。
- *   ① 程序性记忆常驻 → 不检索，从内存存储读出全部规则，拼进 system 段开头
- *   ② 语义 / 情景召回 → 跑嵌入 + 余弦 + Top-K + 阈值弃权（复用 step-3 的 retrieve-score.runRetrieval）
- *                     → 把 Top-K 拼进 system 段「关于这个用户你需要知道的」
- *   ③ 工作记忆累积 → 多轮 messages 数组（前端传进来，本来就在上下文窗口里，不靠检索）
- *   ④ 拼 messages → 把 ①②③ 串成完整 messages 数组 → 调协议 A 对话补全 → 解析
+ * 职责：一次请求怎么把四类记忆拼进 messages（行业两层读取，不是「所有长期记忆都按问句 Top-K」）。
  *
- * 数据流（POST /api/chat）：被路由 chat.ts 调用，调一次完整 4 步拼装 + 调对话模型。
+ * 本步核心：
+ *   ① 程序性记忆 → 全员规则，常驻 system，不检索
+ *   ② 核心用户画像 → 语义记忆·长期，常驻 system，不按问句筛（ChatGPT 已保存记忆 / Letta 的 human 块）
+ *   ③ 本轮相关经历 → 只检索情景记忆，Top-K 只活在这一次请求，下一问整块替换（Letta 档案记忆）
+ *   ④ 工作记忆 → 前端传来的 user / assistant 历史，本来就在上下文窗口里
  *
- * 为什么单独成文件：这是「拼装 + 调模型」一整条主流程；route 只校验入参、调用这一层、按返回上页。
- * 拆分原则见 §5.7「主流程单独成文件」。
+ * 数据流（POST /api/chat）：路由只校验入参；本文件串拼装 + 调对话补全。
  *
- * 每轮独立判断：本 demo 让前端按 5 句连问按钮依次发送 messages 数组。
- *   - 若 toggle.skipRecall === true → 跳过 ②（演示「不读记忆库」分支）
- *   - 若 toggle.disableSemantic / disableEpisodic === true → runRetrieval 过滤对应类别
- *   - ③ 工作记忆永远是 messages 数组本身（前端传进来）
+ * 开关：
+ *   - skipRecall / 问句本身不需要翻经历 → 跳过 ③，①② 仍带
+ *   - disableSemantic → 不注入核心用户画像（对照：问框架会不会忘 Vue）
+ *   - disableEpisodic → 情景不进检索池
  */
 import { getLlm } from "../../../../llm.js";
 import { logger } from "../logger.js";
 import { runRetrieval } from "./retrieve-score.js";
+import { composeSystemContent, shouldSearchEpisodes } from "./retrieve-prompt.js";
 import { listRules } from "../storage/program-rules.js";
+import { listFacts } from "../storage/facts-store.js";
 import type { ScoredFact } from "./retrieve-score.js";
 import type { PersistedFact } from "../storage/facts-store.js";
 import type { ThresholdRejection } from "./retrieve-score.js";
@@ -29,13 +29,13 @@ export interface ChatMessage {
   content: string;
 }
 
-/** 业务开关：前端可勾上跳过召回、或关掉某类记忆 */
+/** 业务开关：只影响下一次请求的读取策略 */
 export interface PipelineToggles {
-  /** 跳过整个 ② 召回步骤（演示「不读记忆库」分支） */
+  /** 跳过本轮情景召回；核心用户画像仍常驻 */
   skipRecall?: boolean;
-  /** 关掉语义记忆进召回池 */
+  /** 不注入核心用户画像（对照用） */
   disableSemantic?: boolean;
-  /** 关掉情景记忆进召回池 */
+  /** 情景记忆不进检索池 */
   disableEpisodic?: boolean;
 }
 
@@ -48,29 +48,29 @@ export interface FullPipelineInput {
 }
 
 export interface FullPipelineOutput {
-  /** 拼好发给模型的消息数组（含 ① 程序性 + ② 召回 + ③ 工作记忆历史） */
+  /** 拼好发给模型的消息数组（system = ①②③，其后是工作记忆历史） */
   finalMessages: ChatMessage[];
-  /** ① 程序性记忆条数（常驻区大小） */
+  /** ① 程序性记忆条数 */
   programRuleCount: number;
-  /** ② 召回结果：候选池 + Top-K + 弃权信息 */
+  /** ② 核心用户画像（语义记忆·长期，本轮常驻、不按问句筛） */
+  coreProfile: PersistedFact[];
+  /** ③ 本轮情景召回：只含经历，不含语义画像 */
   recall: {
     pool: { facts: PersistedFact[]; filePath: string };
     excludedPool: { facts: PersistedFact[] };
     topK: ScoredFact[];
     thresholdRejection: ThresholdRejection | null;
     skipped: boolean;
+    skipReason: string;
   };
-  /** 完整模型请求（含 messages），原样交给页面 */
   modelRequest: unknown;
-  /** 完整模型响应 */
   modelResponse: unknown;
-  /** 模型回答 */
   modelAnswer: string;
   durationMs: number;
 }
 
 /**
- * 4 步拼装 + 调对话模型。
+ * 一次请求的拼装 + 调对话模型。
  * 这是 step-4 唯一的对外函数；route chat.ts 直接调它。
  */
 export async function runFullPipeline(input: FullPipelineInput): Promise<FullPipelineOutput> {
@@ -78,7 +78,7 @@ export async function runFullPipeline(input: FullPipelineInput): Promise<FullPip
   const toggles = input.toggles ?? {};
   const t0 = Date.now();
   logger.info(
-    "│ 主流程-4步拼装",
+    "│ 主流程-拼装",
     "调用函数开始：runFullPipeline",
     "为什么写这条日志：让页面看到本次请求走了哪几道拼装 + 调对话模型；本步是 step-4 的核心。当前：收到多轮 messages + 最新一条 user + 开关状态。",
     {
@@ -96,78 +96,73 @@ export async function runFullPipeline(input: FullPipelineInput): Promise<FullPip
   const programBlock =
     programRules.length === 0
       ? "（当前没有任何全员规则）"
-      : programRules
-          .map((r, i) => `[全员规则 ${i + 1}] ${r.text}`)
-          .join("\n");
+      : programRules.map((r, i) => `[全员规则 ${i + 1}] ${r.text}`).join("\n");
 
-  // ── ② 语义 / 情景召回 ──
+  // ── ② 核心用户画像：语义记忆·长期整份常驻，不按问句筛 ──
+  const listed = listFacts();
+  const allFacts = listed.facts;
+  const coreProfile: PersistedFact[] = toggles.disableSemantic
+    ? []
+    : allFacts.filter((f) => f.memoryType === "语义记忆" && f.term === "长期");
+  const episodicFacts = allFacts.filter((f) => f.memoryType === "情景记忆");
+
+  // ── ③ 本轮情景召回：只翻经历；语义画像不进余弦 ──
   let topK: ScoredFact[] = [];
   let excludedPool: { facts: PersistedFact[] } = { facts: [] };
-  let pool: { facts: PersistedFact[]; filePath: string } = { facts: [], filePath: "" };
+  let pool: { facts: PersistedFact[]; filePath: string } = { facts: episodicFacts, filePath: listed.filePath };
   let thresholdRejection: ThresholdRejection | null = null;
-  let skipped = false;
-  const disableMemoryTypes: string[] = [];
-  if (toggles.disableSemantic) disableMemoryTypes.push("语义记忆");
-  if (toggles.disableEpisodic) disableMemoryTypes.push("情景记忆");
-  const disableSet = new Set(disableMemoryTypes);
-  if (toggles.skipRecall) {
-    skipped = true;
+  const heuristic = shouldSearchEpisodes(input.currentQuery);
+  const skipEpisodes = Boolean(toggles.skipRecall) || Boolean(toggles.disableEpisodic) || !heuristic.search;
+  const skipReason = toggles.skipRecall
+    ? "页面勾了「跳过本轮情景召回」"
+    : toggles.disableEpisodic
+      ? "页面关掉了情景记忆"
+      : heuristic.search
+        ? ""
+        : heuristic.reason;
+  if (skipEpisodes) {
     logger.info(
-      "│ 主流程-4步拼装",
-      "│ ② 召回-跳过",
-      "为什么写这条日志：前端勾上了 skipRecall，本次不走嵌入余弦，跳过召回步骤（演示「不读记忆库」分支，比如「刚才你说了什么」只看 messages 数组）。",
-      { 入参: { skipRecall: true }, __code: "skipped = true;" },
+      "│ 主流程-拼装",
+      "│ ③ 情景召回-跳过",
+      "为什么写这条日志：情景检索可以按问句跳过；核心用户画像仍常驻。当前：记录跳过原因。",
+      { 入参: { skipRecall: toggles.skipRecall, disableEpisodic: toggles.disableEpisodic, heuristic }, __code: "skipEpisodes = true;" },
     );
   } else {
-    const r = await runRetrieval(input.currentQuery, 3, 0.10, disableSet);
+    const disableSet = new Set<string>(["语义记忆", "工作记忆", "程序性记忆"]);
+    const r = await runRetrieval(input.currentQuery, 3, 0.1, disableSet);
     pool = { facts: r.pool.facts, filePath: r.pool.filePath };
     excludedPool = r.excludedPool;
     topK = r.finalTop;
     thresholdRejection = r.thresholdRejection;
     logger.info(
-      "│ 主流程-4步拼装",
-      "│ ② 召回-完成",
-      "为什么写这条日志：让页面看到本次召回跑了多少候选、Top-K 多少条、关掉了哪些类别、有没有阈值弃权。",
+      "│ 主流程-拼装",
+      "│ ③ 情景召回-完成",
+      "为什么写这条日志：让页面看到本轮只对情景记忆跑了嵌入余弦，语义画像不在候选池里。",
       {
-        入参: { query: input.currentQuery, disableMemoryTypes },
+        入参: { query: input.currentQuery, disableMemoryTypes: [...disableSet] },
         返回值: {
           candidateCount: pool.facts.length,
           excludedCount: excludedPool.facts.length,
           topKSize: topK.length,
           thresholdRejection: thresholdRejection
-            ? { topScore: thresholdRejection.topScore, threshold: thresholdRejection.threshold, rejectedKey: thresholdRejection.rejectedTop.fact.key }
+            ? {
+                topScore: thresholdRejection.topScore,
+                threshold: thresholdRejection.threshold,
+                rejectedKey: thresholdRejection.rejectedTop.fact.key,
+              }
             : null,
         },
       },
     );
   }
 
-  // ── ③ 工作记忆累积：messages 数组本来就在上下文窗口里 ──
-  // 拼 system 段（① + ② + 模型行为约定）
-  const systemContent = `你是公司内部前端代码助手。下面分三块拼成 system 段：
-
-【程序性记忆 / 全员规则】
-${programBlock}
-
-【语义 / 情景记忆 / 召回结果】
-${
-  skipped
-    ? "（本次跳过了召回步骤，按 toggle 不读记忆库）"
-    : topK.length === 0
-      ? "（事实库里没有任何一条与这个问题相关的内容）"
-      : topK
-          .map((s, i) => {
-            return `[${i + 1}] 类型=${s.fact.memoryType} / 期限=${s.fact.term} / 余弦相似度=${s.score.toFixed(4)}
-原话：${s.fact.sentence}
-理由：${s.fact.reason}`;
-          })
-          .join("\n\n")
-}
-
-【行为约定】
-- 只能从上面召回的事实里找答案；没召回到的直接说「我的长期记忆里没有这条信息」。
-- 不要编造召回事实里没写的内容。
-- 引用了哪几条按出现顺序简短列出。`;
+  const systemContent = composeSystemContent({
+    programBlock,
+    coreFacts: coreProfile,
+    episodicSkipped: skipEpisodes,
+    episodicSkipReason: skipReason,
+    episodicTopK: topK,
+  });
 
   // 4 步拼成完整 messages
   // 保留前端的 history（多轮 user / assistant 轮次），但要替换或注入 system 段
@@ -189,7 +184,7 @@ ${
   logger.info(
     "││ 主流程-调对话模型",
     "调用模型开始：对话补全",
-    `为什么写这条日志：真发网络请求的那一次。整条 4 步拼装已就位（① 程序性 ${programRules.length} 条 / ② 召回 ${topK.length} 条 / ③ 工作记忆 ${historyNoSystem.length} 条 history），现在请模型基于这些事实回答「${input.currentQuery}」。`,
+    `为什么写这条日志：真发网络请求的那一次。拼装已就位（① 程序性 ${programRules.length} 条 / ② 核心画像 ${coreProfile.length} 条 / ③ 本轮经历 ${topK.length} 条 / ④ 工作记忆 ${historyNoSystem.length} 条 history），现在请模型回答「${input.currentQuery}」。`,
     { 入参: request, __code: "const response = await llm.openai.chat.completions.create(request);" },
   );
 
@@ -217,12 +212,14 @@ ${
   const output: FullPipelineOutput = {
     finalMessages,
     programRuleCount: programRules.length,
+    coreProfile,
     recall: {
       pool,
       excludedPool,
       topK,
       thresholdRejection,
-      skipped,
+      skipped: skipEpisodes,
+      skipReason,
     },
     modelRequest: request,
     modelResponse: response,
@@ -231,15 +228,17 @@ ${
   };
 
   logger.info(
-    "│ 主流程-4步拼装",
+    "│ 主流程-拼装",
     "调用函数结束：runFullPipeline",
-    "为什么写这条日志：让页面拿到完整 4 步拼装结果 + 完整请求/响应 + 模型回答，方便学习者核对每一步是不是按预期走。当前：即将返回给路由。",
+    "为什么写这条日志：让页面拿到完整拼装结果 + 完整请求/响应 + 模型回答。当前：即将返回给路由。",
     {
       返回值: {
         historyLength: input.messages.length,
         programRuleCount: programRules.length,
+        coreProfileCount: coreProfile.length,
         recallSize: topK.length,
-        recallSkipped: skipped,
+        recallSkipped: skipEpisodes,
+        skipReason,
         answerPreview: modelAnswer.slice(0, 80),
         durationMs: Date.now() - t0,
       },

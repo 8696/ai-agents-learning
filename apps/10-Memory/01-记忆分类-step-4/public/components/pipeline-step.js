@@ -12,6 +12,7 @@
     const title = props.title || "";
     const inputText = props.inputText || "";
     const didText = props.didText || "";
+    const outputLabel = props.outputLabel || "输出";
     return (
       <div className={"border-2 rounded p-3 space-y-2 " + tone}>
         <div className="flex items-center justify-between">
@@ -28,7 +29,7 @@
             <p className="text-gray-800 whitespace-pre-wrap">{didText}</p>
           </div>
           <div className="border border-gray-200 rounded p-2 bg-white">
-            <p className="font-mono text-gray-500 mb-1">输出（拼进 messages 的这一段）</p>
+            <p className="font-mono text-gray-500 mb-1">{outputLabel}</p>
             {props.output}
           </div>
         </div>

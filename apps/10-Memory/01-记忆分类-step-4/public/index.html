@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>记忆分类 · 第四步</title>
+  <title>记忆分类 · 第四步 · 行业两层读取</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
@@ -19,10 +19,12 @@
   <script type="text/babel" src="/components/pipeline-step.js"></script>
   <script type="text/babel" src="/components/fragments.js"></script>
   <script type="text/babel" src="/components/renderers.js"></script>
+  <script type="text/babel" src="/components/pipeline-board.js"></script>
+  <script type="text/babel" src="/components/toggle-bar.js"></script>
   <script type="text/babel" src="/components/memory-write-panel.js"></script>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { StatusPill, PageIntro, EnvFooter, PageNav, ProgramRulesPanel, PipelineStep, ProgramRuleList, RecallSystemFragment, ModelCallOutput, HistoryOutput, MemoryWritePanel } = window.DemoUI || {};
+    const { StatusPill, PageIntro, EnvFooter, PageNav, ProgramRulesPanel, MemoryWritePanel, ToggleBar, PipelineBoard } = window.DemoUI || {};
 
     const EXAMPLES = [
       "你好",
@@ -42,6 +44,7 @@
       const [currentInput, setCurrentInput] = useState("");
       const [lastResult, setLastResult] = useState(null);     // { query, recall, modelAnswer, finalMessages }
       const [skipRecall, setSkipRecall] = useState(false);
+      const [disableSemantic, setDisableSemantic] = useState(false);
       const [facts, setFacts] = useState([]);                     // 用户事实库（语义/情景）
       const [lastWrite, setLastWrite] = useState(null);           // 最近一次写入结果
 
@@ -146,6 +149,7 @@
           .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
           .then(function (pack) {
             if (!pack.ok) { setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); setStatus("error"); return; }
+            refreshFacts();
             setStatus("ok");
           })
           .catch(function (err) { setErrorText(String(err)); setStatus("error"); });
@@ -175,7 +179,11 @@
         fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history, currentQuery: query, toggles: { skipRecall: skipRecall } }),
+          body: JSON.stringify({
+            messages: history,
+            currentQuery: query,
+            toggles: { skipRecall: skipRecall, disableSemantic: disableSemantic },
+          }),
         })
           .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
           .then(function (pack) {
@@ -188,10 +196,10 @@
             setLastResult({
               query: query,
               recall: pack.body.recall,
+              coreProfile: pack.body.coreProfile || [],
               modelAnswer: pack.body.modelAnswer,
               finalMessages: pack.body.finalMessages.concat([{ role: "assistant", content: pack.body.modelAnswer }]),
               historySent: history,
-              skipRecall: skipRecall,
             });
             setCurrentInput("");
             setStatus("ok");
@@ -216,7 +224,7 @@
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              记忆分类（Memory Types）· 第四步（step-4）· 完整 4 步拼装
+              记忆分类（Memory Types）· 第四步（step-4）· 核心画像常驻 + 情景按问句召回
             </h1>
             <StatusPill status={status} />
           </header>
@@ -260,13 +268,12 @@
                   );
                 })}
               </div>
-              <div className="border-t pt-3 flex flex-wrap gap-4 text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={skipRecall}
-                    onChange={function (e) { setSkipRecall(e.target.checked); }} className="w-4 h-4" />
-                  <span>跳过整个召回（演示「不读记忆库」分支）</span>
-                </label>
-              </div>
+              <ToggleBar
+                disableSemantic={disableSemantic}
+                skipRecall={skipRecall}
+                onChangeSemantic={setDisableSemantic}
+                onChangeSkipRecall={setSkipRecall}
+              />
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
                   disabled={busy || !currentInput.trim()} onClick={runSend}>
@@ -282,60 +289,11 @@
                 </button>
               </div>
               <p className="text-xs text-gray-500">
-                期望：例句 1 / 3 / 5 应该看到 ② 列显示「⏭ 跳过」；例句 2 / 4 / 6 应该跑嵌入余弦召回。
+                期望：先问「写个按钮」再问「我用什么框架？」——两轮的核心画像都应含 Vue；再问批量改价，经历块会换，画像仍在。
               </p>
             </section>
-            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
-              <p className="text-sm font-semibold text-gray-800">
-                流水线 4 步（自上而下 · 一次请求的完整拼装） ·{" "}
-                {lastResult ? "基于最近一次发问「" + lastResult.query + "」" : "（还没发请求）"}
-              </p>
-              <p className="text-xs text-gray-600">
-                数据从上往下流：当前 user → ①程序性 → ②召回 → ③工作记忆累积 → ④调模型 → 拿到回答。每一步展示「输入 / 做了什么 / 输出」。
-              </p>
-              <div className="space-y-3">
-                <div className="border-2 border-gray-400 bg-white rounded p-3">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">0 · 当前 user 消息（流水线入口）</p>
-                  {lastResult ? (
-                    <p className="border border-blue-300 bg-blue-50 rounded p-2 text-sm whitespace-pre-wrap text-gray-800">「{lastResult.query}」</p>
-                  ) : (
-                    <p className="text-xs text-gray-500">（点上方例句按钮或「发一条」开始）</p>
-                  )}
-                </div>
-                <PipelineStep
-                  tone="border-yellow-300 bg-yellow-50"
-                  icon="①"
-                  title="程序性记忆（常驻不检索）"
-                  inputText="（无 —— 直接从内存 Map 读）"
-                  didText="listRules() → 读出全部程序性规则 → 拼成下面这段（固定部分，每次请求都带同样内容）"
-                  output={<ProgramRuleList rules={programRules} />}
-                />
-                <PipelineStep
-                  tone="border-blue-300 bg-blue-50"
-                  icon="②"
-                  title="语义 / 情景召回（嵌入 + 余弦 + Top-K）"
-                  inputText={lastResult ? "当前 user「" + lastResult.query + "」 + facts.json（" + (lastResult.recall && lastResult.recall.pool ? lastResult.recall.pool.facts.length : "?") + " 条事实）" : "（还没发请求）"}
-                  didText={lastResult && lastResult.recall && lastResult.recall.skipped ? "⏭ 跳过（前端勾了 skipRecall）—— 不调嵌入、不算余弦" : "embedBatch → cosine → pickTopK(3) → applyThreshold(0.10)"}
-                  output={<RecallSystemFragment lastResult={lastResult} />}
-                />
-                <PipelineStep
-                  tone="border-green-300 bg-green-50"
-                  icon="③"
-                  title="调对话模型（拼 messages → POST → 拿回答）"
-                  inputText={lastResult ? "messages = ①+② 拼的 system 段 + ③ messages 历史" : "（还没发请求）"}
-                  didText="llm.openai.chat.completions.create({ model, messages, temperature: 0 })"
-                  output={<ModelCallOutput lastResult={lastResult} rules={programRules} />}
-                />
-                <PipelineStep
-                  tone="border-purple-300 bg-purple-50"
-                  icon="④"
-                  title="工作记忆累积（messages 历史 + 当前 user）"
-                  inputText={lastResult ? "累积的历史 messages + 当前 user「" + lastResult.query + "」" : "（还没发请求）"}
-                  didText="messages 数组 = [system段（①+②+行为约定）, ...history, 当前 user]"
-                  output={<HistoryOutput lastResult={lastResult} />}
-                />
-              </div>
-              {errorText ? <p className="text-xs text-red-700">错误：{errorText}</p> : null}
+            <section id="output">
+              <PipelineBoard lastResult={lastResult} programRules={programRules} errorText={errorText} />
             </section>
           </main>
           <EnvFooter env={env} />

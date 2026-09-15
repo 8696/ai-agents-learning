@@ -43,7 +43,7 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "记忆分类第四步：完整 4 步拼装 + 多轮对话 + 程序性常驻区。", {
+  logger.info("server.start", "listening", "记忆分类第四步：核心用户画像常驻 + 情景按问句召回 + 多轮对话。", {
     url: `http://127.0.0.1:${PORT}/`,
     protocol: "A",
   });

@@ -59,7 +59,7 @@ export function mountChatRoutes(router: Router): void {
     logger.info(
       "调用函数-chat路由",
       "调用函数开始：runFullPipeline",
-      "为什么写这条日志：这一层只认 runFullPipeline 的返回，里面那次调对话补全才是真发网络请求。当前：收到多轮 messages + 当前 query + 开关状态，准备走完整 4 步拼装。",
+      "为什么写这条日志：这一层只认 runFullPipeline 的返回，里面那次调对话补全才是真发网络请求。当前：收到多轮 messages + 当前 query + 开关状态，准备按两层读取拼装。",
       {
         入参: {
           historyLength: messages.length,
@@ -79,11 +79,13 @@ export function mountChatRoutes(router: Router): void {
       logger.info(
         "调用函数-chat路由",
         "调用函数结束：runFullPipeline",
-        "为什么写这条日志：要把 4 步拼装完整结果（① 程序性条数 + ② 召回结果 + ③ 工作记忆历史 + ④ 模型请求/响应/回答）交给页面展示，方便学习者逐项核对。当前：即将写 ctx.body。",
+        "为什么写这条日志：要把拼装完整结果（程序性 + 核心画像 + 本轮经历 + 工作记忆 + 模型回答）交给页面。当前：即将写 ctx.body。",
         {
           返回值: {
             programRuleCount: output.programRuleCount,
+            coreProfileCount: output.coreProfile.length,
             recallSkipped: output.recall.skipped,
+            skipReason: output.recall.skipReason,
             recallSize: output.recall.topK.length,
             historyLength: messages.length,
             answerPreview: output.modelAnswer.slice(0, 80),
@@ -97,12 +99,12 @@ export function mountChatRoutes(router: Router): void {
       logger.error(
         "调用函数-chat路由",
         "调用函数结束：runFullPipeline（失败）",
-        "为什么写这条日志：完整 4 步拼装失败要记下原因方便回查。当前：即将把 502 返回给页面。",
+        "为什么写这条日志：拼装失败要记下原因方便回查。当前：即将把 502 返回给页面。",
         { 返回值: { error: message }, 耗时ms: Date.now() - t0 },
       );
       sendError(ctx, 502, {
         error: "CHAT_FAILED",
-        explain: `4 步拼装失败：${message}`,
+        explain: `拼装失败：${message}`,
       });
     }
   });
