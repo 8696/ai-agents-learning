@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>6-D 被新事实挤掉 · 写入时机 · 第十一步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI || {};
+
+    function factValue(c) {
+      if (c.value && typeof c.value === "object" && "value" in c.value) return c.value.value;
+      return String(c.value);
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [beforeRecall, setBeforeRecall] = useState(null);
+      const [afterRecall, setAfterRecall] = useState(null);
+      const [afterArchive, setAfterArchive] = useState(null);
+      const [linkResult, setLinkResult] = useState(null);
+      const [errorMsg, setErrorMsg] = useState("");
+      const [pushing, setPushing] = useState(false);
+
+      function setPill(status) {
+        const el = document.getElementById("status-pill");
+        if (!el) return;
+        const map = { idle: "⏸ 待连接", running: "🔄 请求中", done: "✅ 完成", error: "❌ 错误" };
+        el.textContent = map[status] || map.idle;
+      }
+
+      async function callApi(path, options) {
+        setErrorMsg("");
+        setPill("running");
+        try {
+          const res = await fetch(path, options);
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setErrorMsg((data && data.explain) || ("HTTP " + res.status));
+            setPill("error");
+            return null;
+          }
+          setPill("done");
+          return data;
+        } catch (err) {
+          setErrorMsg("请求失败：" + String(err));
+          setPill("error");
+          return null;
+        }
+      }
+
+      async function step1Seed() {
+        setPushing(true);
+        const data = await callApi("/api/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+        if (data) setBeforeRecall(null);
+        setPushing(false);
+      }
+
+      async function step2BeforeRecall() {
+        setPushing(true);
+        const data = await callApi("/api/recall");
+        if (data) setBeforeRecall(data);
+        setPushing(false);
+      }
+
+      async function step3TriggerLinked() {
+        setPushing(true);
+        const text = "我 2027 年要从北大毕业";
+        const data = await callApi("/api/expire-linked", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+        if (data) {
+          setLinkResult(data);
+          // 拉一下「之后 recall」和「归档视图」做对比
+          const recallAfter = await callApi("/api/recall");
+          if (recallAfter) setAfterRecall(recallAfter);
+          const archiveAfter = await callApi("/api/archive");
+          if (archiveAfter) setAfterArchive(archiveAfter);
+        }
+        setPushing(false);
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              6-D 被新事实挤掉（关联键）— 「我毕业了」自动挤掉「在读学校」
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="link" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                这个页面演示：<b>变体 6-D「被新事实挤掉」</b>——跟 6-B「时间到了才过期」不一样，是<b>另一条新事实触发</b>导致旧事实过期。
+              </p>
+              <div className="text-xs text-gray-600">
+                <div className="font-semibold text-gray-700 mb-2">按这个顺序点 3 个按钮跑一遍：</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><b>点「灌入示例事实（含 school）」</b>——把演示数据写进库（包括「我在北京大学读书」）</li>
+                  <li><b>点「现在查回答时用的库」</b>——看到 school 还在候选里</li>
+                  <li><b>点「我 2027 年要从北大毕业」</b>——调模型抽候选 + 自动挤掉「在读学校」 + 自动归档 → 再查库发现 school 不在候选里、但是在归档视图里</li>
+                </ol>
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">这个页面在演示什么</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>关联键设计</b>：新事实 value.expires_with = 'school' → 写入时自动归档 school 事实</li>
+                  <li>「我毕业了」是一种 <b>业务触发</b>，不是「时间到了」——跟 6-B / 6-C 不一样</li>
+                  <li><b>过期 ≠ 删除</b>：school 进了归档视图，原始记录还在库里（用户/审计能查回）</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">按顺序点下面的按钮</h2>
+
+              <div className="border-l-4 border-blue-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 1 步：灌入示例事实（含 school）</div>
+                <div className="text-xs text-gray-600">把演示数据写进库（包括「我在北京大学读书」）。</div>
+                <button onClick={step1Seed} disabled={pushing} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">灌入示例事实（含 school）</button>
+              </div>
+
+              <div className="border-l-4 border-green-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 2 步：现在查回答时用的库</div>
+                <div className="text-xs text-gray-600">看「我在北京大学读书」这条事实现在在 recall 候选里（用着能拿到）。</div>
+                <button onClick={step2BeforeRecall} disabled={pushing} className="bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">现在查回答时用的库</button>
+              </div>
+
+              <div className="border-l-4 border-purple-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 3 步：发「我 2027 年要从北大毕业」</div>
+                <div className="text-xs text-gray-600">点完这一下，模型会抽「我毕业了」这条事实，value.expires_with 关联到 school；后台自动把 school 归档。</div>
+                <button onClick={step3TriggerLinked} disabled={pushing} className="bg-purple-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">我 2027 年要从北大毕业</button>
+              </div>
+
+              {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-800">点完按钮后的结果</h2>
+
+              {beforeRecall ? (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-green-900">第 2 步结果：「现在查回答时用的库」</div>
+                  <div className="text-xs text-gray-700">库里现在有 {beforeRecall.count} 条事实。重点看 <b>school</b> 这条 —— 它现在在候选里，意味着如果用户现在问「我在哪读书」，AI 会用这条事实回答。</div>
+                  <div className="text-xs space-y-1">
+                    {beforeRecall.candidates.filter(function (c) { return c.key === "school"; }).map(function (c) {
+                      return <div key={c.key} className="bg-white border rounded p-2"><b>school</b>：{factValue(c)} <span className="text-green-700">（在 recall 候选里）</span></div>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {linkResult ? (
+                <div className="bg-purple-50 border border-purple-300 rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-purple-900">第 3 步结果：模型抽出 + 自动挤掉完成</div>
+                  <ul className="text-xs text-gray-700 space-y-1">
+                    <li>模型抽到 <b>{linkResult.candidates.length}</b> 条事实（written 列表）：<span className="font-mono">{linkResult.written.join(", ")}</span></li>
+                    <li>被新事实挤掉（archivedKeys）：<b className="text-red-700">{linkResult.archivedKeys.length === 0 ? "(没有)" : linkResult.archivedKeys.join(", ")}</b></li>
+                    {linkResult.candidates.map(function (c) {
+                      return (
+                        <li key={c.key}>
+                          <b>{c.key}</b>：{factValue(c)}{c.key === "i_will_graduate_from_school" ? <span className="text-purple-700">（这条 value.expires_with = "school" → 自动挤掉 school）</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+
+              {afterRecall ? (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-green-900">第 3 步之后：再查一次「现在查回答时用的库」</div>
+                  <div className="text-xs text-gray-700">库里仍然有 {afterRecall.count} 条事实。重点看 <b>school</b> —— 它<b>不在候选里</b>了，意味着如果用户再问「我在哪读书」，AI 不会用这条事实回答。</div>
+                  <div className="text-xs space-y-1">
+                    {afterRecall.candidates.filter(function (c) { return c.key === "school"; }).length === 0 ? (
+                      <div className="bg-white border rounded p-2"><b>school</b> <span className="text-red-700">（不在 recall 候选里 —— 被「我毕业了」挤掉了）</span></div>
+                    ) : (
+                      <div className="bg-white border rounded p-2"><b>school</b>：{factValue(afterRecall.candidates.find(function (c) { return c.key === "school"; }))} <span className="text-orange-700">（意外还在候选里 —— 出 bug 了）</span></div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {afterArchive ? (
+                <div className="bg-red-50 border border-red-300 rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-red-900">第 3 步之后：归档视图</div>
+                  <div className="text-xs text-gray-700">「school」事实现在在归档里（用户/审计还能查回，但不再参与 recall）。</div>
+                  {afterArchive.archived.length === 0 ? (
+                    <div className="text-xs text-gray-500 italic">归档里没有事实</div>
+                  ) : (
+                    <ul className="text-xs space-y-2">
+                      {afterArchive.archived.map(function (a) {
+                        return (
+                          <li key={a.key} className="bg-white border rounded p-2 space-y-1">
+                            <div className="text-gray-800"><b>{a.key}</b>：{factValue(a)}</div>
+                            <div className="text-gray-500">原本应该在 <span className="font-mono">{a.validUntil || "(无)"}</span> 之前参与回答；现在 <span className="font-mono">{a.archivedAt}</span> 被归档。</div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50114} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

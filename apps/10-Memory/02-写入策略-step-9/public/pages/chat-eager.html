@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>热路径 · 每轮同步写 · 写入时机 · 第九步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- §5.3.4 加载顺序：utils（普通 script）→ components（babel src）→ 本页内联块 -->
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/candidate-list.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/chat-panel.js"></script>
+
+  <script type="text/babel">
+    // ── 解构 React 全局 + DemoUI ──
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav, ChatPanel } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () {});
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              热路径 · 每轮同步写（变体 1-A）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="eager" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>第 1 关「写入时机」变体 1-A</b>——<b>正常会话</b> + <b>每轮消息发出后同步调 triggerWrite</b>。每条 user message 等助手回复回来后，立刻调「抽取 + 写库」完整流水线；触发响应未返就不算「这一轮结束」。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>用户在下面输入框发消息 → 服务端 POST /api/chat 调模型拿助手回复。</li>
+                <li>助手回复拿到后 → 立刻 POST /api/trigger（入参 mode=eager · text=用户原话 · conversationId=本会话），触发响应未返不算「这一轮结束」。</li>
+                <li>触发响应拿到后 → 显示在 ChatPanel 的「本轮结果」里：触发耗时 / 库条数变化 / 抽到了几条 / 候选清单。</li>
+                <li>下一句提问时库已经更新 → 紧接着的 recall / 模型都能拿到刚学的事实。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ol className="text-xs text-gray-800 list-decimal pl-5 space-y-1">
+                  <li><span className="font-medium">热路径 = 写完才往下走</span>：每轮消息发出后等「抽取 + 写库」全部完成才返回；下一句提问时库已经最新。</li>
+                  <li><span className="font-medium">代价 = 多花的延迟</span>：每轮多一次模型调用 + 写库耗时；用户能感觉到卡顿（一次对话 2~3s）；话说到一半就抽容易抽出半成品。</li>
+                  <li><span className="font-medium">库条数立刻 +N</span>：本轮助手回复后立刻看到 factsCountBefore → factsCountAfter 的变化。</li>
+                  <li><span className="font-medium">强一致</span>：刚刚的事实立刻在 recall 候选里可用，没有时间窗口。</li>
+                </ol>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-800 mb-3">本页控件（输入框 + 发送 = 自动按 mode=eager 触发写入）</h2>
+              <DemoUI.ChatPanel
+                mode="eager"
+                triggerLabel="eager · 每轮助手回复后立刻调 triggerWrite（同步）"
+                autoTrigger={true}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2">
+              <h2 className="text-sm font-semibold text-gray-800">本页输出（响应结果都已经在上面 ChatPanel 的「本轮结果」块里）</h2>
+              <p className="text-xs text-gray-600">本页是变体 1-A 热路径,只有一个输出维度——库条数立刻 +N,「本轮抽到了什么」在 ChatPanel 最后一块的 CandidateList 里(下面整页滚动可见)。没有后台 watcher,没有待结算队列,因为热路径是「同步、立刻、不入队列」。</p>
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50112} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

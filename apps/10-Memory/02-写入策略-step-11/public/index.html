@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>过期 · 第十一步 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="components/layout.js"></script>
+  <script type="text/babel" src="components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () {});
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              过期（Expiration / TTL） · 第十一步（step-11） · 总览
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页是<b>第 6 关「过期」</b>总览。笔记 §6 写了<b>四种过期方式</b>：6-A 永不过期 / 6-B 自带有效期 / 6-C 不用就衰减 / 6-D 被新事实挤掉。<b>step-10</b> 把前三种做齐（<b>时间快进</b> + <b>归档视图</b> + <b>衰减权重排序</b>，跑 <code className="bg-gray-100 px-1">yarn app:10-02-write-policy-step-10</code> 看），<b>step-11</b> 把第四种做齐——「我毕业了」自动挤掉「在读学校」（<b>关联键</b>设计）。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点下方 sub-page 卡片 → 进入「6-D 被新事实挤掉」演示页。</li>
+                <li>演示页里有 3 个控件：灌入示例事实 / 现在查回答时用的库 / 「我 2027 年要从北大毕业」按钮。</li>
+                <li>点完按钮后 → 模型抽这条事实 + 检测关联键 → 自动把 school 事实归档。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ol className="text-xs text-gray-800 list-decimal pl-5 space-y-1">
+                  <li><span className="font-medium">关联键设计</span>：新事实的价值不在「自己」,而在「挤掉旧事实」。比如「我毕业了」挤掉「在读学校」——不是同一 key 覆盖，是让旧事实归档。</li>
+                  <li><span className="font-medium">过期 ≠ 删除</span>：school 进了归档视图，库里还在。原则 6-A / 6-B / 6-C 一样。</li>
+                  <li><span className="font-medium">防止误覆盖</span>：模型抽取时如果抽到与旧事实同 key 的候选，不写库（避免覆盖旧事），改把这条 key 加进 expiresWith 列表 — 当作「要挤掉这条旧事」的指令。</li>
+                </ol>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-800 mb-3">本步 sub-page（点卡片进入）</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="pages/expire-linked.html" className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold bg-purple-100 text-purple-900">mode-link</span>
+                    <span className="text-sm font-semibold text-gray-800">6-D 被新事实挤掉（关联键）</span>
+                  </div>
+                  <p className="text-xs text-gray-600">点「我 2027 年要从北大毕业」→ 模型抽这条事实 + 检测关联键 → 自动把 school 事实归档。再查 recall 看不到 school，归档视图看得到。</p>
+                  <p className="text-xs text-gray-400 mt-2">入口：<span className="font-mono">pages/expire-linked.html</span> · 端口 50114</p>
+                </a>
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-800">笔记 §6 四种过期方式 · 本步只做 6-D（其他三种在 step-10 已做）</h2>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b">
+                    <th className="py-1 pr-2">变体</th>
+                    <th className="py-1 pr-2">做法</th>
+                    <th className="py-1 pr-2">本步</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">6-A 永不过期</td>
+                    <td className="py-1 pr-2 text-gray-600">validUntil = null（除非用户明确改口，否则一直有效）</td>
+                    <td className="py-1 pr-2"><span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded font-semibold">step-10 已做（本步不重复演示）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">6-B 自带有效期</td>
+                    <td className="py-1 pr-2 text-gray-600">提取阶段让模型判断 validUntil；时间到了写 archived_at 而不是物理删除</td>
+                    <td className="py-1 pr-2"><span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded font-semibold">step-10 已做（本步不重复演示）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">6-C 不用就衰减</td>
+                    <td className="py-1 pr-2 text-gray-600">记 last_used_at + use_count，长期没被召回的降权（不删除）</td>
+                    <td className="py-1 pr-2"><span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded font-semibold">step-10 已做（本步不重复演示）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">6-D 被新事实挤掉</td>
+                    <td className="py-1 pr-2 text-gray-600">「我毕业了」进来挤掉「在读学校」（不是同一 key，是关联 key）；模型判断 + 直接 UPDATE</td>
+                    <td className="py-1 pr-2"><span className="bg-green-100 text-green-900 text-xs px-2 py-0.5 rounded font-semibold">step-11 已做（关联键 + 自动挤掉 + 归档视图）</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="text-xs text-gray-600">step-10 + step-11 合起来覆盖笔记 §6 全部四种过期方式。step-10 演示 6-A / 6-B / 6-C（见 <code className="bg-gray-100 px-1">yarn app:10-02-write-policy-step-10</code>），step-11 演示 6-D（本步）。</p>
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50114} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

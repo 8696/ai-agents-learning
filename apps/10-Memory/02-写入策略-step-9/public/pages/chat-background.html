@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>后台异步 · 不挡回复 · 写入时机 · 第九步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/candidate-list.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/chat-panel.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav, ChatPanel } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [currentRunId, setCurrentRunId] = useState(null);
+      const [currentRun, setCurrentRun] = useState(null);
+      const [beforeRecall, setBeforeRecall] = useState(null);
+      const [afterRecall, setAfterRecall] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () {});
+      }, []);
+
+      useEffect(function () {
+        if (!currentRunId) return;
+        let cancelled = false;
+        function poll() {
+          fetch("/api/trigger/status/" + currentRunId)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (cancelled) return;
+              setCurrentRun(data);
+              if (data.status === "pending") setTimeout(poll, 500);
+            })
+            .catch(function () {});
+        }
+        poll();
+        return function () { cancelled = true; };
+      }, [currentRunId]);
+
+      function onRound(result) {
+        if (result.triggerResult && result.triggerResult.runId) {
+          setCurrentRunId(result.triggerResult.runId);
+          setCurrentRun(null);
+          setBeforeRecall(null);
+          setAfterRecall(null);
+        }
+      }
+
+      function checkBeforeRecall() {
+        fetch("/api/recall")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setBeforeRecall(data); })
+          .catch(function () {});
+      }
+
+      function checkAfterRecall() {
+        setTimeout(function () {
+          fetch("/api/recall")
+            .then(function (r) { return r.json(); })
+            .then(function (data) { setAfterRecall(data); })
+            .catch(function () {});
+        }, 3000);
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              后台异步 · 不挡回复（变体 1-B）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="background" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>第 1 关「写入时机」变体 1-B</b>——<b>正常会话</b> + <b>每轮消息发出后异步调 triggerWrite</b>。助手回复立刻给用户；「抽取 + 写库」丢后台，2 秒后跑完入库。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>用户在下面输入框发消息 → 服务端 POST /api/chat 拿助手回复。</li>
+                <li>助手回复拿到后 → POST /api/trigger（入参 mode=background · text=用户原话 · conversationId=本会话），服务端立刻返 202 + runId（这是「触发响应」——很快，几十毫秒）。</li>
+                <li>后台 watcher（右下角）每 0.5s 轮询当前 run 的状态，pending → done 时显示后台抽到的 candidates + 库条数变化。</li>
+                <li>用户感觉不到延迟，但代价是「时间窗口不一致」——可点下面「紧接查 recall / 3s 后再查 recall」对比观察。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ol className="text-xs text-gray-800 list-decimal pl-5 space-y-1">
+                  <li><span className="font-medium">后台异步 = 触发响应快 + 写库延后</span>：触发响应只把 run 入队就返；后台 2s 后跑完整流水线（抽 + 写）。</li>
+                  <li><span className="font-medium">代价 = 不一致的时间窗口</span>：刚说完「我改用 Vue 了」紧接着提问，recall 召回的还是旧事实；过一会儿再问才召得到。</li>
+                  <li><span className="font-medium">后台 watcher 必须主动轮询</span>：触发响应里没有「写完了」的事实；前端要轮询 GET /api/trigger/status/:runId 才能知道 run 完成了。</li>
+                  <li><span className="font-medium">「紧接查 recall vs 3s 后再查 recall」对照</span>——是这件事的肉眼可见证据：紧接查时 count 没变，3s 后再查 count +N。</li>
+                </ol>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-800 mb-3">本页控件（输入框 + 发送 = 自动按 mode=background 触发后台写入）</h2>
+              <DemoUI.ChatPanel
+                mode="background"
+                triggerLabel="background · 每轮助手回复后立刻触发（不挡回复；后台 2s 后跑）"
+                autoTrigger={true}
+                onRound={onRound}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">本页输出：后台 watcher（每 0.5s 轮询）+ 时间窗口观察</h2>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 font-semibold">后台 watcher（轮询 GET /api/trigger/status/&lt;runId&gt;）</div>
+                {currentRunId ? (
+                  <div className="space-y-2">
+                    <div className="text-xs text-gray-500">runId：<span className="font-mono">{currentRunId}</span></div>
+                    {currentRun ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-2 text-xs">
+                          <span className={"px-2 py-0.5 rounded font-semibold " + (currentRun.status === "done" ? "bg-green-100 text-green-900" : currentRun.status === "failed" ? "bg-red-100 text-red-900" : "bg-yellow-100 text-yellow-900")}>
+                            {currentRun.status}
+                          </span>
+                          <span className="text-gray-600">startedAt → finishedAt：<span className="font-mono">{currentRun.startedAt} → {currentRun.finishedAt || "(进行中)"}</span></span>
+                        </div>
+                        {currentRun.factsCountAfter !== undefined ? (
+                          <div className="text-xs text-gray-700">库条数变化：<span className="font-mono">{currentRun.factsCountBefore} → {currentRun.factsCountAfter}</span></div>
+                        ) : null}
+                        {currentRun.candidates && currentRun.candidates.length > 0 ? (
+                          <div className="space-y-1">
+                            <div className="text-xs text-gray-600 font-semibold">后台抽到了（candidates · 抽了什么出来）</div>
+                            <DemoUI.CandidateList candidates={currentRun.candidates} />
+                          </div>
+                        ) : null}
+                        {currentRun.error ? <div className="text-xs text-red-700">error：<span className="font-mono">{currentRun.error}</span></div> : null}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">查询中...</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 italic">还没触发过；发一条消息让本页自动触发后台写入后会显示。</div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 font-semibold">时间窗口观察：紧接查 recall vs 3s 后再查 recall</div>
+                <p className="text-xs text-gray-600">这是「后台异步的不一致时间窗口」的肉眼可见证据——发完消息立刻查 recall 看不到刚学的事实，3s 后再查才看得到。</p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={checkBeforeRecall} className="border border-gray-300 text-sm px-3 py-1 rounded">紧接查 recall</button>
+                  <button onClick={checkAfterRecall} className="border border-gray-300 text-sm px-3 py-1 rounded">3s 后再查 recall</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="border rounded p-3">
+                    <div className="text-xs text-gray-500">紧接查 recall（应当召回不到新事实）</div>
+                    <div className="text-lg font-mono mt-1">count = {beforeRecall ? beforeRecall.count : "(未查)"}</div>
+                    {beforeRecall ? <div className="text-xs text-gray-600 mt-1">keys：{Object.keys(beforeRecall.recalled || {}).join(", ") || "(空)"}</div> : null}
+                  </div>
+                  <div className="border rounded p-3">
+                    <div className="text-xs text-gray-500">3s 后再查 recall（应当召回得到）</div>
+                    <div className="text-lg font-mono mt-1">count = {afterRecall ? afterRecall.count : "(未查)"}</div>
+                    {afterRecall ? <div className="text-xs text-gray-600 mt-1">keys：{Object.keys(afterRecall.recalled || {}).join(", ") || "(空)"}</div> : null}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50112} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

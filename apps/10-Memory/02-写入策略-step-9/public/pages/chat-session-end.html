@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>会话结束才写 · 写入时机 · 第九步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/candidate-list.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/chat-panel.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const { StatusPill, EnvFooter, PageNav, ChatPanel } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [pendingCount, setPendingCount] = useState(0);
+      const [flushResult, setFlushResult] = useState(null);
+      const [closing, setClosing] = useState(false);
+      const conversationIdRef = useRef("demo-session");
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () {});
+      }, []);
+
+      useEffect(function () {
+        const cid = conversationIdRef.current;
+        let cancelled = false;
+        function poll() {
+          fetch("/api/status")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (cancelled) return;
+              const mine = (data.pendingConversations || []).find(function (p) { return p.conversationId === cid; });
+              setPendingCount(mine ? mine.pendingCount : 0);
+              setTimeout(poll, 2000);
+            })
+            .catch(function () { if (!cancelled) setTimeout(poll, 4000); });
+        }
+        poll();
+        return function () { cancelled = true; };
+      }, []);
+
+      async function closeSession() {
+        setClosing(true);
+        try {
+          const res = await fetch("/api/conversation/" + encodeURIComponent(conversationIdRef.current) + "/close", { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) { alert("关闭会话失败：" + (data.explain || "HTTP " + res.status)); return; }
+          setFlushResult(data);
+          setPendingCount(0);
+        } finally {
+          setClosing(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              会话结束才写（变体 1-C）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="session-end" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>第 1 关「写入时机」变体 1-C</b>——<b>正常会话</b> + <b>每轮消息发出后不入库，只入「待结算队列」</b>。助手回复照给用户；「抽取 + 写库」全部推迟到点「结束会话」按钮时一次性跑完。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>用户在下面输入框发消息 → 服务端 POST /api/chat 拿助手回复。</li>
+                <li>助手回复拿到后 → POST /api/trigger（入参 mode=session-end · text=用户原话 · conversationId=本会话），服务端立刻返（几十毫秒），把这段 text 入「待结算队列」。</li>
+                <li>库条数不变（本轮没有任何写库动作）；右下角「待结算队列」实时显示当前会话待写条数。</li>
+                <li>点「结束会话」按钮 → POST /api/conversation/:id/close → flushConversation 一次性把队列里所有 text 跑完整流水线（每段调一次 extractFacts + kvSet）。</li>
+                <li>flushConversation 完成后才看到库条数 +N + flushResult 里每段抽到了什么。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ol className="text-xs text-gray-800 list-decimal pl-5 space-y-1">
+                  <li><span className="font-medium">会话结束才写 = 完整上下文 + 同会话里学不到</span>：close 时整段一起跑流水线，能看出用户中途改口；代价是同一次会话里学到的东西，这一次会话用不上——必须 close 完才能用。</li>
+                  <li><span className="font-medium">库条数 vs 待结算队列长度 = 两个独立的计数器</span>：库条数是已落盘的事实；待结算队列长度是「这段会话还欠着没写的段数」——只要后者 &gt; 0 库条数就一直不变。</li>
+                  <li><span className="font-medium">「结束会话」是必须的人工动作</span>：不点这一下，本页所有事实永远只在队列里、不会进库。</li>
+                  <li><span className="font-medium">flushConversation 一次性结算</span>：不是触发响应，是「把队列里的 text 逐段抽 + 写」，所以最后看到的是 flushedItems + flushedCandidates（每段来源哪句 text + 抽到了什么）。</li>
+                </ol>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-800">本页控件：待结算队列 watcher + 正常会话（输入框 + 发送 = 自动按 mode=session-end 入队列）</h2>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold text-gray-700">待结算队列 watcher（每 2s 轮询 GET /api/status）</div>
+                </div>
+                <div className="text-sm">
+                  会话 <span className="font-mono font-semibold">{conversationIdRef.current}</span> 当前待结算条数：
+                  <span className={"ml-2 font-mono font-semibold text-lg " + (pendingCount > 0 ? "text-orange-700" : "text-gray-400")}>
+                    {pendingCount}
+                  </span>
+                </div>
+                {pendingCount > 0 ? (
+                  <div className="text-xs text-gray-600">这 <b>{pendingCount}</b> 段 user message 还没被抽取 / 写库——它们在「待结算队列」里等「结束会话」按钮按下再跑。</div>
+                ) : (
+                  <div className="text-xs text-gray-500 italic">待结算队列为空；发几条消息让本页把它们入队吧。</div>
+                )}
+                <div className="border-t pt-3 flex items-center gap-2">
+                  <button
+                    onClick={closeSession}
+                    disabled={closing || pendingCount === 0}
+                    className="bg-purple-600 text-white text-sm px-4 py-1 rounded disabled:opacity-50"
+                  >
+                    {closing ? "结算中…" : "结束会话（close session · 触发 flushConversation）"}
+                  </button>
+                  <span className="text-xs text-gray-500">点完这一下，flushConversation 会跑：把队列里每段 user message 调一次 extractFacts + kvSet；库条数会 +N。</span>
+                </div>
+              </div>
+
+              <DemoUI.ChatPanel
+                mode="session-end"
+                triggerLabel="session-end · 每轮助手回复后只入待结算队列；close 才跑"
+                autoTrigger={true}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-800">本页输出：结束会话触发结算结果（flushResult · 库条数 + 每段抽到了什么）</h2>
+              {flushResult ? (
+                <div className="space-y-3">
+                  <ul className="text-xs text-gray-700 space-y-1">
+                    <li>flushedItems：<span className="font-mono">{flushResult.flushedItems}</span></li>
+                    <li>库条数变化：<span className="font-mono">{flushResult.factsCountBefore} → {flushResult.factsCountAfter}</span></li>
+                    <li>candidatesCount（所有段加起来）：<span className="font-mono">{flushResult.candidatesCount}</span></li>
+                    <li>writtenKeys：<span className="font-mono">{flushResult.writtenKeys && flushResult.writtenKeys.length > 0 ? flushResult.writtenKeys.join(", ") : "(空)"}</span></li>
+                    <li>耗时：<span className="font-mono">{flushResult.durationMs} ms</span></li>
+                  </ul>
+                  {flushResult.flushedCandidates && flushResult.flushedCandidates.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="text-xs text-gray-700 font-semibold">flushConversation 逐段抽了什么（每段来源哪句 text + 抽到了什么）</div>
+                      {flushResult.flushedCandidates.map(function (g, gi) {
+                        return (
+                          <div key={gi} className="space-y-1">
+                            <div className="text-xs text-gray-700">段 #{gi + 1} · 原文：<span className="font-mono text-gray-800">{g.text}</span></div>
+                            <DemoUI.CandidateList candidates={g.candidates} fromText={g.text} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500 italic">还没点「结束会话」；点了之后这里会显示结算结果 + 每段抽到了什么。</div>
+              )}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50112} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

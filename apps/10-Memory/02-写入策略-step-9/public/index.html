@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入时机 · 第九步 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="components/layout.js"></script>
+  <script type="text/babel" src="components/candidate-list.js"></script>
+  <script type="text/babel" src="components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI || {};
+
+    function SubPageCard(props) {
+      return (
+        <a href={props.href} className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={"text-xs px-2 py-0.5 rounded font-semibold " + props.tagCls}>{props.tag}</span>
+            <span className="text-sm font-semibold text-gray-800">{props.title}</span>
+          </div>
+          <p className="text-xs text-gray-600">{props.desc}</p>
+          <p className="text-xs text-gray-400 mt-2">入口：<span className="font-mono">{props.href}</span> · 端口 50112</p>
+        </a>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () {});
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入时机（Write Trigger / Memory Formation） · 第九步（step-9） · 总览
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页是<b>第 1 关「写入时机」</b>总览。<b>写入时机</b>是笔记 §0 八关流水线最前面那一关——一轮对话刚结束，<b>这条流水线什么时候跑</b>。本步先把笔记 §1 写的五种触发方式（1-A 热路径 / 1-B 后台异步 / 1-C 会话结束 / 1-D 离线批量 / 1-E 用户显式或工具调用）中的<b>前三种</b>做成可对比的 sub-page，每页都是「正常会话 + 一种时机策略」——同一个聊天面板，三种触发方式。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>三个 sub-page 都从下面的 ChatPanel 起步——你在输入框发消息 → 服务端 POST /api/chat 调模型拿助手回复。</li>
+                <li>助手回复拿到后，三个 sub-page 各自按本页的 mode 触发写入：sub-page 1 同步、sub-page 2 入后台队列 + 轮询、sub-page 3 入待结算队列 + close 才结算。</li>
+                <li>对照「同一段对话 + 同一段抽取逻辑」在三种时机下的可观察差别（耗时 / 库变化 / recall / candidates 何时出现）。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ol className="text-xs text-gray-800 list-decimal pl-5 space-y-1">
+                  <li><span className="font-medium">写入时机 = 流水线什么时候跑</span>——不是「写什么」而是「什么时候跑」「写完什么时候能看见」「用户能不能立刻用上新事实」。</li>
+                  <li><span className="font-medium">取舍 = 同步延迟 vs 用户感知 vs 一致性时间窗口</span>：热路径多花的延迟 / 后台异步不一致的窗口 / 会话结束这一次会话用不上——三种代价各自不同。</li>
+                  <li><span className="font-medium">不只三种</span>：笔记 §1 实际写了五种（1-A~1-E）；本步只做 1-A / 1-B / 1-C 三种——1-D 离线批量属于后端基础设施模块（模块 21），1-E 把写入做成 `save_memory` 工具交给模型属于 Agent 工具调用层，留给后续模块。</li>
+                  <li><span className="font-medium">本步核心 lib/flow/trigger-write.ts 单独成文件</span>：三种 mode 汇合到一处「runExtractAndWrite」（调 extractFacts + kvSet），mode 只决定「这一段在什么时机触发」。</li>
+                </ol>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-800 mb-3">三个 sub-page（点卡片进入；同一个 chat 面板，三种时机策略）</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SubPageCard
+                  href="pages/chat-eager.html"
+                  tag="mode-eager"
+                  tagCls="bg-blue-100 text-blue-900"
+                  title="热路径 · 每轮同步写（变体 1-A）"
+                  desc="每轮助手回复拿到后立刻调 triggerWrite；触发响应未返不算「这一轮结束」。库立刻 +N；用户感觉延迟。"
+                />
+                <SubPageCard
+                  href="pages/chat-background.html"
+                  tag="mode-background"
+                  tagCls="bg-yellow-100 text-yellow-900"
+                  title="后台异步 · 不挡回复（变体 1-B）"
+                  desc="每轮助手回复拿到后立刻调 triggerWrite（后台模式）；触发响应立刻返（几十毫秒），后台 2s 后跑完入库。代价是「紧接 recall 召回不到」。"
+                />
+                <SubPageCard
+                  href="pages/chat-session-end.html"
+                  tag="mode-session-end"
+                  tagCls="bg-purple-100 text-purple-900"
+                  title="会话结束才写（变体 1-C）"
+                  desc="每轮助手回复拿到后只入「待结算队列」；库条数不变。点「结束会话」按钮 → flushConversation 一次性把队列里所有 user message 跑完整流水线。"
+                />
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-800">本页输出：笔记 §1 写的五种触发方式 · 本步覆盖范围</h2>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b">
+                    <th className="py-1 pr-2">变体</th>
+                    <th className="py-1 pr-2">做法</th>
+                    <th className="py-1 pr-2">本步</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">1-A 热路径</td>
+                    <td className="py-1 pr-2 text-gray-600">每轮对话立刻跑提取，跑完才把回复返回给用户</td>
+                    <td className="py-1 pr-2"><span className="bg-green-100 text-green-900 text-xs px-2 py-0.5 rounded font-semibold">已做（chat-eager）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">1-B 后台异步</td>
+                    <td className="py-1 pr-2 text-gray-600">回复先发给用户，提取丢进后台队列</td>
+                    <td className="py-1 pr-2"><span className="bg-green-100 text-green-900 text-xs px-2 py-0.5 rounded font-semibold">已做（chat-background）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">1-C 会话结束</td>
+                    <td className="py-1 pr-2 text-gray-600">会话关掉或静默超过 N 分钟，整段交给模型跑一次</td>
+                    <td className="py-1 pr-2"><span className="bg-green-100 text-green-900 text-xs px-2 py-0.5 rounded font-semibold">已做（chat-session-end）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">1-D 离线批量</td>
+                    <td className="py-1 pr-2 text-gray-600">每天凌晨集中处理昨天所有会话</td>
+                    <td className="py-1 pr-2"><span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded font-semibold">不做（模块 21 后端基础设施）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">1-E 用户显式 / 工具</td>
+                    <td className="py-1 pr-2 text-gray-600">用户说「记住」或把写入做成 save_memory 工具交给模型自己决定什么时候调</td>
+                    <td className="py-1 pr-2"><span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded font-semibold">不做（Agent 工具调用层 · 后续模块）</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="text-xs text-gray-600">1-D / 1-E 留到后续模块：1-D 属于后端与基础设施模块（模块 21 的任务调度 / 离线批处理），1-E 把写入做成工具属于 Agent 工具调用层（模块 05+）。本步只对比 1-A / 1-B / 1-C 这三种主流程时机。</p>
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-800">§9 抽取这一跳怎么调模型（三模式对照 · 2026-09-15 增量）</h2>
+              <p className="text-xs text-gray-700">对应笔记 §9——三种模式各自「调模型抽取」的具体实现 + extractFacts 实际发的请求体 + 用更便宜模型做抽取的扩展方案。</p>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 font-semibold">先讲清：调抽取 ≠ 主对话里塞 prompt</div>
+                <p className="text-xs text-gray-700">主对话用模型当「助手」回答 user；抽取用模型当「抽取器」返回 JSON。两个角色不同（system 提示词 / temperature / 输出格式都不同）。所以<b>每次抽取都是开新会话独立调一次模型</b>（`POST /v1/chat/completions`，messages 只有 2 条 system + user），不进主对话历史。</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 font-semibold">extractFacts 实际发的请求体（就 4 个键）</div>
+                <pre className="bg-gray-50 border rounded p-3 text-xs font-mono whitespace-pre-wrap leading-relaxed">
+{`POST /v1/chat/completions
+{
+  "model": "<modelA · 见 apps/llm.ts CATALOG>",
+  "messages": [
+    { "role": "system", "content": "你是抽取助手。候选结构：key/value/type/confidence/source/validUntil。key 必须稳定。今天是 2026-09-15。" },
+    { "role": "user",   "content": "我们组用 Vue 3 加 TypeScript" }
+  ],
+  "temperature": 0.3,
+  "response_format": { "type": "json_object" }
+}`}
+                </pre>
+                <ul className="text-xs text-gray-700 space-y-1 list-disc pl-5">
+                  <li><code className="bg-gray-100 px-1">model</code> = <code className="bg-gray-100 px-1">llm.modelA</code>（同主对话服务商）</li>
+                  <li><code className="bg-gray-100 px-1">messages[0]</code> = 抽取规则 + 今天的日期（日期让模型能换算「下周三」这种相对时间）</li>
+                  <li><code className="bg-gray-100 px-1">messages[1]</code> = <b>这一段 user 原话</b>（不是整段对话，不是助手回复——抽取只关心用户学到了什么）</li>
+                  <li><code className="bg-gray-100 px-1">temperature: 0.3</code> 稳定,不要创意（vs 主对话默认 0.7）</li>
+                  <li><code className="bg-gray-100 px-1">response_format: json_object</code> 强制 JSON,模型不能输出 Markdown</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 font-semibold">三种模式 × 抽取调用次数对照（用户发 A → B → C → D 四条消息）</div>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-1 pr-2">模式</th>
+                      <th className="py-1 pr-2">每条消息做了什么</th>
+                      <th className="py-1 pr-2">总共调几次</th>
+                      <th className="py-1 pr-2">阻塞 trigger 响应？</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    <tr>
+                      <td className="py-1 pr-2 font-mono">1-A 热路径</td>
+                      <td className="py-1 pr-2 text-gray-700">A→extractFacts(A)→写库；B→extractFacts(B)→写库；C/D 同样。每条助手回完同步调</td>
+                      <td className="py-1 pr-2"><b>4 次</b></td>
+                      <td className="py-1 pr-2">是（阻塞到抽取完成）</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 pr-2 font-mono">1-B 后台异步</td>
+                      <td className="py-1 pr-2 text-gray-700">A→入队返 202+runId_1；B/C/D 同样；后台 watcher 按入队顺序跑 extractFacts(A/B/C/D)</td>
+                      <td className="py-1 pr-2"><b>4 次</b></td>
+                      <td className="py-1 pr-2">否（只入队就返）</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 pr-2 font-mono">1-C 会话结束才写</td>
+                      <td className="py-1 pr-2 text-gray-700">A→入待结算队列；B/C/D 同样；点「结束会话」→ flushConversation 逐段调 extractFacts(A/B/C/D)</td>
+                      <td className="py-1 pr-2"><b>4 次</b></td>
+                      <td className="py-1 pr-2">是（close 阻塞到所有抽取完成）</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="text-xs text-gray-600"><b>三种模式唯一的差别</b>：这 4 次调用的<b>时间点</b>不同。调用的函数 / 模型 / prompt / schema / temperature / response_format 全一样——只有「什么时候调」不同。生产里要换抽取策略，统一在 <code className="bg-gray-100 px-1">extractFacts</code> 一个地方换，不按 mode 区分。</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 font-semibold">扩展：用更便宜 / 更快的模型做抽取</div>
+                <p className="text-xs text-gray-700">抽取任务是「结构化输出 + 稳定结果」，不需要主对话那么强的语言能力。可以让抽取走<b>更便宜 / 更快的模型</b>（具体型号由 <code className="bg-gray-100 px-1">apps/.env</code> 顶层 <code className="bg-gray-100 px-1">LLM_MODEL_EXTRACT</code> 决定，主对话仍走原来的强模型）。具体改法：在 <code className="bg-gray-100 px-1">apps/llm.ts</code> 的 CATALOG 加 <code className="bg-gray-100 px-1">extractModelA</code> 字段（走 <code className="bg-gray-100 px-1">apps/.env</code> 顶层 <code className="bg-gray-100 px-1">LLM_MODEL_EXTRACT</code>），<code className="bg-gray-100 px-1">extract-facts.ts</code> 把 <code className="bg-gray-100 px-1">model</code> 改成 <code className="bg-gray-100 px-1">llm.extractModelA</code> 即可，主对话不受影响。</p>
+                <p className="text-xs text-gray-600">权衡：抽取更快 + 更便宜，但可能质量下降；不同模型对 schema 遵循能力不同，需要在 prompt 里加 few-shot 示例兜底。</p>
+              </div>
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50112} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
