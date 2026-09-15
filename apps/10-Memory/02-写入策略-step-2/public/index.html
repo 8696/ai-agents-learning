@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第二步</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4（classic runtime） -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- §5.3.4 加载顺序：utils（无） → components（babel src）→ 本页内联块 -->
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/filter-verdict.js"></script>
+  <script type="text/babel">
+    // ── 解构 React 全局变量（UMD CDN 加载后 window.React / window.ReactDOM 存在） ──
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, PassedList, RejectedList, FilterSummary } = window.DemoUI || {};
+
+    // 三个例句：与 step-1 同源，方便复习 + 对照。
+    // 第三个「带犹豫」专门给 step-2 用：模型大概率给这条 0.6~0.8 之间的 confidence，
+    // 阈值 0.8 会拦下、阈值 0.3 会通过——一个滑块就能看见翻面。
+    const EXAMPLES = [
+      { label: "寒暄 · 期待 0 条候选", text: "你好" },
+      {
+        label: "语义 + 情景各出 · 期待多条候选",
+        text: "我是深圳的，我们组用 Vue 3 加 TypeScript，我不喜欢太长的回答。今天下午我们还讨论了登录页要不要加验证码。",
+      },
+      {
+        label: "带犹豫 · 期待阈值滑块让同一条翻面",
+        text: "我应该是用 Vue 吧，最近有点乱。",
+      },
+    ];
+
+    function App() {
+      // status：⏸待连接 / 🔄请求中 / ✅完成 / ❌错误
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      // text：一段对话原文输入
+      const [text, setText] = useState(EXAMPLES[2].text);
+      // threshold：置信度阈值滑块（0.0~1.0，步长 0.05，默认 0.5）
+      const [threshold, setThreshold] = useState(0.5);
+      // filterResult：把关接口返回
+      const [filterResult, setFilterResult] = useState(null);
+      // extractResult：只提取对照接口返回
+      const [extractResult, setExtractResult] = useState(null);
+      // errorText：失败时面向人的中文一句话
+      const [errorText, setErrorText] = useState("");
+      // mode：标记当前展示的是「把关」还是「只提取对照」，避免两个结果在 #output 里互相覆盖时混乱
+      const [mode, setMode] = useState("filter");
+      // history：把关历史（带阈值），便于调阈值对照
+      const [history, setHistory] = useState([]);
+
+      // 加载时拿 /health 填页脚
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+      }, []);
+
+      const hasKey = Boolean(env && env.hasKey);
+      const busy = status === "loading";
+
+      // 「提取并把关」按钮：调 /api/filter，把关这一刀切完整流程
+      function runFilter() {
+        setStatus("loading");
+        setErrorText("");
+        setMode("filter");
+        fetch("/api/filter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text, threshold: threshold }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setFilterResult(pack.body);
+            setHistory(function (prev) { return [pack.body].concat(prev); });
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      // 「只提取（对照）」按钮：调 step-1 的 /api/extract，不把关，方便看清把关这一刀切掉了什么
+      function runExtractOnly() {
+        setStatus("loading");
+        setErrorText("");
+        setMode("extract");
+        fetch("/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setExtractResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      // 「演示后端 5xx」按钮：另一条失败通道
+      function runForceError() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/force-error", { method: "POST" })
+          .then(function (res) {
+            return res.json().then(function (body) { return { status: res.status, body: body }; });
+          })
+          .then(function (pack) {
+            setStatus("error");
+            setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      // 给滑块刻度一行小数（0.00 / 0.25 / 0.50 / 0.75 / 1.00）
+      function fmtThreshold(t) { return t.toFixed(2); }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入策略（Write Policy） · 第二步（step-2） · 把关（Filtering）：置信度阈值（Confidence Threshold）一道闸门
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                一段对话原文（text）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={3}
+                  value={text}
+                  onChange={function (event) { setText(event.target.value); }}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map(function (ex) {
+                  return (
+                    <button
+                      key={ex.label}
+                      type="button"
+                      className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                      onClick={function () { setText(ex.text); }}
+                    >
+                      例句：{ex.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500">
+                三个例句：第一个期待抽出 0 条候选（正常结果），第二个期待同时抽出语义记忆和情景记忆，第三个带犹豫，模型给的 confidence 可能在 0.6~0.8——把滑块从 0.8 拉到 0.3 能看见同一条候选翻面。
+              </p>
+              <label className="block text-sm text-gray-700">
+                <span>
+                  置信度阈值（threshold · 0.0~1.0，步长 0.05）：<b>{fmtThreshold(threshold)}</b>
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={threshold}
+                  onChange={function (event) { setThreshold(Number(event.target.value)); }}
+                  className="mt-1 w-full"
+                />
+                <span className="text-xs text-gray-500">
+                  滑块调到的数字会作为这一刀「低于阈值就拦下」的判定标准，调了立刻能在下面结果里看见翻面。
+                </span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !text.trim()}
+                  onClick={runFilter}
+                >
+                  提取并把关（调模型 + 置信度阈值 · /api/filter）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !text.trim()}
+                  onClick={runExtractOnly}
+                >
+                  只提取（对照 · 不把关 · /api/extract）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runForceError}
+                >
+                  演示后端 5xx（另一条失败通道 · /api/force-error）
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                「提取并把关」走完整流程（提取 + 置信度判定）；「只提取（对照）」跳过把关，直接拿 step-1 的 /api/extract 返回，对照能看清把关这一刀切掉了什么。空原文会让前两个按钮变灰；后端 5xx 走完全不同的失败通道，跟原文内容无关。
+              </p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                <p className="font-medium">请求参数</p>
+                <p>对话原文（text）：{text || "（空）"}</p>
+                <p>阈值（threshold）：{fmtThreshold(threshold)}</p>
+                <p>当前接口：{mode === "extract" ? "POST /api/extract（只提取，不把关）" : "POST /api/filter（提取并把关）"}</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                <p className="font-medium">调用流程</p>
+                <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                  <li>服务端先调 extractFacts 把原文抽成 0~N 条候选（与 step-1 同源）</li>
+                  <li>调 filterByConfidence 把每条 candidate.confidence 跟传入的 threshold 比一遍</li>
+                  <li>达到阈值 → 放进 passed 数组（绿色 PASSED 徽标）；达不到 → 放进 rejected 数组（红色 REJECTED 徽标 + 拦下理由 BELOW_THRESHOLD）</li>
+                  <li>页面把「通过 / 拦下」两堆原样画出来，附完整的模型请求 / 响应</li>
+                </ol>
+              </div>
+
+              {/* 把关结果（来自 /api/filter） */}
+              {mode === "filter" && filterResult ? (
+                <div className="space-y-4">
+                  <FilterSummary
+                    originalCount={filterResult.originalCount}
+                    passedCount={filterResult.passed.length}
+                    rejectedCount={filterResult.rejected.length}
+                    threshold={filterResult.threshold}
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-green-800 mb-2">
+                      通过（{filterResult.passed.length} 条 · 能写进库）
+                    </p>
+                    <PassedList items={filterResult.passed} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-red-800 mb-2">
+                      拦下（{filterResult.rejected.length} 条 · 不写进库）
+                    </p>
+                    <RejectedList items={filterResult.rejected} />
+                    {filterResult.rejected.length > 0 ? (
+                      <p className="text-xs text-gray-500 mt-2">
+                        这些候选被拦下了，但「拒之门外」不等于「忘了它们」——它们仍在本次响应里，排查时能看到具体拦下理由。
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="border border-gray-200 bg-white rounded p-3 text-xs text-gray-600">
+                    今天的日期（todayBjt，传给模型用来换算相对时间）：<b>{filterResult.todayBjt}</b>　·　这次调用耗时：{filterResult.durationMs} ms
+                  </div>
+                  <div className="border border-blue-300 bg-blue-50 rounded p-3 space-y-1">
+                    <p className="text-sm font-semibold text-blue-900">调大模型 · 请求参数（原始 request）</p>
+                    <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto bg-white rounded p-2">
+                      {JSON.stringify(filterResult.modelRequest, null, 2)}
+                    </pre>
+                  </div>
+                  <div className="border border-indigo-300 bg-indigo-50 rounded p-3 space-y-1">
+                    <p className="text-sm font-semibold text-indigo-900">调大模型 · 响应结果（原始 response）</p>
+                    <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto bg-white rounded p-2">
+                      {JSON.stringify(filterResult.modelResponse, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* 只提取对照结果（来自 /api/extract） */}
+              {mode === "extract" && extractResult ? (
+                <div className="space-y-4">
+                  <div className="border border-gray-300 bg-gray-50 rounded p-3 text-sm text-gray-700">
+                    这是「只提取 / 不把关」的对照结果——共抽出 <b>{extractResult.candidates.length}</b> 条候选。
+                    跟「把关」那一刀对比就能看见：同样的原文、同样的模型，「不把关 = 全部进库」，「把关 = 按 confidence 切走一片」。
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">候选事实清单（不把关）</p>
+                    <ul className="space-y-2">
+                      {extractResult.candidates.map(function (c, idx) {
+                        return (
+                          <li key={c.key + "-e-" + idx} className="border border-gray-200 bg-white rounded p-2 text-xs space-y-1">
+                            <p className="text-sm font-semibold text-gray-900">{c.value}</p>
+                            <p className="text-gray-600">键（key）：<code className="bg-gray-100 px-1 rounded">{c.key}</code>　·　类型：{c.type}　·　置信度：<b>{c.confidence.toFixed(2)}</b></p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                  <div className="border border-gray-200 bg-white rounded p-3 text-xs text-gray-600">
+                    今天的日期（todayBjt）：<b>{extractResult.todayBjt}</b>　·　这次调用耗时：{extractResult.durationMs} ms
+                  </div>
+                </div>
+              ) : null}
+
+              {!filterResult && !extractResult && !errorText ? (
+                <p className="text-sm text-gray-500">
+                  还没有结果。点「提取并把关」按当前阈值走完整流程；点「只提取（对照）」跳过把关看提取本身；调阈值滑块再点一次，看同一条候选翻面。
+                </p>
+              ) : null}
+
+              {/* 历史：记录每次把关的阈值 + 通过 / 拦下 数 */}
+              {history.length > 0 ? (
+                <div className="border-t pt-3">
+                  <p className="text-sm font-semibold text-gray-800 mb-2">把关历史（按时间倒序）</p>
+                  <ul className="space-y-2">
+                    {history.map(function (item, idx) {
+                      return (
+                        <li key={idx} className="border border-gray-200 rounded p-2 text-xs text-gray-700">
+                          <p className="font-medium text-gray-800">原文：{item.text}</p>
+                          <p className="text-gray-500">
+                            阈值 {fmtThreshold(item.threshold)} · 通过 {item.passed.length} 条 / 拦下 {item.rejected.length} 条 · 耗时 {item.durationMs} ms
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

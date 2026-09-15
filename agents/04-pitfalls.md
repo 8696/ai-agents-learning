@@ -262,6 +262,25 @@
 - **修复**：检索最小单位写 **切块（Chunk）**，口语可补「知识片段」；计数写「N 个切块」。界面面板才叫卡片。不要用「切片」（易和数据集切片混）。代码标识符 `cardId` 可以保留
 - **反模式**：知识库（6 张卡）；该中的卡；漏掉的卡；编号卡；配假术语 `知识卡（Knowledge Card）`
 - **关联**：2026-09-14 模块 09 · 01 BM25 小节文档 + Demo 文案；P-021（教学分类名）；模块 08 第 2 条切块（Chunking）
+
+### P-024  ·  默认沙箱里跑烟雾测试，tsx 起不来（EPERM）
+
+- **症状**：`PORT=31001 npx tsx .../server.ts` 直接退出，报 `Error: listen EPERM: operation not permitted /var/folders/.../tsx-501/NNNNN.pipe`，前面还可能带一句 `nice(5) failed: operation not permitted`；`logs/{当天}.log` 因此不存在，看起来像 logger 路径写错了
+- **触发**：Cursor 里跑 [§5.3.16 烟雾测试](./05-demo.md#5316-详细日志强制) 时，Shell 命令用了默认沙箱（没有申请额外权限）
+- **根因**：`tsx` 启动时要在系统临时目录建一个本机进程间通信管道（IPC pipe），沙箱不允许这个系统调用；失败发生在业务代码之前，跟 demo 自己的端口、路径都无关
+- **修复**：同一条命令原样重跑，带上完整权限（Shell 工具的 `required_permissions: ["all"]`）。判断依据：报错信息里出现 `tsx-*/*.pipe` 或 `nice(... ) failed` 就是沙箱拦的，**不要**先去改 `lib/logger.ts` 的路径
+- **反模式**：一看到 `logs/` 下没文件就动 `path.resolve(__dirname, "..", "logs")`；或改用 `yarn app:` / `preview_start` 绕过（会撞学习者的 50000 段默认端口）
+- **关联**：agents/05-demo.md §5.3.16 烟雾测试；P-012（Bash 第一条不 cd apps）；2026-09-15 模块 10 · 02 写入策略 step-1
+
+### P-025  ·  JSX 报错反复 Edit 绕路不调 @babel/parser
+
+- **症状**：写完 `public/*.html` 后凭直觉反复 Edit（移动花括号 / 加删 `type={"string"}` / 拆 JSX），定位半天找不到错点；或者等 `check-demo` 报 `Unexpected token (行:列)` 才回头猜
+- **触发**：写完或修改任何 `<script type="text/babel">` 块（无论内联或外链），没跑 [agents/05-demo.md §5.3.6 「JSX 写完即跑 @babel/parser（强制）」](./05-demo.md#jsx-写完即跑-babelparser强制--2026-09-15-立--替换旧的jsx-报错定位段) 的命令模板就直接进下一步
+- **根因**：`@babel/parser` 已经在 `apps/node_modules/@babel/parser`，30 秒能拿精确位置；Agent 选择「凭感觉改」或「等错再说」= 浪费一轮又写完一整页才回头
+- **修复**：写完 / 修改 JSX 块后**立即**跑 §5.3.6 命令模板（替换 `{demo}/{path}`），全 `OK` 才进 check-demo；报错时按 `block N: ERR Unexpected token (行:列)` 的行:列精确修那一行，不要再写新 JSX 试探
+- **反模式**：把 `node -e '...'` 命令每次临时拼一段；只查内联块忘查外链 `components/*.js`；自己写 JSX 解析器代替 `@babel/parser`
+- **关联**：agents/05-demo.md §5.3.6 JSX 写完即跑 @babel/parser（强制 · 2026-09-15 立）；2026-09-15 模块 10 · 02 写入策略 step-2 / step-3 反模板字符串反引号 + 第 473 行超限
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第七步 · 变体 4-D 包含关系粒度比对</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/fact-list.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter, FactList, FactCountBadge } = window.DemoUI || {};
+
+    const EXAMPLES = [
+      { factKey: "framework", factValue: "Vue 3 + TypeScript" },
+      { factKey: "framework", factValue: "Vue 3" },
+      { factKey: "framework", factValue: "Vue 3 + TypeScript + Vite + Pinia" },
+      { factKey: "framework", factValue: "React" },
+    ];
+
+    function InclusionIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示<b>变体 4-D 包含关系 → 用更具体的替换更笼统的</b>。服务端调 <code>dedupByInclusion</code>：按 key 查库，比新旧 value 的 JSON 字符串长度——新值显著更长判 <code>more_specific</code>；新值更短判 <code>less_specific</code>（不替换，避免库退化）；长度相近判 <code>unrelated</code>。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>填 (key, value) + includeThreshold（默认 1.2），点「判定」（POST /api/dedup-by-inclusion）。</li>
+            <li>服务端按 key 调 kvGet 查事实库。</li>
+            <li>比 valueSize（新 value 字符串长度）vs valueSize（旧 value 字符串长度）。</li>
+            <li>sizeRatio ≥ includeThreshold → more_specific；sizeRatio ≤ 1/includeThreshold → less_specific；否则 → unrelated。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">反向不替换是变体 4-D 的关键</span>：新值更长 → 用更具体的替换更笼统的；新值更短 → <b>不替换</b>，否则每聊一次库就退化一点（笔记易混点）。</li>
+              <li><span className="font-medium">粒度用 JSON 字符串长度做近似</span>：严谨的「哪条信息量更大」要调模型判（笔记 §9「谁判」分工）；本步先用纯本地代码（字符串长度）。includeThreshold &gt; 1（默认 1.2）避免伪包含关系误判。</li>
+              <li><span className="font-medium">本步只读不写</span>：跟 4-C 一样，只调 kvGet，不调 kvSet——避免「包含关系就直接替换」伪知识。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [factKey, setFactKey] = useState(EXAMPLES[0].factKey);
+      const [factValue, setFactValue] = useState(JSON.stringify(EXAMPLES[0].factValue));
+      const [includeThreshold, setIncludeThreshold] = useState(1.2);
+      const [replace, setReplace] = useState(false);
+      const [result, setResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [factCount, setFactCount] = useState(0);
+      const [factList, setFactList] = useState({});
+      const [showFacts, setShowFacts] = useState(false);
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function () { setEnv(null); });
+        refreshFacts();
+      }, []);
+
+      function refreshFacts() {
+        fetch("/api/facts")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setFactCount(data.count || 0); setFactList(data.facts || {}); })
+          .catch(function () { /* 静默 */ });
+      }
+
+      function runDedup() {
+        setStatus("loading");
+        setErrorText("");
+        let parsedValue;
+        try {
+          parsedValue = JSON.parse(factValue);
+        } catch (err) {
+          setStatus("error");
+          setErrorText("value 不是合法 JSON：" + err.message);
+          return;
+        }
+        fetch("/api/dedup-by-inclusion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: factKey, value: parsedValue, includeThreshold: includeThreshold, replace: replace }),
+        })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      const actionLabel = {
+        new: { text: "🟢 库里没有这条 key（new）", cls: "bg-green-200 text-green-900" },
+        more_specific: { text: "🟣 新值信息量更大 → more_specific", cls: "bg-purple-200 text-purple-900" },
+        less_specific: { text: "🟠 新值更笼统 → less_specific（不替换）", cls: "bg-orange-200 text-orange-900" },
+        unrelated: { text: "⚪ 长度相近但不是包含关系 → unrelated", cls: "bg-gray-200 text-gray-800" },
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入策略 · 第七步 · 变体 4-D 包含关系粒度比对
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="inclusion" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <InclusionIntro />
+            <section id="fact-status" className="flex flex-wrap items-center gap-2">
+              <FactCountBadge count={factCount} open={showFacts} onShow={function () { setShowFacts(function (v) { return !v; }); }} />
+              <span className="text-xs text-gray-500">（按 key 查库 + 比 value 字符串长度，纯本地代码，不调模型）</span>
+            </section>
+            {showFacts ? (
+              <section id="facts" className="bg-white shadow rounded p-4 space-y-2">
+                <p className="text-sm font-semibold text-gray-800 mb-2">事实库清单（GET /api/facts）</p>
+                <FactList facts={factList} count={factCount} />
+              </section>
+            ) : null}
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                key（要查重的 key，必须是库里已有的 key 才能触发 4-D；否则判 new）
+                <input type="text" className="mt-1 w-full border rounded p-2 text-sm font-mono"
+                  value={factKey} onChange={function (e) { setFactKey(e.target.value); }} />
+              </label>
+              <label className="block text-sm text-gray-700">
+                value（新候选 value，合法 JSON）
+                <textarea className="mt-1 w-full border rounded p-2 text-sm font-mono" rows={3}
+                  value={factValue} onChange={function (e) { setFactValue(e.target.value); }} />
+              </label>
+              <label className="block text-sm text-gray-700">
+                includeThreshold（粒度比，&gt; 1；新值长度 / 旧值长度 ≥ 这个数才算「更具体」）
+                <input type="number" step="0.1" min="1.01" className="mt-1 w-full border rounded p-2 text-sm font-mono"
+                  value={includeThreshold} onChange={function (e) { setIncludeThreshold(parseFloat(e.target.value) || 1.2); }} />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map(function (ex) {
+                  const exKey = ex["factKey"];
+                  const exValue = ex["factValue"];
+                  return (
+                    <button
+                      key={exKey + "-" + exValue}
+                      type="button"
+                      className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                      onClick={function () { setFactKey(exKey); setFactValue(JSON.stringify(exValue)); }}
+                    >
+                      例：key={exKey} · value={JSON.stringify(exValue)}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500">
+                先在 4-A 页面把 <code>framework = Vue 3 + TypeScript</code> 写进库，再来这页面分别试「Vue 3」（less_specific）/「Vue 3 + TS + Vite + Pinia」（more_specific）。
+              </p>
+              <button type="button" className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                disabled={!factKey.trim() || !factValue.trim()} onClick={runDedup}>
+                包含关系判定（POST /api/dedup-by-inclusion）
+              </button>
+              <label className="flex items-center gap-2 text-xs text-gray-700 mt-1">
+                <input type="checkbox" checked={replace}
+                  onChange={function (e) { setReplace(e.target.checked); }} />
+                勾上 = 「新内容比库里更详细」时真改库里（其它情况：更笼统/差不多/库里没有 — 都不改）
+              </label>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              {result ? (
+                <div className="space-y-3">
+                  <div className={"border rounded p-3 text-sm font-semibold " + (actionLabel[result.action] ? actionLabel[result.action].cls : "bg-gray-200")}>
+                    {actionLabel[result.action] ? actionLabel[result.action].text : "未知动作"}
+                  </div>
+                  {result.action !== "new" && result.existingValue !== undefined ? (
+                    <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-1">
+                      <p className="font-semibold text-gray-800">库里已有的 value</p>
+                      <pre className="bg-gray-50 rounded p-2 overflow-auto max-h-32">{JSON.stringify(result.existingValue, null, 2)}</pre>
+                      <p>sizeRatio（新 / 旧）= <b>{typeof result.sizeRatio === "number" ? result.sizeRatio.toFixed(3) : result.sizeRatio}</b></p>
+                      {result.replaced ? (
+                        <p className="text-green-800 font-semibold mt-2">✅ 已替换：库里这条 key=<code>{factKey}</code> 的内容已被改成你新填的这段文本。打开顶部「查看事实库」能看到新内容。</p>
+                      ) : (
+                        <p className="text-gray-600 mt-2">只判没改库 —— 当前 sizeRatio 没达到「更详细」的阈值。想真改库请勾上「替换」checkbox 再点一次「包含关系判定」（more_specific 时才真改）。</p>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">还没跑过包含关系判定。填 (key, value) + includeThreshold，点「判定」。</p>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

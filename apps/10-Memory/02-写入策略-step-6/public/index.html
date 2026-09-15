@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第六步</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD CDN -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone  7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- §5.3.4 加载顺序 -->
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/filter-verdict.js"></script>
+  <script type="text/babel" src="/components/model-trace.js"></script>
+  <script type="text/babel" src="/components/output-renderers.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, DimsOutput, FilterOutput, ExtractOutput, HistoryList } = window.DemoUI || {};
+
+    // 例句：含一个中档示例（conf ≈ 0.6~0.8），专门给「待确认」区用
+    const EXAMPLES = [
+      { label: "寒暄 · 期待 0 条候选", text: "你好" },
+      { label: "语义 + 情景各出 · 期待多条候选", text: "我是深圳的，我们组用 Vue 3 加 TypeScript，我不喜欢太长的回答。" },
+      { label: "中档待确认 · 信心不足", text: "我应该是用 Vue 吧，最近有点乱。" },
+      { label: "维度 A · 全员规则", text: "以后我们组表单校验都用 zod。" },
+      { label: "维度 P · 敏感信息", text: "我的身份证号是 110101199001011234，我对青霉素过敏，住在北京市朝阳区。" },
+    ];
+
+    function App() {
+      // status：⏸待连接 / 🔄请求中 / ✅完成 / ❌错误
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [text, setText] = useState(EXAMPLES[2].text);
+      // 两个分档阈值：midThreshold（跟 step-2 的 threshold 同义）+ highThreshold
+      const [midThreshold, setMidThreshold] = useState(0.5);
+      const [highThreshold, setHighThreshold] = useState(0.8);
+      const [enableA, setEnableA] = useState(true);
+      const [enableB, setEnableB] = useState(true);
+      const [enableC, setEnableC] = useState(true);
+      const [enablePii, setEnablePii] = useState(true);
+      // dimsResult：六道闸门接口返回
+      const [dimsResult, setDimsResult] = useState(null);
+      // pendingConfirmation：当前「待确认」区（服务端 pendingStore 是真相，UI 用 dimsResult 里的快照）
+      const [pendingConfirmation, setPendingConfirmation] = useState([]);
+      // 用户在 UI 上点过 [记住] / [不用] 后，从 pendingConfirmation 移除
+      const [decidedIds, setDecidedIds] = useState(new Set());
+      const [filterResult, setFilterResult] = useState(null);
+      const [extractResult, setExtractResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [mode, setMode] = useState("dims");
+      const [history, setHistory] = useState([]);
+      // confirmStatus：「记住 N 条 / 不用 N 条」之类的提示
+      const [confirmNote, setConfirmNote] = useState("");
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+      }, []);
+
+      const hasKey = Boolean(env && env.hasKey);
+      const busy = status === "loading";
+
+      function runDimensions() {
+        setStatus("loading");
+        setErrorText("");
+        setMode("dims");
+        setConfirmNote("");
+        fetch("/api/filter-dimensions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text, midThreshold: midThreshold, highThreshold: highThreshold, enableA: enableA, enableB: enableB, enableC: enableC, enablePii: enablePii }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setDimsResult(pack.body);
+            setPendingConfirmation(pack.body.pendingConfirmation || []);
+            setDecidedIds(new Set());
+            setHistory(function (prev) { return [pack.body].concat(prev); });
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      function runFilterOnly() {
+        setStatus("loading");
+        setErrorText("");
+        setMode("filter");
+        fetch("/api/filter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text, threshold: midThreshold }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setFilterResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      function runExtractOnly() {
+        setStatus("loading");
+        setErrorText("");
+        setMode("extract");
+        fetch("/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) {
+              return { ok: res.ok, status: res.status, body: body };
+            });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            setExtractResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      function runForceError() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/force-error", { method: "POST" })
+          .then(function (res) {
+            return res.json().then(function (body) { return { status: res.status, body: body }; });
+          })
+          .then(function (pack) {
+            setStatus("error");
+            setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+          })
+          .catch(function (err) {
+            setStatus("error");
+            setErrorText(String(err));
+          });
+      }
+
+      // 用户在「待确认」区点 [记住] / [不用]：调 POST /api/confirm；本地把条目从 pendingConfirmation 移除
+      function confirmAction(verdictId, action) {
+        fetch("/api/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ verdictId: verdictId, action: action }),
+        })
+          .then(function (res) {
+            return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; });
+          })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              return;
+            }
+            // 本地从 pendingConfirmation 移除；已决定的 id 加进 decidedIds 集合（备用，统计用）
+            setPendingConfirmation(function (prev) { return prev.filter(function (e) { return e.id !== verdictId; }); });
+            setDecidedIds(function (prev) { var n = new Set(prev); n.add(verdictId); return n; });
+            setConfirmNote("已 " + (action === "remember" ? "记住" : "丢弃") + "：「" + (pack.body && pack.body.verdictId ? "" : "") + "」1 条");
+          })
+          .catch(function (err) {
+            setErrorText(String(err));
+          });
+      }
+
+      function fmtThreshold(t) { return t.toFixed(2); }
+
+      // 中档候选要展示完整 verdict 卡片（含 source / validUntil 等字段），
+      // 这里从 dimsResult.passed / rejectedByDimension / rejectedByThreshold 里找出同 key 的 verdict 给 PendingList
+      function buildCandidatesByKey() {
+        const map = {};
+        if (!dimsResult) return map;
+        [].concat(dimsResult.passed || [], dimsResult.rejectedByDimension || [], dimsResult.rejectedByThreshold || []).forEach(function (v) {
+          map[v.candidate.key] = v.candidate;
+        });
+        return map;
+      }
+      const candidatesByKey = buildCandidatesByKey();
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入策略（Write Policy） · 第六步（step-6） · 把关（Filtering）：人工确认（变体 3-D）—— 三档分档 + 攒起来让用户批量确认
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                一段对话原文（text）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={3}
+                  value={text}
+                  onChange={function (event) { setText(event.target.value); }}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map(function (ex) {
+                  return (
+                    <button
+                      key={ex.label}
+                      type="button"
+                      className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                      onClick={function () { setText(ex.text); }}
+                    >
+                      例句：{ex.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500">
+                五个例句：第一个期待抽出 0 条；第二个期待多条候选；第三个专门给「中档待确认」用（conf 大概 0.6~0.8）；第四个给维度 A；第五个给维度 P。
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <label className="block text-sm text-gray-700">
+                  <span>midThreshold（≤ 之下的拦下）：<b>{fmtThreshold(midThreshold)}</b></span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={midThreshold}
+                    onChange={function (event) { setMidThreshold(Number(event.target.value)); }}
+                    className="mt-1 w-full"
+                  />
+                </label>
+                <label className="block text-sm text-gray-700">
+                  <span>highThreshold（≥ 自动写）：<b>{fmtThreshold(highThreshold)}</b></span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={highThreshold}
+                    onChange={function (event) { setHighThreshold(Number(event.target.value)); }}
+                    className="mt-1 w-full"
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={enableA} onChange={function (event) { setEnableA(event.target.checked); }} />
+                  <span>维度 A</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={enableB} onChange={function (event) { setEnableB(event.target.checked); }} />
+                  <span>维度 B</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={enableC} onChange={function (event) { setEnableC(event.target.checked); }} />
+                  <span>维度 C</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={enablePii} onChange={function (event) { setEnablePii(event.target.checked); }} />
+                  <span>维度 P</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">
+                两个分档阈值 + 四个维度开关：调任意一项，下面六道闸门都变。把第三个例句（中档待确认）跑一遍，调 highThreshold 从 0.8 拉到 0.5 能看见同一条候选从「待确认」移到「自动通过」。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !text.trim()}
+                  onClick={runDimensions}
+                >
+                  提取并把关（六道闸门 · /api/filter-dimensions）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !text.trim()}
+                  onClick={runFilterOnly}
+                >
+                  只把关（置信度对照 · /api/filter）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !text.trim()}
+                  onClick={runExtractOnly}
+                >
+                  只提取（对照 · /api/extract）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runForceError}
+                >
+                  演示后端 5xx（/api/force-error）
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                「提取并把关」走完整六道闸门；「只把关（置信度对照）」调 step-2 的 /api/filter；「只提取（对照）」调 step-1 的 /api/extract。三个按钮各自独立请求。
+              </p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              {confirmNote ? (
+                <div className="border border-green-300 bg-green-50 rounded p-3 text-sm text-green-800">{confirmNote}</div>
+              ) : null}
+              <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                <p className="font-medium">请求参数</p>
+                <p>对话原文（text）：{text || "（空）"}</p>
+                <p>midThreshold：{fmtThreshold(midThreshold)}　·　highThreshold：{fmtThreshold(highThreshold)}</p>
+                <p>维度 A：{enableA ? "开" : "关"}　·　维度 B：{enableB ? "开" : "关"}　·　维度 C：{enableC ? "开" : "关"}　·　维度 P：{enablePii ? "开" : "关"}</p>
+                <p>当前接口：{mode === "extract" ? "POST /api/extract" : mode === "filter" ? "POST /api/filter" : "POST /api/filter-dimensions"}</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                <p className="font-medium">调用流程（六道闸门）</p>
+                <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                  <li>第一步 · extractFacts 调协议 A 抽 0~N 条候选</li>
+                  <li>第二步 · filterByConfidence 按 confidence ≥ midThreshold 过滤，达不到的标 BELOW_THRESHOLD</li>
+                  <li>第三步 · filterByContentDimensions 让模型给过置信度的候选一次性判四道标签（isFact / isCrossSession / isStorageWorth / isPii + piiType + reasoning）</li>
+                  <li>第四步 · splitByConfidence 把过了所有维度的候选按 highThreshold / midThreshold 分三档（高档自动 / 中档待确认 / 低档已拦下）</li>
+                  <li>第五步 · 用户在「待确认」区点 [记住] / [不用] → POST /api/confirm 把对应条目从 pendingStore 移除（记住 → 即将进库 / 不用 → 永不进库）</li>
+                  <li>第六步 · 服务端 audit log 记录每一次确认（生产再加 SQLite 持久化）</li>
+                </ol>
+              </div>
+
+              {mode === "dims" && dimsResult ? (
+                <DimsOutput
+                  result={dimsResult}
+                  onRemember={function (id) { confirmAction(id, "remember"); }}
+                  onDrop={function (id) { confirmAction(id, "drop"); }}
+                />
+              ) : null}
+              {mode === "filter" && filterResult ? <FilterOutput result={filterResult} /> : null}
+              {mode === "extract" && extractResult ? <ExtractOutput result={extractResult} /> : null}
+
+              {!dimsResult && !filterResult && !extractResult && !errorText ? (
+                <p className="text-sm text-gray-500">
+                  还没有结果。点「提取并把关」按当前分档阈值 + 维度开关走六道闸门；中档候选进「待确认」区等用户点 [记住] / [不用]。
+                </p>
+              ) : null}
+
+              <HistoryList items={history} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

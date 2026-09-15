@@ -125,6 +125,57 @@ Demo 判断
 
 N 动态 + 学习者锁定（[§5.3.14](#5314-demo-子节拆分动态引导由浅入深新)）：至少 1 个 step-N 被学习者主动锁定（✅）→ 可在进度表给这一小节打钩 ✅；后续 step-(N+1) 是「加深」，✅ 后可继续加，不阻塞当前小节。
 
+#### 写 demo / 修 bug 超时直接重写（兜底策略 · 2026-09-15 立）
+
+**触发**（任一即重写，不要再试修复）：
+
+- 修 bug 修了 **5 次**还没修通——同一报错 / 同一种症状反复出现
+- 写 demo 改了 **5 次**还没过 `check-demo` / `yarn typecheck`——改动越来越大、问题越修越多
+- 修到一半发现代码已偏离原始设计——开始堆 hack（开关变量 / 条件渲染绕开原问题）试图掩盖症状
+
+**动作**（**先问再写**，不要自动重写 —— 2026-09-15 立）：
+
+- **第 5 次还没修通时停下来**，按 [§0.3 给选项](./00-mode.md#03-不好处理时先给选项) 模板问学习者要不要重写：
+  ```text
+  已超过 5 次还没修通（最后一次报错：{原文}）。
+  按由浅入深，此刻要：
+    1) 直接 Write 覆写当前文件（重写前我会先 Read 旧文件，避免丢东西）
+    2) 拆成更小的改动，一步一步试
+    3) 停下来 /停，等你决定
+  推荐：1)
+  ```
+- 学习者选「重写」→ 先 `Read` 旧文件看现有结构（log / 注释 / 数据流说明 / 不该丢的字段）→ 再 `Write` 覆写 → 重写完按 [§5.3.6 JSX 写完即跑](agents/05-demo.md#536-jsx-写完即跑强制--2026-09-15-立--替换旧的jsx-报错定位段) + `check-demo` + `yarn typecheck` + 烟雾测试四步走
+- 学习者选「拆小」或「停」→ 按学习者说的做，不擅自动手
+
+**为什么先问不直接重写**：
+
+- 重写可能丢东西（log / 注释 / 数据流说明 / 边界 case 处理）—— 学习者可能比 Agent 更清楚哪些是「可以丢」哪些「必须留」
+- 学习者可能有别的考虑：保留这次失败作为后续章节参考、换思路、暂停休整——Agent 不该替学习者决定
+- 「5 次没修通」是触发询问的信号，不是「必须重写」的自动动作
+
+**为什么**：
+
+- 同一报错反复出现 = 当前实现思路有问题，再 Edit 是堆 hack
+- 改了 3 次越来越大 = 改动半径失控，已经在掩盖原始问题
+- 重写是合法的开发动作，不是失败——也比「凑合跑通」更接近教学目标的最佳表达
+
+**不算触发**（继续 Edit 即可）：
+
+- 改了 4 次以内就好了（典型 typo / 漏字段 / import 路径错）
+- 第一次写 demo 没过 check-demo 但报错明确且改动局部
+- 学习者明确说「再试一下，不要重写」
+
+**与「调试式修 bug」的区别**：
+
+| | 调试式（继续 Edit） | 兜底式（直接重写） |
+| --- | --- | --- |
+| 报错信息 | 明确、可定位 | 反复出现 / 改了又冒出来 |
+| 改动半径 | 局部（一两行） | 越来越大（一次改三四个地方） |
+| 思路本身 | 不需要换 | 已经偏离原始设计 |
+| 修复后 | 跑通就停 | 越修越乱，要清空重来 |
+
+---
+
 #### `coach complete` 打钩前检查（对外条目：打钩前检查 1→2→3→4）
 
 全文与必查清单：[agents/03-progress.md `coach complete`](./03-progress.md#coach-complete-打钩前必须先报)。本文件只留 Demo 相关口径：
@@ -544,22 +595,48 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
   | `attr={expression}` | 任意 JS 表达式（拼接 / 函数调用 / 三元都行） |
   | `attr={"literal"}` | 用表达式包裹字符串 |
 
-- **JSX 报错直接调 `@babel/parser` 定位**（避坑 · 2026-09-14 立 · 不要反复 Edit 绕路）：
+- **JSX 写完即跑 @babel/parser（强制 · 2026-09-15 立 · 替换旧的「JSX 报错定位」段）**：
 
-  `check-demo` 失败给的是 `Unexpected token (行:列)`，不要凭这个猜。**直接用 `apps/node_modules/@babel/parser` 跑同一个配置拿精确位置**，30 秒定位：
+  **触发时机**：写完或修改 `public/*.html`（含 `index.html` 与 `public/pages/*.html`）之后、`node scripts/check-demo.cjs` 之前，**必须**跑下面这条命令。**禁止**凭「看着没问题」提交；**禁止**等 check-demo 报 `Unexpected token (行:列)` 再回头定位——`check-demo` 失败时同样要跑这条，它给的是 JSX 层面更精确的位置。
+
+  **为什么必须**：Babel Standalone 在浏览器运行时才解析 JSX，那时一整页已经写完，定位代价大。**写完即跑 = 预防式**（每写一个内联块就校验），不是触发式（不是等错了才跑）。
+
+  **命令模板**（替换 `{demo}/{path}`，其它一字不动；外链 `components/*.js` 各自单独跑）：
 
   ```bash
   cd apps && node -e '
   const fs = require("fs");
   const parser = require("@babel/parser");
-  const html = fs.readFileSync("../apps/<demo>/public/<path>.html", "utf8");
-  const code = html.match(/<script type="text\/babel">([\s\S]*?)<\/script>/)[1];
-  try { parser.parse(code, { sourceType: "script", plugins: ["jsx"] }); console.log("OK"); }
-  catch (e) { console.log("ERR:", e.message); }
+  function scan(file) {
+    const html = fs.readFileSync(file, "utf8");
+    const re = /<script type="text\/babel"(?:\s+src="[^"]*")?>([\s\S]*?)<\/script>/g;
+    let m, idx = 0, allOk = true;
+    while ((m = re.exec(html))) {
+      idx++;
+      const code = m[1] || "";
+      if (!code) { console.log(file + " block " + idx + " SKIP (src 外链)"); continue; }
+      try { parser.parse(code, { sourceType: "script", plugins: ["jsx"] }); console.log(file + " block " + idx + ": OK"); }
+      catch (e) { allOk = false; console.log(file + " block " + idx + ": ERR " + e.message); }
+    }
+    return allOk;
+  }
+  const target = "../apps/{demo}/public/{path}";
+  const ok = scan(target);
+  process.exit(ok ? 0 : 1);
   '
   ```
 
-  报错如 `Unexpected token (200:79)` = 第 200 行第 79 列。用 `awk` / `lines.slice(69, 100)` 读那一行精确内容。
+  **解读输出**：
+  - 全 `OK` → 该 HTML 没问题，可跑 check-demo / typecheck / 烟雾测试
+  - `block N: ERR Unexpected token (200:79)` → 第 N 个内联块第 200 行第 79 列出错；用 `awk 'NR==200'` 或 `sed -n '200p'` 读那一行精确内容
+  - `block N SKIP (src 外链)` → 外链 `<script type="text/babel" src="...">` 不在内联块里，**每个外链 `components/*.js` 各自单独跑一遍**（把路径换上去）
+
+  **禁止**：
+  - 凭「看着没问题」提交
+  - 反复 Edit 绕路（来回移动花括号、删加 `type={"string"}` 等试探）
+  - 等 check-demo 报 `Unexpected token` 才回头定位——那时已经写完一整页
+  - 自己写 JSX 解析代码代替 @babel/parser——重新发明轮子且结果不一致
+  - 把 `node -e '...'` 命令每次临时拼一段——必须用上面这套模板（替换 `{demo}` `{path}` 即可）
 
 #### 5.3.7 已写出地清单不写在本文件
 

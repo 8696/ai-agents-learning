@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第七步 · 变体 4-A 字面去重</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/fact-list.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter, FactList, FactCountBadge } = window.DemoUI || {};
+
+    // 三个例句：方便复现三种判定动作
+    const EXAMPLES = [
+      { factKey: "framework", factValue: "Vue 3 + TypeScript" },
+      { factKey: "framework", factValue: "React + TypeScript" },
+      { factKey: "city", factValue: "深圳" },
+    ];
+
+    function LiteralIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示<b>变体 4-A 字面完全相同 → NOOP</b>。填 (key, value)，服务端调 <code>dedupByKey</code>：
+            字面完全相同 → 跳过；同 key 不同值 → 交给冲突（4-B，留给第 5 关）；库里没有 → 写入。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>填 (key, value)，点「去重（（字面）」（POST /api/dedup）。</li>
+            <li>服务端按 key 调 kvGet 查事实库（data/facts.db）。</li>
+            <li>库里没有 → 调 kvSet 写入；同 key + 同 value → NOOP；同 key + 不同 value → conflict。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">4-A 是去重 4 种情况里最简单的</span>：按 key 查库 + JSON.stringify 比对 value —— 字面完全相同 → NOOP。</li>
+              <li><span className="font-medium">重复陈述不是「再覆盖一遍」</span>：走覆盖会刷新 updated_at，按时间排序全乱套（笔记踩坑 §4）。修法：字面完全相同动作是「not-doing」并显式记录。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [factKey, setFactKey] = useState(EXAMPLES[0].factKey);
+      const [factValue, setFactValue] = useState(JSON.stringify(EXAMPLES[0].factValue));
+      const [result, setResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [factCount, setFactCount] = useState(0);
+      const [factList, setFactList] = useState({});
+      const [showFacts, setShowFacts] = useState(false);
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function () { setEnv(null); });
+        refreshFacts();
+      }, []);
+
+      function refreshFacts() {
+        fetch("/api/facts")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setFactCount(data.count || 0); setFactList(data.facts || {}); })
+          .catch(function () { /* 静默 */ });
+      }
+
+      function runDedup() {
+        setStatus("loading");
+        setErrorText("");
+        let parsedValue;
+        try {
+          parsedValue = JSON.parse(factValue);
+        } catch (err) {
+          setStatus("error");
+          setErrorText("value 不是合法 JSON：" + err.message);
+          return;
+        }
+        fetch("/api/dedup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: factKey, value: parsedValue }),
+        })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setResult(pack.body);
+            refreshFacts();
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      const actionLabel = {
+        new: { text: "✅ 写入事实库（new）", cls: "bg-green-200 text-green-900" },
+        noop: { text: "🟡 字面完全相同 → NOOP（不重复写）", cls: "bg-yellow-200 text-yellow-900" },
+        conflict: { text: "🟠 同 key 不同值 → 冲突（变体 4-B，留给第 5 关）", cls: "bg-orange-200 text-orange-900" },
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入策略 · 第七步 · 变体 4-A 字面去重（NOOP）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="literal" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <LiteralIntro />
+            <section id="fact-status" className="flex flex-wrap items-center gap-2">
+              <FactCountBadge count={factCount} open={showFacts} onShow={function () { setShowFacts(function (v) { return !v; }); }} />
+              <span className="text-xs text-gray-500">（持久化：data/facts.db · 重启服务事实库不会清空）</span>
+            </section>
+            {showFacts ? (
+              <section id="facts" className="bg-white shadow rounded p-4 space-y-2">
+                <p className="text-sm font-semibold text-gray-800 mb-2">事实库清单（GET /api/facts）</p>
+                <FactList facts={factList} count={factCount} />
+              </section>
+            ) : null}
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                key（事实的唯一标识）
+                <input type="text" className="mt-1 w-full border rounded p-2 text-sm font-mono"
+                  value={factKey} onChange={function (e) { setFactKey(e.target.value); }} />
+              </label>
+              <label className="block text-sm text-gray-700">
+                value（事实正文，合法 JSON）
+                <textarea className="mt-1 w-full border rounded p-2 text-sm font-mono" rows={3}
+                  value={factValue} onChange={function (e) { setFactValue(e.target.value); }} />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map(function (ex) {
+                  const exKey = ex["factKey"];
+                  const exValue = ex["factValue"];
+                  return (
+                    <button
+                      key={exKey + "-" + exValue}
+                      type="button"
+                      className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                      onClick={function () { setFactKey(exKey); setFactValue(JSON.stringify(exValue)); }}
+                    >
+                      例：key={exKey} · value={JSON.stringify(exValue)}
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                disabled={!factKey.trim() || !factValue.trim()} onClick={runDedup}>
+                去重（（字面 · POST /api/dedup）
+              </button>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              {result ? (
+                <div className="space-y-3">
+                  <div className={"border rounded p-3 text-sm font-semibold " + (actionLabel[result.action] ? actionLabel[result.action].cls : "bg-gray-200")}>
+                    {actionLabel[result.action] ? actionLabel[result.action].text : "未知动作"}
+                  </div>
+                  {result.action === "conflict" ? (
+                    <div className="border border-orange-300 bg-orange-50 rounded p-3 text-xs space-y-1">
+                      <p className="font-semibold text-orange-900">冲突详情（同 key 不同 value）</p>
+                      <pre className="bg-white rounded p-2 overflow-auto max-h-32">{JSON.stringify(result.existingValue, null, 2)}</pre>
+                      <p className="text-gray-600">这是变体 4-B，按笔记 §4 留给第 5 关——当前不调 kvSet，事实库不变。</p>
+                    </div>
+                  ) : null}
+                  {result.action === "new" ? (
+                    <div className="border border-green-300 bg-green-50 rounded p-3 text-xs text-gray-700">库里没有 → 写入 data/facts.db。事实库 +1。</div>
+                  ) : null}
+                  {result.action === "noop" ? (
+                    <div className="border border-yellow-300 bg-yellow-50 rounded p-3 text-xs text-gray-700">库里已有同 key + 同 value → 不重复写（避免白白刷新 updated_at）。</div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">还没跑过去重。填 key + value，点按钮。</p>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

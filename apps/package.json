@@ -116,7 +116,14 @@
     "app:10-01-memory-types-step-1": "PORT=50100 tsx 10-Memory/01-记忆分类-step-1/server.ts",
     "app:10-01-memory-types-step-2": "PORT=50101 tsx 10-Memory/01-记忆分类-step-2/server.ts",
     "app:10-01-memory-types-step-3": "PORT=50102 tsx 10-Memory/01-记忆分类-step-3/server.ts",
-    "app:10-01-memory-types-step-4": "PORT=50103 tsx 10-Memory/01-记忆分类-step-4/server.ts"
+    "app:10-01-memory-types-step-4": "PORT=50103 tsx 10-Memory/01-记忆分类-step-4/server.ts",
+    "app:10-02-write-policy-step-1": "PORT=50104 tsx 10-Memory/02-写入策略-step-1/server.ts",
+    "app:10-02-write-policy-step-2": "PORT=50105 tsx 10-Memory/02-写入策略-step-2/server.ts",
+    "app:10-02-write-policy-step-3": "PORT=50106 tsx 10-Memory/02-写入策略-step-3/server.ts",
+    "app:10-02-write-policy-step-4": "PORT=50107 tsx 10-Memory/02-写入策略-step-4/server.ts",
+    "app:10-02-write-policy-step-5": "PORT=50108 tsx 10-Memory/02-写入策略-step-5/server.ts",
+    "app:10-02-write-policy-step-6": "PORT=50109 tsx 10-Memory/02-写入策略-step-6/server.ts",
+    "app:10-02-write-policy-step-7": "PORT=50110 tsx 10-Memory/02-写入策略-step-7/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

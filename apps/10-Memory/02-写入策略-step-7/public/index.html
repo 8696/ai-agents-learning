@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第七步 · 去重总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+
+    function OverviewIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页是<b>写入策略八关里的第 4 关「去重（Deduplication）」</b>总览——笔记 §4 写了 4 种重复情况：
+            <b>4-A 字面完全相同 → NOOP</b>、<b>4-B 同 key 不同值</b>、<b>4-C 措辞不同但意思一样</b>、<b>4-D 包含关系</b>。
+            本步把 4-A / 4-C / 4-D 三种做在同一 demo；4-B 按笔记 §4 表格就说明是冲突，交给第 5 关另开 step。
+          </p>
+          <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
+            <li><b>4-A 字面去重</b>：按 key 查库 + JSON.stringify 比对 value。</li>
+            <li><b>4-C 跨 key 嵌入相似度</b>：拿一段文本调嵌入模型，跟库里所有事实比余弦。</li>
+            <li><b>4-D 包含关系</b>：按 key 查库，比 value 字符串长度；新值更长判「更具体」，更短判「更笼统」（不替换，避免库退化）。</li>
+          </ul>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">去重不是单一算法，是 4 种情况各管一段</span>：字面（4-A 纯本地） / 跨 key 语义（4-C 嵌入 + 余弦） / 包含粒度（4-D 长度近似） / 同 key 不同值（4-B 留给第 5 关）。</li>
+              <li><span className="font-medium">三种去重输入不一样</span>：4-A 要 (key, value)；4-C 只需一段文本（跨 key 查）；4-D 要 (key, value) 按同 key 比粒度。</li>
+              <li><span className="font-medium">4-B 留给第 5 关</span>：同 key 但 value 不同 → 是「冲突更新」要解决，不是「去重」能解决。</li>
+              <li><span className="font-medium">本步只读不写</span>：三个 sub-page 只调 kvGet / kvList，不调 kvSet——避免「同义就直接覆盖」伪知识。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function ModeCard({ cardHref, tag, tagCls, title, desc }) {
+      return (
+        <a href={cardHref} className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={"text-xs px-2 py-0.5 rounded font-semibold " + tagCls}>{tag}</span>
+            <span className="text-sm font-semibold text-gray-800">{title}</span>
+          </div>
+          <p className="text-xs text-gray-600">{desc}</p>
+          <p className="text-xs text-gray-400 mt-2">入口：{cardHref} · 端口 50110</p>
+        </a>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入策略 · 第七步 · 去重（第 4 关完整版）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <OverviewIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">三种去重方式——点卡片进入 sub-page：</p>
+              <div id="modes" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <ModeCard
+                  cardHref="pages/dedup-literal.html"
+                  tag="变体 4-A"
+                  tagCls="bg-yellow-100 text-yellow-900"
+                  title="字面去重（NOOP）"
+                  desc="按 key 查库 + JSON.stringify 比对 value。库里已有同 key + 同 value → NOOP。"
+                />
+                <ModeCard
+                  cardHref="pages/dedup-semantic.html"
+                  tag="变体 4-C"
+                  tagCls="bg-blue-100 text-blue-900"
+                  title="跨 key 嵌入相似度"
+                  desc="调嵌入模型，跟库里所有事实比余弦相似度；最高 ≥ threshold 判语义重复。"
+                />
+                <ModeCard
+                  cardHref="pages/dedup-inclusion.html"
+                  tag="变体 4-D"
+                  tagCls="bg-purple-100 text-purple-900"
+                  title="包含关系粒度比对"
+                  desc="按 key 查库，比 value 字符串长度。新值更长判 more_specific；新值更短判 less_specific（不替换）。"
+                />
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2 min-h-[120px]">
+              <p className="text-sm font-semibold text-gray-800">为什么本步不做变体 4-B</p>
+              <p className="text-xs text-gray-700">
+                笔记 §4 表格：「4-B 同一个键、不同的值」——「这不是去重，是冲突，交给第 5 关」。
+                同 key 但 value 不同（如旧 React、新 Vue 3）需要选「新增 / 更新 / 删除 / 什么都不做」四个动作之一，还涉及「旧值去哪儿」——这些属于第 5 关「冲突与更新」。
+              </p>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
