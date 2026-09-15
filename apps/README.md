@@ -121,6 +121,9 @@
 | `yarn app:09-04-chunk-query-variants-step-1` | `50098` | 模块 09 · 04 · 切块与查询变体 step-1：父子切块 · 子块检索、父块生成 · 同父去重 · 真调模型答复 |
 | `yarn app:09-04-chunk-query-variants-step-2` | `50099` | 模块 09 · 04 · 切块与查询变体 step-2：多路查询 · 模型生成 N 条问句变体 · 各搜 · RRF 合并 · 同父去重 · 真调模型答复 |
 | `yarn app:10-01-memory-types-step-1` | `50100` | 模块 10 · 01 · 记忆分类 step-1：一句用户原话 · 调模型判进四类记忆的哪一类 + 短期/长期 + 理由 · 页面贴完整请求/响应 · 真调模型 |
+| `yarn app:10-01-memory-types-step-2` | `50101` | 模块 10 · 01 · 记忆分类 step-2：在 step-1 分类基础上加选项 C 写入侧严格度的落盘规则 + 重启验证 · 真调模型 |
+| `yarn app:10-01-memory-types-step-3` | `50102` | 模块 10 · 01 · 记忆分类 step-3：从 step-2 落盘的事实库按关键词重合度（Jaccard）取 Top-K=3 + 拼进 Prompt + 调真模型；不调模型版 POST /api/retrieve 也单独给（POST /api/ask / POST /api/retrieve / GET /api/facts / DELETE /api/facts / POST /api/force-error） |
+| `yarn app:10-01-memory-types-step-4` | `50103` | 模块 10 · 01 · 记忆分类 step-4：完整 4 步拼装 + 多轮对话 + 程序性常驻区；5 句连问演示每轮独立判断要不要召回；程序性规则 in-memory 共享，改一条对所有用户生效（POST /api/chat / GET+POST+DELETE /api/program-rules / GET+DELETE /api/facts / POST /api/force-error） |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

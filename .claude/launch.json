@@ -296,6 +296,22 @@
       "port": 50097,
       "url": "http://127.0.0.1:50097/",
       "autoPort": false
+    },
+    {
+      "name": "10-01-memory-types-step-1",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:10-01-memory-types-step-1"],
+      "port": 50100,
+      "url": "http://127.0.0.1:50100/",
+      "autoPort": false
+    },
+    {
+      "name": "10-01-memory-types-step-2",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:10-01-memory-types-step-2"],
+      "port": 50101,
+      "url": "http://127.0.0.1:50101/",
+      "autoPort": false
     }
   ]
 }

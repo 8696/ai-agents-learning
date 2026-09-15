@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>记忆分类 · 第三步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/fact-card.js"></script>
+  <script type="text/babel" src="/components/pool-block.js"></script>
+  <script type="text/babel" src="/components/top-k-block.js"></script>
+  <script type="text/babel" src="/components/messages-block.js"></script>
+  <script type="text/babel" src="/components/toggle-bar.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, PageIntro, EnvFooter, PageNav, PoolBlock, TopKBlock, MessagesBlock, ToggleBar } = window.DemoUI || {};
+
+    // 八个例句：前四条是语义事实（偏好/身份），后四条是情景经历（带时间/场景/结果）。
+    //   ① 我平时用什么前端框架？        → 语义「我们组用 Vue 3」
+    //   ② 我住哪个城市？                → 语义「我是深圳人」
+    //   ③ 我用什么数据库？              → 事实库里没有 → 阈值弃权 → Top-K 为空
+    //   ④ 我今天累不累？                → 事实库里没有 → 阈值弃权 → Top-K 为空
+    //   ⑤ 上次 refund 工具调用结果怎样？ → 情景「9 月 10 日调用 refund 工具，订单 A123，403 权限不足」
+    //   ⑥ 我处理过哪些批量改价任务？    → 情景「上周二 10:00 批量改价任务，分批 50 条成功」
+    //   ⑦ 我写过哪些 Vue 组件？         → 情景「上个月 21 号帮张三写过 LoginForm.vue」
+    //   ⑧ 张三的登录表单用的是什么框架？ → 情景 + 语义联合召回
+    const EXAMPLES = [
+      "我平时用什么前端框架？",
+      "我住哪个城市？",
+      "我用什么数据库？",
+      "我今天累不累？",
+      "上次那个 refund 工具调用结果怎样？",
+      "我处理过哪些批量改价任务？",
+      "我写过哪些 Vue 组件？",
+      "张三的登录表单用的是什么框架？",
+    ];
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(EXAMPLES[0]);
+      const [errorText, setErrorText] = useState("");
+      const [retrieveResult, setRetrieveResult] = useState(null);
+      const [askResult, setAskResult] = useState(null);
+      const [disableEpisodic, setDisableEpisodic] = useState(false);
+      const [disableSemantic, setDisableSemantic] = useState(false);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+      }, []);
+
+      const hasKey = Boolean(env && env.hasKey);
+      const busy = status === "loading";
+
+      function runRetrieve() {
+        setStatus("loading");
+        setErrorText("");
+        setAskResult(null);
+        fetch("/api/retrieve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, disableEpisodic: disableEpisodic, disableSemantic: disableSemantic }),
+        })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              setRetrieveResult(null);
+              return;
+            }
+            setRetrieveResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      function runAsk() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, disableEpisodic: disableEpisodic, disableSemantic: disableSemantic }),
+        })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            if (!pack.ok) {
+              setStatus("error");
+              setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+              setAskResult(null);
+              return;
+            }
+            setAskResult(pack.body);
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      function runForceError() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/force-error", { method: "POST" })
+          .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, status: res.status, body: body }; }); })
+          .then(function (pack) {
+            setStatus("error");
+            setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status));
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              记忆分类（Memory Types）· 第三步（step-3）· 检索 / 按相关性召回 + 拼进 Prompt + 调大模型
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="main" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                一句问句（query：要问的话，不是要存的）
+                <textarea
+                  className="mt-1 w-full border rounded p-2 text-sm"
+                  rows={2}
+                  value={query}
+                  onChange={function (event) { setQuery(event.target.value); }}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map(function (ex) {
+                  return (
+                    <button key={ex} type="button" className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                      onClick={function () { setQuery(ex); }}>
+                      例句：{ex}
+                    </button>
+                  );
+                })}
+              </div>
+              <ToggleBar
+                disableEpisodic={disableEpisodic}
+                disableSemantic={disableSemantic}
+                onChangeEpisodic={setDisableEpisodic}
+                onChangeSemantic={setDisableSemantic}
+              />
+              <p className="text-xs text-gray-500">
+                期望：① 问前端框架 → Top-1 = 我们组用 Vue 3；② 问住哪个城市 → Top-1 = 我是深圳人；
+                ③ 问数据库 / 累不累 → 事实库里没有 → Top-K 为空；④ 问 refund / 改价 / LoginForm → 召回情景记忆。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !query.trim()} onClick={runRetrieve}>
+                  只检索看 Prompt（不调模型 · POST /api/retrieve）
+                </button>
+                <button type="button" className="bg-green-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !hasKey || !query.trim()} onClick={runAsk}>
+                  检索并问（调模型 · POST /api/ask）
+                </button>
+                <button type="button" className="border border-red-300 text-red-700 text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={busy} onClick={runForceError}>
+                  演示后端 5xx（POST /api/force-error）
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                「只检索看 Prompt」会算候选池 + Top-K=3 + 拼好 system / user 两条 messages，但不调模型；
+                「检索并问」在它基础上再调一次大模型，把模型回答也拿回来。
+              </p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div>
+              ) : null}
+              {!retrieveResult && !askResult ? (
+                <p className="text-sm text-gray-500">
+                  还没有结果。点「只检索看 Prompt」先看三栏对照；想看模型回答再点「检索并问」。
+                </p>
+              ) : null}
+              {retrieveResult || askResult ? (function () {
+                const r = retrieveResult || askResult;
+                const topK = r.topK || [];
+                const pool = r.candidatePool || { facts: [], filePath: "" };
+                const excludedPool = r.excludedPool || { facts: [] };
+                const disabledMemoryTypes = r.disabledMemoryTypes || [];
+                const messages = r.messages || [];
+                const rejection = r.thresholdRejection || null;
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 text-gray-700 rounded p-3 text-xs space-y-1">
+                      <p className="font-medium text-gray-800">请求参数</p>
+                      <p>问句（query）：{r.query}</p>
+                      <p>嵌入维度（embeddingDim）：{r.embeddingDim ?? "（待调嵌入）"}</p>
+                      <p>接口：{retrieveResult ? "POST /api/retrieve（嵌入 + 余弦 + 拼 Prompt，不调对话模型）" : "POST /api/ask（嵌入 + 余弦 + 拼 Prompt + 调对话模型）"}</p>
+                      <p>
+                        记忆类别 toggle：情景记忆 {disableEpisodic ? "❌ 关" : "✅ 开"}　·　语义记忆 {disableSemantic ? "❌ 关" : "✅ 开"}
+                        {disabledMemoryTypes.length > 0 ? "（本次关掉了 " + disabledMemoryTypes.join("、") + "）" : ""}
+                      </p>
+                      <p>
+                        Top-K：{topK.length} 条 / 候选池（参与召回）：{pool.facts.length} 条
+                        {excludedPool.facts.length > 0 ? " / 被排除池：" + excludedPool.facts.length + " 条" : ""}
+                        {" / 事实库文件：" + pool.filePath}
+                      </p>
+                      {rejection ? (
+                        <p className="text-amber-800">
+                          ⚠ 阈值弃权：Top-1 余弦相似度 = {rejection.topScore.toFixed(4)} {"<"} 阈值 {rejection.threshold} → 整组 Top-K 视为空（被弃的事实：{rejection.rejectedTop.fact.sentence}）
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                      <p className="font-medium text-gray-800">调用流程</p>
+                      <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                        <li>按 toggle 过滤候选池（关掉的类别整组不进余弦）</li>
+                        <li>把问句 + 过滤后的事一起送进嵌入接口，拿到 N 个向量</li>
+                        <li>对每条事实算余弦相似度 = A·B / (|A|·|B|)</li>
+                        <li>按分数倒序、取 Top-K=3</li>
+                        <li>把 Top-K 拼进 system 段，user 段放问句</li>
+                        <li>「检索并问」额外调一次大模型，把回答也拿回来</li>
+                      </ol>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                        <p className="font-semibold text-gray-800">① 候选池（{pool.facts.length} 条 · 按类别分组）</p>
+                        <p className="text-gray-600">来自事实库 data/facts.json，过滤 toggle 关闭的类别后剩下这些</p>
+                        {pool.facts.length === 0 ? (
+                          <p className="text-gray-500">过滤后候选池为空（toggle 全关 / 事实库为空）。</p>
+                        ) : <PoolBlock facts={pool.facts} />}
+                      </div>
+                      <div className="border border-blue-300 bg-blue-50 rounded p-3 text-xs space-y-2">
+                        <p className="font-semibold text-blue-900">② Top-K={topK.length}（按相似度倒序）</p>
+                        <TopKBlock topK={topK} rejection={rejection} />
+                      </div>
+                      <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                        <p className="font-semibold text-gray-800">③ 拼好的 Prompt（messages）</p>
+                        <p className="text-gray-600">送进模型的字长这样（每段前标 role）</p>
+                        <MessagesBlock messages={messages} />
+                      </div>
+                    </div>
+                    {excludedPool.facts.length > 0 ? (
+                      <div className="border border-red-300 bg-red-50 rounded p-3 text-xs space-y-2">
+                        <p className="font-semibold text-red-800">⛔ 被 toggle 排除的条目（{excludedPool.facts.length} 条）</p>
+                        <p className="text-gray-600">这些条目因 toggle（{disabledMemoryTypes.join(" / ")}）被排除，没参与余弦召回；按类别分组展示。</p>
+                        <PoolBlock facts={excludedPool.facts} />
+                      </div>
+                    ) : null}
+                    {askResult ? (
+                      <div className="space-y-3 border-t pt-3">
+                        <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                          <p className="text-sm font-semibold text-green-900">模型回答</p>
+                          <p className="text-sm whitespace-pre-wrap">{askResult.modelAnswer}</p>
+                        </div>
+                        <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                          <p className="font-semibold text-gray-800">完整模型请求（modelRequest）</p>
+                          <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded max-h-60 overflow-auto">
+                            {JSON.stringify(askResult.modelRequest, null, 2)}
+                          </pre>
+                        </div>
+                        <div className="border border-gray-300 bg-white rounded p-3 text-xs space-y-2">
+                          <p className="font-semibold text-gray-800">完整模型响应（modelResponse）</p>
+                          <pre className="whitespace-pre-wrap text-xs bg-gray-50 p-2 rounded max-h-60 overflow-auto">
+                            {JSON.stringify(askResult.modelResponse, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })() : null}
+              <div className="border-t pt-3 bg-gray-50 -mx-4 -mb-4 px-4 py-3 rounded-b">
+                <p className="text-sm font-semibold text-gray-800 mb-1">怎么验证「按相关性召回 + 类别 toggle 对照」</p>
+                <ol className="text-xs text-gray-700 list-decimal pl-5 space-y-1">
+                  <li>先看顶部的事实库当前有几条（&gt; <code className="bg-white px-1 rounded">GET /api/facts</code> 或直接看本步骤左侧候选池）</li>
+                  <li>点「只检索看 Prompt」输出一句问句，观察「候选池 → Top-K → 拼好的 Prompt」三栏是不是真按分数排序</li>
+                  <li>勾上「关掉情景记忆」再问一次 refund / 改价 / LoginForm → Top-K 应该变空或只剩语义；下方「被排除的条目」区会列出情景条目</li>
+                  <li>勾上「关掉语义记忆」再问前端框架 → Top-K 应该变空或只剩情景；下方「被排除的条目」区会列出语义条目</li>
+                  <li>点「检索并问」观察模型回答里是不是只引用了 Top-K 里的事实（事实库里没写的应该不出现）</li>
+                </ol>
+                <p className="text-xs text-gray-600 mt-2">
+                  事实库的内容由第二步「分类 + 写入」写入。本步骤只读不写。
+                  想加事实 → 改去 <code className="bg-white px-1 rounded">yarn app:10-01-memory-types-step-2</code>（端口 50101）。
+                </p>
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
