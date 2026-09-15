@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第八步 · mode-merge 合并多值</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+
+    function MergeIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页演示<b>判定逻辑 · 合并（MERGE）</b>——库里同 key 已经有「Vue 3 + TypeScript」，用户说「我 Vue 和 React 都写」→ 业务把 values 合并成数组，intent=merge 调 <code>resolveConflict</code> → <b>action = MERGE</b>，旧值进 fact_history。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>页面启动时自动 seed 库里 <code>framework = Vue 3 + TypeScript</code>。</li>
+            <li>点「合并」按钮 → 业务把 values 合并成 <code>["Vue 3 + TypeScript", "React"]</code>，intent=merge 调 <code>POST /api/conflict/resolve</code>。</li>
+            <li>服务端：库里同 key → 走 MERGE 分支：旧值进 fact_history (action='merge') → kvSet 写入新 value（values 数组）。</li>
+            <li>事实库 value.values = ["Vue 3 + TypeScript", "React"]，mode-history 可查这条 key 的历史版本。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">「都写」不是 UPDATE 是 MERGE</span>：「我改用 React 了」是 UPDATE（Vue 消失）；「我 Vue 和 React 都写」是 MERGE（两个值共存）。</li>
+              <li><span className="font-medium">MERGE 由业务把 values 合并好再传</span>：resolveConflict 不判断「该合并还是该替换」——这一层语义由业务（前端 + 用户语言信号）决定；本步只保证「intent=merge + 旧值进历史 + 写入新 value」三件事。</li>
+              <li><span className="font-medium">MERGE 也写历史</span>：旧值进 fact_history (action='merge')，点 mode-history 能看到「之前是 Vue 3 + TypeScript，后来合并成多值」。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [result, setResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [factList, setFactList] = useState({});
+      const [seeded, setSeeded] = useState(false);
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function () { setEnv(null); });
+      }, []);
+
+      function refreshFacts() {
+        fetch("/api/facts").then(function (r) { return r.json(); }).then(function (d) { setFactList(d.facts || {}); }).catch(function () {});
+      }
+
+      function seed() {
+        setStatus("loading");
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: "framework",
+            value: { value: "Vue 3 + TypeScript", type: "语义记忆", confidence: 1.0, source: "mode-merge seed", validUntil: null },
+            intent: "new", sourceSession: "merge-seed", sourceMsgSeq: 0,
+          }),
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (b) { setSeeded(true); refreshFacts(); setResult({ seed: b }); setStatus("ok"); })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      function merge() {
+        setStatus("loading");
+        setErrorText("");
+        const newValue = {
+          values: ["Vue 3 + TypeScript", "React"],
+          type: "语义记忆",
+          confidence: 1.0,
+          source: "演示按钮：合并",
+          validUntil: null,
+        };
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "framework", value: newValue, intent: "merge", sourceSession: "merge-demo", sourceMsgSeq: 1 }),
+        })
+          .then(function (res) { return res.json().then(function (b) { return { ok: res.ok, status: res.status, body: b }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setResult(pack.body);
+            refreshFacts();
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">写入策略 · 第八步 · mode-merge · 合并多值</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="merge" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <MergeIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">按顺序点两个按钮：</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="bg-gray-700 text-white text-sm px-3 py-2 rounded" onClick={seed}>
+                  ① seed 库里 framework = Vue 3 + TypeScript
+                </button>
+                <button type="button" className="bg-purple-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={!seeded} onClick={merge}>
+                  ② 合并：intent=merge · values = ["Vue 3 + TypeScript", "React"]
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">如果库里已经有 framework（比如从 mode-actions 跑过来的），seed 会走 NOOP，不影响。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {errorText ? <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div> : null}
+              {result ? (
+                <div className="space-y-2">
+                  <div className="border border-purple-300 bg-purple-50 rounded p-3 text-sm">
+                    <p><b>action</b> = {String(result.action || "(seed 还没跑)")}</p>
+                    <p><b>旧值进历史</b> = {String(result.recordedHistory || false)}</p>
+                    <p><b>软删除</b> = {String(result.softDeleted || false)}</p>
+                  </div>
+                  {result.newValue !== undefined ? (
+                    <pre className="bg-gray-50 rounded p-2 text-xs overflow-auto max-h-48">newValue = {JSON.stringify(result.newValue, null, 2)}</pre>
+                  ) : null}
+                </div>
+              ) : <p className="text-sm text-gray-500">还没跑过。点 seed 再点合并。</p>}
+            </section>
+            <section id="facts" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-800">事实库清单（GET /api/facts）</p>
+              <pre className="bg-gray-50 rounded p-2 text-xs overflow-auto max-h-48">{JSON.stringify(factList, null, 2)}</pre>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

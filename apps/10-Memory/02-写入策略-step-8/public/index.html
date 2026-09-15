@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第八步 · 冲突更新总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+
+    function OverviewIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页是<b>写入策略八关里的第 5 关「冲突与更新（Conflict &amp; Update）」</b>总览——笔记 §5 写了
+            <b>四个动作</b>：<b>NEW（新建）/ UPDATE（更新）/ MERGE（合并）/ DELETE（删除）/ NOOP（什么都不做）</b>，以及<b>三种旧值去向</b>：
+            <b>进历史版本</b>（fact_history 表）/ <b>真删</b>（物理 DELETE）/ <b>软删除</b>（deleted_at 设为当前时间）。
+            本步把四个动作 + 软删除 + 历史版本查询做在同一 demo；「一键撤回」按笔记 §8-B 留到 step-9+ 做需求 8 时再做。
+          </p>
+          <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
+            <li><b>mode-actions · 四个动作</b>：库里预置「framework = Vue 3 + TypeScript」，依次送「我改用 React 了」「我 Vue 和 React 都写」「我不用 React 了」「我们组用 Vue 3」，看见四个动作。</li>
+            <li><b>mode-merge · 合并多值</b>：单跑「我 Vue 和 React 都写」，看见 MERGE 把 value.values 合并成多值数组。</li>
+            <li><b>mode-soft-delete · 软删除</b>：单跑「我不用 React 了」，从召回候选消失，「已删除」视图仍可见。</li>
+            <li><b>mode-history · 历史版本</b>：点开任一条事实看历史版本（每次 action / 旧值 / 新值 / 时间）。</li>
+          </ul>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">冲突不是 bug，是日常</span>：同一 key 用户改主意（Vue → React / Vue + React / 不用 React）是常态，写库必须能处理四种结果。</li>
+              <li><span className="font-medium">五个动作 = 一个意图表 + 一个状态机</span>：NEW（库里没）/ UPDATE（改值）/ MERGE（合多值）/ DELETE（删）/ NOOP（不动）；intent + 库状态决定动作。</li>
+              <li><span className="font-medium">三种旧值去向，三种取舍</span>：进历史（可审计可撤回）/ 软删（召回排除但能查回）/ 真删（不可恢复，本步只留接口）。</li>
+              <li><span className="font-medium">intent 让前端/用户表达，不让模型判意图</span>：「我改用 React 了」是 update、「我 Vue 和 React 都写」是 merge、「我不用 React 了」是 delete——这些由用户语言信号表达，业务传 intent，不让模型反复判断意图。</li>
+              <li><span className="font-medium">跟 step-7 的接口层接得上</span>：复用 lib/db.ts 的 kv 表 + kvGet / kvSet；本步扩展 deleted_at + 加 fact_history 表 + 软删接口，主流程 resolveConflict 单独成文件。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function ModeCard({ cardHref, tag, tagCls, title, desc }) {
+      return (
+        <a href={cardHref} className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={"text-xs px-2 py-0.5 rounded font-semibold " + tagCls}>{tag}</span>
+            <span className="text-sm font-semibold text-gray-800">{title}</span>
+          </div>
+          <p className="text-xs text-gray-600">{desc}</p>
+          <p className="text-xs text-gray-400 mt-2">入口：{cardHref} · 端口 50111</p>
+        </a>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+
+      useEffect(function () {
+        fetch("/health")
+          .then(function (res) { return res.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () { setEnv(null); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入策略 · 第八步 · 冲突更新（第 5 关完整版）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <OverviewIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">四个 sub-page——点卡片进入：</p>
+              <div id="modes" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ModeCard
+                  cardHref="pages/conflict-actions.html"
+                  tag="mode-actions"
+                  tagCls="bg-blue-100 text-blue-900"
+                  title="四个动作 UPDATE / MERGE / DELETE / NOOP"
+                  desc="库里预置「framework = Vue 3 + TypeScript」，依次送四句话，看见四个动作 + 旧值去向。"
+                />
+                <ModeCard
+                  cardHref="pages/conflict-merge.html"
+                  tag="mode-merge"
+                  tagCls="bg-purple-100 text-purple-900"
+                  title="合并多值（MERGE）"
+                  desc="单跑「我 Vue 和 React 都写」，看见 MERGE 把 value.values 合并成多值数组。"
+                />
+                <ModeCard
+                  cardHref="pages/conflict-soft-delete.html"
+                  tag="mode-soft-delete"
+                  tagCls="bg-pink-100 text-pink-900"
+                  title="软删除（DELETE + 旧值进历史）"
+                  desc="单跑「我不用 React 了」，从召回候选消失，「已删除」视图仍可见。"
+                />
+                <ModeCard
+                  cardHref="pages/conflict-history.html"
+                  tag="mode-history"
+                  tagCls="bg-green-100 text-green-900"
+                  title="历史版本（fact_history）"
+                  desc="点开任一条事实看历史版本（每次 action / 旧值 / 新值 / 时间）。"
+                />
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2 min-h-[120px]">
+              <p className="text-sm font-semibold text-gray-800">为什么本步不做「一键撤回」</p>
+              <p className="text-xs text-gray-700">
+                笔记 §8-B 写了「可审计可撤回」，但「撤回」本质上属于第 8 关「审计与安全」（变体 8-B）——它需要一个完整的 audit 表（含会话 id / 消息序号 / 时间戳 / 操作人），跟本步的 fact_history 表不是同一回事。
+                本步 fact_history 只记「值变更」（验收 ③），不做「撤回按钮」。撤回功能留到 step-9+ 做需求 8 时一并做。
+              </p>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

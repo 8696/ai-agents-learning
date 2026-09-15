@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第八步 · mode-history 历史版本</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+
+    function HistoryIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页演示<b>旧值去向 · 进历史版本</b>：点开库里任一条事实 → 看它的完整变更链（每次 action / 旧值 / 新值 / 时间）。
+            这就是验收 ③ 要的「点开任一条事实能看见它的历史版本和每次变更时间」。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>页面启动时拉 <code>GET /api/facts</code> 列出当前库。</li>
+            <li>点某条事实 → <code>GET /api/fact/:key/history</code> 查它的 fact_history。</li>
+            <li>页面按 id 升序列出每次变更（update / merge / delete），含 created_at。</li>
+            <li>没跑过任何写入动作的 key → 历史为空（验收 ③ 边界情况）。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">fact_history 是「写入审计」不是「撤回按钮」</span>：本表只记值变更 + 时间，不含操作人 / 会话 id 完整审计信息（那一层在 step-9+ 做需求 8 时补）。</li>
+              <li><span className="font-medium">每条历史只写一次</span>：resolveConflict 在 UPDATE / MERGE / DELETE 时各写一行；NOOP / NEW 不写。</li>
+              <li><span className="font-medium">历史可回溯但不直接可撤回</span>：本表是只读历史；「一键撤回」按笔记 §8-B 留到 step-9+ 做需求 8 时一并做。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function HistoryCard({ entry }) {
+      const cls = {
+        update: "border-blue-300 bg-blue-50",
+        merge:  "border-purple-300 bg-purple-50",
+        delete: "border-pink-300 bg-pink-50",
+      }[entry.action] || "border-gray-300 bg-gray-50";
+      return (
+        <div className={"border rounded p-3 space-y-2 " + cls}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono px-2 py-0.5 rounded bg-white border">#{entry.id}</span>
+            <span className="text-xs font-mono px-2 py-0.5 rounded bg-white border">{entry.action}</span>
+            <span className="text-xs text-gray-500">{entry.createdAt}</span>
+          </div>
+          <details className="text-xs">
+            <summary className="cursor-pointer text-gray-700">旧值</summary>
+            <pre className="bg-white rounded p-2 mt-1 overflow-auto max-h-32">{entry.oldValue === null ? "（null）" : JSON.stringify(entry.oldValue, null, 2)}</pre>
+          </details>
+          <details className="text-xs" open>
+            <summary className="cursor-pointer text-gray-700">新值</summary>
+            <pre className="bg-white rounded p-2 mt-1 overflow-auto max-h-32">{entry.newValue === null ? "（null）" : JSON.stringify(entry.newValue, null, 2)}</pre>
+          </details>
+        </div>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [factList, setFactList] = useState({});
+      const [selectedKey, setSelectedKey] = useState("");
+      const [history, setHistory] = useState([]);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function () { setEnv(null); });
+        refreshFacts();
+      }, []);
+
+      function refreshFacts() {
+        fetch("/api/facts").then(function (r) { return r.json(); }).then(function (d) { setFactList(d.facts || {}); }).catch(function () {});
+      }
+
+      function loadHistory(key) {
+        setStatus("loading");
+        setErrorText("");
+        setSelectedKey(key);
+        fetch("/api/fact/" + encodeURIComponent(key) + "/history")
+          .then(function (res) { return res.json().then(function (b) { return { ok: res.ok, status: res.status, body: b }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setHistory(pack.body.history || []);
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      const keys = Object.keys(factList);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">写入策略 · 第八步 · mode-history · 历史版本</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="history" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <HistoryIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">点库里任一条事实看历史：</p>
+              {keys.length === 0 ? (
+                <p className="text-sm text-gray-500">库里还没事实。先去 mode-actions / mode-merge / mode-soft-delete 跑一遍。</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {keys.map(function (k) {
+                    return (
+                      <button key={k} type="button"
+                        className={"border text-sm px-3 py-2 rounded " + (k === selectedKey ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold" : "border-gray-300 hover:bg-gray-50")}
+                        onClick={function () { loadHistory(k); }}>
+                        {k}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button type="button" className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100" onClick={refreshFacts}>
+                刷新事实库
+              </button>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {errorText ? <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div> : null}
+              {!selectedKey ? (
+                <p className="text-sm text-gray-500">选一条事实看历史。</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-800">key = <code>{selectedKey}</code> 的历史（{history.length} 条）</p>
+                  {history.length === 0 ? (
+                    <p className="text-sm text-gray-500">这条还没发生过 UPDATE / MERGE / DELETE 写入，所以 fact_history 为空。NEW 不写历史。</p>
+                  ) : (
+                    history.map(function (entry) {
+                      return <HistoryCard key={entry.id} entry={entry} />;
+                    })
+                  )}
+                </div>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

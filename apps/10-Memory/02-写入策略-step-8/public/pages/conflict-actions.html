@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第八步 · mode-actions 四个动作</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+
+    // 四句话对应四个动作。
+    // 第④按钮的 source 跟 seed 一致（"演示种子数据"），保证 valuesEqual 严格判定走 NOOP；
+    // 用户先 seed 再点 ④（不点 ① ② ③）才能演示 NOOP；按了其它按钮库被改后再按 ④ 会 UPDATE / 复活（按业务语义）。
+    const SCENARIOS = [
+      { intent: "update", key: "framework", value: "React + TypeScript", label: "① 我改用 React 了", expect: "UPDATE", source: "演示按钮①" },
+      { intent: "merge",   key: "framework", value: "React",              label: "② 我 Vue 和 React 都写", expect: "MERGE", source: "演示按钮②" },
+      { intent: "delete",  key: "framework", value: null,                label: "③ 我不用 React 了", expect: "DELETE", source: null },
+      { intent: "update",  key: "framework", value: "Vue 3 + TypeScript", label: "④ 我们组用 Vue 3（重复原值）", expect: "NOOP（前提：当前库是 seed 状态）", source: "演示种子数据" },
+    ];
+
+    // 库里预置的事实
+    const SEED = {
+      key: "framework",
+      value: {
+        value: "Vue 3 + TypeScript",
+        type: "语义记忆",
+        confidence: 1.0,
+        source: "演示种子数据",
+        validUntil: null,
+      },
+    };
+
+    function ActionsIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页演示<b>写入策略第 5 关「冲突与更新」的四个动作</b>。库里预置 <code>framework = Vue 3 + TypeScript</code>，依次点四句话，看每个动作的结果：
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>页面启动时自动 <code>POST /api/conflict/resolve</code> 把 <b>种子事实</b>写进库（intent=new）。</li>
+            <li>点任一句示例按钮 → 服务端按 intent 调 <code>resolveConflict</code> → 返回 action / 旧值 / 新值 / 是否进历史 / 是否软删除。</li>
+            <li>顶部「事实库清单」实时刷新（<code>GET /api/facts</code>，排除软删除）；点开「已删除」视图可看见 DELETE 后那条还在。</li>
+            <li>对应四句话分别触发 <b>UPDATE / MERGE / DELETE / NOOP</b>四个动作。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">同一 key 撞上不同 value 是常态</span>：用户改主意（Vue → React）+ 都写（Vue + React）+ 不用了（删 React）+ 重复原值（NOOP）——这四种结果都要可观察。</li>
+              <li><span className="font-medium">intent 让前端表达，不让模型判意图</span>：「我改用 React 了」是 update、「我 Vue 和 React 都写」是 merge、「我不用 React 了」是 delete——业务传 intent，不调模型反复判断。</li>
+              <li><span className="font-medium">UPDATE / MERGE / DELETE 三种都把旧值塞 fact_history</span>：旧值进历史版本（验收 ③）；NOOP / NEW 不进。</li>
+              <li><span className="font-medium">DELETE 走软删除（变体 5-C）</span>：deleted_at 设为当前时间，物理行还在；「已删除」视图能看见，召回候选看不见（验收 ④）。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function ActionCard({ result }) {
+      const cls = {
+        NEW:    "border-green-300 bg-green-50 text-green-900",
+        UPDATE: "border-blue-300 bg-blue-50 text-blue-900",
+        MERGE:  "border-purple-300 bg-purple-50 text-purple-900",
+        DELETE: "border-pink-300 bg-pink-50 text-pink-900",
+        NOOP:   "border-yellow-300 bg-yellow-50 text-yellow-900",
+      }[result.action] || "border-gray-300 bg-gray-50";
+      return (
+        <div className={"border rounded p-3 space-y-2 " + cls}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono px-2 py-0.5 rounded bg-white border">{result.action}</span>
+            <span className="text-xs">key = <code>{result.key}</code></span>
+            <span className="text-xs">旧值进历史 = {String(result.recordedHistory)}</span>
+            <span className="text-xs">软删除 = {String(result.softDeleted)}</span>
+          </div>
+          {result.oldValue !== undefined ? (
+            <details className="text-xs">
+              <summary className="cursor-pointer text-gray-700">旧值（旧 value）</summary>
+              <pre className="bg-white rounded p-2 mt-1 overflow-auto max-h-32">{JSON.stringify(result.oldValue, null, 2)}</pre>
+            </details>
+          ) : null}
+          {result.newValue !== undefined ? (
+            <details className="text-xs" open>
+              <summary className="cursor-pointer text-gray-700">新值（写入后）</summary>
+              <pre className="bg-white rounded p-2 mt-1 overflow-auto max-h-32">{JSON.stringify(result.newValue, null, 2)}</pre>
+            </details>
+          ) : null}
+        </div>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [log, setLog] = useState([]);
+      const [factCount, setFactCount] = useState(0);
+      const [factList, setFactList] = useState({});
+      const [trashCount, setTrashCount] = useState(0);
+      const [trashList, setTrashList] = useState({});
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function () { setEnv(null); });
+        seedFact();
+        refreshFacts();
+        refreshTrash();
+      }, []);
+
+      function refreshFacts() {
+        fetch("/api/facts").then(function (r) { return r.json(); }).then(function (d) { setFactCount(d.count || 0); setFactList(d.facts || {}); }).catch(function () {});
+      }
+      function refreshTrash() {
+        fetch("/api/trash").then(function (r) { return r.json(); }).then(function (d) { setTrashCount(d.count || 0); setTrashList(d.facts || {}); }).catch(function () {});
+      }
+
+      function seedFact() {
+        // 用 intent=new 把种子事实写进库（如果库里已有同名 key + 同 value → NOOP，不影响）
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: SEED.key, value: SEED.value, intent: "new", sourceSession: "demo-seed", sourceMsgSeq: 0 }),
+        }).then(function () { refreshFacts(); refreshTrash(); }).catch(function () {});
+      }
+
+      function resetFact() {
+        // 重置事实库到 seed 状态：先删（软删），再 seed 一条 seed value 的新事实——这样第④按钮演示 NOOP 之前库一定是 seed 状态。
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: SEED.key, value: null, intent: "delete", sourceSession: "demo-reset", sourceMsgSeq: 99 }),
+        })
+          .then(function () {
+            return fetch("/api/conflict/resolve", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key: SEED.key, value: SEED.value, intent: "new", sourceSession: "demo-seed", sourceMsgSeq: 100 }),
+            });
+          })
+          .then(function () { refreshFacts(); refreshTrash(); })
+          .catch(function () {});
+      }
+
+      function runScenario(s) {
+        setStatus("loading");
+        setErrorText("");
+        // value 用业务 schema 包一层（除 DELETE 外）；source 跟 scenario 走（让第④按钮 NOOP 跟 seed 一致）
+        const body = { key: s.key, value: s.value === null ? null : { value: s.value, type: "语义记忆", confidence: 1.0, source: s.source, validUntil: null }, intent: s.intent };
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+        })
+          .then(function (res) { return res.json().then(function (b) { return { ok: res.ok, status: res.status, body: b }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setLog(function (prev) { return prev.concat([{ scenario: s, result: pack.body }]); });
+            refreshFacts();
+            refreshTrash();
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">写入策略 · 第八步 · mode-actions · 四个动作</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="actions" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <ActionsIntro />
+            <section id="fact-status" className="flex flex-wrap items-center gap-3 bg-white shadow rounded p-3 text-sm">
+              <span>事实库（未软删）=<b>{factCount}</b> 条</span>
+              <span>已删除视图 =<b>{trashCount}</b> 条</span>
+              <span className="text-xs text-gray-500">（持久化：data/facts.db · 重启服务事实库不会清空）</span>
+            </section>
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">四句话对应四个动作——依次点：</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {SCENARIOS.map(function (s) {
+                  const k = s.label;
+                  return (
+                    <button key={k} type="button"
+                      className="border border-gray-300 text-left text-xs px-3 py-2 rounded hover:bg-gray-50"
+                      onClick={function () { runScenario(s); }}>
+                      <div className="font-semibold text-gray-800">{s.label}</div>
+                      <div className="text-gray-500 mt-1">intent = <code>{s.intent}</code> · 期望动作 = <b>{s.expect}</b></div>
+                      <div className="text-gray-400 mt-1">{s.value === null ? "（无 value；DELETE 不需要）" : "value = " + JSON.stringify(s.value)}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500">推荐顺序演示 NOOP：先点「重置」让库回到 seed 状态，再点 ④ → NOOP。按了 ① / ② / ③ 后库被改，再按 ④ 会变 UPDATE / 复活（按业务语义），不是 bug。</p>
+              <button type="button" className="border border-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-100" onClick={resetFact}>
+                重置事实库到 seed
+              </button>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              <p className="text-sm font-semibold text-gray-800">动作日志（最新在上）</p>
+              {errorText ? <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div> : null}
+              {log.length === 0 ? <p className="text-sm text-gray-500">还没跑过动作。点上面的按钮。</p> : null}
+              <div className="space-y-2">
+                {log.slice().reverse().map(function (entry, i) {
+                  const key = entry.scenario.label + "-" + i;
+                  return (
+                    <div key={key} className="space-y-1">
+                      <p className="text-xs text-gray-700">{entry.scenario.label}</p>
+                      <ActionCard result={entry.result} />
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+            <section id="facts" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-800">事实库清单（GET /api/facts，未软删）</p>
+              <pre className="bg-gray-50 rounded p-2 text-xs overflow-auto max-h-48">{JSON.stringify(factList, null, 2)}</pre>
+            </section>
+            <section id="trash" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm font-semibold text-gray-800">已删除视图（GET /api/trash）</p>
+              <pre className="bg-gray-50 rounded p-2 text-xs overflow-auto max-h-48">{JSON.stringify(trashList, null, 2)}</pre>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

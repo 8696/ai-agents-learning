@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>写入策略 · 第八步 · mode-soft-delete 软删除</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+
+    function SoftDeleteIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页演示<b>变体 5-C 软删除（Soft Delete）</b>：用户说「我不用 React 了」→ intent=delete 调 <code>resolveConflict</code> → <b>action = DELETE</b>，旧值进 fact_history，<code>deleted_at</code> 设为当前时间。
+            从召回候选消失（验收 ④），但「已删除」视图仍可见。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>页面启动时 seed 库里 <code>framework = Vue 3 + TypeScript</code>。</li>
+            <li>点「软删除」按钮 → intent=delete 调 <code>POST /api/conflict/resolve</code> → action=DELETE，软删 + 旧值进历史。</li>
+            <li>看「召回候选」（GET /api/recall）：默认排除软删除 → 列表为空。</li>
+            <li>看「已删除视图」（GET /api/trash）：列表里还能看到这条。</li>
+            <li>再点「复活」按钮 → intent=update + 同 value → 走 UPDATE 路径（复活归 NEW？本页演示让用户重新说「我改回 Vue 3」），deleted_at 置 NULL，召回又能看见。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <p className="text-sm font-semibold text-yellow-900">本页核心教学点</p>
+            <ol className="text-sm text-yellow-900 list-decimal pl-5 space-y-1">
+              <li><span className="font-medium">软删除 = deleted_at 设为当前时间</span>：物理行还在（fact_history 还能查）；只是召回 + 总览视图自动排除（SQL <code>WHERE deleted_at IS NULL</code>）。</li>
+              <li><span className="font-medium">软删除 ≠ 真删</span>：本步的 DELETE 走软删除（默认）；真删（DELETE FROM kv）接口在 lib/db.ts 里留了，但不接页面——避免学习者误操作丢数据。</li>
+              <li><span className="font-medium">召回默认排除软删除</span>：GET /api/recall 默认 SQL <code>deleted_at IS NULL</code>，新会话不会把「我不用 React 了」这条又喂给用户。</li>
+              <li><span className="font-medium">「已删除」视图能看到</span>：验收 ④ 必须能在 trash 视图复现；本页用 toggle 切换「召回 / trash」两个视图。</li>
+            </ol>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [view, setView] = useState("recall"); // recall | trash
+      const [list, setList] = useState({});
+      const [count, setCount] = useState(0);
+      const [result, setResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [seeded, setSeeded] = useState(false);
+
+      useEffect(function () { fetch("/health").then(function (r) { return r.json(); }).then(setEnv).catch(function () { setEnv(null); }); }, []);
+
+      function refresh() {
+        const url = view === "trash" ? "/api/trash" : "/api/recall";
+        fetch(url).then(function (r) { return r.json(); }).then(function (d) { setList(d.facts || d.recalled || {}); setCount(d.count || 0); }).catch(function () {});
+      }
+      useEffect(function () { refresh(); }, [view]);
+
+      function seed() {
+        setStatus("loading");
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: "framework",
+            value: { value: "Vue 3 + TypeScript", type: "语义记忆", confidence: 1.0, source: "mode-soft-delete seed", validUntil: null },
+            intent: "new", sourceSession: "soft-delete-seed", sourceMsgSeq: 0,
+          }),
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (b) { setSeeded(true); setResult({ label: "seed", body: b }); refresh(); setStatus("ok"); })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      function softDelete() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "framework", value: null, intent: "delete", sourceSession: "soft-delete-demo", sourceMsgSeq: 1 }),
+        })
+          .then(function (res) { return res.json().then(function (b) { return { ok: res.ok, status: res.status, body: b }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setResult({ label: "DELETE", body: pack.body });
+            refresh();
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      function revive() {
+        setStatus("loading");
+        setErrorText("");
+        fetch("/api/conflict/resolve", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: "framework",
+            value: { value: "Vue 3 + TypeScript", type: "语义记忆", confidence: 1.0, source: "mode-soft-delete revive", validUntil: null },
+            intent: "update", sourceSession: "soft-delete-revive", sourceMsgSeq: 2,
+          }),
+        })
+          .then(function (res) { return res.json().then(function (b) { return { ok: res.ok, status: res.status, body: b }; }); })
+          .then(function (pack) {
+            if (!pack.ok) { setStatus("error"); setErrorText((pack.body && pack.body.explain) || ("HTTP " + pack.status)); return; }
+            setResult({ label: "REVIVE", body: pack.body });
+            refresh();
+            setStatus("ok");
+          })
+          .catch(function (err) { setStatus("error"); setErrorText(String(err)); });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">写入策略 · 第八步 · mode-soft-delete · 软删除</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="soft" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <SoftDeleteIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">按顺序点：</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="bg-gray-700 text-white text-sm px-3 py-2 rounded" onClick={seed}>
+                  ① seed 库里 framework = Vue 3 + TypeScript
+                </button>
+                <button type="button" className="bg-pink-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={!seeded} onClick={softDelete}>
+                  ② 软删除：intent=delete
+                </button>
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-2 rounded disabled:opacity-50"
+                  disabled={!seeded} onClick={revive}>
+                  ③ 复活：intent=update + 同 value
+                </button>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span>视图：</span>
+                <button type="button"
+                  className={"px-3 py-1 rounded border " + (view === "recall" ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold" : "border-gray-300")}
+                  onClick={function () { setView("recall"); }}>召回（GET /api/recall，默认排除软删除）</button>
+                <button type="button"
+                  className={"px-3 py-1 rounded border " + (view === "trash" ? "border-pink-500 bg-pink-50 text-pink-700 font-semibold" : "border-gray-300")}
+                  onClick={function () { setView("trash"); }}>已删除（GET /api/trash）</button>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[200px]">
+              {errorText ? <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{errorText}</div> : null}
+              {result ? (
+                <div className="space-y-2">
+                  <div className="border border-gray-300 bg-gray-50 rounded p-3 text-sm">
+                    <p><b>{result.label}</b> · action = <code>{String(result.body.action)}</code></p>
+                    <p>旧值进历史 = {String(result.body.recordedHistory)} · 软删除 = {String(result.body.softDeleted)}</p>
+                  </div>
+                </div>
+              ) : <p className="text-sm text-gray-500">还没跑过。点 seed → 软删除 → 复活。</p>}
+              <p className="text-sm font-semibold text-gray-800 mt-2">{view === "trash" ? "已删除视图" : "召回视图"}（{count} 条）</p>
+              <pre className="bg-gray-50 rounded p-2 text-xs overflow-auto max-h-48">{JSON.stringify(list, null, 2)}</pre>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
