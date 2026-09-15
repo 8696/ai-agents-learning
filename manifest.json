@@ -12758,6 +12758,1819 @@
                 "path": "apps/10-Memory/01-记忆分类-step-1/server.ts"
               }
             ]
+          },
+          {
+            "label": "01-记忆分类-step-2",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.json",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/data/facts.json"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "classify-memory.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-2/lib/flow/classify-memory.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-2/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "storage",
+                    "children": [
+                      {
+                        "label": "facts-store.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-2/lib/storage/facts-store.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-2/public/components/layout.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/01-记忆分类-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "classify.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/routes/classify.ts"
+                  },
+                  {
+                    "label": "facts.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/routes/facts.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/01-记忆分类-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-记忆分类-step-3",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.json",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/data/facts.json"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "retrieve-and-ask.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/flow/retrieve-and-ask.ts"
+                      },
+                      {
+                        "label": "retrieve-and-compose.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/flow/retrieve-and-compose.ts"
+                      },
+                      {
+                        "label": "retrieve-prompt.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/flow/retrieve-prompt.ts"
+                      },
+                      {
+                        "label": "retrieve-score.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/flow/retrieve-score.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "storage",
+                    "children": [
+                      {
+                        "label": "facts-store.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/lib/storage/facts-store.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "fact-card.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/fact-card.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "messages-block.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/messages-block.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pool-block.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/pool-block.js"
+                      },
+                      {
+                        "label": "toggle-bar.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/toggle-bar.js"
+                      },
+                      {
+                        "label": "top-k-block.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-3/public/components/top-k-block.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/01-记忆分类-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "ask.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/routes/ask.ts"
+                  },
+                  {
+                    "label": "facts.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/routes/facts.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "retrieve.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-3/routes/retrieve.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/01-记忆分类-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-记忆分类-step-4",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.json",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/data/facts.json"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "classify-memory.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/flow/classify-memory.ts"
+                      },
+                      {
+                        "label": "full-pipeline.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/flow/full-pipeline.ts"
+                      },
+                      {
+                        "label": "retrieve-prompt.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/flow/retrieve-prompt.ts"
+                      },
+                      {
+                        "label": "retrieve-score.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/flow/retrieve-score.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/lib/logger.ts"
+                  },
+                  {
+                    "label": "storage",
+                    "children": [
+                      {
+                        "label": "fact-delete.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/storage/fact-delete.ts"
+                      },
+                      {
+                        "label": "facts-store.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/storage/facts-store.ts"
+                      },
+                      {
+                        "label": "program-rules.ts",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/lib/storage/program-rules.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "fact-card.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/fact-card.js"
+                      },
+                      {
+                        "label": "fragments.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/fragments.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "memory-write-panel.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/memory-write-panel.js"
+                      },
+                      {
+                        "label": "messages-block.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/messages-block.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pipeline-board.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/pipeline-board.js"
+                      },
+                      {
+                        "label": "pipeline-step.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/pipeline-step.js"
+                      },
+                      {
+                        "label": "pool-block.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/pool-block.js"
+                      },
+                      {
+                        "label": "program-rules-panel.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/program-rules-panel.js"
+                      },
+                      {
+                        "label": "renderers.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/renderers.js"
+                      },
+                      {
+                        "label": "toggle-bar.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/toggle-bar.js"
+                      },
+                      {
+                        "label": "top-k-block.js",
+                        "path": "apps/10-Memory/01-记忆分类-step-4/public/components/top-k-block.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/01-记忆分类-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/routes/chat.ts"
+                  },
+                  {
+                    "label": "classify.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/routes/classify.ts"
+                  },
+                  {
+                    "label": "facts.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/routes/facts.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/routes/health.ts"
+                  },
+                  {
+                    "label": "program-rules.ts",
+                    "path": "apps/10-Memory/01-记忆分类-step-4/routes/program-rules.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/01-记忆分类-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-1/lib/flow/extract-facts.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-1/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-1/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "candidates.js",
+                        "path": "apps/10-Memory/02-写入策略-step-1/public/components/candidates.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-1/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "extract.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-1/routes/extract.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-10",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.db",
+                    "path": "apps/10-Memory/02-写入策略-step-10/data/facts.db"
+                  },
+                  {
+                    "label": "facts.db-shm",
+                    "path": "apps/10-Memory/02-写入策略-step-10/data/facts.db-shm"
+                  },
+                  {
+                    "label": "facts.db-wal",
+                    "path": "apps/10-Memory/02-写入策略-step-10/data/facts.db-wal"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/lib/db.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "expiration.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-10/lib/flow/expiration.ts"
+                      },
+                      {
+                        "label": "score-importance.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-10/lib/flow/score-importance.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-10/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-10/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "candidate-list.js",
+                        "path": "apps/10-Memory/02-写入策略-step-10/public/components/candidate-list.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-10/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-10/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "timeline.js",
+                        "path": "apps/10-Memory/02-写入策略-step-10/public/components/timeline.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-10/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "recall-decay.html",
+                        "path": "apps/10-Memory/02-写入策略-step-10/public/pages/recall-decay.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-10/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "archive.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/archive.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/health.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/recall.ts"
+                  },
+                  {
+                    "label": "score-importance.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/score-importance.ts"
+                  },
+                  {
+                    "label": "seed.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/seed.ts"
+                  },
+                  {
+                    "label": "time-skip.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-10/routes/time-skip.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-10/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-11",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.db",
+                    "path": "apps/10-Memory/02-写入策略-step-11/data/facts.db"
+                  },
+                  {
+                    "label": "facts.db-shm",
+                    "path": "apps/10-Memory/02-写入策略-step-11/data/facts.db-shm"
+                  },
+                  {
+                    "label": "facts.db-wal",
+                    "path": "apps/10-Memory/02-写入策略-step-11/data/facts.db-wal"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/lib/db.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "expiration.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-11/lib/flow/expiration.ts"
+                      },
+                      {
+                        "label": "expire-linked.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-11/lib/flow/expire-linked.ts"
+                      },
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-11/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "score-importance.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-11/lib/flow/score-importance.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-11/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-11/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-11/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-11/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-11/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "expire-linked.html",
+                        "path": "apps/10-Memory/02-写入策略-step-11/public/pages/expire-linked.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-11/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "archive.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/routes/archive.ts"
+                  },
+                  {
+                    "label": "expire-linked.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/routes/expire-linked.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/routes/health.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/routes/recall.ts"
+                  },
+                  {
+                    "label": "seed.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-11/routes/seed.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-11/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-2/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "filter-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-2/lib/flow/filter-by-confidence.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-2/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-2/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "filter-verdict.js",
+                        "path": "apps/10-Memory/02-写入策略-step-2/public/components/filter-verdict.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-2/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "extract.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-2/routes/extract.ts"
+                  },
+                  {
+                    "label": "filter.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-2/routes/filter.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-2/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-2/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-3/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "filter-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-3/lib/flow/filter-by-confidence.ts"
+                      },
+                      {
+                        "label": "filter-by-content-dimensions.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-3/lib/flow/filter-by-content-dimensions.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-3/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-3/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "filter-verdict.js",
+                        "path": "apps/10-Memory/02-写入策略-step-3/public/components/filter-verdict.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "model-trace.js",
+                        "path": "apps/10-Memory/02-写入策略-step-3/public/components/model-trace.js"
+                      },
+                      {
+                        "label": "output-renderers.js",
+                        "path": "apps/10-Memory/02-写入策略-step-3/public/components/output-renderers.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-3/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-3/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "extract.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-3/routes/extract.ts"
+                  },
+                  {
+                    "label": "filter-dimensions.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-3/routes/filter-dimensions.ts"
+                  },
+                  {
+                    "label": "filter.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-3/routes/filter.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-3/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-3/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-4",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-4/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "filter-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-4/lib/flow/filter-by-confidence.ts"
+                      },
+                      {
+                        "label": "filter-by-content-dimensions.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-4/lib/flow/filter-by-content-dimensions.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-4/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-4/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-4/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "filter-verdict.js",
+                        "path": "apps/10-Memory/02-写入策略-step-4/public/components/filter-verdict.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-4/public/components/layout.js"
+                      },
+                      {
+                        "label": "model-trace.js",
+                        "path": "apps/10-Memory/02-写入策略-step-4/public/components/model-trace.js"
+                      },
+                      {
+                        "label": "output-renderers.js",
+                        "path": "apps/10-Memory/02-写入策略-step-4/public/components/output-renderers.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-4/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-4/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-4/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "extract.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-4/routes/extract.ts"
+                  },
+                  {
+                    "label": "filter-dimensions.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-4/routes/filter-dimensions.ts"
+                  },
+                  {
+                    "label": "filter.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-4/routes/filter.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-4/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-4/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-4/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-5",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-5/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "filter-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-5/lib/flow/filter-by-confidence.ts"
+                      },
+                      {
+                        "label": "filter-by-content-dimensions.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-5/lib/flow/filter-by-content-dimensions.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-5/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-5/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-5/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "filter-verdict.js",
+                        "path": "apps/10-Memory/02-写入策略-step-5/public/components/filter-verdict.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-5/public/components/layout.js"
+                      },
+                      {
+                        "label": "model-trace.js",
+                        "path": "apps/10-Memory/02-写入策略-step-5/public/components/model-trace.js"
+                      },
+                      {
+                        "label": "output-renderers.js",
+                        "path": "apps/10-Memory/02-写入策略-step-5/public/components/output-renderers.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-5/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-5/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-5/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "extract.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-5/routes/extract.ts"
+                  },
+                  {
+                    "label": "filter-dimensions.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-5/routes/filter-dimensions.ts"
+                  },
+                  {
+                    "label": "filter.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-5/routes/filter.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-5/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-5/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-5/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-6",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-6/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "filter-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-6/lib/flow/filter-by-confidence.ts"
+                      },
+                      {
+                        "label": "filter-by-content-dimensions.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-6/lib/flow/filter-by-content-dimensions.ts"
+                      },
+                      {
+                        "label": "split-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-6/lib/flow/split-by-confidence.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-6/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-6/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "filter-verdict.js",
+                        "path": "apps/10-Memory/02-写入策略-step-6/public/components/filter-verdict.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-6/public/components/layout.js"
+                      },
+                      {
+                        "label": "model-trace.js",
+                        "path": "apps/10-Memory/02-写入策略-step-6/public/components/model-trace.js"
+                      },
+                      {
+                        "label": "output-renderers.js",
+                        "path": "apps/10-Memory/02-写入策略-step-6/public/components/output-renderers.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-6/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-6/public/index.html"
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-6/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "confirm.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/routes/confirm.ts"
+                  },
+                  {
+                    "label": "extract.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/routes/extract.ts"
+                  },
+                  {
+                    "label": "filter-dimensions.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/routes/filter-dimensions.ts"
+                  },
+                  {
+                    "label": "filter.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/routes/filter.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-6/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-6/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-7",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/lib/db.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "dedup-by-embedding.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/dedup-by-embedding.ts"
+                      },
+                      {
+                        "label": "dedup-by-inclusion.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/dedup-by-inclusion.ts"
+                      },
+                      {
+                        "label": "dedup-by-key.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/dedup-by-key.ts"
+                      },
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "filter-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/filter-by-confidence.ts"
+                      },
+                      {
+                        "label": "filter-by-content-dimensions.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/filter-by-content-dimensions.ts"
+                      },
+                      {
+                        "label": "split-by-confidence.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/flow/split-by-confidence.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-7/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "fact-list.js",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/components/fact-list.js"
+                      },
+                      {
+                        "label": "filter-verdict.js",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/components/filter-verdict.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/components/layout.js"
+                      },
+                      {
+                        "label": "model-trace.js",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/components/model-trace.js"
+                      },
+                      {
+                        "label": "output-renderers.js",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/components/output-renderers.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-7/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "dedup-inclusion.html",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/pages/dedup-inclusion.html"
+                      },
+                      {
+                        "label": "dedup-literal.html",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/pages/dedup-literal.html"
+                      },
+                      {
+                        "label": "dedup-semantic.html",
+                        "path": "apps/10-Memory/02-写入策略-step-7/public/pages/dedup-semantic.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-7/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "dedup-by-embedding.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/routes/dedup-by-embedding.ts"
+                  },
+                  {
+                    "label": "dedup-by-inclusion.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/routes/dedup-by-inclusion.ts"
+                  },
+                  {
+                    "label": "dedup.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/routes/dedup.ts"
+                  },
+                  {
+                    "label": "facts.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/routes/facts.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-7/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-7/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-8",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/lib/db.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "resolve-conflict.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-8/lib/flow/resolve-conflict.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "history-store.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/lib/history-store.ts"
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-8/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-8/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-8/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-8/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-8/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "conflict-actions.html",
+                        "path": "apps/10-Memory/02-写入策略-step-8/public/pages/conflict-actions.html"
+                      },
+                      {
+                        "label": "conflict-history.html",
+                        "path": "apps/10-Memory/02-写入策略-step-8/public/pages/conflict-history.html"
+                      },
+                      {
+                        "label": "conflict-merge.html",
+                        "path": "apps/10-Memory/02-写入策略-step-8/public/pages/conflict-merge.html"
+                      },
+                      {
+                        "label": "conflict-soft-delete.html",
+                        "path": "apps/10-Memory/02-写入策略-step-8/public/pages/conflict-soft-delete.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-8/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "conflict.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/routes/conflict.ts"
+                  },
+                  {
+                    "label": "fact-detail.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/routes/fact-detail.ts"
+                  },
+                  {
+                    "label": "facts.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/routes/facts.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/routes/health.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/routes/recall.ts"
+                  },
+                  {
+                    "label": "trash.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-8/routes/trash.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-8/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-写入策略-step-9",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.db",
+                    "path": "apps/10-Memory/02-写入策略-step-9/data/facts.db"
+                  },
+                  {
+                    "label": "facts.db-shm",
+                    "path": "apps/10-Memory/02-写入策略-step-9/data/facts.db-shm"
+                  },
+                  {
+                    "label": "facts.db-wal",
+                    "path": "apps/10-Memory/02-写入策略-step-9/data/facts.db-wal"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/lib/db.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "extract-facts.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-9/lib/flow/extract-facts.ts"
+                      },
+                      {
+                        "label": "trigger-state.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-9/lib/flow/trigger-state.ts"
+                      },
+                      {
+                        "label": "trigger-types.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-9/lib/flow/trigger-types.ts"
+                      },
+                      {
+                        "label": "trigger-write.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-9/lib/flow/trigger-write.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-9/lib/http/runtime-ctx.ts"
+                      },
+                      {
+                        "label": "send-error.ts",
+                        "path": "apps/10-Memory/02-写入策略-step-9/lib/http/send-error.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "candidate-list.js",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/components/candidate-list.js"
+                      },
+                      {
+                        "label": "chat-panel.js",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/components/chat-panel.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/10-Memory/02-写入策略-step-9/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "chat-background.html",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/pages/chat-background.html"
+                      },
+                      {
+                        "label": "chat-eager.html",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/pages/chat-eager.html"
+                      },
+                      {
+                        "label": "chat-session-end.html",
+                        "path": "apps/10-Memory/02-写入策略-step-9/public/pages/chat-session-end.html"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/10-Memory/02-写入策略-step-9/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "chat.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/chat.ts"
+                  },
+                  {
+                    "label": "conversation.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/conversation.ts"
+                  },
+                  {
+                    "label": "facts.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/facts.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/health.ts"
+                  },
+                  {
+                    "label": "recall.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/recall.ts"
+                  },
+                  {
+                    "label": "status.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/status.ts"
+                  },
+                  {
+                    "label": "trigger-status.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/trigger-status.ts"
+                  },
+                  {
+                    "label": "trigger.ts",
+                    "path": "apps/10-Memory/02-写入策略-step-9/routes/trigger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/10-Memory/02-写入策略-step-9/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "apps",
+        "children": [
+          {
+            "label": "10-Memory",
+            "children": [
+              {
+                "label": "01-记忆分类-step-4",
+                "children": [
+                  {
+                    "label": "data",
+                    "children": []
+                  },
+                  {
+                    "label": "lib",
+                    "children": [
+                      {
+                        "label": "flow",
+                        "children": []
+                      },
+                      {
+                        "label": "http",
+                        "children": []
+                      },
+                      {
+                        "label": "storage",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "label": "public",
+                    "children": [
+                      {
+                        "label": "components",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "label": "routes",
+                    "children": []
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
