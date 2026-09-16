@@ -24,6 +24,7 @@ import { mountCapacityConfigRoutes } from "./routes/capacity-config.js";
 import { mountAutoMergeWriteRoutes } from "./routes/auto-merge-write.js";
 import { mountLibraryRoutes } from "./routes/library.js";
 import { mountRecallPreviewRoutes } from "./routes/recall-preview.js";
+import { mountRecallPreviewControlRoutes } from "./routes/recall-preview-control.js";
 
 const app = new Koa();
 const router = new Router();
@@ -56,6 +57,7 @@ mountCapacityConfigRoutes(router);
 mountAutoMergeWriteRoutes(router);
 mountLibraryRoutes(router);
 mountRecallPreviewRoutes(router);
+mountRecallPreviewControlRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));

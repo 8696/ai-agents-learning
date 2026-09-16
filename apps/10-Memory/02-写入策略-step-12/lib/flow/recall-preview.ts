@@ -1,15 +1,25 @@
 /**
  * 职责：变体 7-E「跨会话验证 + 记忆调取预览」——演示「库里的记忆拼进 prompt + 大模型真能基于记忆说话」。
- * 数据流：
- *   recallPreview(userId)
+ *
+ * 数据流（两个对照函数）：
+ *   recallPreview(userId, userQuestion) — 调记忆
  *     → kvListForDisplay(userId) → 找出 user_profile_auto 的 summary + chat_session_v1 的 value + summary
  *     → 拼成 messages：
- *        system: 你是「基于记忆的 Agent」，现在要跟用户说话——下面是关于这个用户的记忆素材（画像 + 之前的对话）
- *        user:   请基于这些素材，写一句开场白
- *     → 调大模型生成开场白
- *     → 返 { promptMaterials: { imageSummary, conversationOriginal, conversationSummary }, modelRequest, modelResponse, opening }
+ *        system: 你是「基于记忆的 Agent」，用户刚问你：[userQuestion]，请基于素材回答
+ *        user:   三层素材（综合层画像 / 对话原文 / 对话摘要）
+ *     → 调大模型生成 answer
+ *     → 返 { materials, modelRequest, modelResponse, answer, userQuestion }
  *
- * 为什么单独成文件：本步核心是「把库里的记忆拼成 prompt」——不是压缩、不是自动合并，是「召回 → 拼 prompt → 生成」。文件头写「本步核心」。
+ *   recallPreviewNoMemory(userQuestion) — 不调记忆（对照组）
+ *     → 不读库
+ *     → 拼成 messages：
+ *        system: 你是 Agent，用户刚问你：[userQuestion]，请直接回答（不依赖任何外部信息）
+ *        user:   [userQuestion]
+ *     → 调大模型生成 answer
+ *     → 返 { modelRequest, modelResponse, answer, userQuestion }
+ *
+ * 为什么单独成文件：本步核心是「把库里的记忆拼成 prompt + 让模型回答用户问题」——不是压缩、不是自动合并。
+ * 文件头写「本步核心」。
  *
  * 与现有步骤的关系：
  *   - lib/flow/compress.ts 已有 compressSession + mergeFactsToImage；本步不复用（本步是「读 + 用」，不是「写 + 压缩」）
@@ -42,34 +52,73 @@ export interface RecallPreviewResult {
   modelRequest: unknown;
   /** 大模型返回的完整 response */
   modelResponse: unknown;
-  /** 大模型生成的开场白（直接给用户看的终态） */
-  opening: string;
+  /** 大模型基于素材生成的回答 */
+  answer: string;
+  /** 用户在「新会话」里问的问题 */
+  userQuestion: string;
   /** 提示用：素材不全时为什么不全 */
   warnings: string[];
 }
 
-const SYSTEM_PROMPT = `你是「基于记忆的 Agent」。下面是关于这个用户的记忆素材：
+export interface RecallPreviewControlResult {
+  /** 发给大模型的完整 messages + system（不包含任何素材） */
+  modelRequest: unknown;
+  /** 大模型返回的完整 response */
+  modelResponse: unknown;
+  /** 大模型在没拿到记忆时生成的回答 */
+  answer: string;
+  /** 用户在「新会话」里问的问题（跟调记忆那一组完全相同） */
+  userQuestion: string;
+}
+
+const SYSTEM_PROMPT_WITH_MEMORY = `你是「基于记忆的 Agent」。下面是关于这个用户的记忆素材：
 
 【1】综合层画像（user_profile_auto.summary）：如果存在，是从多条零碎事实合并出来的整体描述
 【2】对话原文（chat_session_v1.value）：用户之前跟你的一段对话原始内容
 【3】对话摘要（chat_session_v1.summary）：上面那段对话的摘要
 
-请基于这些素材，写一句「如果现在跟用户说话，开场白会是什么」。
+用户刚才在新会话里问你：「{userQuestion}」
 
 要求：
-- 只用素材里的信息，不要补充任何素材外的内容
-- 一句话，20-50 字，自然、像真人在打招呼
-- 如果素材里有用户名字或工作相关内容，自然带出来（比如「你好，字节跳动的 X」）
+- 优先用素材里的具体细节（时间、地点、人物、过敏、偏好）——这些是新会话里没有、需要记忆才能知道的
+- 不要补充任何素材外的内容（不知道就说不知道，不要编）
+- 50-200 字，自然像真人回复
 
-返回 JSON: { "opening": "..." }`;
+返回 JSON: { "answer": "..." }`;
 
-export async function recallPreview(userId: string): Promise<RecallPreviewResult> {
+const SYSTEM_PROMPT_NO_MEMORY = `你是 Agent。用户刚在新会话里问你：「{userQuestion}」
+
+这次系统没给你任何关于这个用户的记忆素材（没有画像、没有历史对话、没有摘要）。
+请直接回答。
+
+要求：
+- 50-200 字，自然像真人回复
+- 不依赖任何外部信息——如果用户的问题是「你还记得吗 / 下周怎么样」，你只能回答通用内容
+- 不要编造具体细节（不知道就说不知道）
+
+返回 JSON: { "answer": "..." }`;
+
+function stripWrap(content: string): string {
+  let c = content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+  const fence = c.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) c = fence[1].trim();
+  return c;
+}
+
+function parseAnswer(content: string): string {
+  const c = stripWrap(content);
+  let parsed: { answer?: string };
+  try { parsed = JSON.parse(c); } catch { parsed = { answer: "" }; }
+  return (parsed.answer || "").trim();
+}
+
+export async function recallPreview(userId: string, userQuestion: string): Promise<RecallPreviewResult> {
   const t0 = Date.now();
   logger.info(
     "调用函数-recall-preview",
     "调用函数开始：recallPreview",
-    "为什么写这条日志：变体 7-E——演示「记忆真的能召回 + 大模型真能基于记忆说话」。当前：从库里读 user_profile_auto + chat_session_v1。",
-    { 入参: { userId }, __code: "const facts = kvListForDisplay(userId);" },
+    "为什么写这条日志：变体 7-E——演示「记忆真的能召回 + 大模型真能基于记忆回答用户问题」。当前：从库里读 user_profile_auto + chat_session_v1，按用户问题拼 prompt。",
+    { 入参: { userId, userQuestion }, __code: "const facts = kvListForDisplay(userId);" },
   );
 
   const facts = kvListForDisplay(userId);
@@ -87,49 +136,43 @@ export async function recallPreview(userId: string): Promise<RecallPreviewResult
   if (!conversationOriginal) warnings.push("库里没有 chat_session_v1（先点「灌入示例」写入对话原文）");
   if (!conversationSummary) warnings.push("库里 chat_session_v1 没有 summary（先在 compress-session 页跑一次压缩对话原文）");
 
-  // 拼成 messages：把素材按三层标注清楚，让大模型明确知道每段是哪一层
+  // 拼成 messages：把素材按三层标注清楚 + 把用户问题写进 system 让模型明确知道这是「用户问的」
   const materialsBlock: string[] = [];
   materialsBlock.push(`【1】综合层画像：${imageSummary || "（无）"}`);
   materialsBlock.push(`【2】对话原文：${conversationOriginal ? conversationOriginal.slice(0, 800) + (conversationOriginal.length > 800 ? "...(省略)" : "") : "（无）"}`);
   materialsBlock.push(`【3】对话摘要：${conversationSummary || "（无）"}`);
   const userContent = "记忆素材：\n\n" + materialsBlock.join("\n\n");
+  const systemPrompt = SYSTEM_PROMPT_WITH_MEMORY.replace("{userQuestion}", userQuestion);
 
-  const request = {
+  const request: { model: string; messages: { role: "system" | "user"; content: string }[]; temperature: number; response_format: { type: "json_object" } } = {
     model: "",
     messages: [
-      { role: "system" as const, content: SYSTEM_PROMPT },
+      { role: "system" as const, content: systemPrompt },
       { role: "user" as const, content: userContent },
     ],
     temperature: 0.7,
     response_format: { type: "json_object" as const },
   };
-  // model 字段从 llm 拿
   const llm = await getLlm();
-  (request as { model: string }).model = llm.modelA;
+  request.model = llm.modelA;
 
   logger.info(
-    "││ 调用模型-recall-preview-对话生成",
-    "调用模型开始：recallPreview 对话生成",
-    `为什么写这条日志：真发网络请求的那一次，让模型基于素材写开场白。当前：materialsBlock 已拼好（imageSummary = ${imageSummary ? "有" : "无"}, conversationOriginal = ${conversationOriginal ? "有" : "无"}, conversationSummary = ${conversationSummary ? "有" : "无"}）。`,
+    "││ 调用模型-recall-preview-回答用户问题",
+    "调用模型开始：recallPreview 回答用户问题",
+    `为什么写这条日志：真发网络请求的那一次，让模型基于素材回答用户问题。当前：userQuestion = "${userQuestion}"；materialsBlock 已拼好（imageSummary = ${imageSummary ? "有" : "无"}, conversationOriginal = ${conversationOriginal ? "有" : "无"}, conversationSummary = ${conversationSummary ? "有" : "无"}）。`,
     { 入参: request },
   );
 
   const response = await llm.openai.chat.completions.create(request);
-
-  let content = response.choices?.[0]?.message?.content || '{"opening":""}';
-  content = content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  const fence = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) content = fence[1].trim();
-  let parsed: { opening?: string };
-  try { parsed = JSON.parse(content); } catch { parsed = { opening: "" }; }
-  const opening = (parsed.opening || "").trim();
+  const rawContent = response.choices?.[0]?.message?.content || '{"answer":""}';
+  const answer = parseAnswer(rawContent);
 
   logger.info(
-    "││ 调用模型-recall-preview-对话生成",
-    "调用模型结束：recallPreview 对话生成",
-    `为什么写这条日志：让前端拿到开场白文本 + modelRequest + 模型Response。当前：opening = ${opening.slice(0, 50)}${opening.length > 50 ? "..." : ""}。`,
-    { 返回值: response, 耗时ms: Date.now() - t0 - (Date.now() - t0), 字段释义: {
-      "opening": "大模型基于记忆素材生成的开场白",
+    "││ 调用模型-recall-preview-回答用户问题",
+    "调用模型结束：recallPreview 回答用户问题",
+    `为什么写这条日志：让前端拿到回答文本 + modelRequest + 模型Response。当前：answer 长度 ${answer.length} 字。`,
+    { 返回值: response, 字段释义: {
+      "answer": "大模型基于记忆素材 + 用户问题生成的回答",
     } },
   );
 
@@ -143,15 +186,75 @@ export async function recallPreview(userId: string): Promise<RecallPreviewResult
     },
     modelRequest: request,
     modelResponse: response,
-    opening,
+    answer,
+    userQuestion,
     warnings,
   };
 
   logger.info(
     "调用函数-recall-preview",
     "调用函数结束：recallPreview",
-    `当前：素材是否齐全 = hasImage ${result.materials.hasImage}, hasConversation ${result.materials.hasConversation}；开场白长度 ${opening.length} 字。`,
-    { 返回值: { hasImage: result.materials.hasImage, hasConversation: result.materials.hasConversation, openingLength: opening.length }, 耗时ms: Date.now() - t0 },
+    `当前：素材是否齐全 = hasImage ${result.materials.hasImage}, hasConversation ${result.materials.hasConversation}；answer 长度 ${answer.length} 字；warnings ${warnings.length} 条。`,
+    { 返回值: { hasImage: result.materials.hasImage, hasConversation: result.materials.hasConversation, answerLength: answer.length, warningsCount: warnings.length }, 耗时ms: Date.now() - t0 },
+  );
+
+  return result;
+}
+
+export async function recallPreviewNoMemory(userQuestion: string): Promise<RecallPreviewControlResult> {
+  const t0 = Date.now();
+  logger.info(
+    "调用函数-recall-preview-control",
+    "调用函数开始：recallPreviewNoMemory",
+    "为什么写这条日志：变体 7-E 的对照组——同样用户问题，但不读库、不拼素材，看大模型没拿到记忆时怎么答。当前：拿到 userQuestion。",
+    { 入参: { userQuestion }, __code: "llm.chat.completions.create(request)" },
+  );
+
+  const systemPrompt = SYSTEM_PROMPT_NO_MEMORY.replace("{userQuestion}", userQuestion);
+  const request: { model: string; messages: { role: "system" | "user"; content: string }[]; temperature: number; response_format: { type: "json_object" } } = {
+    model: "",
+    messages: [
+      { role: "system" as const, content: systemPrompt },
+      { role: "user" as const, content: userQuestion },
+    ],
+    temperature: 0.7,
+    response_format: { type: "json_object" as const },
+  };
+  const llm = await getLlm();
+  request.model = llm.modelA;
+
+  logger.info(
+    "││ 调用模型-recall-preview-control-无记忆回答",
+    "调用模型开始：recallPreviewNoMemory 无记忆回答",
+    `为什么写这条日志：对照组真发网络请求的那一次，不带任何素材。当前：userQuestion = "${userQuestion}"。`,
+    { 入参: request },
+  );
+
+  const response = await llm.openai.chat.completions.create(request);
+  const rawContent = response.choices?.[0]?.message?.content || '{"answer":""}';
+  const answer = parseAnswer(rawContent);
+
+  logger.info(
+    "││ 调用模型-recall-preview-control-无记忆回答",
+    "调用模型结束：recallPreviewNoMemory 无记忆回答",
+    `为什么写这条日志：让前端拿到无记忆时的回答文本。当前：answer 长度 ${answer.length} 字。`,
+    { 返回值: response, 字段释义: {
+      "answer": "大模型没拿到记忆时对用户问题的回答（对照组）",
+    } },
+  );
+
+  const result: RecallPreviewControlResult = {
+    modelRequest: request,
+    modelResponse: response,
+    answer,
+    userQuestion,
+  };
+
+  logger.info(
+    "调用函数-recall-preview-control",
+    "调用函数结束：recallPreviewNoMemory",
+    `当前：answer 长度 ${answer.length} 字（对照组——和调记忆那一组用同一个 userQuestion）。`,
+    { 返回值: { answerLength: answer.length }, 耗时ms: Date.now() - t0 },
   );
 
   return result;

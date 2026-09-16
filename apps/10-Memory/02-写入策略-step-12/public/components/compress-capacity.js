@@ -98,67 +98,116 @@
   };
 
   // ── 跨会话验证 + 记忆调取预览 面板（变体 7-E 用） ──
-  DemoUI.RecallPreviewPanel = function RecallPreviewPanel(props) {
+  // 拆成三个：WithMemory / WithoutMemory / UseRawJson
+  // - WithMemory：展示答案 + 拼进 prompt 的素材（默认展开）+ 完整 modelRequest / modelResponse（折叠）
+  // - WithoutMemory：展示答案 + 完整 modelRequest / modelResponse（折叠），没有素材那一栏
+  // - UseRawJson：给 seedResult 那块复用，亮出 /api/seed 返回的完整 JSON
+
+  // 通用 · 单一答案卡（顶部回答 + 底部折叠请求/响应）
+  function AnswerCard(props) {
     const r = props.result;
     const JsonBlock = DemoUI.JsonBlock;
     if (!r) return null;
-    const m = r.materials;
     return (
-      <div className="bg-white border rounded p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">跨会话验证 · 记忆被拼成 prompt + 大模型基于记忆说话</h3>
-          <span className="text-xs bg-purple-100 text-purple-900 px-2 py-0.5 rounded font-semibold">
-            SQLite 持久化 · 跨会话可读
-          </span>
+      <div className="space-y-3">
+        {/* 用户问的问题 */}
+        <div className="bg-gray-50 border-l-4 border-gray-400 rounded p-2 space-y-1">
+          <div className="text-xs font-semibold text-gray-700">用户在新会话里问：</div>
+          <div className="text-sm text-gray-800 font-mono">{r.userQuestion}</div>
         </div>
-
-        {/* 素材是否齐全的提示 */}
-        {r.warnings && r.warnings.length > 0 ? (
-          <div className="bg-yellow-50 border border-yellow-300 rounded p-2 text-xs text-yellow-900">
-            <b>提示（{r.warnings.length} 条）</b>：
-            <ul className="list-disc pl-5 mt-1 space-y-1">
-              {r.warnings.map(function (w, i) { return <li key={i}>{w}</li>; })}
-            </ul>
-          </div>
-        ) : null}
-
-        {/* 大模型生成的开场白 */}
-        {r.opening ? (
+        {/* 大模型基于素材生成的回答 */}
+        {r.answer ? (
           <div className="bg-blue-50 border border-blue-300 rounded p-3 space-y-1">
-            <div className="text-xs font-semibold text-blue-900">大模型基于记忆生成的开场白</div>
-            <pre className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{r.opening}</pre>
+            <div className="text-xs font-semibold text-blue-900">{props.answerLabel || "大模型基于记忆生成的回答"}</div>
+            <pre className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{r.answer}</pre>
           </div>
         ) : null}
-
-        {/* 拼进 prompt 的素材 */}
-        <details className="text-xs">
-          <summary className="cursor-pointer text-gray-700">📦 拼进 prompt 的素材（点展开看「召回链路」）</summary>
-          <div className="mt-2 space-y-2 pl-3 border-l-2 border-gray-300">
-            <div className="bg-gray-50 border rounded p-2">
-              <div className="font-semibold text-gray-800 mb-1">【1】综合层画像（user_profile_auto.summary）</div>
-              <pre className="text-xs font-mono whitespace-pre-wrap">{m.imageSummary || "（库里没有这条事实——先跑自动合并写入）"}</pre>
-            </div>
-            <div className="bg-gray-50 border rounded p-2">
-              <div className="font-semibold text-gray-800 mb-1">【2】对话原文（chat_session_v1.value）</div>
-              <pre className="text-xs font-mono whitespace-pre-wrap max-h-32 overflow-auto">{m.conversationOriginal || "（库里没有这条事实——先点「灌入示例」）"}</pre>
-            </div>
-            <div className="bg-gray-50 border rounded p-2">
-              <div className="font-semibold text-gray-800 mb-1">【3】对话摘要（chat_session_v1.summary）</div>
-              <pre className="text-xs font-mono whitespace-pre-wrap">{m.conversationSummary || "（没跑过 compressSession——先去 compress-session 页跑一次）"}</pre>
-            </div>
-          </div>
-        </details>
-
         {/* 发给大模型的完整 messages */}
         <details className="text-xs">
-          <summary className="cursor-pointer text-gray-700">📄 发给大模型的完整 messages（点展开看「system + user 长什么样」）</summary>
+          <summary className="cursor-pointer text-gray-700">📄 发给大模型的完整 messages（点展开看 system + user 长什么样）</summary>
           <div className="mt-2 space-y-2 pl-3 border-l-2 border-gray-300">
             <JsonBlock label="展开看 modelRequest 完整 JSON" data={r.modelRequest} />
-            <div className="text-gray-600">② 大模型返回的完整响应</div>
             <JsonBlock label="展开看 modelResponse 完整 JSON" data={r.modelResponse} />
           </div>
         </details>
       </div>
     );
+  }
+
+  DemoUI.RecallPreviewPanel = {
+    WithMemory: function WithMemoryPanel(props) {
+      const r = props.result;
+      if (!r) return null;
+      const m = r.materials;
+      const JsonBlock = DemoUI.JsonBlock;
+      return (
+        <section className="bg-white shadow rounded p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-800">调取预览（调记忆）· Agent 拿到素材后怎么答</h3>
+            <span className="text-xs bg-purple-100 text-purple-900 px-2 py-0.5 rounded font-semibold">
+              SQLite 持久化 · 跨会话可读
+            </span>
+          </div>
+
+          {/* 素材是否齐全的提示 */}
+          {r.warnings && r.warnings.length > 0 ? (
+            <div className="bg-yellow-50 border border-yellow-300 rounded p-2 text-xs text-yellow-900">
+              <b>提示（{r.warnings.length} 条）</b>：
+              <ul className="list-disc pl-5 mt-1 space-y-1">
+                {r.warnings.map(function (w, i) { return <li key={i}>{w}</li>; })}
+              </ul>
+            </div>
+          ) : null}
+
+          {/* 用户问题 + 答案 + 折叠的 modelRequest/modelResponse */}
+          <AnswerCard result={r} answerLabel="大模型基于记忆素材生成的回答（调记忆）" />
+
+          {/* 拼进 prompt 的素材 —— 默认展开 */}
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-gray-700">📦 拼进 prompt 的素材（默认展开，看 Agent 召回了什么）</div>
+            <div className="space-y-2 pl-3 border-l-2 border-gray-300">
+              <div className="bg-gray-50 border rounded p-2">
+                <div className="font-semibold text-gray-800 mb-1 text-xs">【1】综合层画像（user_profile_auto.summary）</div>
+                <pre className="text-xs font-mono whitespace-pre-wrap">{m.imageSummary || "（库里没有这条事实——先跑自动合并写入）"}</pre>
+              </div>
+              <div className="bg-gray-50 border rounded p-2">
+                <div className="font-semibold text-gray-800 mb-1 text-xs">【2】对话原文（chat_session_v1.value）</div>
+                <pre className="text-xs font-mono whitespace-pre-wrap max-h-32 overflow-auto">{m.conversationOriginal || "（库里没有这条事实——先点「灌入示例」）"}</pre>
+              </div>
+              <div className="bg-gray-50 border rounded p-2">
+                <div className="font-semibold text-gray-800 mb-1 text-xs">【3】对话摘要（chat_session_v1.summary）</div>
+                <pre className="text-xs font-mono whitespace-pre-wrap">{m.conversationSummary || "（没跑过 compressSession——先去 compress-session 页跑一次）"}</pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    },
+
+    WithoutMemory: function WithoutMemoryPanel(props) {
+      const r = props.result;
+      if (!r) return null;
+      return (
+        <section className="bg-white shadow rounded p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-800">对照组（不调记忆）· 没拿到素材时 Agent 怎么答</h3>
+            <span className="text-xs bg-gray-200 text-gray-800 px-2 py-0.5 rounded font-semibold">
+              对照组 · 不读库 · 不拼素材
+            </span>
+          </div>
+
+          <div className="bg-gray-50 border-l-4 border-gray-400 rounded p-2 text-xs text-gray-700">
+            <b>对照组说明</b>：跟上一组用<b>同一个 userQuestion</b>，但服务端只发 system + user(question) 给大模型，<b>不读库、不拼素材</b>。两个回答并排对照——同一道问题，记忆有没有用、差多少。
+          </div>
+
+          <AnswerCard result={r} answerLabel="大模型没拿到记忆时的回答（对照组）" />
+        </section>
+      );
+    },
+
+    UseRawJson: function UseRawJson(props) {
+      const JsonBlock = DemoUI.JsonBlock;
+      return <JsonBlock label="展开看种子返回的完整 JSON" data={props.data} />;
+    },
   };
 })();

@@ -25,10 +25,15 @@
     const { useState, useEffect } = React;
     const { StatusPill, EnvFooter, PageNav, LibraryPanel, RecallPreviewPanel } = window.DemoUI || {};
 
+    const DEFAULT_QUESTION = "下周上海分享会帮我再过一遍要点";
+
     function App() {
       const [env, setEnv] = useState(null);
       const [library, setLibrary] = useState([]);
-      const [previewResult, setPreviewResult] = useState(null);
+      const [seedResult, setSeedResult] = useState(null);
+      const [userQuestion, setUserQuestion] = useState(DEFAULT_QUESTION);
+      const [withMemory, setWithMemory] = useState(null);
+      const [withoutMemory, setWithoutMemory] = useState(null);
       const [busy, setBusy] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
@@ -67,19 +72,35 @@
       }
 
       async function step1Seed() {
-        await callApi("/api/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }, "seed");
-        await refreshLibrary();
-      }
-
-      async function step2RecallPreview() {
-        const r = await callApi("/api/recall-preview", {
+        const r = await callApi("/api/seed", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
-        }, "recall-preview");
+        }, "seed");
         if (r) {
-          setPreviewResult(r);
+          setSeedResult(r);
+          setWithMemory(null);
+          setWithoutMemory(null);
+          await refreshLibrary();
         }
+      }
+
+      async function step3RecallWithMemory() {
+        const r = await callApi("/api/recall-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: userQuestion }),
+        }, "recall-preview");
+        if (r) setWithMemory(r);
+      }
+
+      async function step3RecallWithoutMemory() {
+        const r = await callApi("/api/recall-preview-control", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: userQuestion }),
+        }, "recall-preview-control");
+        if (r) setWithoutMemory(r);
       }
 
       useEffect(function () {
@@ -99,23 +120,25 @@
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
               <p className="text-sm text-gray-700">
-                这个页面演示：<b>笔记 §0 验收第 7 条「跨会话验证：新开会话时 Agent 记得我的偏好」</b>——满足笔记 §7 设计原则 + 演示 SQLite 持久化（库里的画像 + 对话原文 + 对话摘要真实存在，重启服务后仍在）。前面三个 sub-page（整段摘要 / 多条画像 / 自动合并）都是「写入侧」，本步演示<b>「召回侧」</b>——把库里已有的素材拼成 prompt，调大模型生成基于记忆的开场白。
+                这个页面演示：<b>笔记 §0 验收第 7 条「跨会话验证：新开会话时 Agent 记得我的偏好」</b>——满足笔记 §7 设计原则 + 演示 SQLite 持久化（库里的画像 + 对话原文 + 对话摘要真实存在，重启服务后仍在）。前面三个 sub-page（整段摘要 / 多条画像 / 自动合并）都是「写入侧」，本步演示<b>「召回侧」</b>：把库里已有的素材拼进 prompt + 用户在新会话里问问题 + 大模型基于记忆回答。
               </p>
               <div className="text-xs text-gray-600">
-                <div className="font-semibold text-gray-700 mb-2">按顺序点 2 个按钮跑一遍：</div>
+                <div className="font-semibold text-gray-700 mb-2">按顺序点 3 步跑一遍：</div>
                 <ol className="list-decimal pl-5 space-y-1">
-                  <li><b>点「灌入示例」</b>——库里写 5 条零碎事实 + 1 段对话原文（chat_session_v1）+ （若已跑过自动合并）user_profile_auto</li>
-                  <li><b>点「调取预览」</b>——服务端（POST /api/recall-preview）拉库里的素材 → 拼成 messages → 调大模型 → 返完整素材 + modelRequest + modelResponse + 大模型生成的开场白</li>
+                  <li><b>点「灌入示例」</b>——库里写 5 条零碎事实（user_works_at / team_uses_python / prefer_remote / food_preference / hobby）+ 1 段 12 轮对话原文（chat_session_v1，主题：5/22 上海技术分享会）</li>
+                  <li><b>改下面输入框</b>——这是「新会话里用户问的问题」（默认：下周上海分享会帮我再过一遍要点）</li>
+                  <li><b>两个按钮按顺序点</b>：先「调取预览（调记忆）」看 Agent 拿到素材后怎么答；再「对照组（不调记忆）」看没素材时 Agent 怎么答；并排对比</li>
                 </ol>
-                <p className="text-gray-500 mt-2">提示：本页只演示「召回 + 拼 prompt + 大模型说话」。素材不全时（warnings）会提示先到对应 sub-page 跑一次（如先在 compress-session 跑一次拿到 chat_session_v1.summary；先在 auto-merge 跑一次拿到 user_profile_auto）。</p>
+                <p className="text-gray-500 mt-2">提示：本页只演示「召回 + 拼 prompt + 大模型回答」。素材不全时（warnings）会提示先到对应 sub-page 跑一次（如先在 compress-session 跑一次拿到 chat_session_v1.summary；先在 auto-merge 跑一次拿到 user_profile_auto）。</p>
               </div>
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
                 <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
                   <li><b>记忆召回链路可见</b>：页面亮出「实际拼进 prompt 的素材」是哪几层（综合层画像 / 对话原文 / 对话摘要）——学习者看一眼就知道 Agent 召回时拿到了什么。</li>
+                  <li><b>用户问题 → 拼 prompt → 大模型回答</b>：跟笔记 §0 验收第 7 条原文「新开会话时 Agent 记得我的偏好」对齐——本步加了「新会话用户问什么」这一跳，对照实验核心。</li>
                   <li><b>SQLite 持久化</b>：库的素材写在 <code>apps/10-Memory/02-写入策略-step-12/data/facts.db</code>；服务关掉再起，user_profile_auto / chat_session_v1 还在——这就是「新开会话 Agent 记得我的偏好」的工程基础。</li>
-                  <li><b>大模型基于记忆说话</b>：调大模型时只传从库里读到的素材（system + user）；大模型返一段开场白——证明「记忆真的进了 prompt + 大模型真的基于它说话」。</li>
                   <li><b>三种召回粒度</b>：综合层（画像，一次拿全）/ 对话原文（事实层细节）/ 对话摘要（事实层 + 压缩）——按场景选合适的层（笔记 §7 「事实 vs 综合」分工）。</li>
+                  <li><b>对照（调记忆 vs 不调记忆）</b>：并排两个回答——同一道问题，一个有素材、一个没素材；Agent 的回答差距就是「记忆有没有用」的直接证据。</li>
                 </ul>
               </div>
             </section>
@@ -129,25 +152,86 @@
                 <button onClick={step1Seed} disabled={busy} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">灌入示例</button>
               </div>
 
+              <div className="border-l-4 border-yellow-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 2 步：用户在新会话里问的问题</div>
+                <div className="text-xs text-gray-600">这就是「跨会话」的关键——上一秒发生过的事（灌入示例）这一秒已经被「关掉」了，新会话里只能看到这个问题。</div>
+                <textarea
+                  value={userQuestion}
+                  onChange={function (e) { setUserQuestion(e.target.value); }}
+                  rows={2}
+                  className="w-full text-sm border border-gray-300 rounded p-2 font-mono"
+                  placeholder="例如：下周上海分享会帮我再过一遍要点"
+                />
+              </div>
+
               <div className="border-l-4 border-purple-400 pl-3 space-y-2">
-                <div className="text-sm font-semibold text-gray-800">第 2 步：调取预览（POST /api/recall-preview）</div>
-                <div className="text-xs text-gray-600">服务端拉 user_profile_auto 的 summary + chat_session_v1 的 value + summary，拼成 messages，调大模型生成「基于记忆跟你说话的第一句」。</div>
-                <button onClick={step2RecallPreview} disabled={busy} className="bg-purple-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">调取预览</button>
+                <div className="text-sm font-semibold text-gray-800">第 3 步：调取预览（点两个按钮并排对照）</div>
+                <div className="text-xs text-gray-600">
+                  <b>调记忆</b>：POST /api/recall-preview → 服务端拉 user_profile_auto 的 summary + chat_session_v1 的 value + summary，拼成 messages，调大模型回答用户问题。<br />
+                  <b>不调记忆</b>：POST /api/recall-preview-control → 服务端不读库，只发 system + user(question) 给大模型，看没素材时怎么答。
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={step3RecallWithMemory} disabled={busy} className="bg-purple-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">调取预览（调记忆）</button>
+                  <button onClick={step3RecallWithoutMemory} disabled={busy} className="bg-gray-700 text-white text-sm px-3 py-1 rounded disabled:opacity-50">对照组（不调记忆）</button>
+                </div>
               </div>
 
               {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
             </section>
 
-            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
-              <h2 className="text-sm font-semibold text-gray-800">结果</h2>
-              {previewResult ? <RecallPreviewPanel result={previewResult} /> : null}
-              {library.length > 0 ? (
+            {seedResult ? (
+              <section id="seed-result" className="bg-white shadow rounded p-4 space-y-3">
+                <h2 className="text-sm font-semibold text-gray-800">第 1 步结果 · 灌入的示例长这样</h2>
+                <div className="text-xs text-gray-600">库里现在有 <b>{seedResult.seeded.length}</b> 条（5 条零碎事实 + 1 段对话原文 chat_session_v1）。</div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">5 条零碎事实（语义记忆）</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {seedResult.scatteredFacts.map(function (f) {
+                      return (
+                        <div key={f.key} className="border border-gray-200 rounded p-2 bg-gray-50">
+                          <div className="font-mono text-xs font-semibold text-gray-800">{f.key}</div>
+                          <div className="text-sm text-gray-700">{f.value}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">1 段对话原文（chat_session_v1，存进 value 字段）</div>
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-gray-50 border rounded p-2 max-h-72 overflow-auto">{seedResult.conversationText}</pre>
+                  <div className="bg-yellow-50 border-l-2 border-yellow-400 px-2 py-1 text-xs text-gray-700">
+                    <b>隐藏细节</b>：用户在第 7 轮提过<b>「我对花生过敏」</b>——摘要可能漏掉这个（笔记 §7 有损代价）。这是对照实验的一个关键差异点。
+                  </div>
+                </div>
+
                 <details className="text-xs">
-                  <summary className="cursor-pointer text-sm font-semibold text-gray-800">📚 库里现在有什么（点展开看每条事实的完整字段 + summary 压缩）</summary>
-                  <div className="mt-2 pl-3 border-l-2 border-gray-300">
-                    <LibraryPanel library={library} />
+                  <summary className="cursor-pointer text-gray-700">📦 种子返回的完整 JSON（点展开）</summary>
+                  <div className="mt-2">
+                    <RecallPreviewPanel.UseRawJson data={seedResult} />
                   </div>
                 </details>
+              </section>
+            ) : null}
+
+            <section id="output" className="space-y-4">
+              {withMemory ? (
+                <RecallPreviewPanel.WithMemory result={withMemory} />
+              ) : null}
+              {withoutMemory ? (
+                <RecallPreviewPanel.WithoutMemory result={withoutMemory} />
+              ) : null}
+
+              {library.length > 0 ? (
+                <section className="bg-white shadow rounded p-4 space-y-2">
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-sm font-semibold text-gray-800">📚 库里现在有什么（点展开看每条事实的完整字段 + summary 压缩）</summary>
+                    <div className="mt-2 pl-3 border-l-2 border-gray-300">
+                      <LibraryPanel library={library} />
+                    </div>
+                  </details>
+                </section>
               ) : null}
             </section>
           </main>
