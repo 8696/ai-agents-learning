@@ -135,6 +135,7 @@
 | `yarn app:10-02-write-policy-step-9` | `50112` | 模块 10 · 02 · 写入策略 step-9：第 1 关「写入时机」完整版——三种触发方式（热路径 eager · 同步 / 后台异步 background · 紧接 recall 可能召回不到 / 会话结束 session-end · close 才结算）；本步核心 `lib/flow/trigger-write.ts` 按 mode 决定流水线何时跑；调真模型抽候选（extract-facts.ts 复用 step-7）+ 直接 kvSet 写库 |
 | `yarn app:10-02-write-policy-step-10` | `50113` | 写入策略 · 第十步 · 过期（第 6 关）——三种过期方式（6-A 永不过期 / 6-B 自带有效期 · 时间快进后 scanForExpired 归档 + 过期 ≠ 删除 / 6-C 衰减权重 = last_used_at + use_count + computeDecayWeight 排序 + 命中后更新）；本步核心 `lib/flow/expiration.ts`；model 调一次给每条事实打 importance + reasoning（lib/flow/score-importance.ts 「谁判、代码判」分工的「模型判」一端） |
 | `yarn app:10-02-write-policy-step-11` | `50114` | 写入策略 · 第十一步 · 过期变体 6-D「被新事实挤掉」——给事实加 `expires_with` 关联键（指明这条事实在「另一条事实写入时自动归档」）；本步核心 `lib/flow/expire-linked.ts` 单独成文件；点「我 2027 年要从北大毕业」→ 自动挤掉「在读学校」；让需求 6 验收 ② 终于能演示 |
+| `yarn app:10-02-write-policy-step-12` | `50115` | 写入策略 · 第十二步 · 压缩与摘要（第 7 关）——整段 → 会话摘要 + 多条 → 画像都做（单轮 → 事实 step-1 已做）；本步核心 `lib/flow/compress.ts` 单独成文件；调真模型做两次调用（system 明确「只从原文抽，不要参考已生成的摘要」）；页面把「跟大模型的完整交互」全亮出来（modelRequest / modelResponse / 压缩比 / 漏掉的细节） |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

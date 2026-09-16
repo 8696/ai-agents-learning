@@ -344,6 +344,14 @@
       "port": 50114,
       "url": "http://127.0.0.1:50114/",
       "autoPort": false
+    },
+    {
+      "name": "10-02-write-policy-step-12",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:10-02-write-policy-step-12"],
+      "port": 50115,
+      "url": "http://127.0.0.1:50115/",
+      "autoPort": false
     }
   ]
 }

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>压缩与摘要 · 第十二步 · 总览</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="components/layout.js"></script>
+  <script type="text/babel" src="components/page-nav.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      useEffect(function () {
+        fetch("/health")
+          .then(function (r) { return r.json(); })
+          .then(function (data) { setEnv(data); })
+          .catch(function () {});
+      }, []);
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              压缩与摘要（Compaction） · 第十二步（step-12） · 总览
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页是<b>第 7 关「压缩与摘要」</b>总览。笔记 §6 写了<b>三个层次</b>：单轮 → 事实（step-1 已做）/ 整段 → 会话摘要（本步）/ 多条零碎 → 画像（本步）。<b>step-12</b> 把后两个层次做齐（整段 → 会话摘要 + 多条 → 画像合并），并在页面里把「跟大模型的完整交互」全亮出来——你能看到发给大模型的 messages / 大模型返回的完整 response / 压缩比 / 漏掉的细节。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点下方 sub-page 卡片 → 进入对应演示页（两个 sub-page 各管一个层次，互不依赖）。</li>
+                <li>每个演示页里都是 2 个控件：灌入示例（5 条零碎事 + 1 段对话原文）→ 跑对应压缩。</li>
+                <li>每次跑完一步，页面会亮出完整流程——原文、发给大模型的 messages、模型返回、压缩比、漏掉的细节（原文里你提了「花生过敏」，摘要可能漏）。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>三个层次的压缩比</b>：单轮 → 事实最大（几百字 → 几十字）；整段 → 摘要中等（12 轮对话 → 5 行摘要）；多条 → 画像最小（5 条零碎 → 1 段连贯画像）。</li>
+                  <li><b>有损代价</b>：摘要可能漏掉「我对花生过敏」这种细节——演示页会标 ❌ 提示。</li>
+                  <li><b>摘要不拿摘要再压</b>：本步 system prompt 明确告诉模型「只从原文抽，不要参考已生成的摘要」——每次都从原始素材重新生成，避免「摘要的摘要会漂移」。</li>
+                  <li><b>库里要有 summary 列</b>：step-12 新增 `summary TEXT` 列存「压缩结果」，让「原文」和「摘要」并存（原文在 value 字段，摘要进 summary 字段），方便后续需要时查回原文。</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <h2 className="text-sm font-semibold text-gray-800 mb-3">本步 sub-page（点卡片进入）</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="pages/compress-session.html" className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold bg-green-100 text-green-900">第二层</span>
+                    <span className="text-sm font-semibold text-gray-800">整段 → 会话摘要</span>
+                  </div>
+                  <p className="text-xs text-gray-600">处理<b>对话侧</b>（聊天日志）。点 2 个按钮：灌入示例 → 压缩对话原文（亮出 modelRequest/modelResponse/压缩比/漏掉的细节）。摘要写回 chat_session_v1.summary。</p>
+                  <p className="text-xs text-gray-400 mt-2">入口：<span className="font-mono">pages/compress-session.html</span> · 端点 POST /api/compress-session</p>
+                </a>
+                <a href="pages/compress-image.html" className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold bg-purple-100 text-purple-900">第三层</span>
+                    <span className="text-sm font-semibold text-gray-800">多条 → 画像</span>
+                  </div>
+                  <p className="text-xs text-gray-600">处理<b>记忆侧</b>（库里已有事实）。点 2 个按钮：灌入示例 → 合并 5 条零碎事实成画像（同样亮出完整交互）。画像写进 user_profile_v1.summary。</p>
+                  <p className="text-xs text-gray-400 mt-2">入口：<span className="font-mono">pages/compress-image.html</span> · 端点 POST /api/compress-image</p>
+                </a>
+                <a href="pages/auto-merge.html" className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold bg-yellow-100 text-yellow-900">变体 7-D</span>
+                    <span className="text-sm font-semibold text-gray-800">库容量上限 + 自动合并</span>
+                  </div>
+                  <p className="text-xs text-gray-600">满足笔记 §7「库有容量上限，逼着系统定期做减法」（Letta / MemGPT）。写新事实时自动检查，超阈自动合并到 user_profile_auto。本步用按钮触发代替 cron 定时。</p>
+                  <p className="text-xs text-gray-400 mt-2">入口：<span className="font-mono">pages/auto-merge.html</span> · 端点 POST /api/auto-merge/write + GET /api/capacity + POST /api/capacity/config</p>
+                </a>
+                <a href="pages/recall-preview.html" className="block bg-white shadow rounded p-4 hover:bg-gray-50 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs px-2 py-0.5 rounded font-semibold bg-purple-100 text-purple-900">变体 7-E</span>
+                    <span className="text-sm font-semibold text-gray-800">跨会话验证 + 记忆调取预览</span>
+                  </div>
+                  <p className="text-xs text-gray-600">满足笔记 §0 验收第 7 条「新开会话时 Agent 记得我的偏好」。从库里拉画像 + 对话原文 + 对话摘要拼成 prompt，调大模型生成基于记忆的开场白。演示 SQLite 持久化 + 召回链路可见。</p>
+                  <p className="text-xs text-gray-400 mt-2">入口：<span className="font-mono">pages/recall-preview.html</span> · 端点 POST /api/recall-preview</p>
+                </a>
+              </div>
+              <p className="text-xs text-gray-600 mt-3">四个 sub-page 各自独立——三个「写入侧」（整段摘要 / 多条画像 / 自动合并）+ 一个「召回侧」（调取预览）。手动合并写到 user_profile_v1，自动合并写到 user_profile_auto，key 不同互不干扰。</p>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-800">笔记 §6 三个层次 · 本步覆盖整段 + 多条（单轮已由 step-1 锁）</h2>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b">
+                    <th className="py-1 pr-2">层次</th>
+                    <th className="py-1 pr-2">做法</th>
+                    <th className="py-1 pr-2">本步</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">单轮 → 事实</td>
+                    <td className="py-1 pr-2 text-gray-600">调模型从一句话抽 0~N 条结构化候选事实（key / value / type / confidence / source / validUntil 六个字段）</td>
+                    <td className="py-1 pr-2"><span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded font-semibold">step-1 已做（本步不重复演示）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">整段 → 会话摘要</td>
+                    <td className="py-1 pr-2 text-gray-600">调模型把一段对话（多轮）压成 ≤5 行摘要，存到事实的 summary 字段；压缩比可观察</td>
+                    <td className="py-1 pr-2"><span className="bg-green-100 text-green-900 text-xs px-2 py-0.5 rounded font-semibold">step-12 已做（compressSession 调大模型）</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2 font-mono">多条 → 画像</td>
+                    <td className="py-1 pr-2 text-gray-600">调模型把 N 条零碎事实合并成一段连贯的「用户画像」；合并后库里条数下降</td>
+                    <td className="py-1 pr-2"><span className="bg-green-100 text-green-900 text-xs px-2 py-0.5 rounded font-semibold">step-12 已做（mergeFactsToImage 调大模型）</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="text-xs text-gray-600">step-12 同时演示「有损代价」（原文里你提到「花生过敏」，摘要里漏了 → 演示页用 ❌ 红字标出来）和「摘要不拿摘要再压」（system prompt 明确告诉模型「只从原文抽」）。</p>
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50115} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

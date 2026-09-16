@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>多条 → 画像 · 第十二步 · 第三层</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/compress-shared.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    const { StatusPill, EnvFooter, PageNav, LibraryPanel, ImageResultPanel } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [seedData, setSeedData] = useState(null);
+      const [imageResult, setImageResult] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [errorMsg, setErrorMsg] = useState("");
+
+      function setPill(status) {
+        const el = document.getElementById("status-pill");
+        if (!el) return;
+        const map = { idle: "⏸ 待连接", running: "🔄 请求中", done: "✅ 完成", error: "❌ 错误" };
+        el.textContent = map[status] || map.idle;
+      }
+
+      async function callApi(path, options, label) {
+        setBusy(true); setErrorMsg(""); setPill("running");
+        try {
+          const res = await fetch(path, options);
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setErrorMsg((data && data.explain) || ("HTTP " + res.status));
+            setPill("error");
+            return null;
+          }
+          setPill("done");
+          return data;
+        } catch (err) {
+          setErrorMsg(label + " 失败：" + String(err));
+          setPill("error");
+          return null;
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function step1Seed() {
+        const data = await callApi("/api/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }, "seed");
+        if (data) setSeedData(data);
+      }
+
+      async function step2MergeImage() {
+        if (!seedData) { setErrorMsg("先点第 1 步灌入示例数据"); return; }
+        const keys = seedData.scatteredFacts.map(function (f) { return f.key; });
+        const data = await callApi("/api/compress-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keys: keys }),
+        }, "compress-image");
+        if (data) setImageResult(data);
+      }
+
+      const currentLibrary = imageResult ? imageResult.currentLibrary : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              多条零碎事实 → 用户画像 — 第 7 关第三层（压缩与摘要）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="compress-image" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                这个页面演示：<b>笔记 §6 第三层「多条零碎事实 → 用户画像」</b>——把库里多条零碎事实合并成一段连贯的用户画像。处理的是<b>记忆侧</b>，跟「整段 → 会话摘要」处理<b>对话侧</b>是两件不同的事，两者独立、可单独跑。
+              </p>
+              <div className="text-xs text-gray-600">
+                <div className="font-semibold text-gray-700 mb-2">按顺序点 2 个按钮跑一遍：</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><b>点「灌入示例」</b>——库里写 5 条零碎事实（user_works_at / team_uses_python / prefer_remote / food_preference / hobby，本步用来合并）+ 1 段对话原文（顺便写，本页面不用）</li>
+                  <li><b>点「合并零碎事实 → 用户画像」</b>——调大模型（POST /api/compress-image）把 5 条零碎事合并成一段连贯画像，页面同样亮出「给模型的 N 条事实 + 模型返回的画像 + modelRequest/modelResponse」</li>
+                </ol>
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>第三层管记忆侧</b>：处理的是库里已有的零碎事实，不是对话原文；触发条件是「库里条数 / 字数超过容量上限」。本步演示手动触发（点按钮），笔记本 §7 说的「库有容量上限逼着系统定期做减法」是设计原则。</li>
+                  <li><b>压缩比最小</b>：5 条零碎事共约 80 字 → 画像约 200~300 字（画像要写得更连贯，所以通常字数比原始几条的总和略多——压缩比小于 1 时是「浓缩为可读段」而不是「压缩字节数」）。</li>
+                  <li><b>库里条数下降 vs 容量上限</b>：合并后原 5 条还在库（保留事实粒度），但新生成 1 条 user_profile_v1 事实承载画像——后续召回可一次性拿全画像，无需召回 5 条逐条拼。</li>
+                  <li><b>从原始事实合并</b>：system prompt 明确告诉模型「只从这 N 条事实里提取」，不是拿上一次的摘要再压。</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">按顺序点下面的按钮</h2>
+
+              <div className="border-l-4 border-blue-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 1 步：灌入示例</div>
+                <div className="text-xs text-gray-600">库里写：5 条零碎事实（user_works_at / team_uses_python / prefer_remote / food_preference / hobby，本步用来合并）+ 1 段对话原文（顺便写，本页面不用）。</div>
+                <button onClick={step1Seed} disabled={busy} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">灌入示例</button>
+              </div>
+
+              <div className="border-l-4 border-purple-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 2 步：合并零碎事实 → 用户画像</div>
+                <div className="text-xs text-gray-600">调大模型（POST /api/compress-image）把 5 条零碎事实合并成一段连贯的用户画像（2-4 段）。画像写进 user_profile_v1 事实的 summary 字段（演示「N 条零碎事实 + 合并画像并存」）。</div>
+                <button onClick={step2MergeImage} disabled={busy || !seedData} className="bg-purple-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">合并零碎事实 → 用户画像</button>
+              </div>
+
+              {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-800">点完按钮后的结果（每个结果都能展开看完整过程）</h2>
+
+              {seedData ? (
+                <div className="bg-blue-50 border border-blue-300 rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-blue-900">第 1 步结果：库里有 {seedData.seeded.length} 条事实</div>
+                  <details>
+                    <summary className="cursor-pointer text-xs text-blue-900">📄 5 条零碎事实（演示用 · 点展开）</summary>
+                    <pre className="mt-2 bg-white border rounded p-3 text-xs whitespace-pre-wrap leading-relaxed">{seedData.scatteredFacts.map(function (f) { return "- " + f.key + ": " + f.value; }).join("\n")}</pre>
+                  </details>
+                </div>
+              ) : null}
+
+              {imageResult ? <ImageResultPanel result={imageResult} /> : null}
+
+              {currentLibrary && currentLibrary.length > 0 ? (
+                <details open className="text-xs">
+                  <summary className="cursor-pointer text-sm font-semibold text-gray-800">📚 库里现在有什么（点展开看每条事实的完整字段 + summary 压缩结果）</summary>
+                  <div className="mt-2 pl-3 border-l-2 border-gray-300">
+                    <LibraryPanel library={currentLibrary} />
+                  </div>
+                </details>
+              ) : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50115} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>整段 → 会话摘要 · 第十二步 · 第二层</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/compress-shared.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    const { StatusPill, EnvFooter, PageNav, LibraryPanel, SessionResultPanel } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [seedData, setSeedData] = useState(null);
+      const [sessionResult, setSessionResult] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [errorMsg, setErrorMsg] = useState("");
+
+      function setPill(status) {
+        const el = document.getElementById("status-pill");
+        if (!el) return;
+        const map = { idle: "⏸ 待连接", running: "🔄 请求中", done: "✅ 完成", error: "❌ 错误" };
+        el.textContent = map[status] || map.idle;
+      }
+
+      async function callApi(path, options, label) {
+        setBusy(true); setErrorMsg(""); setPill("running");
+        try {
+          const res = await fetch(path, options);
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setErrorMsg((data && data.explain) || ("HTTP " + res.status));
+            setPill("error");
+            return null;
+          }
+          setPill("done");
+          return data;
+        } catch (err) {
+          setErrorMsg(label + " 失败：" + String(err));
+          setPill("error");
+          return null;
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function step1Seed() {
+        const data = await callApi("/api/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }, "seed");
+        if (data) setSeedData(data);
+      }
+
+      async function step2CompressSession() {
+        if (!seedData) { setErrorMsg("先点第 1 步灌入示例数据"); return; }
+        const data = await callApi("/api/compress-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: seedData.conversationText }),
+        }, "compress-session");
+        if (data) setSessionResult(data);
+      }
+
+      const currentLibrary = sessionResult ? sessionResult.currentLibrary : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              整段 → 会话摘要 — 第 7 关第二层（压缩与摘要）
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="compress-session" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                这个页面演示：<b>笔记 §6 第二层「整段 → 会话摘要」</b>——把一段对话原文（一长串聊天记录）压成 ≤5 行摘要。处理的是<b>对话侧</b>，跟「多条 → 画像」处理<b>记忆侧</b>是两件不同的事，两者独立、可单独跑。
+              </p>
+              <div className="text-xs text-gray-600">
+                <div className="font-semibold text-gray-700 mb-2">按顺序点 2 个按钮跑一遍：</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><b>点「灌入示例」</b>——库里写 1 段 12 轮对话原文（存进 chat_session_v1 事实）+ 5 条零碎事实（这一步会顺便写，但本页面只用对话原文）</li>
+                  <li><b>点「压缩对话原文 → 会话摘要」</b>——调大模型把对话压成 ≤5 行摘要，页面亮出「发给大模型的 messages / 返回的 response / 压缩比 / 漏掉的细节」</li>
+                </ol>
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>第二层管对话侧</b>：处理的是聊天日志（一长串），不是库里已有事实；触发条件是「会话结束」或「对话过长」。</li>
+                  <li><b>压缩比中等</b>：12 轮对话原文约 350 字 → 摘要约 80 字，压缩比 ≈ 4（比单轮 → 事实小，比多条 → 画像大）。</li>
+                  <li><b>有损代价</b>：原文里你提到「对花生过敏」（第 7 轮），摘要可能漏掉 → 页面用 ❌ 红字标出来「这条细节在摘要里丢失了」。</li>
+                  <li><b>摘要不拿摘要再压</b>：system prompt 明确告诉模型「只从原文抽」，每次都从原始素材重新生成。反复压缩会漂移。</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">按顺序点下面的按钮</h2>
+
+              <div className="border-l-4 border-blue-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 1 步：灌入示例</div>
+                <div className="text-xs text-gray-600">库里写：1 段 12 轮对话原文（存进 chat_session_v1 事实的 value 字段，本步用来压）+ 5 条零碎事实（顺便写，本页面不用，但下一步 / 下个 sub-page 会用）。</div>
+                <button onClick={step1Seed} disabled={busy} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">灌入示例</button>
+              </div>
+
+              <div className="border-l-4 border-green-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 2 步：压缩对话原文 → 会话摘要</div>
+                <div className="text-xs text-gray-600">调大模型（POST /api/compress-session）把对话原文压成 5 行内摘要。摘要写回 chat_session_v1 的 summary 字段（演示「原文 + 摘要并存」）。</div>
+                <button onClick={step2CompressSession} disabled={busy || !seedData} className="bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">压缩对话原文 → 会话摘要</button>
+              </div>
+
+              {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-800">点完按钮后的结果（每个结果都能展开看完整过程）</h2>
+
+              {seedData ? (
+                <div className="bg-blue-50 border border-blue-300 rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-blue-900">第 1 步结果：库里有 {seedData.seeded.length} 条事实</div>
+                  <details>
+                    <summary className="cursor-pointer text-xs text-blue-900">📄 原始对话原文（12 轮 · 演示用 · 点展开）</summary>
+                    <pre className="mt-2 bg-white border rounded p-3 text-xs whitespace-pre-wrap leading-relaxed">{seedData.conversationText}</pre>
+                  </details>
+                </div>
+              ) : null}
+
+              {sessionResult ? <SessionResultPanel result={sessionResult} /> : null}
+
+              {currentLibrary && currentLibrary.length > 0 ? (
+                <details open className="text-xs">
+                  <summary className="cursor-pointer text-sm font-semibold text-gray-800">📚 库里现在有什么（点展开看每条事实的完整字段 + summary 压缩结果）</summary>
+                  <div className="mt-2 pl-3 border-l-2 border-gray-300">
+                    <LibraryPanel library={currentLibrary} />
+                  </div>
+                </details>
+              ) : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50115} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

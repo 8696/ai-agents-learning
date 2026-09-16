@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>库容量上限 + 自动合并 · 第十二步 · 变体 7-D</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/compress-shared.js"></script>
+  <script type="text/babel" src="../components/compress-capacity.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav, CapacityBar, AutoMergePanel, LibraryPanel } = window.DemoUI || {};
+
+    // 预置几条「新事实」——演示库满了之后继续写时怎么自动合并
+    const PRESET_FACTS = [
+      { key: "fact_proj_x",     value: "我在做 LLM Agent 学习项目" },
+      { key: "fact_tool_y",     value: "工具用 Claude + Cursor" },
+      { key: "fact_team_z",     value: "团队用 TypeScript 全栈" },
+      { key: "fact_hobby_photo", value: "我周末喜欢摄影" },
+      { key: "fact_pet",        value: "家里有一只猫叫小灰" },
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [threshold, setThreshold] = useState(null);
+      const [thresholdInput, setThresholdInput] = useState("");
+      const [customKey, setCustomKey] = useState("");
+      const [customValue, setCustomValue] = useState("");
+      const [capacityState, setCapacityState] = useState(null);
+      const [writeResult, setWriteResult] = useState(null);
+      const [library, setLibrary] = useState([]);
+      const [busy, setBusy] = useState(false);
+      const [errorMsg, setErrorMsg] = useState("");
+
+      function setPill(status) {
+        const el = document.getElementById("status-pill");
+        if (!el) return;
+        const map = { idle: "⏸ 待连接", running: "🔄 请求中", done: "✅ 完成", error: "❌ 错误" };
+        el.textContent = map[status] || map.idle;
+      }
+
+      async function callApi(path, options, label) {
+        setBusy(true); setErrorMsg(""); setPill("running");
+        try {
+          const res = await fetch(path, options);
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setErrorMsg((data && data.explain) || ("HTTP " + res.status));
+            setPill("error");
+            return null;
+          }
+          setPill("done");
+          return data;
+        } catch (err) {
+          setErrorMsg(label + " 失败：" + String(err));
+          setPill("error");
+          return null;
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function refreshAll() {
+        // 用服务端返的 CapacityState（threshold + currentChars + factCount + scatterCount + exceeded）
+        // —— 不在本地重算（避免「未归档事实的字符数」算法漂移）
+        const cap = await callApi("/api/capacity", {}, "capacity");
+        if (cap) {
+          setThreshold(cap.threshold);
+          setThresholdInput(cap.threshold == null ? "" : String(cap.threshold));
+          setCapacityState(cap);
+        }
+        const libRes = await fetch("/api/library?userId=default");
+        const libData = await libRes.json().catch(function () { return []; });
+        setLibrary(Array.isArray(libData) ? libData : []);
+      }
+
+      async function step1Seed() {
+        await callApi("/api/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }, "seed");
+        await refreshAll();
+      }
+
+      async function step2SetThreshold(value) {
+        const num = value === "" || value == null ? null : Number(value);
+        const r = await callApi("/api/capacity/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thresholdChars: Number.isFinite(num) ? num : null }),
+        }, "capacity-config");
+        if (r) {
+          setThreshold(r.threshold);
+          await refreshAll();
+        }
+      }
+
+      async function step3Write(fact) {
+        const r = await callApi("/api/auto-merge/write", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: fact.key, value: { value: fact.value, type: "语义记忆", confidence: 0.9, source: "用户在多轮对话中提到" } }),
+        }, "auto-merge-write");
+        if (r) {
+          setWriteResult(r);
+          await refreshAll();
+        }
+      }
+
+      async function step3WriteCustom() {
+        const k = customKey.trim();
+        const v = customValue.trim();
+        if (!k || !v) {
+          setErrorMsg("key 和 value 都要填");
+          return;
+        }
+        await step3Write({ key: k, value: v });
+        // 写完清空输入框（让用户继续填下一条）
+        setCustomKey("");
+        setCustomValue("");
+      }
+
+      // 页面挂载时：先把默认阈值 1200 字符落库（满足学习者「默认一个容量上限」），再 refresh
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(function (data) { setEnv(data); }).catch(function () {});
+        (async function () {
+          // 设默认阈值（学习者 5 条设计 #1：默认一个容量上限；1200 字符）
+          await callApi("/api/capacity/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ thresholdChars: 1200 }),
+          }, "capacity-config-default");
+          await refreshAll();
+        })();
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              库容量上限 + 自动合并 — 第 7 关变体 7-D
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="auto-merge" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                这个页面演示：<b>笔记 §7 变体 7-D「库容量上限 + 自动触发合并」</b>——满足笔记「库有容量上限，逼着系统定期做减法」的设计原则（Letta / MemGPT）。前面两个 sub-page（整段摘要 / 多条画像）都是「手动触发合并」，本步演示<b>写入时自动检查容量，超阈值自动合并</b>——本步用「按钮触发」代替「cron 定时」，同一 demo + 同一端口 + 同一 `lib/flow/` 核心（按 §5.3.14「改动很小」例外）。
+              </p>
+              <div className="text-xs text-gray-600">
+                <div className="font-semibold text-gray-700 mb-2">按顺序点 3 步按钮跑一遍：</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><b>点「灌入示例」</b>——库里先有 5 条零碎事实（每条约 12 字）+ 1 段对话原文（chat_session_v1 不参与合并）</li>
+                  <li><b>设阈值</b>（如「60」字符）——把上限调低一点，下次写入就会触发自动合并</li>
+                  <li><b>点「写新事实」</b>（5 个预置按钮任选）——服务端先写事实 → 检查容量 → 超阈自动合并零碎事实到 user_profile_auto</li>
+                </ol>
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>库有上限才不会被撑爆</b>：笔记 §7 提到 Letta 核心记忆块有容量上限，写满了必须先压缩才能再写——本步演示这条设计原则的代码实现。</li>
+                  <li><b>自动合并的入口在写入侧</b>：本步把「检查容量」放在「写新事实」后面——`POST /api/auto-merge/write` 一站式完成「写 + 检查 + 必要时合并」。生产里这一步可以是同步阻塞或异步队列。</li>
+                  <li><b>合并产物 key 不参与再合并</b>：user_profile_auto / chat_session_* 这种合并产物不进「散乱事实」列表，避免「把画像再合并成画像」的死循环。</li>
+                  <li><b>手动 vs 自动</b>：手动合并（前面两个 sub-page）由用户决定什么时候合并；自动合并由容量阈值决定——两条路径可同时存在（本 demo 里手动合并写到 user_profile_v1，自动合并写到 user_profile_auto，key 不同互不干扰）。</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">按顺序点下面的按钮 / 输入</h2>
+
+              <div className="border-l-4 border-blue-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 1 步：灌入示例</div>
+                <div className="text-xs text-gray-600">库里先写 5 条零碎事（每条约 12 字）+ 1 段 12 轮对话原文（chat_session_v1，不参与合并）。</div>
+                <button onClick={step1Seed} disabled={busy} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">灌入示例</button>
+              </div>
+
+              <div className="border-l-4 border-yellow-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 2 步：设容量上限（库总字符数 ≥ N 时自动合并）</div>
+                <div className="text-xs text-gray-600">留空 = 不限（不触发自动合并）。填数字 = 设阈值（POST /api/capacity/config 落 KV key = _capacity_threshold_chars）。</div>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="留空 = 不限"
+                    value={thresholdInput}
+                    onChange={function (e) { setThresholdInput(e.target.value); }}
+                    className="border rounded px-2 py-1 text-sm w-32"
+                  />
+                  <button onClick={function () { step2SetThreshold(thresholdInput); }} disabled={busy} className="bg-yellow-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">
+                    落库
+                  </button>
+                  <button onClick={function () { setThresholdInput(""); step2SetThreshold(null); }} disabled={busy} className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50">
+                    清除（不限）
+                  </button>
+                </div>
+                <div className="text-xs text-gray-600">当前阈值：<b>{threshold == null ? "不限" : threshold + " 字符"}</b></div>
+              </div>
+
+              <div className="border-l-4 border-purple-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 3 步：写新事实 → 自动检查容量</div>
+                <div className="text-xs text-gray-600">
+                  点下面任一按钮 / 自己填 key + value → 服务端（POST /api/auto-merge/write）写事实 → 检查容量 → 超阈自动合并到 user_profile_auto。
+                  <b className="text-orange-800">注意：同 key 写入 = 覆盖（库字符不会涨，因为新 value 替换旧 value）；要触发合并请用<b>新 key</b>。</b>
+                </div>
+
+                {/* 自由输入框（不固定 5 个预置 key，可以随便填） */}
+                <div className="bg-purple-50 border border-purple-200 rounded p-2 space-y-2">
+                  <div className="text-xs font-semibold text-purple-900">自由输入（key + value 都自己填）</div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="key（事实名，比如 fact_my_hobby）"
+                      value={customKey}
+                      onChange={function (e) { setCustomKey(e.target.value); }}
+                      className="border rounded px-2 py-1 text-sm w-56"
+                    />
+                    <input
+                      type="text"
+                      placeholder="value（事实内容，比如 我周末喜欢摄影）"
+                      value={customValue}
+                      onChange={function (e) { setCustomValue(e.target.value); }}
+                      className="border rounded px-2 py-1 text-sm flex-1 min-w-48"
+                    />
+                    <button onClick={step3WriteCustom} disabled={busy || !customKey.trim() || !customValue.trim()} className="bg-purple-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">
+                      写入
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5 个预置按钮（演示一键触发；保留作快捷方式） */}
+                <div className="text-xs text-gray-500">快捷预置：</div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_FACTS.map(function (f) {
+                    return (
+                      <button key={f.key} onClick={function () { step3Write(f); }} disabled={busy} className="bg-purple-600 text-white text-xs px-3 py-1 rounded disabled:opacity-50">
+                        + 写 {f.key}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-800">结果（每次写入后自动刷新）</h2>
+              <CapacityBar state={capacityState} />
+              {writeResult ? <AutoMergePanel result={writeResult} /> : null}
+              {library.length > 0 ? (
+                <details open className="text-xs">
+                  <summary className="cursor-pointer text-sm font-semibold text-gray-800">📚 库里现在有什么（点展开看每条事实的完整字段 + summary 压缩结果）</summary>
+                  <div className="mt-2 pl-3 border-l-2 border-gray-300">
+                    <LibraryPanel library={library} />
+                  </div>
+                </details>
+              ) : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50115} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
