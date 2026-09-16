@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>8-B 审计表 + 一键撤回 · 第十三步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/audit-card.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav, AuditRowCard } = window.DemoUI || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [seedResult, setSeedResult] = useState(null);
+      const [audits, setAudits] = useState([]);
+      const [library, setLibrary] = useState({});
+      const [writeNewKey, setWriteNewKey] = useState("user_works_at");
+      const [writeNewValue, setWriteNewValue] = useState("我在阿里云做前端开发");
+      const [writeConfidence, setWriteConfidence] = useState(0.95);
+      const [lastWrite, setLastWrite] = useState(null);
+      const [lastRollback, setLastRollback] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [errorMsg, setErrorMsg] = useState("");
+
+      function setPill(status) {
+        const el = document.getElementById("status-pill");
+        if (!el) return;
+        const map = { idle: "⏸ 待连接", running: "🔄 请求中", done: "✅ 完成", error: "❌ 错误" };
+        el.textContent = map[status] || map.idle;
+      }
+
+      async function callApi(path, options, label) {
+        setBusy(true); setErrorMsg(""); setPill("running");
+        try {
+          const res = await fetch(path, options);
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setErrorMsg((data && data.explain) || ("HTTP " + res.status));
+            setPill("error");
+            return null;
+          }
+          setPill("done");
+          return data;
+        } catch (err) {
+          setErrorMsg(label + " 失败：" + String(err));
+          setPill("error");
+          return null;
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function refreshAll() {
+        const [a, l] = await Promise.all([
+          fetch("/api/audit?userId=default").then(function (r) { return r.json(); }),
+          fetch("/api/library?userId=default").then(function (r) { return r.json(); }),
+        ]);
+        setAudits(Array.isArray(a) ? a : []);
+        setLibrary(l || {});
+      }
+
+      async function step1Seed() {
+        const r = await callApi("/api/seed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "fresh" }),
+        }, "seed");
+        if (r) {
+          setSeedResult(r);
+          setLastWrite(null);
+          setLastRollback(null);
+          await refreshAll();
+        }
+      }
+
+      async function step2Write() {
+        if (!writeNewKey.trim()) { setErrorMsg("key 不能为空"); return; }
+        const r = await callApi("/api/audit/write", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: writeNewKey.trim(),
+            value: { value: writeNewValue, type: "语义记忆", confidence: writeConfidence, source: "step-13 audit demo" },
+            confidence: writeConfidence,
+            sourceSessionId: "demo-session",
+            sourceMessageIndex: audits.length,
+          }),
+        }, "audit/write");
+        if (r) {
+          setLastWrite(r);
+          await refreshAll();
+        }
+      }
+
+      async function step4Rollback(auditId) {
+        const r = await callApi("/api/audit/rollback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auditId: auditId }),
+        }, "audit/rollback");
+        if (r) {
+          setLastRollback(r);
+          await refreshAll();
+        }
+      }
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(function (data) { setEnv(data); }).catch(function () {});
+        refreshAll();
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              审计表 + 一键撤回 — 第 8 关变体 8-B
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="audit" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                这个页面演示：<b>笔记 §0 需求 8 验收 ②「审计表 7 字段」+ ③「一键撤回」</b>。每次写入都先打一行 <code>audit_log</code>（不动事实库之前），撤回就是按 <code>action</code> 反向恢复事实库 + 标 <code>audit.rolled_back_at</code>。这样库变化可观测可逆。
+              </p>
+              <div className="text-xs text-gray-600">
+                <div className="font-semibold text-gray-700 mb-2">按顺序点下面的步骤跑一遍：</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><b>点「灌入示例」</b>——清三张表 + 灌 4 条零碎事实（user_works_at / team_uses_python / prefer_remote / hobby）；清表是为了看 audit_log 从空开始长</li>
+                  <li><b>写一条新事实</b>：默认 key=user_works_at 已有 → action 应该是 UPDATE；改 key=全名新事实 → action 是 NEW。两个都试一遍看 7 字段差异</li>
+                  <li><b>看审计表</b>：每行 7 字段（时间 / 动作 / 键 / 旧值 / 新值 / 来源会话+消息序号 / 置信度）+ 状态徽标 + 「撤回这次写入」按钮</li>
+                  <li><b>点「撤回」</b>：按 action 反向恢复事实库（NEW 覆盖回旧值 / UPDATE 覆盖回旧值 / DELETE 恢复旧值）；audit.rolled_back_at 标上</li>
+                </ol>
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>写之前先留痕</b>：recordAuditWrite 的顺序是 <code>查旧值 → 决定 action → kvSet → recordAudit</code>；即使后两步抛错，audit_log 也没漏；这才是「可观测可逆」。</li>
+                  <li><b>按 action 反向恢复</b>：NEW（old_value=null）→ 把库里的新值删回；UPDATE/DELETE → 把 old_value 写回去；MERGE/NOOP/BLOCKED → 没库动作可逆，只标 rolled_back_at。</li>
+                  <li><b>库里被改过则拒绝盲撤回</b>：rollbackAuditById 拿库里当前值跟 audit.new_value 比对，不一致就拒绝——盲撤回会把别人后来的合法更新一起吃掉。</li>
+                  <li><b>7 字段</b>：created_at / action / key / old_value / new_value / source_session_id + source_message_index / confidence；MERGE 留扩展位（演示里只走 NEW/UPDATE/DELETE）。</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">按顺序点下面 4 步</h2>
+
+              <div className="border-l-4 border-blue-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 1 步：灌入示例（清三张表 + 写 4 条零碎事实）</div>
+                <button onClick={step1Seed} disabled={busy} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">灌入示例</button>
+                {seedResult ? <div className="text-xs text-gray-600">已种 <b>{seedResult.seeded.length}</b> 条事实（fresh 模式同时清了 audit_log / idempotency_keys）</div> : null}
+              </div>
+
+              <div className="border-l-4 border-yellow-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 2 步：写一条新事实（产生 audit 行）</div>
+                <div className="text-xs text-gray-600">
+                  改 key / value 试两种路径：<b>key 已存在</b>（默认 user_works_at）→ action=UPDATE；<b>key 全新的</b>（比如 custom_key_1）→ action=NEW
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">key（要写入的键）</div>
+                    <input type="text" value={writeNewKey} onChange={function (e) { setWriteNewKey(e.target.value); }} className="w-full text-sm border border-gray-300 rounded p-1 font-mono" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">value（要写入的内容）</div>
+                    <input type="text" value={writeNewValue} onChange={function (e) { setWriteNewValue(e.target.value); }} className="w-full text-sm border border-gray-300 rounded p-1 font-mono" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">confidence（0~1）</div>
+                    <input type="number" step="0.05" min="0" max="1" value={writeConfidence} onChange={function (e) { setWriteConfidence(Number(e.target.value)); }} className="w-full text-sm border border-gray-300 rounded p-1 font-mono" />
+                  </div>
+                </div>
+                <button onClick={step2Write} disabled={busy} className="bg-yellow-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">写这条事实</button>
+                {lastWrite ? (
+                  <div className="text-xs text-gray-600">
+                    本次结果：<b>action = {lastWrite.action}</b>，<b>audit_id = #{lastWrite.audit.id}</b>，{lastWrite.previousValue === null ? "库里之前没有这条" : "覆盖前值 = " + JSON.stringify(lastWrite.previousValue)}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="border-l-4 border-green-400 pl-3 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">第 3 步：审计表（每行 7 字段 + 状态 + 撤回按钮）</div>
+                <div className="text-xs text-gray-600">共 <b>{audits.length}</b> 条 audit 记录（含已撤回）。每行点「撤回这次写入」会按 action 反向恢复事实库。</div>
+                <button onClick={refreshAll} disabled={busy} className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50">刷新审计表 + 库</button>
+              </div>
+
+              {lastRollback ? (
+                <div className="border-l-4 border-red-400 pl-3 space-y-1">
+                  <div className="text-sm font-semibold text-gray-800">最近一次撤回</div>
+                  <div className="text-xs text-gray-600">
+                    <b>audit_id = #{lastRollback.auditId}</b>，<b>{lastRollback.success ? "✅ 成功" : "❌ 拒绝"}</b>，{lastRollback.reason}
+                    {lastRollback.restoredValue !== null ? "，恢复后值 = " + JSON.stringify(lastRollback.restoredValue) : ""}
+                  </div>
+                </div>
+              ) : null}
+
+              {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
+            </section>
+
+            <section id="output" className="space-y-4">
+              {audits.length === 0 ? (
+                <section className="bg-white shadow rounded p-4 min-h-[80px] text-xs text-gray-500">
+                  审计表目前是空的。先点第 1 步「灌入示例」+ 第 2 步「写一条新事实」就会出 audit 行。
+                </section>
+              ) : (
+                <div className="space-y-2">
+                  {audits.map(function (row) {
+                    return (
+                      <AuditRowCard key={row.id} row={row} onRollback={step4Rollback} busy={busy} />
+                    );
+                  })}
+                </div>
+              )}
+
+              {Object.keys(library).length > 0 ? (
+                <section className="bg-white shadow rounded p-4 space-y-2">
+                  <h2 className="text-sm font-semibold text-gray-800">📚 库里现在的事实（每次撤回后会变）</h2>
+                  <div className="space-y-1">
+                    {Object.keys(library).map(function (k) {
+                      return (
+                        <div key={k} className="text-xs">
+                          <span className="font-mono font-semibold text-gray-700">{k}</span>
+                          <span className="text-gray-500"> = </span>
+                          <span className="font-mono break-all">{JSON.stringify(library[k])}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50116} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -128,7 +128,8 @@
     "app:10-02-write-policy-step-9": "PORT=50112 tsx 10-Memory/02-写入策略-step-9/server.ts",
     "app:10-02-write-policy-step-10": "PORT=50113 tsx 10-Memory/02-写入策略-step-10/server.ts",
     "app:10-02-write-policy-step-11": "PORT=50114 tsx 10-Memory/02-写入策略-step-11/server.ts",
-    "app:10-02-write-policy-step-12": "PORT=50115 tsx 10-Memory/02-写入策略-step-12/server.ts"
+    "app:10-02-write-policy-step-12": "PORT=50115 tsx 10-Memory/02-写入策略-step-12/server.ts",
+    "app:10-02-write-policy-step-13": "PORT=50116 tsx 10-Memory/02-写入策略-step-13/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

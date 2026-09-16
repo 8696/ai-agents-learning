@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>8-C 写入幂等 · 第十三步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/idempotent-card.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav, IdempotentResultCard } = window.DemoUI || {};
+
+    function genUuid() {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+      return "idem-" + Math.random().toString(36).slice(2, 10) + "-" + Date.now();
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [idempotencyKey, setIdempotencyKey] = useState(genUuid());
+      const [writeKey, setWriteKey] = useState("custom_idem_key");
+      const [writeValue, setWriteValue] = useState("幂等测试值");
+      const [library, setLibrary] = useState({});
+      const [lastResult, setLastResult] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [errorMsg, setErrorMsg] = useState("");
+      const [log, setLog] = useState([]);
+
+      function setPill(status) {
+        const el = document.getElementById("status-pill");
+        if (!el) return;
+        const map = { idle: "⏸ 待连接", running: "🔄 请求中", done: "✅ 完成", error: "❌ 错误" };
+        el.textContent = map[status] || map.idle;
+      }
+
+      function appendLog(line) {
+        setLog(function (prev) { return prev.concat([{ ts: new Date().toISOString(), text: line }]); });
+      }
+
+      async function refreshLibrary() {
+        const l = await fetch("/api/library?userId=default").then(function (r) { return r.json(); });
+        setLibrary(l || {});
+      }
+
+      async function doWrite(label) {
+        if (!idempotencyKey.trim()) { setErrorMsg("idempotencyKey 不能为空"); return; }
+        if (!writeKey.trim()) { setErrorMsg("key 不能为空"); return; }
+        setBusy(true); setErrorMsg(""); setPill("running");
+        try {
+          const res = await fetch("/api/idempotent/write", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idempotencyKey: idempotencyKey.trim(),
+              key: writeKey.trim(),
+              value: { value: writeValue, type: "语义记忆", confidence: 0.9, source: "step-13 idempotent demo" },
+              confidence: 0.9,
+              sourceSessionId: "demo-session",
+              sourceMessageIndex: 0,
+            }),
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            setErrorMsg(data.explain || ("HTTP " + res.status));
+            setPill("error");
+            return;
+          }
+          setLastResult(data);
+          appendLog(label + " → isDuplicate = " + String(data.isDuplicate) + (data.audit ? "，audit_id = #" + data.audit.id : "，无 audit") + "，库里 custom_idem_key 长度 = " + (data.response.factValue ? JSON.stringify(data.response.factValue).length : 0));
+          setPill("done");
+          await refreshLibrary();
+        } catch (err) {
+          setErrorMsg("请求失败：" + String(err));
+          setPill("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function newKey() {
+        const k = genUuid();
+        setIdempotencyKey(k);
+        appendLog("换了新 idempotencyKey = " + k.slice(0, 8) + "…");
+      }
+
+      useEffect(function () {
+        fetch("/health").then(function (r) { return r.json(); }).then(function (data) { setEnv(data); }).catch(function () {});
+        refreshLibrary();
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              写入幂等 — 第 8 关变体 8-C
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+          <PageNav current="idempotent" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                这个页面演示：<b>笔记 §0 需求 8 验收 ④「写入幂等」</b>。客户端传 <code>idempotencyKey</code>，服务端查 <code>idempotency_keys</code> 表；同 key 重复 → 直接返前次 response（isDuplicate=true）；换新 key → 真写 + 留底。这是网络重试 / 用户连点「提交」不重复扣款不重复入库的工程基础。
+              </p>
+              <div className="text-xs text-gray-600">
+                <div className="font-semibold text-gray-700 mb-2">按顺序点下面的按钮看幂等：</div>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li><b>点「首次写入（用当前 key）」</b>——库会多一条 + 响应 audit_id + isDuplicate=false</li>
+                  <li><b>再点一次「再次提交（同 key）」</b>——库不变，响应里 isDuplicate=true + audit_id 跟前一次一样 + 提示「命中幂等」</li>
+                  <li><b>点「换 key 重写」</b>——生成新 UUID 写入，库会多一条（不同 key）+ 响应 isDuplicate=false</li>
+                </ol>
+              </div>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                  <li><b>同 key 重复只生效一次</b>：服务端 <code>writeWithIdempotency</code> 查 <code>idempotency_keys</code> 表；命中 → 返前次 response；不调 <code>kvSet</code>、不写 <code>audit_log</code>、不再插 <code>idempotency_keys</code> 行。</li>
+                  <li><b>user 隔离</b>：idempotencyKey 是 user 隔离的——别的 user 用同 key 当成自己的当下来，会被拒（避免多用户互踩）。</li>
+                  <li><b>request_hash 防"同 key 不同请求"</b>：client 用了同 key 但 payload 改了 → server 给 warning（不报错，按原 response 返）。生产里通常 409 Conflict，本演示按 warning 走。</li>
+                  <li><b>不是去重、不是缓存</b>：幂等键只跟"同一次操作"绑定；事实库本身的去重是 step-7 那一关（4-A 字面 / 4-C 嵌入 / 4-D 包含关系），跟 8-C 是两件不同的事。</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-800">按顺序点下面 3 步</h2>
+
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500">idempotencyKey（自动生成 UUID；可改）</div>
+                <input type="text" value={idempotencyKey} onChange={function (e) { setIdempotencyKey(e.target.value); }} className="w-full text-xs border border-gray-300 rounded p-1 font-mono" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">key（要写入的键）</div>
+                    <input type="text" value={writeKey} onChange={function (e) { setWriteKey(e.target.value); }} className="w-full text-sm border border-gray-300 rounded p-1 font-mono" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">value（要写入的内容）</div>
+                    <input type="text" value={writeValue} onChange={function (e) { setWriteValue(e.target.value); }} className="w-full text-sm border border-gray-300 rounded p-1 font-mono" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={function () { doWrite("首次写入"); }} disabled={busy} className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">首次写入（用当前 key）</button>
+                  <button onClick={function () { doWrite("再提交一次"); }} disabled={busy} className="bg-yellow-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">再提交一次（同 key）</button>
+                  <button onClick={newKey} disabled={busy} className="bg-green-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50">换 key 重写</button>
+                </div>
+                {errorMsg ? <div className="text-xs text-red-700">{errorMsg}</div> : null}
+              </div>
+
+              {log.length > 0 ? (
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold text-gray-700">本会话操作流水</div>
+                  <div className="bg-gray-50 border rounded p-2 space-y-1 text-xs font-mono">
+                    {log.map(function (l, i) {
+                      return <div key={i}><span className="text-gray-500">[{i + 1}]</span> {l.ts.slice(11, 19)} · {l.text}</div>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section id="output" className="space-y-4">
+              {lastResult ? <IdempotentResultCard result={lastResult} /> : (
+                <section className="bg-white shadow rounded p-4 min-h-[80px] text-xs text-gray-500">
+                  第一次点「首次写入」后，结果会出现在这里。
+                </section>
+              )}
+
+              {Object.keys(library).length > 0 ? (
+                <section className="bg-white shadow rounded p-4 space-y-2">
+                  <h2 className="text-sm font-semibold text-gray-800">📚 库里现在的事实（每次写入后会变）</h2>
+                  <div className="space-y-1">
+                    {Object.keys(library).map(function (k) {
+                      return (
+                        <div key={k} className="text-xs">
+                          <span className="font-mono font-semibold text-gray-700">{k}</span>
+                          <span className="text-gray-500"> = </span>
+                          <span className="font-mono break-all">{JSON.stringify(library[k])}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="text-xs text-gray-500">注意：重复点「再提交一次」库里这条不会重复出现；只有「首次写入」或「换 key」才会让条数变。</div>
+                </section>
+              ) : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} port={50116} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
