@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>状态机 · 线性 FAQ · 走一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/pipeline.js"></script>
+  <script type="text/babel" src="/components/transform-card.js"></script>
+  <script type="text/babel" src="/components/current-state.js"></script>
+  <script type="text/babel" src="/components/history-list.js"></script>
+  <script type="text/babel" src="/components/chat-pane.js"></script>
+  <script type="text/babel" src="/components/desk-pane.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, ChatPane, DeskPane } = window.DemoUI;
+    const { getJson, postJson } = window.DemoUtils;
+
+    const HINT = {
+      rewrite: "处理中：改写问题",
+      retrieve: "处理中：检索",
+      generate: "处理中：生成答案",
+      okEnd: "",
+    };
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [errorText, setErrorText] = useState("");
+      const [draft, setDraft] = useState("退货要几天到账");
+      const [messages, setMessages] = useState([]);
+      const [processingHint, setProcessingHint] = useState("");
+      const [state, setState] = useState(null);
+      const [graph, setGraph] = useState(null);
+      const [transition, setTransition] = useState(null);
+      const [created, setCreated] = useState(null);
+      const [history, setHistory] = useState([]);
+      const [lastCall, setLastCall] = useState(null);
+
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) {
+            setEnv(body);
+            setStatus("ok");
+          })
+          .catch(function () {
+            setStatus("error");
+          });
+      }, []);
+
+      function fail(err) {
+        setStatus("error");
+        setErrorText(err.message || String(err));
+      }
+
+      async function onSend() {
+        setStatus("loading");
+        setErrorText("");
+        const payload = { userQuestion: draft };
+        try {
+          const body = await postJson("/api/faq/start", payload);
+          setLastCall({ method: "POST", url: "/api/faq/start", request: payload, response: body });
+          setState(body.state);
+          setGraph(body.graph);
+          setCreated({ state: body.state });
+          setTransition(null);
+          setMessages([{ role: "user", text: body.state.userQuestion }]);
+          setProcessingHint(HINT[body.state.currentNode] || "");
+          setHistory([
+            {
+              title: "工单创建 " + body.state.ticketId,
+              detail: "进图，停在 rewrite。还没有走一步。",
+              read: { userQuestion: body.state.userQuestion },
+              wrote: { currentNode: body.state.currentNode },
+            },
+          ]);
+          setStatus("ok");
+        } catch (err) {
+          setLastCall({ method: "POST", url: "/api/faq/start", request: payload, response: err.body || null });
+          fail(err);
+        }
+      }
+
+      async function onStep() {
+        if (!state) return;
+        setStatus("loading");
+        setErrorText("");
+        const payload = { state: state };
+        try {
+          const body = await postJson("/api/faq/step", payload);
+          setLastCall({ method: "POST", url: "/api/faq/step", request: payload, response: body });
+          setState(body.state);
+          setGraph(body.graph);
+          setCreated(null);
+          setTransition(body.transition);
+          setProcessingHint(HINT[body.state.currentNode] || "");
+          setHistory(function (prev) {
+            return prev.concat([
+              {
+                title: "第 " + prev.length + " 步　" + body.transition.from + " → " + body.transition.to,
+                detail: "条件：" + body.transition.condition,
+                read: body.transition.read,
+                wrote: body.transition.wrote,
+              },
+            ]);
+          });
+          if (body.state.currentNode === "okEnd" && body.state.replyDraft) {
+            setMessages(function (prev) {
+              return prev.concat([{ role: "assistant", text: body.state.replyDraft }]);
+            });
+          }
+          setStatus("ok");
+        } catch (err) {
+          setLastCall({ method: "POST", url: "/api/faq/step", request: payload, response: err.body || null });
+          fail(err);
+        }
+      }
+
+      async function onForceError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+        } catch (err) {
+          setLastCall({ method: "GET", url: "/api/force-error", request: {}, response: err.body || null });
+          fail(err);
+        }
+      }
+
+      function onReset() {
+        setErrorText("");
+        setMessages([]);
+        setProcessingHint("");
+        setState(null);
+        setGraph(null);
+        setTransition(null);
+        setCreated(null);
+        setHistory([]);
+        setLastCall(null);
+        setDraft("退货要几天到账");
+        setStatus("ok");
+      }
+
+      const loading = status === "loading";
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              状态机（State Machine）· 线性 FAQ · 走一步才算一步
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="linear" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <div className="grid lg:grid-cols-2 gap-4">
+              <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+                <ChatPane
+                  draft={draft}
+                  messages={messages}
+                  processingHint={processingHint}
+                  locked={Boolean(state)}
+                  loading={loading}
+                  onDraftChange={setDraft}
+                  onSend={onSend}
+                  onReset={onReset}
+                />
+              </section>
+              <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+                <DeskPane
+                  state={state}
+                  graph={graph}
+                  transition={transition}
+                  created={created}
+                  history={history}
+                  lastCall={lastCall}
+                  errorText={errorText}
+                  loading={loading}
+                  onStep={onStep}
+                  onForceError={onForceError}
+                />
+              </section>
+            </div>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

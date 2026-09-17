@@ -137,6 +137,10 @@
 | `yarn app:10-02-write-policy-step-11` | `50114` | 写入策略 · 第十一步 · 过期变体 6-D「被新事实挤掉」——给事实加 `expires_with` 关联键（指明这条事实在「另一条事实写入时自动归档」）；本步核心 `lib/flow/expire-linked.ts` 单独成文件；点「我 2027 年要从北大毕业」→ 自动挤掉「在读学校」；让需求 6 验收 ② 终于能演示 |
 | `yarn app:10-02-write-policy-step-12` | `50115` | 写入策略 · 第十二步 · 压缩与摘要（第 7 关）——整段 → 会话摘要 + 多条 → 画像都做（单轮 → 事实 step-1 已做）；本步核心 `lib/flow/compress.ts` 单独成文件；调真模型做两次调用（system 明确「只从原文抽，不要参考已生成的摘要」）；页面把「跟大模型的完整交互」全亮出来（modelRequest / modelResponse / 压缩比 / 漏掉的细节） |
 | `yarn app:10-02-write-policy-step-13` | `50116` | 写入策略 · 第十三步 · 写入安全与审计（第 8 关）——三个 sub-page：8-A 投毒拦截（POST /api/poison/check 调大模型判「这条输入是不是想改规则 / 注入指令」/ category: rule_change / instruction_injection / role_override / pii_collect / safe）、8-B 审计表 + 一键撤回（POST /api/audit/write + GET /api/audit + POST /api/audit/rollback，按 action 恢复事实库并标 rolled_back_at）、8-C 写入幂等（同 idempotencyKey 连发两次 → 库里只多一条 + 返 previousResponse）；本步核心 `lib/flow/safety.ts` 单独成文件；调真模型 1 次（投毒判定）/ 审计 + 幂等为本地 SQL；复用 step-12 的 `lib/db.ts` KV 抽象 + 新增 `audit_log` + `idempotency_keys` 两表 |
+| `yarn app:11-01-state-machine-step-1` | `50117` | 模块 11 · 01 · 状态机 step-1：七页一口（线性 FAQ / 七个对象 / 条件路由 / 循环回边 / 非法转移 / 节点失败 / 并行汇合）；本地计算，不调大模型 |
+| （口不回收 · 原 step-2 已并入 step-1 `/pages/objects.html`） | `50118` | 不再单独启动 |
+| （口不回收 · 原 step-3 已并入 step-1 `/pages/routing.html`） | `50119` | 不再单独启动 |
+| （口不回收 · 原 step-4 已并入 step-1 `/pages/loop.html`） | `50120` | 不再单独启动；下一可用口 `50121` |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

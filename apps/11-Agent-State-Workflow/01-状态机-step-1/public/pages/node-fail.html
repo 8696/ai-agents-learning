@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>状态机 · 节点失败</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="/components/cafe-layout.js"></script>
+  <script type="text/babel" src="/components/cafe-pipeline.js"></script>
+  <script type="text/babel" src="/components/cafe-transform-card.js"></script>
+  <script type="text/babel" src="/components/cafe-current-state.js"></script>
+  <script type="text/babel" src="/components/history-list.js"></script>
+  <script type="text/babel" src="/components/cafe-chat-pane.js"></script>
+  <script type="text/babel" src="/components/cafe-desk-pane.js"></script>
+  <script type="text/babel" src="/components/object-board.js"></script>
+  <script type="text/babel" src="/components/path-compare.js"></script>
+  <script type="text/babel" src="/components/cafe-page-config.js"></script>
+  <script type="text/babel" src="/components/cafe-app.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, CafePlayground } = window.DemoUI;
+    const { getJson } = window.DemoUtils;
+    const CHECK_DEMO_IDS = 'id="controls" id="output"';
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) {
+            setEnv(body);
+            setStatus("ok");
+          })
+          .catch(function () {
+            setStatus("error");
+          });
+      }, []);
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              状态机（State Machine）· 节点失败：写 lastError 走失败边，不把图摔死
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="nodeFail" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="nodeFail" />
+            <CafePlayground page="nodeFail" status={status} onStatus={setStatus} />
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

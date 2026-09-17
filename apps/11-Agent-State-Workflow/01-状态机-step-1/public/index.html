@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>状态机 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI;
+    const { getJson } = window.DemoUtils;
+
+    function Overview() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) {
+            setEnv(body);
+            setStatus("ok");
+          })
+          .catch(function () {
+            setStatus("error");
+          });
+      }, []);
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              状态机（State Machine）· 总览 · 七页一口
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本演示由 2026-09-17 学习者要求，把原来的 step-1～step-4 合并进这一份 step-1，随后补上非法转移、节点失败、并行汇合。一个端口、三张图（线性 FAQ + 咖啡店主图 + 并行拿铁）、七个教学页。不调大模型，不用 LangGraph。
+              </p>
+              <p className="text-xs text-gray-600">
+                端口 50117 · 本地计算 · 不调 LLM · 原 50118 / 50119 / 50120 已并入，口不回收
+              </p>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  Agent 的一步 = 一次状态转移（State Transition）。前面几页看走一步、对象、路由、回边、非法转移、节点失败。这一页看图上两条臂同时出发，只合并自己改的字段。
+                </div>
+              </div>
+            </section>
+            <section className="grid gap-3 md:grid-cols-2">
+              <a href="/pages/linear.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">① 线性 FAQ · 走一步</div>
+                <p className="text-xs text-gray-700">改写 → 检索 → 生成。三次走一步才出回复。看见节点、边、当前整份状态。</p>
+                <p className="text-xs text-gray-500">端点：POST /api/faq/start · POST /api/faq/step</p>
+              </a>
+              <a href="/pages/objects.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">② 七个对象</div>
+                <p className="text-xs text-gray-700">对着这一杯咖啡点开：状态 / 节点 / 边 / 条件路由 / 状态转移 / 图 / 调度器。真实字段 + 伪代码。</p>
+                <p className="text-xs text-gray-500">端点：POST /api/cafe/start · POST /api/cafe/step</p>
+              </a>
+              <a href="/pages/routing.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">③ 条件路由</div>
+                <p className="text-xs text-gray-700">热拿铁走热饮、冰美式走冰饮、抹茶走进失败终止。图没变、路径变了。漏网必须有边。</p>
+                <p className="text-xs text-gray-500">端点：同上，各自一次请求对照路径</p>
+              </a>
+              <a href="/pages/loop.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">④ 循环回边</div>
+                <p className="text-xs text-gray-700">做坏的热拿铁第 1、2 次回到制作站，第 3 次走进失败终止。次数写在 retryCount。</p>
+                <p className="text-xs text-gray-500">端点：同上；对照普通热拿铁一次出餐</p>
+              </a>
+              <a href="/pages/illegal.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">⑤ 非法转移</div>
+                <p className="text-xs text-gray-700">点单后故意跳到出餐。serve 不在 takeOrder 的出边名单里，调度器拦住，写入 lastError，走进失败终止。HTTP 仍是 200。</p>
+                <p className="text-xs text-gray-500">端点：POST /api/cafe/step（body.forceIllegalNext）对照 GET /api/force-error</p>
+              </a>
+              <a href="/pages/node-fail.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">⑥ 节点失败</div>
+                <p className="text-xs text-gray-700">热饮机坏了：制作站写 lastError，立刻走失败边，retryCount 仍是 0。对照做坏的热拿铁会回到本站。HTTP 仍是 200。</p>
+                <p className="text-xs text-gray-500">端点：POST /api/cafe/start · POST /api/cafe/step；对照 GET /api/force-error</p>
+              </a>
+              <a href="/pages/parallel.html" className="bg-white shadow rounded p-4 space-y-2 hover:bg-blue-50">
+                <div className="text-sm font-semibold">⑦ 并行汇合</div>
+                <p className="text-xs text-gray-700">浓缩和打奶同时做。合得对只合并自己的字段；合错的那杯把另一臂盖掉。两边都回来才组装。</p>
+                <p className="text-xs text-gray-500">端点：POST /api/parallel/start · POST /api/parallel/step</p>
+              </a>
+            </section>
+            <section id="controls" className="hidden">
+              <span>（总览页无控件；从上方七页点进去）</span>
+            </section>
+            <section id="output" className="hidden">
+              <span>（总览页无输出）</span>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<Overview />);
+  </script>
+</body>
+</html>
