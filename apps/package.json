@@ -130,7 +130,13 @@
     "app:10-02-write-policy-step-11": "PORT=50114 tsx 10-Memory/02-写入策略-step-11/server.ts",
     "app:10-02-write-policy-step-12": "PORT=50115 tsx 10-Memory/02-写入策略-step-12/server.ts",
     "app:10-02-write-policy-step-13": "PORT=50116 tsx 10-Memory/02-写入策略-step-13/server.ts",
-    "app:11-01-state-machine-step-1": "PORT=50117 tsx 11-Agent-State-Workflow/01-状态机-step-1/server.ts"
+    "app:11-01-state-machine-step-1": "PORT=50117 tsx 11-Agent-State-Workflow/01-状态机-step-1/server.ts",
+    "app:11-02-checkpoint-durable-resume-step-1": "PORT=50121 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/server.ts",
+    "app:11-02-checkpoint-durable-resume-step-2": "PORT=50122 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-2/server.ts",
+    "app:11-02-checkpoint-durable-resume-step-3": "PORT=50123 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/server.ts",
+    "app:11-02-checkpoint-durable-resume-step-4": "PORT=50124 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/server.ts",
+    "app:11-02-checkpoint-durable-resume-step-5": "PORT=50125 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-5/server.ts",
+    "app:11-02-checkpoint-durable-resume-step-6": "PORT=50126 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-6/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 从磁盘恢复</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-resume.js"></script>
+  <script type="text/babel" src="/components/output-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, Controls, OutputBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [drinkName, setDrinkName] = useState("热拿铁");
+      const [runId, setRunId] = useState("");
+      const [last, setLast] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [inMemory, setInMemory] = useState(false);
+      const [showKillCommands, setShowKillCommands] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) {
+            setEnv(body);
+          })
+          .catch(function () {
+            setEnv({ port: 50121, provider: null, model: null, hasKey: false });
+          });
+      }, []);
+
+      async function run(action) {
+        setBusy(true);
+        setStatus("loading");
+        setError(null);
+        try {
+          const body = await action();
+          setLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({
+            message: err.message,
+            status: err.status,
+            code: err.code,
+          });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const currentState = last && ((last.checkpoint && last.checkpoint.state) || last.state);
+      const stopped =
+        Boolean(last && last.stopped) ||
+        Boolean(currentState && currentState.currentNode === "okEnd");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              检查点（Checkpoint） · 从磁盘恢复（Durable Resume）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="resume" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="resume" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <Controls
+                drinkName={drinkName}
+                runId={runId}
+                busy={busy}
+                stopped={stopped}
+                inMemory={inMemory}
+                onDrinkNameChange={setDrinkName}
+                onStart={function () {
+                  run(function () {
+                    return DemoUtils.startRun(drinkName);
+                  }).then(function (body) {
+                    if (body && body.runId) {
+                      setRunId(body.runId);
+                      setInMemory(true);
+                    }
+                  });
+                }}
+                onStep={function () {
+                  run(function () {
+                    return DemoUtils.stepOnce(runId);
+                  });
+                }}
+                onRead={function () {
+                  run(function () {
+                    return DemoUtils.readCheckpoint(runId);
+                  });
+                }}
+                onForget={function () {
+                  run(function () {
+                    return DemoUtils.forgetRun(runId);
+                  }).then(function (body) {
+                    if (body) setInMemory(Boolean(body.inMemoryAfter));
+                  });
+                }}
+                onResume={function () {
+                  run(function () {
+                    return DemoUtils.resumeRun(runId);
+                  }).then(function (body) {
+                    if (body) setInMemory(Boolean(body.inMemoryAfter));
+                  });
+                }}
+                onShowKillCommands={function () {
+                  setShowKillCommands(function (prev) { return !prev; });
+                }}
+              />
+            </section>
+            {showKillCommands ? (
+              <section id="kill-commands" className="bg-purple-50 border border-purple-300 rounded p-4 space-y-2 text-xs">
+                <p className="text-sm font-semibold text-purple-900">在终端里真把服务进程杀掉再起一次</p>
+                <p>本演示的服务是你自己在终端里用 <code>yarn app:11-02-checkpoint-durable-resume-step-1</code> 起的。下面的命令要在<strong>同一个终端</strong>里跑（不是这个浏览器里）。</p>
+                <p className="text-purple-900">第一步：先在本页走到 currentNode 至少是 brewHot，让磁盘上有一份完整快照。</p>
+                <p className="text-purple-900">第二步：在终端里查进程编号（PID），再杀。</p>
+                <pre className="bg-white border border-purple-200 rounded p-2 text-xs whitespace-pre-wrap break-all">
+{`# 查这个端口的进程编号
+lsof -nP -iTCP:50121 -sTCP:LISTEN
+
+# 杀进程（把 <PID> 换成上面 lsof 输出的 PID）
+kill -9 <PID>`}
+                </pre>
+                <p className="text-purple-900">第三步：再起服务，回到这个页面刷一下浏览器（同进程 forget 不会清磁盘，但浏览器里这条 runId 的 inMemory 会变 false，因为新进程内存表是空的）。</p>
+                <pre className="bg-white border border-purple-200 rounded p-2 text-xs whitespace-pre-wrap break-all">
+{`# 在 step-1 目录里
+cd apps
+yarn app:11-02-checkpoint-durable-resume-step-1`}
+                </pre>
+                <p className="text-purple-900">第四步：等看到 200 OK 的 /health 后，浏览器 hard reload（Cmd+Shift+R / Ctrl+Shift+R），回到这一页——本页面里这条 runId 应该显示「服务端内存里：空的」。点「从磁盘恢复到内存」后，currentNode 应仍是之前那一站（不是 takeOrder）。</p>
+                <p className="text-xs text-gray-700">为什么不替你 kill：服务进程是你自己起的，杀掉它会影响你这台机器上所有打开的 step-N demo。我只把命令显示在这里，由你复制执行。</p>
+              </section>
+            ) : null}
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <OutputBoard last={last} error={error} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

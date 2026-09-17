@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 节点失败 ≠ 进程被杀掉</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-node-fail.js"></script>
+  <script type="text/babel" src="/components/node-fail-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, NodeFailControls, NodeFailBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [drinkName, setDrinkName] = useState("热拿铁");
+      const [runId, setRunId] = useState("");
+      const [inMemory, setInMemory] = useState(false);
+      const [failFlagSet, setFailFlagSet] = useState(false);
+      const [last, setLast] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setEnv({ port: 50125, provider: null, model: null, hasKey: false }); });
+      }, []);
+
+      async function run(action) {
+        setBusy(true); setStatus("loading"); setError(null);
+        try {
+          const body = await action();
+          setLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally { setBusy(false); }
+      }
+
+      async function onStart() {
+        await run(function () { return DemoUtils.startRun(drinkName); }).then(function (body) {
+          if (body && body.runId) { setRunId(body.runId); setInMemory(true); setFailFlagSet(false); }
+        });
+      }
+      async function onStep() {
+        await run(function () { return DemoUtils.stepOnce(runId); });
+        setInMemory(true);
+      }
+      async function onSetFailFlag() {
+        await run(function () { return DemoUtils.brewFail(runId); }).then(function (body) {
+          if (body) { setFailFlagSet(Boolean(body.brewFailOnStep)); setInMemory(true); }
+        });
+      }
+      async function onStepAgain() {
+        await run(function () { return DemoUtils.stepOnce(runId); });
+        setInMemory(true);
+      }
+      async function onRead() {
+        await run(function () { return DemoUtils.readCheckpoint(runId); });
+      }
+
+      const currentState = last && ((last.checkpoint && last.checkpoint.state) || last.state);
+      const currentNode = currentState && currentState.currentNode;
+      const stopped = Boolean(last && last.stopped) || Boolean(currentState && currentState.currentNode === "okEnd") || Boolean(currentState && currentState.currentNode === "brewFailed");
+      const atBrew = currentNode === "brewHot" || currentNode === "brewIced" || currentNode === "chargeCard";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">检查点（Checkpoint） · 节点失败 ≠ 进程被杀掉</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="node-fail" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="node-fail" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <NodeFailControls
+                drinkName={drinkName}
+                runId={runId}
+                inMemory={inMemory}
+                failFlagSet={failFlagSet}
+                stopped={stopped}
+                atBrew={atBrew}
+                busy={busy}
+                onDrinkNameChange={setDrinkName}
+                onStart={onStart}
+                onStep={onStep}
+                onSetFailFlag={onSetFailFlag}
+                onStepAgain={onStepAgain}
+                onRead={onRead}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <NodeFailBoard last={last} error={error} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

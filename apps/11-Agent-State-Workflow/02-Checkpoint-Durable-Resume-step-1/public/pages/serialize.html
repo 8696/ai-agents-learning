@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 不可序列化</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-serialize.js"></script>
+  <script type="text/babel" src="/components/output-board.js"></script>
+  <script type="text/babel" src="/components/serialize-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, Controls, OutputBoard, SerializeBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [drinkName, setDrinkName] = useState("热拿铁");
+      const [runId, setRunId] = useState("");
+      const [legalLast, setLegalLast] = useState(null);
+      const [dirtyLast, setDirtyLast] = useState(null);
+      const [legalError, setLegalError] = useState(null);
+      const [dirtyError, setDirtyError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) {
+            setEnv(body);
+          })
+          .catch(function () {
+            setEnv({ port: 50121, provider: null, model: null, hasKey: false });
+          });
+      }, []);
+
+      async function runLegal(action) {
+        setBusy(true);
+        setStatus("loading");
+        setLegalError(null);
+        try {
+          const body = await action();
+          setLegalLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setLegalError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runDirty(kind) {
+        setBusy(true);
+        setStatus("loading");
+        setDirtyError(null);
+        try {
+          const body = await DemoUtils.serializeDirty(runId, kind);
+          setDirtyLast(body);
+          setStatus("ok");
+        } catch (err) {
+          setDirtyError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const currentState = legalLast && ((legalLast.checkpoint && legalLast.checkpoint.state) || legalLast.state);
+      const stopped =
+        Boolean(legalLast && legalLast.stopped) ||
+        Boolean(currentState && currentState.currentNode === "okEnd");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              检查点（Checkpoint） · 不可序列化（Serialization）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="serialize" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="serialize" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <Controls
+                drinkName={drinkName}
+                runId={runId}
+                busy={busy}
+                stopped={stopped}
+                onDrinkNameChange={setDrinkName}
+                onStart={function () {
+                  runLegal(function () {
+                    return DemoUtils.startRun(drinkName);
+                  }).then(function (body) {
+                    if (body && body.runId) setRunId(body.runId);
+                    setDirtyLast(null);
+                    setDirtyError(null);
+                  });
+                }}
+                onStep={function () {
+                  runLegal(function () {
+                    return DemoUtils.stepOnce(runId);
+                  });
+                }}
+                onRead={function () {
+                  runLegal(function () {
+                    return DemoUtils.readCheckpoint(runId);
+                  });
+                }}
+                onDirty={runDirty}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-6 min-h-[200px]">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-800 mb-2">合法快照这一侧（POST /api/run/step）</h2>
+                <OutputBoard
+                  last={legalLast}
+                  error={legalError}
+                  emptyText="还没有合法快照。先开始并走一步，这里会出现磁盘上的 JSON。"
+                />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-800 mb-2">脏类型这一侧（POST /api/run/serialize-dirty）</h2>
+                <SerializeBoard last={dirtyLast} error={dirtyError} />
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -352,6 +352,54 @@
       "port": 50115,
       "url": "http://127.0.0.1:50115/",
       "autoPort": false
+    },
+    {
+      "name": "11-02-checkpoint-durable-resume-step-1",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:11-02-checkpoint-durable-resume-step-1"],
+      "port": 50121,
+      "url": "http://127.0.0.1:50121/",
+      "autoPort": false
+    },
+    {
+      "name": "11-02-checkpoint-durable-resume-step-2",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:11-02-checkpoint-durable-resume-step-2"],
+      "port": 50122,
+      "url": "http://127.0.0.1:50122/",
+      "autoPort": false
+    },
+    {
+      "name": "11-02-checkpoint-durable-resume-step-3",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:11-02-checkpoint-durable-resume-step-3"],
+      "port": 50123,
+      "url": "http://127.0.0.1:50123/",
+      "autoPort": false
+    },
+    {
+      "name": "11-02-checkpoint-durable-resume-step-4",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:11-02-checkpoint-durable-resume-step-4"],
+      "port": 50124,
+      "url": "http://127.0.0.1:50124/",
+      "autoPort": false
+    },
+    {
+      "name": "11-02-checkpoint-durable-resume-step-5",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:11-02-checkpoint-durable-resume-step-5"],
+      "port": 50125,
+      "url": "http://127.0.0.1:50125/",
+      "autoPort": false
+    },
+    {
+      "name": "11-02-checkpoint-durable-resume-step-6",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:11-02-checkpoint-durable-resume-step-6"],
+      "port": 50126,
+      "url": "http://127.0.0.1:50126/",
+      "autoPort": false
     }
   ]
 }

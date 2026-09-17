@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 终态开新业务</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-next-run.js"></script>
+  <script type="text/babel" src="/components/next-run-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, NextRunControls, NextRunBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [firstDrinkName, setFirstDrinkName] = useState("热拿铁");
+      const [nextDrinkName, setNextDrinkName] = useState("冰美式");
+      const [firstRunId, setFirstRunId] = useState("");
+      const [nextRunId, setNextRunId] = useState("");
+      const [nextParentRunId, setNextParentRunId] = useState("");
+      const [firstLast, setFirstLast] = useState(null);
+      const [nextLast, setNextLast] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setEnv({ port: 50122, provider: null, model: null, hasKey: false }); });
+      }, []);
+
+      async function runOne(side, action) {
+        setBusy(true); setStatus("loading"); setError(null);
+        try {
+          const body = await action();
+          if (side === "first") setFirstLast(body); else setNextLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally { setBusy(false); }
+      }
+
+      async function onStartFirst() {
+        await runOne("first", function () { return DemoUtils.startRun(firstDrinkName); }).then(function (body) {
+          if (body && body.runId) setFirstRunId(body.runId);
+        });
+      }
+      async function onStepFirst() {
+        await runOne("first", function () { return DemoUtils.stepOnce(firstRunId); });
+      }
+      async function onWalkToEnd() {
+        for (let i = 0; i < 8; i++) {
+          if (!firstRunId) break;
+          const body = await runOne("first", function () { return DemoUtils.stepOnce(firstRunId); });
+          if (!body || body.stopped || (body.state && body.state.currentNode === "okEnd")) break;
+          if (body.error || !body.ok) break;
+        }
+      }
+      async function onNext() {
+        await runOne("next", function () { return DemoUtils.nextRun(firstRunId, nextDrinkName); }).then(function (body) {
+          if (body && body.runId) {
+            setNextRunId(body.runId);
+            setNextParentRunId(body.parentRunId || "");
+          }
+        });
+      }
+      async function onNextBad() {
+        await runOne("next", function () { return DemoUtils.nextRun(firstRunId, nextDrinkName); });
+      }
+
+      const firstStopped = Boolean(firstLast && firstLast.state && firstLast.state.currentNode === "okEnd");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">检查点（Checkpoint） · 终态开新业务</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="next-run" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="next-run" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <NextRunControls
+                firstDrinkName={firstDrinkName}
+                nextDrinkName={nextDrinkName}
+                firstRunId={firstRunId}
+                firstStopped={firstStopped}
+                busy={busy}
+                onFirstDrinkNameChange={setFirstDrinkName}
+                onNextDrinkNameChange={setNextDrinkName}
+                onStartFirst={onStartFirst}
+                onStepFirst={onStepFirst}
+                onWalkToEnd={onWalkToEnd}
+                onNext={onNext}
+                onNextBad={onNextBad}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <NextRunBoard firstLast={firstLast} nextLast={nextLast} error={error} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

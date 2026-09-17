@@ -1,0 +1,79 @@
+{
+  "initialBalance": 50,
+  "calls": [
+    {
+      "at": "2026-09-17T08:14:34.634Z",
+      "idempotencyKey": "charge:1d4450a1-0e31-4977-aed3-61137bef79e2",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:14:34.642Z",
+      "idempotencyKey": "charge:1d4450a1-0e31-4977-aed3-61137bef79e2",
+      "amount": 18,
+      "hitIdempotency": true
+    },
+    {
+      "at": "2026-09-17T08:16:03.125Z",
+      "idempotencyKey": "charge:e026815c-87ff-4910-a727-f5e94d3be812",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:16:21.532Z",
+      "idempotencyKey": "charge:a7cb8e83-7d77-4cd8-b6a5-c43b35316e8e",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:16:29.858Z",
+      "idempotencyKey": "charge:99b3d653-b935-4732-9ef9-9bfef494e2d9",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:16:36.741Z",
+      "idempotencyKey": "charge:b63401cf-9efd-4aab-95da-1690f7bfe863",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:16:54.172Z",
+      "idempotencyKey": "charge:b63401cf-9efd-4aab-95da-1690f7bfe863",
+      "amount": 18,
+      "hitIdempotency": true
+    },
+    {
+      "at": "2026-09-17T08:38:39.243Z",
+      "idempotencyKey": "charge:c0b883bc-84d2-4a09-b6ef-2cec955a3fb5",
+      "amount": 18,
+      "hitIdempotency": false
+    }
+  ],
+  "firstSuccessByKey": {
+    "charge:1d4450a1-0e31-4977-aed3-61137bef79e2": {
+      "amount": 18,
+      "at": "2026-09-17T08:14:34.634Z"
+    },
+    "charge:e026815c-87ff-4910-a727-f5e94d3be812": {
+      "amount": 18,
+      "at": "2026-09-17T08:16:03.125Z"
+    },
+    "charge:a7cb8e83-7d77-4cd8-b6a5-c43b35316e8e": {
+      "amount": 18,
+      "at": "2026-09-17T08:16:21.532Z"
+    },
+    "charge:99b3d653-b935-4732-9ef9-9bfef494e2d9": {
+      "amount": 18,
+      "at": "2026-09-17T08:16:29.858Z"
+    },
+    "charge:b63401cf-9efd-4aab-95da-1690f7bfe863": {
+      "amount": 18,
+      "at": "2026-09-17T08:16:36.741Z"
+    },
+    "charge:c0b883bc-84d2-4a09-b6ef-2cec955a3fb5": {
+      "amount": 18,
+      "at": "2026-09-17T08:38:39.243Z"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "initialBalance": 50,
+  "calls": [
+    {
+      "at": "2026-09-17T09:11:50.836Z",
+      "idempotencyKey": "charge:bb00403a-0a24-443c-8aea-109ebd8d2c55",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T09:12:12.915Z",
+      "idempotencyKey": "charge:1d3e770f-4b67-42e4-9935-1c533ed2d62b",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T09:13:59.864Z",
+      "idempotencyKey": "charge:761e9e61-1e88-40d7-b475-fa08eb99ebc3",
+      "amount": 18,
+      "hitIdempotency": false
+    }
+  ],
+  "firstSuccessByKey": {
+    "charge:bb00403a-0a24-443c-8aea-109ebd8d2c55": {
+      "amount": 18,
+      "at": "2026-09-17T09:11:50.836Z"
+    },
+    "charge:1d3e770f-4b67-42e4-9935-1c533ed2d62b": {
+      "amount": 18,
+      "at": "2026-09-17T09:12:12.915Z"
+    },
+    "charge:761e9e61-1e88-40d7-b475-fa08eb99ebc3": {
+      "amount": 18,
+      "at": "2026-09-17T09:13:59.864Z"
+    }
+  }
+}

@@ -140,7 +140,15 @@
 | `yarn app:11-01-state-machine-step-1` | `50117` | 模块 11 · 01 · 状态机 step-1：七页一口（线性 FAQ / 七个对象 / 条件路由 / 循环回边 / 非法转移 / 节点失败 / 并行汇合）；本地计算，不调大模型 |
 | （口不回收 · 原 step-2 已并入 step-1 `/pages/objects.html`） | `50118` | 不再单独启动 |
 | （口不回收 · 原 step-3 已并入 step-1 `/pages/routing.html`） | `50119` | 不再单独启动 |
-| （口不回收 · 原 step-4 已并入 step-1 `/pages/loop.html`） | `50120` | 不再单独启动；下一可用口 `50121` |
+| （口不回收 · 原 step-4 已并入 step-1 `/pages/loop.html`） | `50120` | 不再单独启动 |
+| `yarn app:11-02-checkpoint-durable-resume-step-1` | `50121` | 模块 11 · 02 · Checkpoint / Durable Resume step-1：三页一口（写入检查点 / 从磁盘恢复 / 扣款后还没写成）；本地计算，不调大模型 |
+| `yarn app:11-02-checkpoint-durable-resume-step-2` | `50122` | 模块 11 · 02 · Checkpoint / Durable Resume step-2：三页一口（总览 + 终态开新业务 + 内存 vs 磁盘对照）；本地计算，不调大模型 |
+| `yarn app:11-02-checkpoint-durable-resume-step-3` | `50123` | 模块 11 · 02 · Checkpoint / Durable Resume step-3：三页一口（总览 + 纯计算 vs 扣款 + 半份文件退回）；本地计算，不调大模型 |
+| `yarn app:11-02-checkpoint-durable-resume-step-4` | `50124` | 模块 11 · 02 · Checkpoint / Durable Resume step-4：二页一口（总览 + 图版本失败可见）；本地计算，不调大模型 |
+| `yarn app:11-02-checkpoint-durable-resume-step-5` | `50125` | 模块 11 · 02 · Checkpoint / Durable Resume step-5：二页一口（总览 + 节点失败 ≠ 进程被杀掉）；本地计算，不调大模型 |
+| `yarn app:11-02-checkpoint-durable-resume-step-6` | `50126` | 模块 11 · 02 · Checkpoint / Durable Resume step-6：二页一口（总览 + 业务例子图 订单发货 + 退款）；本地计算，不调大模型 |
+| （口不回收 · 原 step-2 已并入 step-1 `/pages/resume.html`） | `50122` | 不再单独启动 |
+| （口不回收 · 原 step-3 已并入 step-1 `/pages/charge-crash.html`） | `50123` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

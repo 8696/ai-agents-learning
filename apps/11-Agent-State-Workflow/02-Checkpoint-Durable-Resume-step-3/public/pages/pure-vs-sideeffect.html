@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 纯计算 vs 扣款</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-pure-vs-sideeffect.js"></script>
+  <script type="text/babel" src="/components/pure-vs-sideeffect-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, PureVsSideEffectControls, PureVsSideEffectBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [leftDrinkName, setLeftDrinkName] = useState("热拿铁");
+      const [rightDrinkName, setRightDrinkName] = useState("热拿铁");
+      const [leftRunId, setLeftRunId] = useState("");
+      const [rightRunId, setRightRunId] = useState("");
+      const [leftInMemory, setLeftInMemory] = useState(false);
+      const [rightInMemory, setRightInMemory] = useState(false);
+      const [leftLast, setLeftLast] = useState(null);
+      const [rightLast, setRightLast] = useState(null);
+      const [leftPayment, setLeftPayment] = useState(null);
+      const [rightPayment, setRightPayment] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setEnv({ port: 50123, provider: null, model: null, hasKey: false }); });
+      }, []);
+
+      async function runOne(side, action) {
+        setBusy(true); setStatus("loading"); setError(null);
+        try {
+          const body = await action();
+          if (side === "left") setLeftLast(body); else setRightLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally { setBusy(false); }
+      }
+
+      async function refreshPayment(runId, side) {
+        if (!runId) return;
+        try {
+          const body = await DemoUtils.readPayment(runId);
+          if (side === "left") setLeftPayment(body.payment); else setRightPayment(body.payment);
+        } catch (_err) { /* 内存空了正常 */ }
+      }
+
+      async function onStartLeft() {
+        await runOne("left", function () { return DemoUtils.startRun(leftDrinkName); }).then(function (body) {
+          if (body && body.runId) { setLeftRunId(body.runId); setLeftInMemory(true); refreshPayment(body.runId, "left"); }
+        });
+      }
+      async function onStepLeft() {
+        await runOne("left", function () { return DemoUtils.stepOnce(leftRunId); }).then(function () {
+          setLeftInMemory(true); refreshPayment(leftRunId, "left");
+        });
+      }
+      async function onForgetLeft() {
+        await runOne("left", function () { return DemoUtils.forgetRun(leftRunId); }).then(function (body) {
+          if (body) setLeftInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function onResumeLeft() {
+        await runOne("left", function () { return DemoUtils.resumeRun(leftRunId); }).then(function (body) {
+          if (body) setLeftInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function onReadPaymentLeft() { refreshPayment(leftRunId, "left"); }
+
+      async function onStartRight() {
+        await runOne("right", function () { return DemoUtils.startRun(rightDrinkName); }).then(function (body) {
+          if (body && body.runId) { setRightRunId(body.runId); setRightInMemory(true); refreshPayment(body.runId, "right"); }
+        });
+      }
+      async function onStepRight() {
+        await runOne("right", function () { return DemoUtils.stepOnce(rightRunId); }).then(function () {
+          setRightInMemory(true); refreshPayment(rightRunId, "right");
+        });
+      }
+      async function onKillMidRight() {
+        await runOne("right", function () { return DemoUtils.chargeCrash(rightRunId); }).then(function (body) {
+          if (body) { setRightInMemory(Boolean(body.inMemoryAfter)); refreshPayment(rightRunId, "right"); }
+        });
+      }
+      async function onForgetRight() {
+        await runOne("right", function () { return DemoUtils.forgetRun(rightRunId); }).then(function (body) {
+          if (body) setRightInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function onResumeRight() {
+        await runOne("right", function () { return DemoUtils.resumeRun(rightRunId); }).then(function (body) {
+          if (body) setRightInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function onReadPaymentRight() { refreshPayment(rightRunId, "right"); }
+
+      const leftStopped = Boolean(leftLast && leftLast.state && leftLast.state.currentNode === "okEnd");
+      const rightStopped = Boolean(rightLast && rightLast.state && rightLast.state.currentNode === "okEnd");
+      const rightAtCharge = Boolean(rightLast && rightLast.state && rightLast.state.currentNode === "chargeCard");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">检查点（Checkpoint） · 纯计算 vs 扣款</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="pure-vs-sideeffect" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="pure-vs-sideeffect" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <PureVsSideEffectControls
+                leftDrinkName={leftDrinkName} rightDrinkName={rightDrinkName}
+                leftRunId={leftRunId} rightRunId={rightRunId}
+                leftInMemory={leftInMemory} rightInMemory={rightInMemory}
+                leftStopped={leftStopped} rightStopped={rightStopped}
+                busy={busy}
+                onLeftDrinkNameChange={setLeftDrinkName}
+                onRightDrinkNameChange={setRightDrinkName}
+                onStartLeft={onStartLeft} onStepLeft={onStepLeft} onForgetLeft={onForgetLeft} onResumeLeft={onResumeLeft} onReadPaymentLeft={onReadPaymentLeft}
+                onStartRight={onStartRight} onStepRight={onStepRight} onKillMidRight={onKillMidRight} onForgetRight={onForgetRight} onResumeRight={onResumeRight} onReadPaymentRight={onReadPaymentRight}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <PureVsSideEffectBoard
+                leftLast={leftLast} rightLast={rightLast}
+                leftPayment={leftPayment} rightPayment={rightPayment}
+                error={error}
+              />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 两单编号隔离</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-two-orders.js"></script>
+  <script type="text/babel" src="/components/two-orders-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, TwoOrdersControls, TwoOrdersBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [leftDrinkName, setLeftDrinkName] = useState("热拿铁");
+      const [rightDrinkName, setRightDrinkName] = useState("冰美式");
+      const [leftRunId, setLeftRunId] = useState("");
+      const [rightRunId, setRightRunId] = useState("");
+      const [leftInMemory, setLeftInMemory] = useState(false);
+      const [rightInMemory, setRightInMemory] = useState(false);
+      const [leftLast, setLeftLast] = useState(null);
+      const [rightLast, setRightLast] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setEnv({ port: 50121, provider: null, model: null, hasKey: false }); });
+      }, []);
+
+      async function runOne(side, action) {
+        setBusy(true);
+        setStatus("loading");
+        setError(null);
+        try {
+          const body = await action();
+          if (side === "left") setLeftLast(body);
+          else setRightLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function openLeft() {
+        await runOne("left", function () { return DemoUtils.startRun(leftDrinkName); }).then(function (body) {
+          if (body && body.runId) { setLeftRunId(body.runId); setLeftInMemory(true); }
+        });
+      }
+      async function stepLeft() {
+        await runOne("left", function () { return DemoUtils.stepOnce(leftRunId); });
+      }
+      async function forgetLeft() {
+        await runOne("left", function () { return DemoUtils.forgetRun(leftRunId); }).then(function (body) {
+          if (body) setLeftInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function resumeLeft() {
+        await runOne("left", function () { return DemoUtils.resumeRun(leftRunId); }).then(function (body) {
+          if (body) setLeftInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function openRight() {
+        await runOne("right", function () { return DemoUtils.secondRun(rightDrinkName); }).then(function (body) {
+          if (body && body.runId) { setRightRunId(body.runId); setRightInMemory(true); }
+        });
+      }
+      async function stepRight() {
+        await runOne("right", function () { return DemoUtils.stepOnce(rightRunId); });
+      }
+      async function forgetRight() {
+        await runOne("right", function () { return DemoUtils.forgetRun(rightRunId); }).then(function (body) {
+          if (body) setRightInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+      async function resumeRight() {
+        await runOne("right", function () { return DemoUtils.resumeRun(rightRunId); }).then(function (body) {
+          if (body) setRightInMemory(Boolean(body.inMemoryAfter));
+        });
+      }
+
+      const leftStopped = Boolean(leftLast && leftLast.state && leftLast.state.currentNode === "okEnd");
+      const rightStopped = Boolean(rightLast && rightLast.state && rightLast.state.currentNode === "okEnd");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              检查点（Checkpoint） · 两单编号隔离
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="two-orders" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="two-orders" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <TwoOrdersControls
+                leftDrinkName={leftDrinkName}
+                rightDrinkName={rightDrinkName}
+                leftRunId={leftRunId}
+                rightRunId={rightRunId}
+                leftInMemory={leftInMemory}
+                rightInMemory={rightInMemory}
+                leftStopped={leftStopped}
+                rightStopped={rightStopped}
+                busy={busy}
+                onLeftDrinkNameChange={setLeftDrinkName}
+                onRightDrinkNameChange={setRightDrinkName}
+                onOpenLeft={openLeft}
+                onStepLeft={stepLeft}
+                onForgetLeft={forgetLeft}
+                onResumeLeft={resumeLeft}
+                onOpenRight={openRight}
+                onStepRight={stepRight}
+                onForgetRight={forgetRight}
+                onResumeRight={resumeRight}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <TwoOrdersBoard leftLast={leftLast} rightLast={rightLast} error={error} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

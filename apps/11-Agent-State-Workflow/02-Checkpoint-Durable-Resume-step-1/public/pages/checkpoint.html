@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 写入检查点</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls.js"></script>
+  <script type="text/babel" src="/components/output-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, Controls, OutputBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [drinkName, setDrinkName] = useState("热拿铁");
+      const [runId, setRunId] = useState("");
+      const [last, setLast] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) {
+            setEnv(body);
+          })
+          .catch(function () {
+            setEnv({ port: 50121, provider: null, model: null, hasKey: false });
+          });
+      }, []);
+
+      async function run(action) {
+        setBusy(true);
+        setStatus("loading");
+        setError(null);
+        try {
+          const body = await action();
+          setLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({
+            message: err.message,
+            status: err.status,
+            code: err.code,
+          });
+          setStatus("error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const currentState = last && ((last.checkpoint && last.checkpoint.state) || last.state);
+      const stopped =
+        Boolean(last && last.stopped) ||
+        Boolean(currentState && currentState.currentNode === "okEnd");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              检查点（Checkpoint） · 写入检查点
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="checkpoint" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="checkpoint" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <Controls
+                drinkName={drinkName}
+                runId={runId}
+                busy={busy}
+                stopped={stopped}
+                onDrinkNameChange={setDrinkName}
+                onStart={function () {
+                  run(function () {
+                    return DemoUtils.startRun(drinkName);
+                  }).then(function (body) {
+                    if (body && body.runId) setRunId(body.runId);
+                  });
+                }}
+                onStep={function () {
+                  run(function () {
+                    return DemoUtils.stepOnce(runId);
+                  });
+                }}
+                onRead={function () {
+                  run(function () {
+                    return DemoUtils.readCheckpoint(runId);
+                  });
+                }}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <OutputBoard last={last} error={error} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

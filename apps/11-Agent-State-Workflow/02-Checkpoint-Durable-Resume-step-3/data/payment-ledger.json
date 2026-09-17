@@ -1,0 +1,77 @@
+{
+  "initialBalance": 50,
+  "calls": [
+    {
+      "at": "2026-09-17T08:56:19.550Z",
+      "idempotencyKey": "charge:aa3a6770-f1a8-4259-9394-2e6b3cf0beb7",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:56:25.172Z",
+      "idempotencyKey": "charge:cb79c137-6770-4c41-84b6-3a94960a8cc9",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:56:41.755Z",
+      "idempotencyKey": "charge:fd9fa424-d119-445d-892f-865382f29312",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:56:45.238Z",
+      "idempotencyKey": "charge:44c6e6d9-8391-497c-8f79-23d5932b9e22",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:57:04.212Z",
+      "idempotencyKey": "charge:2982a822-12b6-4f3e-876c-90136f31115d",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:57:19.536Z",
+      "idempotencyKey": "charge:20c809a4-cd7d-4621-94c0-b95d29654876",
+      "amount": 18,
+      "hitIdempotency": false
+    },
+    {
+      "at": "2026-09-17T08:58:41.331Z",
+      "idempotencyKey": "charge:400e527d-50d2-45bc-812c-616baefe7a73",
+      "amount": 18,
+      "hitIdempotency": false
+    }
+  ],
+  "firstSuccessByKey": {
+    "charge:aa3a6770-f1a8-4259-9394-2e6b3cf0beb7": {
+      "amount": 18,
+      "at": "2026-09-17T08:56:19.550Z"
+    },
+    "charge:cb79c137-6770-4c41-84b6-3a94960a8cc9": {
+      "amount": 18,
+      "at": "2026-09-17T08:56:25.172Z"
+    },
+    "charge:fd9fa424-d119-445d-892f-865382f29312": {
+      "amount": 18,
+      "at": "2026-09-17T08:56:41.755Z"
+    },
+    "charge:44c6e6d9-8391-497c-8f79-23d5932b9e22": {
+      "amount": 18,
+      "at": "2026-09-17T08:56:45.238Z"
+    },
+    "charge:2982a822-12b6-4f3e-876c-90136f31115d": {
+      "amount": 18,
+      "at": "2026-09-17T08:57:04.212Z"
+    },
+    "charge:20c809a4-cd7d-4621-94c0-b95d29654876": {
+      "amount": 18,
+      "at": "2026-09-17T08:57:19.536Z"
+    },
+    "charge:400e527d-50d2-45bc-812c-616baefe7a73": {
+      "amount": 18,
+      "at": "2026-09-17T08:58:41.331Z"
+    }
+  }
+}

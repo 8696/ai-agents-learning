@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 · 内存 vs 磁盘</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/controls-memory-vs-disk.js"></script>
+  <script type="text/babel" src="/components/memory-vs-disk-board.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, PageIntro, EnvFooter, MemoryVsDiskControls, MemoryVsDiskBoard } = window.DemoUI;
+    const DemoUtils = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [leftDrinkName, setLeftDrinkName] = useState("热拿铁");
+      const [rightDrinkName, setRightDrinkName] = useState("热拿铁");
+      const [leftRunId, setLeftRunId] = useState("");
+      const [rightRunId, setRightRunId] = useState("");
+      const [leftInMemory, setLeftInMemory] = useState(false);
+      const [rightInMemory, setRightInMemory] = useState(false);
+      const [leftLast, setLeftLast] = useState(null);
+      const [rightLast, setRightLast] = useState(null);
+      const [leftMemory, setLeftMemory] = useState(null);
+      const [rightMemory, setRightMemory] = useState(null);
+      const [error, setError] = useState(null);
+      const [busy, setBusy] = useState(false);
+
+      useEffect(function () {
+        DemoUtils.loadHealth()
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setEnv({ port: 50122, provider: null, model: null, hasKey: false }); });
+      }, []);
+
+      async function runOne(side, action) {
+        setBusy(true); setStatus("loading"); setError(null);
+        try {
+          const body = await action();
+          if (side === "left") setLeftLast(body); else setRightLast(body);
+          setStatus("ok");
+          return body;
+        } catch (err) {
+          setError({ message: err.message, status: err.status, code: err.code });
+          setStatus("error");
+        } finally { setBusy(false); }
+      }
+
+      async function refreshMemory(runId, side) {
+        if (!runId) return;
+        try {
+          const body = await DemoUtils.readMemory(runId);
+          if (side === "left") setLeftMemory(body); else setRightMemory(body);
+        } catch (_err) {
+          // ignore — 内存里没有时也会抛
+        }
+      }
+
+      async function onStartLeft() {
+        await runOne("left", function () { return DemoUtils.startRun(leftDrinkName); }).then(function (body) {
+          if (body && body.runId) { setLeftRunId(body.runId); setLeftInMemory(true); refreshMemory(body.runId, "left"); }
+        });
+      }
+      async function onStepLeft() {
+        await runOne("left", function () { return DemoUtils.stepOnceInMemory(leftRunId); }).then(function () {
+          refreshMemory(leftRunId, "left");
+        });
+      }
+      async function onForgetLeft() {
+        await runOne("left", function () { return DemoUtils.forgetRun(leftRunId); }).then(function () {
+          setLeftInMemory(false);
+          refreshMemory(leftRunId, "left");
+        });
+      }
+      async function onReadMemoryLeft() { refreshMemory(leftRunId, "left"); }
+
+      async function onStartRight() {
+        await runOne("right", function () { return DemoUtils.startRun(rightDrinkName); }).then(function (body) {
+          if (body && body.runId) { setRightRunId(body.runId); setRightInMemory(true); refreshMemory(body.runId, "right"); }
+        });
+      }
+      async function onStepRight() {
+        await runOne("right", function () { return DemoUtils.stepOnce(rightRunId); }).then(function () {
+          refreshMemory(rightRunId, "right");
+        });
+      }
+      async function onForgetRight() {
+        await runOne("right", function () { return DemoUtils.forgetRun(rightRunId); }).then(function () {
+          setRightInMemory(false);
+          refreshMemory(rightRunId, "right");
+        });
+      }
+      async function onReadMemoryRight() { refreshMemory(rightRunId, "right"); }
+
+      const leftStopped = Boolean(leftLast && leftLast.state && leftLast.state.currentNode === "okEnd");
+      const rightStopped = Boolean(rightLast && rightLast.state && rightLast.state.currentNode === "okEnd");
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">检查点（Checkpoint） · 内存 vs 磁盘</h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="memory-vs-disk" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro page="memory-vs-disk" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <MemoryVsDiskControls
+                leftDrinkName={leftDrinkName} rightDrinkName={rightDrinkName}
+                leftRunId={leftRunId} rightRunId={rightRunId}
+                leftInMemory={leftInMemory} rightInMemory={rightInMemory}
+                leftStopped={leftStopped} rightStopped={rightStopped}
+                busy={busy}
+                onLeftDrinkNameChange={setLeftDrinkName}
+                onRightDrinkNameChange={setRightDrinkName}
+                onStartLeft={onStartLeft} onStepLeft={onStepLeft} onForgetLeft={onForgetLeft} onReadMemoryLeft={onReadMemoryLeft}
+                onStartRight={onStartRight} onStepRight={onStepRight} onForgetRight={onForgetRight} onReadMemoryRight={onReadMemoryRight}
+              />
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <MemoryVsDiskBoard
+                leftLast={leftLast} rightLast={rightLast}
+                leftMemory={leftMemory} rightMemory={rightMemory}
+                error={error}
+              />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
