@@ -13,7 +13,7 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**MCP 架构**：Client / Server；Tool、Resource、Prompt 三种原语](./01-MCP-架构.md) | 能说清谁连谁、三种原语各干什么 | `Model Context Protocol architecture` `MCP tool resource prompt` · [modelcontextprotocol.io](https://modelcontextprotocol.io) 官方文档 | — |
+| ✅ | [**MCP 架构**：Client / Server；Tool、Resource、Prompt 三种原语](./01-MCP-架构.md) | 能说清谁连谁、三种原语各干什么 | `Model Context Protocol architecture` `MCP tool resource prompt` · [modelcontextprotocol.io](https://modelcontextprotocol.io) 官方文档 | [沉淀](./01-MCP-架构.md) |
 | ⬜ | [**stdio vs Streamable HTTP**：本地玩具 vs 远程 + 按用户鉴权](./02-stdio-vs-Streamable-HTTP.md) | 知道生产形态为什么不是 stdio | `MCP stdio transport` `MCP streamable HTTP` `MCP OAuth 2.1` · MCP 规范 Transport / Authorization | — |
 | ⬜ | [**Skills vs MCP**：MCP 是连工具的协议；Skills / AGENTS.md 是打包领域行为](./03-Skills-vs-MCP.md) | 能一句话划界，不混成一个东西 | `Claude agent skills` `AGENTS.md vs MCP` · Anthropic Skills · 本仓库 AGENTS.md | — |
 | ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |

@@ -138,7 +138,10 @@
     "app:11-02-checkpoint-durable-resume-step-5": "PORT=50125 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-5/server.ts",
     "app:11-02-checkpoint-durable-resume-step-6": "PORT=50126 tsx 11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-6/server.ts",
     "app:11-03-human-in-the-loop-step-1": "PORT=50127 tsx 11-Agent-State-Workflow/03-Human-in-the-loop-step-1/server.ts",
-    "app:11-03-human-in-the-loop-step-2": "PORT=50128 tsx 11-Agent-State-Workflow/03-Human-in-the-loop-step-2/server.ts"
+    "app:11-03-human-in-the-loop-step-2": "PORT=50128 tsx 11-Agent-State-Workflow/03-Human-in-the-loop-step-2/server.ts",
+    "app:12-01-mcp-architecture-step-1": "PORT=50129 tsx 12-MCP/01-MCP-架构-step-1/server.ts",
+    "app:12-01-mcp-architecture-step-2": "PORT=50131 tsx 12-MCP/01-MCP-架构-step-2/server.ts",
+    "app:12-01-mcp-architecture-step-3": "PORT=50132 tsx 12-MCP/01-MCP-架构-step-3/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

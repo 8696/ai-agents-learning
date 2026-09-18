@@ -400,6 +400,14 @@
       "port": 50126,
       "url": "http://127.0.0.1:50126/",
       "autoPort": false
+    },
+    {
+      "name": "12-01-mcp-architecture-step-1",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:12-01-mcp-architecture-step-1"],
+      "port": 50129,
+      "url": "http://127.0.0.1:50129/",
+      "autoPort": false
     }
   ]
 }

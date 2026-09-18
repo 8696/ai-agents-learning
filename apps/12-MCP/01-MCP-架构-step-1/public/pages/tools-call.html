@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP 架构 · 调用工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/api-client.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/page-intro.js"></script>
+  <script type="text/babel" src="../components/protocol-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter, PageIntro, ProtocolCard } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [card, setCard] = useState(null);
+      const [httpError, setHttpError] = useState("");
+      const [busy, setBusy] = useState(false);
+      const [initOk, setInitOk] = useState(false);
+      const [listOk, setListOk] = useState(false);
+      const [cupSize, setCupSize] = useState("中杯");
+
+      useEffect(function () {
+        getJson("/health").then(function (r) {
+          if (r.httpOk) setEnv(r.json);
+        });
+      }, []);
+
+      async function run(url, body) {
+        setBusy(true);
+        setStatus("loading");
+        setHttpError("");
+        try {
+          const r = await postJson(url, body || {});
+          if (!r.httpOk) {
+            setStatus("err");
+            setHttpError("HTTP " + r.httpStatus + "：" + ((r.json && r.json.error) || "请求失败"));
+            return;
+          }
+          setCard(r.json);
+          if (r.json.protocolOk && r.json.jsonrpcRequest.method === "initialize") setInitOk(true);
+          if (r.json.protocolOk && r.json.jsonrpcRequest.method === "tools/list") setListOk(true);
+          setStatus(r.json.protocolOk ? "ok" : "err");
+        } catch (err) {
+          setStatus("err");
+          setHttpError(String(err && err.message ? err.message : err));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              MCP 架构（Model Context Protocol） · 第一步（step-1） · 调用工具（tools/call · 真去做一杯拿铁）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <div className="container mx-auto px-4 pt-4">
+            <PageNav current="tools-call" base="../" />
+          </div>
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro mode="tools-call" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <button
+                type="button"
+                className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
+                disabled={busy}
+                onClick={function () { run("/api/mcp/initialize"); }}
+              >
+                ① 初始化（initialize · 问吧台开门了没）
+              </button>
+              <p className="text-xs text-gray-600">点了发出初始化。调用工具前仍要先打招呼。</p>
+              <button
+                type="button"
+                className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
+                disabled={busy || !initOk}
+                onClick={function () { run("/api/mcp/tools-list"); }}
+              >
+                ② 工具发现（tools/list · 你能提供做什么咖啡）
+              </button>
+              <p className="text-xs text-gray-600">点了发出工具发现。期望：result.tools 里有 make_latte。请先做 ①。</p>
+              <label className="block text-xs text-gray-700">
+                杯型（cupSize）
+                <input
+                  className="mt-1 border rounded px-2 py-1 text-sm w-40"
+                  value={cupSize}
+                  onChange={function (event) { setCupSize(event.target.value); }}
+                />
+              </label>
+              <button
+                type="button"
+                className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
+                disabled={busy || !listOk}
+                onClick={function () { run("/api/mcp/tools-call", { cupSize: cupSize }); }}
+              >
+                ③ 调用工具（tools/call · 真去做一杯拿铁）
+              </button>
+              <p className="text-xs text-gray-600">点了发出 tools/call。期望：result.content 写着拿铁做好了。请先做 ① 和 ②。</p>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-3">
+              {httpError ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{httpError}</div>
+              ) : null}
+              {!card && !httpError ? (
+                <p className="text-sm text-gray-500">还没有发出过请求。从 ① 初始化开始，最后才调用工具。</p>
+              ) : null}
+              {card ? <ProtocolCard card={card} /> : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

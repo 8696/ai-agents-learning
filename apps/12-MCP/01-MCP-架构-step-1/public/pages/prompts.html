@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MCP 架构 · 提示词模板原语（prompts/list + prompts/get）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/api-client.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/page-intro.js"></script>
+  <script type="text/babel" src="../components/protocol-card.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, StatusPill, EnvFooter, PageIntro, ProtocolCard } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+
+    // 与服务端 lib/mcp/catalog.ts 的 PROMPTS 对齐。本步只挂 1 份「退款话术」。
+    const KNOWN_PROMPTS = [
+      {
+        value: "refund-script",
+        label: "refund-script（退款话术 · arguments: orderId + reason）",
+      },
+    ];
+
+    function App() {
+      const [status, setStatus] = useState("idle");
+      const [env, setEnv] = useState(null);
+      const [card, setCard] = useState(null);
+      const [httpError, setHttpError] = useState("");
+      const [busy, setBusy] = useState(false);
+      const [initOk, setInitOk] = useState(false);
+      const [listOk, setListOk] = useState(false);
+      const [promptName, setPromptName] = useState("refund-script");
+      const [orderId, setOrderId] = useState("A-1001");
+      const [reason, setReason] = useState("七天无理由");
+
+      useEffect(function () {
+        getJson("/health").then(function (r) {
+          if (r.httpOk) setEnv(r.json);
+        });
+      }, []);
+
+      async function run(url, body) {
+        setBusy(true);
+        setStatus("loading");
+        setHttpError("");
+        try {
+          const r = await postJson(url, body || {});
+          if (!r.httpOk) {
+            setStatus("err");
+            setHttpError("HTTP " + r.httpStatus + "：" + ((r.json && r.json.error) || "请求失败"));
+            return;
+          }
+          setCard(r.json);
+          if (r.json.protocolOk && r.json.jsonrpcRequest.method === "initialize") setInitOk(true);
+          if (r.json.protocolOk && r.json.jsonrpcRequest.method === "prompts/list") setListOk(true);
+          setStatus(r.json.protocolOk ? "ok" : "err");
+        } catch (err) {
+          setStatus("err");
+          setHttpError(String(err && err.message ? err.message : err));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runGetEmpty() {
+        // 第二类错误：空 name → zod 校验失败 → HTTP 4xx
+        setBusy(true);
+        setStatus("loading");
+        setHttpError("");
+        try {
+          const r = await postJson("/api/mcp/prompts-get", { name: "", arguments: {} });
+          setStatus("err");
+          setHttpError("HTTP " + r.httpStatus + "（4xx）：" + ((r.json && r.json.error) || "name 不能空"));
+        } catch (err) {
+          setStatus("err");
+          setHttpError(String(err && err.message ? err.message : err));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runGetMissingArg() {
+        // 第二类错误：缺必填参数 → 服务端 JSON-RPC 层报错（HTTP 200，protocolOk = false）
+        setBusy(true);
+        setStatus("loading");
+        setHttpError("");
+        try {
+          const r = await postJson("/api/mcp/prompts-get", {
+            name: "refund-script",
+            arguments: { orderId: "A-1001" },
+          });
+          setCard(r.json);
+          setStatus(r.json.protocolOk ? "ok" : "err");
+        } catch (err) {
+          setStatus("err");
+          setHttpError(String(err && err.message ? err.message : err));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              MCP 架构（Model Context Protocol） · 第一步（step-1） · 提示词模板原语（prompts/list + get · 用户控制）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <div className="container mx-auto px-4 pt-4">
+            <PageNav current="prompts" base="../" />
+          </div>
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro mode="prompts" />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <button
+                type="button"
+                className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
+                disabled={busy}
+                onClick={function () { run("/api/mcp/initialize"); }}
+              >
+                ① 初始化（initialize · capabilities 三扇门：tools + resources + prompts）
+              </button>
+              <p className="text-xs text-gray-600">点了发出初始化。期望：capabilities 同时有 tools / resources / prompts 三个键。</p>
+              <button
+                type="button"
+                className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
+                disabled={busy || !initOk}
+                onClick={function () { run("/api/mcp/prompts-list"); }}
+              >
+                ② 模板发现（prompts/list · 列出 refund-script）
+              </button>
+              <p className="text-xs text-gray-600">点了发出模板发现。期望：result.prompts 是 refund-script 一份，arguments 含 orderId / reason（都 required: true）。请先做 ①。</p>
+              <label className="block text-xs text-gray-700">
+                模板名（name）
+                <select
+                  className="mt-1 border rounded px-2 py-1 text-sm w-full max-w-md"
+                  value={promptName}
+                  onChange={function (event) { setPromptName(event.target.value); }}
+                >
+                  {KNOWN_PROMPTS.map(function (item) {
+                    return <option key={item.value} value={item.value}>{item.label}</option>;
+                  })}
+                </select>
+              </label>
+              <div className="grid md:grid-cols-2 gap-2">
+                <label className="block text-xs text-gray-700">
+                  订单号（orderId · 必填）
+                  <input
+                    className="mt-1 border rounded px-2 py-1 text-sm w-full"
+                    value={orderId}
+                    onChange={function (event) { setOrderId(event.target.value); }}
+                  />
+                </label>
+                <label className="block text-xs text-gray-700">
+                  退款原因（reason · 必填）
+                  <input
+                    className="mt-1 border rounded px-2 py-1 text-sm w-full"
+                    value={reason}
+                    onChange={function (event) { setReason(event.target.value); }}
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded disabled:opacity-50"
+                disabled={busy || !listOk}
+                onClick={function () {
+                  run("/api/mcp/prompts-get", {
+                    name: promptName,
+                    arguments: { orderId: orderId, reason: reason },
+                  });
+                }}
+              >
+                ③ 取模板（prompts/get · 拿填好的消息数组）
+              </button>
+              <p className="text-xs text-gray-600">点了发出 prompts/get。期望：result.messages 是 user + assistant 两条消息，content.text 是带 Few-shot 的中文话术。请先做 ① 和 ②。</p>
+              <div className="pt-2 border-t space-y-1">
+                <p className="text-xs text-gray-500">失败会长什么样（对照用，不是主路径）</p>
+                <button type="button" className="border text-sm px-3 py-1 rounded disabled:opacity-50" disabled={busy} onClick={runGetEmpty}>
+                  发空 name（HTTP 4xx · zod 校验）
+                </button>
+                <button type="button" className="border text-sm px-3 py-1 rounded disabled:opacity-50" disabled={busy} onClick={runGetMissingArg}>
+                  缺必填参数 reason（JSON-RPC 错误 · HTTP 200，protocolOk = false）
+                </button>
+                <button type="button" className="border text-sm px-3 py-1 rounded disabled:opacity-50" disabled={busy} onClick={function () { run("/api/force-error"); }}>
+                  演示后端 5xx（5xx · 第二类错误 · /api/force-error）
+                </button>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-3">
+              {httpError ? (
+                <div className="border border-red-300 bg-red-50 rounded p-3 text-sm text-red-800">{httpError}</div>
+              ) : null}
+              {!card && !httpError ? (
+                <p className="text-sm text-gray-500">还没有发出过请求。从 ① 初始化开始，最后才取模板。</p>
+              ) : null}
+              {card ? <ProtocolCard card={card} /> : null}
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
