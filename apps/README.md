@@ -154,6 +154,9 @@
 | `yarn app:12-01-mcp-architecture-step-1` | `50129` | 模块 12 · 01 · MCP 架构 step-1：初始化 + 工具发现 + 调用工具（tools/call）；咖啡店类比；纯协议形状，不调大模型 |
 | `yarn app:12-01-mcp-architecture-step-2` | `50131` | 模块 12 · 01 · MCP 架构 step-2：三原语对照（同一轮退款里政策 / 话术 / 建单 同时出现，三栏独立请求；前端 Promise.all 并行触发；服务端不打包跑）；纯协议形状，不调大模型 |
 | `yarn app:12-01-mcp-architecture-step-3` | `50132` | 模块 12 · 01 · MCP 架构 step-3：拓扑 + 解耦（1 宿主 · 2 客户端 · 2 服务端一对一专线；服务端 ticket=tools / kb=resources+prompts；切换宿主 X-MCP-Host-Id 验证"工具定义不在宿主源码里"）；纯协议形状，不调大模型 |
+| `yarn app:12-02-stdio-vs-http-step-1` | `50133` | 模块 12 · 02 · stdio vs Streamable HTTP step-1：父进程真 spawn tsx 子进程走 stdin/stdout；1 Tool + 1 Resource；本地玩具演示 stdio 长什么样 + 子进程边界；本地计算，不调大模型 |
+| `yarn app:12-02-stdio-vs-http-step-2-mcp-server` | `50134`（koa 同端口：浏览器 + MCP endpoint POST /mcp） | 模块 12 · 02 · Streamable HTTP MCP Server：独立进程 listen 一个 koa 端口；MCP endpoint 走同进程 POST /mcp route（ctx.respond=false 让 koa 不拦 SSE）；注册 make_latte + menu://today；状态页展示 serverPid + endpoint URL；本地计算，不调大模型 |
+| `yarn app:12-02-stdio-vs-http-step-2-mcp-client` | `50135` | 模块 12 · 02 · Streamable HTTP MCP Client：连远端 MCP endpoint（127.0.0.1:50134/mcp）；演示 Client 进程不拥有 Server；本地计算，不调大模型 |
 | （口不回收 · 原 step-2 已删，收进 step-1 最小发现） | `50130` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。

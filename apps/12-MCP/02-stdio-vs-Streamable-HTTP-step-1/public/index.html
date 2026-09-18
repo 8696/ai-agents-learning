@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>stdio vs Streamable HTTP · 第一步（step-1）· 本地玩具：父进程 spawn 子进程走 stdin/stdout</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4 强制：React 18.3.1 UMD -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- §5.3.4 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- 共享 JSX 组件（按 §5.3.8：内联脚本只装配；超过 400 行的部分拆到 components/） -->
+  <script type="text/babel" src="/components/prompts.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    // 共享组件：PromptsSection 在 public/components/prompts.js 里挂 window.DemoUI.PromptsSection
+    const { PromptsSection } = window.DemoUI || {};
+
+    // ── 本页核心教学点：stdio Transport ──
+    // 点"启动吧台"会真的 fork 一个 tsx 子进程跑 lib/mcp-server/server.ts
+    // 子进程通过 stdin/stdout 走 JSON-RPC；父进程（我们的 koa）拥有这个子进程
+    // 父进程死了 → 子进程跟着死（这就是 stdio 的边界，下一步讲为什么生产不用它）
+
+    function App() {
+      const [status, setStatus] = useState("⏸ 待连接");
+      const [busy, setBusy] = useState(false);
+      const [clientInfo, setClientInfo] = useState(null);
+      const [tools, setTools] = useState(null);
+      const [toolCallResult, setToolCallResult] = useState(null);
+      const [resources, setResources] = useState(null);
+      const [resourceRead, setResourceRead] = useState(null);
+      const [bogusTool, setBogusTool] = useState(null);
+      const [bogusResource, setBogusResource] = useState(null);
+      const [prompts, setPrompts] = useState(null);
+      const [promptGet, setPromptGet] = useState(null);
+      const [customerName, setCustomerName] = useState("张三");
+      const [cupSize, setCupSize] = useState("中杯");
+      const [errMsg, setErrMsg] = useState("");
+
+      // 页脚环境元信息
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(d => {
+          const el = document.getElementById("env-info");
+          if (!el) return;
+          el.textContent =
+            `端口 ${d.port} · 协议 Transport · ${d.transport} · 模型服务商 ${d.provider ?? "—"} · 模型 ${d.model ?? "—"} · 密钥 ${d.hasKey ? "✅" : "❌"} · 本地计算 · 不调大模型`;
+        }).catch(() => {});
+      }, []);
+
+      async function call(url, body, onOk) {
+        setBusy(true);
+        setErrMsg("");
+        setStatus("🔄 请求中");
+        const t0 = Date.now();
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body ?? {}),
+          });
+          const data = await res.json();
+          const elapsed = Date.now() - t0;
+          if (!res.ok || !data.ok) {
+            setErrMsg(data.error || `HTTP ${res.status}`);
+            setStatus("❌ 错误");
+            return;
+          }
+          onOk(data, elapsed);
+          setStatus("✅ 完成");
+        } catch (e) {
+          setErrMsg(e instanceof Error ? e.message : String(e));
+          setStatus("❌ 错误");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function onConnectClick() {
+        call("/api/stdio/connect", {}, (data, ms) => {
+          setClientInfo({ ...data.status, elapsedMs: ms });
+        });
+      }
+
+      function onListToolsClick() {
+        call("/api/stdio/list-tools", {}, (data, ms) => {
+          setTools({ tools: data.tools, elapsedMs: ms });
+        });
+      }
+
+      function onCallToolClick() {
+        call("/api/stdio/call-tool", { cupSize }, (data, ms) => {
+          setToolCallResult({ result: data.result, elapsedMs: ms });
+        });
+      }
+
+      function onListResourcesClick() {
+        call("/api/stdio/list-resources", {}, (data, ms) => {
+          setResources({ resources: data.resources, elapsedMs: ms });
+        });
+      }
+
+      function onReadResourceClick() {
+        call("/api/stdio/read-resource", { uri: "menu://today" }, (data, ms) => {
+          setResourceRead({ result: data.result, elapsedMs: ms });
+        });
+      }
+
+      function onCallBogusToolClick() {
+        call("/api/stdio/call-bogus-tool", {}, (data, ms) => {
+          setBogusTool({ result: data.result, error: data.error, elapsedMs: ms });
+        });
+      }
+
+      function onReadBogusResourceClick() {
+        call("/api/stdio/read-bogus-resource", {}, (data, ms) => {
+          setBogusResource({ result: data.result, error: data.error, elapsedMs: ms });
+        });
+      }
+
+      function onListPromptsClick() {
+        call("/api/stdio/list-prompts", {}, (data, ms) => {
+          setPrompts({ prompts: data.prompts, elapsedMs: ms });
+        });
+      }
+
+      function onGetGreetingClick() {
+        call(
+          "/api/stdio/get-prompt",
+          { name: "customer_service_greeting", arguments: { customerName } },
+          (data, ms) => {
+            setPromptGet({ result: data.result, error: data.error, elapsedMs: ms, label: "客服开场白" });
+          },
+        );
+      }
+
+      function onGetRefundClick() {
+        call(
+          "/api/stdio/get-prompt",
+          { name: "refund_response", arguments: { orderId: "ORD-2026-001", reason: "商品与描述不符" } },
+          (data, ms) => {
+            setPromptGet({ result: data.result, error: data.error, elapsedMs: ms, label: "退款话术" });
+          },
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              stdio Transport · 第一步（step-1）· 本地玩具：父进程 spawn 子进程走 stdin/stdout
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">{status}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>stdio Transport 长什么样 —— 父进程真去 fork 一个子进程，父子之间用 stdin/stdout 走 JSON-RPC</b>。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点「启动吧台」：服务端 spawn `tsx lib/mcp-server/server.ts`，返回子进程 pid</li>
+                <li>点「看吧台菜单 / 列工具」：触发 MCP 协议 tools/list → 服务端通过 stdin 发 JSON-RPC 请求 → 子进程通过 stdout 回 JSON-RPC 响应</li>
+                <li>点「做一杯」：触发 MCP 协议 tools/call(make_latte) → 同样走 stdin/stdout</li>
+                <li>点「看资源 / 读资源」：触发 MCP 协议 resources/list + resources/read</li>
+              </ol>
+
+              {/* 核心教学点卡片（强制 · §5.3.11.b） */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  stdio Transport = 父进程把 Server 当成子进程跑起来，父子之间用 stdin/stdout 走 JSON-RPC。Server 没有自己的端口，别人也连不到它 —— 它只是被父进程"叫来"做事的。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么在结果里观察这个核心点：点完「启动吧台」后看下方 clientInfo.pid —— 那是一个真进程号；父进程（koa 服务）死了它也死。下一步切到 Streamable HTTP 时，你会看到 Server 变成独立 listen 一个端口，远端都能连。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  id="btn-connect"
+                  onClick={onConnectClick}
+                  disabled={busy}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="真去 fork 一个 tsx 子进程（stdio 子进程）"
+                >
+                  启动吧台（spawn stdio 子进程 · 首次才真起）
+                </button>
+                <button
+                  id="btn-list-tools"
+                  onClick={onListToolsClick}
+                  disabled={busy}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="走 JSON-RPC tools/list，让子进程告诉我们它有哪些工具"
+                >
+                  看吧台菜单（MCP tools/list）
+                </button>
+                <button
+                  id="btn-call-tool"
+                  onClick={onCallToolClick}
+                  disabled={busy || !tools}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="走 JSON-RPC tools/call(make_latte)，让子进程真去做一杯"
+                >
+                  做一杯拿铁（MCP tools/call）
+                </button>
+                <button
+                  id="btn-list-resources"
+                  onClick={onListResourcesClick}
+                  disabled={busy}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="走 JSON-RPC resources/list"
+                >
+                  看今日菜单（MCP resources/list）
+                </button>
+                <button
+                  id="btn-read-resource"
+                  onClick={onReadResourceClick}
+                  disabled={busy || !resources}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="走 JSON-RPC resources/read(menu://today)"
+                >
+                  读今日菜单（MCP resources/read）
+                </button>
+                <button
+                  id="btn-call-bogus-tool"
+                  onClick={onCallBogusToolClick}
+                  disabled={busy}
+                  className="border border-red-300 text-red-700 px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="故意调一个不存在的 tool，演示业务类失败（类 B）"
+                >
+                  故意调不存在的 Tool（演示业务错）
+                </button>
+                <button
+                  id="btn-read-bogus-resource"
+                  onClick={onReadBogusResourceClick}
+                  disabled={busy}
+                  className="border border-red-300 text-red-700 px-3 py-1 rounded text-sm disabled:opacity-50"
+                  title="故意读一个不存在的 resource，演示业务类失败（类 B）"
+                >
+                  故意读不存在的 Resource（演示业务错）
+                </button>
+                {/* Prompts 块：4 个控件 + 2 张输出卡 拆到 public/components/prompts.js，文件超过 400 行硬约束 */}
+                <PromptsSection
+                  prompts={prompts}
+                  promptGet={promptGet}
+                  customerName={customerName}
+                  busy={busy}
+                  onListPromptsClick={onListPromptsClick}
+                  onGetGreetingClick={onGetGreetingClick}
+                  onGetRefundClick={onGetRefundClick}
+                  onCustomerNameChange={setCustomerName}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <label htmlFor="cupSize">杯型（cupSize）：</label>
+                <select
+                  id="cupSize"
+                  value={cupSize}
+                  onChange={(e) => setCupSize(e.target.value)}
+                  className="border border-gray-300 px-2 py-1 rounded text-sm"
+                >
+                  <option value="小杯">小杯</option>
+                  <option value="中杯">中杯</option>
+                  <option value="大杯">大杯</option>
+                </select>
+              </div>
+
+              {errMsg && (
+                <div className="bg-red-50 border border-red-300 text-red-800 text-sm rounded p-2">
+                  {errMsg}
+                </div>
+              )}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!clientInfo && !tools && !toolCallResult && !resources && !resourceRead && (
+                <p className="text-xs text-gray-500">还没有运行结果。先点「启动吧台」。</p>
+              )}
+
+              {clientInfo && (
+                <div className="bg-gray-50 border border-gray-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-gray-700">
+                    客户端状态（stdio 子进程）
+                  </div>
+                  <div className="text-xs text-gray-600">进程 ID：<code>{clientInfo.pid}</code>（这是 tsx 子进程的 pid）</div>
+                  <div className="text-xs text-gray-600">启动时刻：<code>{new Date(clientInfo.startedAt).toLocaleTimeString()}</code></div>
+                  <div className="text-xs text-gray-600">本次耗时：<code>{clientInfo.elapsedMs} ms</code>（含 tsx 启动 + 握手）</div>
+                </div>
+              )}
+
+              {tools && (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-green-900">
+                    MCP 协议响应 · tools/list · 耗时 {tools.elapsedMs} ms
+                  </div>
+                  <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto">
+                    {JSON.stringify(tools.tools, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {toolCallResult && (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-green-900">
+                    MCP 协议响应 · tools/call(make_latte) · 耗时 {toolCallResult.elapsedMs} ms
+                  </div>
+                  <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto">
+                    {JSON.stringify(toolCallResult.result, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {resources && (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-green-900">
+                    MCP 协议响应 · resources/list · 耗时 {resources.elapsedMs} ms
+                  </div>
+                  <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto">
+                    {JSON.stringify(resources.resources, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {resourceRead && (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-green-900">
+                    MCP 协议响应 · resources/read(menu://today) · 耗时 {resourceRead.elapsedMs} ms
+                  </div>
+                  <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto">
+                    {JSON.stringify(resourceRead.result, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {bogusTool && (
+                <div className="bg-red-50 border border-red-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-red-900">
+                    业务类失败（类 B）· 故意调 non_existent_tool · 耗时 {bogusTool.elapsedMs} ms
+                  </div>
+                  <div className="text-xs text-gray-700">
+                    错误信息：<code>{bogusTool.error ?? "(无)"}</code>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    类 A = 网络/连接类失败（如 Connection closed、Server 没起）；类 B = 协议层业务错（tool 不存在、参数错）。这一节给的是类 B。
+                  </div>
+                </div>
+              )}
+
+              {bogusResource && (
+                <div className="bg-red-50 border border-red-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-red-900">
+                    业务类失败（类 B）· 故意读 bogus://does/not/exist · 耗时 {bogusResource.elapsedMs} ms
+                  </div>
+                  <div className="text-xs text-gray-700">
+                    错误信息：<code>{bogusResource.error ?? "(无)"}</code>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    跟「故意调不存在的 Tool」是同一类（业务错），区别只是报错位置不同。HTTP 401 是另一类——下一步加鉴权再看。
+                  </div>
+                </div>
+              )}
+
+              {/* Prompts 输出卡已拆到 public/components/prompts.js（PromptsSection 内部） */}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">端口 50133 · 协议 Transport · stdio · …（加载中）</span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

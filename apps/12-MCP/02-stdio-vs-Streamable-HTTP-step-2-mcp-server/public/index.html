@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Streamable HTTP MCP Server · 第二步（step-2）· Server 自己 listen 端口</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [info, setInfo] = useState(null);
+      const [probe, setProbe] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [status, setStatus] = useState("⏸ 待加载");
+      const [errMsg, setErrMsg] = useState("");
+
+      useEffect(() => {
+        fetch("/health").then(r => r.json()).then(d => {
+          const el = document.getElementById("env-info");
+          if (!el) return;
+          el.textContent =
+            `端口 ${d.port} · 协议 Transport · ${d.transport} · 模型服务商 ${d.provider ?? "—"} · 模型 ${d.model ?? "—"} · 密钥 ${d.hasKey ? "✅" : "❌"} · 本地计算 · 不调大模型`;
+        }).catch(() => {});
+        fetch("/api/server-info").then(r => r.json()).then(d => {
+          if (d.ok) setInfo(d);
+        });
+      }, []);
+
+      function onProbe() {
+        setBusy(true);
+        setErrMsg("");
+        setStatus("🔄 请求中");
+        const t0 = Date.now();
+        fetch("/api/server-info").then(r => r.json()).then(d => {
+          const ms = Date.now() - t0;
+          if (d.ok) {
+            setProbe({ info: d, elapsedMs: ms, ts: new Date().toLocaleTimeString() });
+            setStatus("✅ 完成");
+          } else {
+            setErrMsg("探测失败");
+            setStatus("❌ 错误");
+          }
+        }).catch(e => {
+          setErrMsg(e instanceof Error ? e.message : String(e));
+          setStatus("❌ 错误");
+        }).finally(() => setBusy(false));
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Streamable HTTP MCP Server · 第二步（step-2）· Server 自己 listen 端口
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200">{status}</span>
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">本页只演示：<b>Streamable HTTP 形态的 MCP Server 跟浏览器状态页共用一个 koa 端口（50134）；MCP endpoint = <code>POST /mcp</code>，跟状态页 <code>GET /</code> 同进程同端口</b>。</p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>打开本页：浏览器连 koa（端口 50134）；MCP endpoint 也在这个端口（<code>POST /mcp</code>）</li>
+                <li>看下方「我自己的状态」卡片：进程 ID、MCP endpoint URL、session ID</li>
+                <li>点「探测 MCP endpoint」：浏览器 GET /api/server-info（验证 Server 还活着 + 拿到最新 session）</li>
+                <li>另起 Client demo 进程（端口 50135），让 Client 走 HTTP POST 到 50134/mcp 调工具</li>
+                <li>实验：杀掉 koa 进程、Client 进程继续在（Server 仍 listen）；反过来杀掉 Client、Server 不受影响</li>
+              </ol>
+
+              {/* 核心教学点卡片 */}
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  Streamable HTTP 形态下，MCP Server 是一个独立进程、自己 listen 端口；Client 用 HTTP POST 连过来，不再像 stdio 那样"拥有"Server。Server 的生死跟 Client 解耦 —— 这才是 HTTP Transport 的价值。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么在结果里观察这个核心点：下面卡片里的 <code>serverPid</code> 是这个 koa 进程的 pid；MCP endpoint URL 是 <code>http://127.0.0.1:50134/mcp</code>（跟浏览器状态页同一个端口）。杀掉这个 Server demo 进程，Client demo 那边的 HTTP 请求立刻 connection refused —— 但反过来杀 Client demo，Server 不受影响。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <button
+                id="btn-probe"
+                onClick={onProbe}
+                disabled={busy}
+                className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                title="浏览器 GET /api/server-info，看 Server 状态（验证 Server 进程还活着）"
+              >
+                探测 MCP endpoint（看 Server 还活着没）
+              </button>
+              {errMsg && (
+                <div className="bg-red-50 border border-red-300 text-red-800 text-sm rounded p-2">
+                  {errMsg}
+                </div>
+              )}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!info && !probe && (
+                <p className="text-xs text-gray-500">还没有数据。</p>
+              )}
+
+              {info && (
+                <div className="bg-gray-50 border border-gray-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-gray-700">
+                    我自己的状态（一次进程内有 2 个 listener）
+                  </div>
+                  <div className="text-xs text-gray-600">进程 ID：<code>{info.serverPid}</code></div>
+                  <div className="text-xs text-gray-600">MCP endpoint：<code>{info.mcpEndpoint}</code>（跟 koa 同端口的 POST /mcp）</div>
+                  <div className="text-xs text-gray-600">koa 端口：<code>50134</code>（你正在看的这个页面 / MCP endpoint 同端口）</div>
+                  <div className="text-xs text-gray-600">当前 session ID：<code>{info.sessionId ?? "(尚未生成，等 Client 连过来才生成)"}</code></div>
+                </div>
+              )}
+
+              {probe && (
+                <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-green-900">
+                    探测成功 · 耗时 {probe.elapsedMs} ms · 时间 {probe.ts}
+                  </div>
+                  <div className="text-xs text-gray-600">session ID：<code>{probe.info.sessionId ?? "(同上)"}</code></div>
+                  <div className="text-xs text-gray-600">说明 Server 进程还在跑；Client 现在可以连</div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <span id="env-info">端口 50134 · 协议 Transport · streamable-http · …（加载中）</span>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
