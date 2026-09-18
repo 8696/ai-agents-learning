@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人机回圈 · 第二步 · 渠道失败 ≠ 人拒绝</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/api.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/ledger-panel.js"></script>
+  <script type="text/babel" src="../components/pending-panel.js"></script>
+  <script type="text/babel" src="../components/trace-panel.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter, LedgerPanel, PendingPanel, TracePanel } = window.DemoUI || {};
+    const { getJson, postJson } = window.DemoUtils;
+
+    function ChannelFailureIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：<b>人通过 ≠ 执行成功</b>。变体 F 的关键：人点头之后，executeTransfer 走到一半渠道挂了（银行接口返回 500 / 网络超时 / 余额被另一笔交易改走等），账本<b>不应该</b>改，但 pending 也不能停在 waiting。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>点「发起转账提议」→ 待审批挂着（pending.status=waiting、currentNode=waitForHuman）。</li>
+            <li>点「通过（正常 executeTransfer）」→ executeTransfer 成功 → pending.status=executed、currentNode=executed、transferCallCount=1。</li>
+            <li>重置后再提议 → 点「通过（模拟渠道失败）」→ executeTransfer throw → approveTransfer 不 throw，写 pending.status=<b>failed</b>、currentNode=<b>executed_failed</b>、transferCallCount 仍是 0、账本不变。</li>
+            <li>对照：失败 = 橙红色边「人已通过但执行失败」；拒绝 = 灰色「人已拒绝，账本未动」——两种不能混在一起（变体 F 的核心判别点）。</li>
+            <li>本页不做杀进程再批 / 超时——走 restart-recovery / timeout-default 页。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">
+              通过 ≠ 执行成功。渠道失败要走<b>自己的边</b>（executed_failed），不能塞进 cancel（cancel 是人拒绝的语义），也不能塞进 executed（账本没真扣）。客服如果把「渠道失败」按「人拒绝」处理，会按驳回流程走——人明明同意了，钱没扣成也没人追。
+            </div>
+            <div className="text-xs text-gray-600">
+              怎么观察：提议之后点「通过（模拟渠道失败）」→ 余额仍是初始数、transferCallCount 仍是 0；pending 卡片变<b>橙红色</b>，写「人已通过，但执行失败（账本未动、调用次数仍是 0）」；currentNode 显示 executed_failed。和拒绝那一页对照：拒绝灰色、失败橙红色。
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [to, setTo] = useState("张三");
+      const [amount, setAmount] = useState("5000");
+      const [snapshot, setSnapshot] = useState(null);
+      const [lastCall, setLastCall] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        getJson("/health").then(function (body) { setEnv(body); }).catch(function () { setStatus("error"); });
+        getJson("/api/snapshot").then(function (body) { setSnapshot(body.snapshot); setStatus("ok"); }).catch(function () { setStatus("error"); });
+      }, []);
+
+      const waiting = snapshot && snapshot.pending && snapshot.pending.status === "waiting";
+      const loading = status === "loading";
+
+      function run(method, url, request, sender) {
+        setStatus("loading");
+        setErrorText("");
+        return sender()
+          .then(function (body) {
+            if (body.snapshot) setSnapshot(body.snapshot);
+            setLastCall({ method: method, url: url, request: request, response: body, httpStatus: 200 });
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            const httpStatus = err.status || 0;
+            setLastCall({
+              method: method,
+              url: url,
+              request: request,
+              response: err.body || { error: err.message },
+              httpStatus: httpStatus,
+            });
+            setErrorText(err.message || "请求失败");
+            setStatus("error");
+          });
+      }
+
+      function onPropose() {
+        run("POST", "/api/propose", { to: to, amount: amount }, function () {
+          return postJson("/api/propose", { to: to, amount: amount });
+        });
+      }
+      function onApproveNormal() {
+        const runId = snapshot && snapshot.pending ? snapshot.pending.runId : "";
+        run("POST", "/api/approve", { runId: runId, forceFail: false }, function () {
+          return postJson("/api/approve", { runId: runId, forceFail: false });
+        });
+      }
+      function onApproveFail() {
+        const runId = snapshot && snapshot.pending ? snapshot.pending.runId : "";
+        run("POST", "/api/approve", { runId: runId, forceFail: true }, function () {
+          return postJson("/api/approve", { runId: runId, forceFail: true });
+        });
+      }
+      function onReset() {
+        run("POST", "/api/reset", {}, function () {
+          return postJson("/api/reset", {});
+        });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              人机回圈（Human-in-the-loop） · 第二步（step-2） · 渠道失败 ≠ 人拒绝
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="channel" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <ChannelFailureIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="text-sm text-gray-700">
+                  收款人（to）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={to}
+                    disabled={loading}
+                    onChange={function (e) { setTo(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">提议时写入。</span>
+                </label>
+                <label className="text-sm text-gray-700">
+                  金额（amount · 元）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={amount}
+                    disabled={loading}
+                    onChange={function (e) { setAmount(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">正整数。</span>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading} onClick={onPropose}>
+                  发起转账提议（不扣款 · propose）
+                </button>
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading || !waiting} onClick={onApproveNormal}>
+                  通过（正常 executeTransfer · approve）
+                </button>
+                <button type="button" className="border border-orange-500 text-orange-700 text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading || !waiting} onClick={onApproveFail}>
+                  通过（模拟渠道失败 · forceFail=true · approve）
+                </button>
+                <button type="button" className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading} onClick={onReset}>
+                  重置账本（回到 10000 · 清 pending · 清盘 · reset）
+                </button>
+              </div>
+              {errorText ? (
+                <p className="text-sm text-red-700">页面能看见的失败：{errorText}</p>
+              ) : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <p className="text-xs text-gray-500">
+                {snapshot && snapshot.lastEvent ? snapshot.lastEvent : "输出区空态：还没有跑过主路径。"}
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <LedgerPanel ledger={snapshot && snapshot.ledger} />
+                <PendingPanel
+                  pending={snapshot && snapshot.pending}
+                  currentNode={snapshot && snapshot.currentNode}
+                />
+              </div>
+              <TracePanel lastCall={lastCall} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

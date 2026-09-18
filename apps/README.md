@@ -149,6 +149,8 @@
 | `yarn app:11-02-checkpoint-durable-resume-step-6` | `50126` | 模块 11 · 02 · Checkpoint / Durable Resume step-6：二页一口（总览 + 业务例子图 订单发货 + 退款）；本地计算，不调大模型 |
 | （口不回收 · 原 step-2 已并入 step-1 `/pages/resume.html`） | `50122` | 不再单独启动 |
 | （口不回收 · 原 step-3 已并入 step-1 `/pages/charge-crash.html`） | `50123` | 不再单独启动 |
+| `yarn app:11-03-human-in-the-loop-step-1` | `50127` | 模块 11 · 03 · Human-in-the-loop step-1：转账在点头前停住；本地计算，不调大模型 |
+| `yarn app:11-03-human-in-the-loop-step-2` | `50128` | 模块 11 · 03 · Human-in-the-loop step-2：杀进程再批（单还在、钱没动）—— 接 step-1 三 sub-page + 持久化 sub-page（lib/db.ts SQLite + initState 恢复）；本地计算，不调大模型 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
 

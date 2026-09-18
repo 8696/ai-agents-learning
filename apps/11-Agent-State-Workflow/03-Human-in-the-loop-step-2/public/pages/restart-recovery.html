@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人机回圈 · 第二步 · 杀进程再批（单还在、钱没动）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/api.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/ledger-panel.js"></script>
+  <script type="text/babel" src="../components/pending-panel.js"></script>
+  <script type="text/babel" src="../components/trace-panel.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter, LedgerPanel, PendingPanel, TracePanel } = window.DemoUI || {};
+    const { getJson, postJson } = window.DemoUtils;
+
+    function RestartIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：<b>杀掉进程再起来，待审批仍在、钱没动</b>。靠的是磁盘上的检查点（lib/db.ts）：每次 setPending / setLedger 同步触发 SQLite 写盘；进程重启时 initState() 从磁盘读回 pending 与 ledger。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>第一次启动：服务起来时调 initState()，磁盘无 pending → 走初始状态（余额 10000、两个调用次数 = 0）。</li>
+            <li>点「发起转账提议」→ POST /api/propose。pending 写内存 + 写盘（lib/db.ts）。</li>
+            <li>在终端 Ctrl+C 杀掉服务（同一份 logs/ 里能看到 server.start 那行）。</li>
+            <li><code>yarn app:11-03-human-in-the-loop-step-2</code> 重启服务。initState() 从磁盘读回 pending，currentNode 回到 waitForHuman。</li>
+            <li>页面再次 GET /api/snapshot → lastEvent 显示「从磁盘恢复：待审批仍在（runId=...，向 张三 转 5000 元）。余额仍是 10000。」</li>
+            <li>点「通过」→ executeTransfer 跑一次，余额减少、调用次数变成 1；写盘也更新（ledger_state）。</li>
+            <li>判错会怎样：演示只在同一次页面会话里点通过，从没停过服务 = 证明不了人机回圈能跨进程。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">
+              暂停能成立，先要能把状态存住。检查点解决「进程死了单还在」；人机回圈解决「单在，但人没点头就不能往下做」。没有检查点，恢复后调度器会把转账跑完；没有等待节点，单是裸放在内存里，重启就没了。
+            </div>
+            <div className="text-xs text-gray-600">
+              怎么观察：杀掉服务再起来，pending 卡片仍是同一笔待审批、runId 不变、余额未变、transferCallCount 仍是 0；点通过之后才扣一次。如果重启后 pending 没了 / runId 变了 / 余额变了 → 检查点没写上或没读上，不是这一节。
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [to, setTo] = useState("张三");
+      const [amount, setAmount] = useState("5000");
+      const [snapshot, setSnapshot] = useState(null);
+      const [lastCall, setLastCall] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setStatus("error"); });
+        getJson("/api/snapshot")
+          .then(function (body) {
+            setSnapshot(body.snapshot);
+            setStatus("ok");
+          })
+          .catch(function () { setStatus("error"); });
+      }, []);
+
+      const waiting = snapshot && snapshot.pending && snapshot.pending.status === "waiting";
+      const loading = status === "loading";
+
+      function run(method, url, request, sender) {
+        setStatus("loading");
+        setErrorText("");
+        return sender()
+          .then(function (body) {
+            if (body.snapshot) setSnapshot(body.snapshot);
+            setLastCall({ method: method, url: url, request: request, response: body, httpStatus: 200 });
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            const httpStatus = err.status || 0;
+            setLastCall({
+              method: method,
+              url: url,
+              request: request,
+              response: err.body || { error: err.message },
+              httpStatus: httpStatus,
+            });
+            setErrorText(err.message || "请求失败");
+            setStatus("error");
+          });
+      }
+
+      function onPropose() {
+        const payload = { to: to, amount: amount };
+        run("POST", "/api/propose", payload, function () {
+          return postJson("/api/propose", payload);
+        });
+      }
+      function onApprove() {
+        const runId = snapshot && snapshot.pending ? snapshot.pending.runId : "";
+        run("POST", "/api/approve", { runId: runId }, function () {
+          return postJson("/api/approve", { runId: runId });
+        });
+      }
+      function onReject() {
+        const runId = snapshot && snapshot.pending ? snapshot.pending.runId : "";
+        run("POST", "/api/reject", { runId: runId }, function () {
+          return postJson("/api/reject", { runId: runId });
+        });
+      }
+      function onEdit() {
+        const runId = snapshot && snapshot.pending ? snapshot.pending.runId : "";
+        run("POST", "/api/edit", { runId: runId, to: to, amount: amount }, function () {
+          return postJson("/api/edit", { runId: runId, to: to, amount: amount });
+        });
+      }
+      function onRead() {
+        run("POST", "/api/read", {}, function () {
+          return postJson("/api/read", {});
+        });
+      }
+      function onReset() {
+        run("POST", "/api/reset", {}, function () {
+          return postJson("/api/reset", {});
+        });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              人机回圈（Human-in-the-loop） · 第二步（step-2） · 杀进程再批（单还在、钱没动）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="restart" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <RestartIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="text-sm text-gray-700">
+                  收款人（to）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={to}
+                    disabled={loading}
+                    onChange={function (e) { setTo(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">提议时写入；保存修改时也用它。</span>
+                </label>
+                <label className="text-sm text-gray-700">
+                  金额（amount · 元）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={amount}
+                    disabled={loading}
+                    onChange={function (e) { setAmount(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">正整数。重启后这条 runId 上的 pending.args 不变。</span>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading} onClick={onPropose}>
+                  发起转账提议（写内存 + 写盘 · propose）
+                </button>
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading || !waiting} onClick={onApprove}>
+                  通过（这时才扣款 · approve）
+                </button>
+                <button type="button" className="border border-red-400 text-red-700 text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading || !waiting} onClick={onReject}>
+                  拒绝（副作用为零 · reject）
+                </button>
+                <button type="button" className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading || !waiting} onClick={onEdit}>
+                  保存修改（改参数 · 不触发支付 · edit）
+                </button>
+                <button type="button" className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading} onClick={onRead}>
+                  查余额（自动走 · getBalance）
+                </button>
+                <button type="button" className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50" disabled={loading} onClick={onReset}>
+                  重置账本（清内存 + 清盘 · reset）
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                演示「杀进程再批」：点「发起转账提议」→ 在终端 Ctrl+C 杀掉服务 → <code>yarn app:11-03-human-in-the-loop-step-2</code> 重启 → 回本页，pending 仍在。
+              </p>
+              {errorText ? (
+                <p className="text-sm text-red-700">页面能看见的失败：{errorText}</p>
+              ) : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <p className="text-xs text-gray-500">
+                {snapshot && snapshot.lastEvent ? snapshot.lastEvent : "输出区空态：还没有跑过主路径。"}
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <LedgerPanel ledger={snapshot && snapshot.ledger} />
+                <PendingPanel
+                  pending={snapshot && snapshot.pending}
+                  currentNode={snapshot && snapshot.currentNode}
+                />
+              </div>
+              <TracePanel lastCall={lastCall} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人机回圈 · 第二步 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+    const { getJson } = window.DemoUtils;
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) { setEnv(body); setStatus("ok"); })
+          .catch(function () { setStatus("error"); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              人机回圈（Human-in-the-loop） · 第二步（step-2） · 总览
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页是 step-2 总览。step-2 聚焦变体 E「等人期间靠检查点活着」——<b>只有一个 sub-page</b>：杀进程再批。pending 与 ledger 写盘（<code>lib/db.ts</code> SQLite），进程重启 <code>initState()</code> 恢复。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>step-1（端口 50127）已经演示了：通过 / 拒绝 / 改参数 / 只读对照（变体 A / C / H）——这些在 step-2 不重复，行为完全一样，只是每次 setPending / setLedger 多写一次盘。</li>
+                <li>step-2 新增的只有一件事：杀进程后 pending 不丢、runId 不变、余额不变、transferCallCount 仍是 0。</li>
+                <li>打开「杀进程再批」sub-page：点「发起转账提议」→ 在终端 Ctrl+C 杀服务 → <code>yarn app:11-03-human-in-the-loop-step-2</code> 重启 → 回页面，pending 卡片仍是同一笔待审批。</li>
+                <li>判错会怎样：演示只在同一次页面会话里点通过，从没停过服务 = 证明不了人机回圈能跨进程；判错是「进程死了再起，pending 没了 / runId 变了 / 余额变了」——那是检查点没写上。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  暂停能成立，先要能把状态存住。检查点（<code>lib/db.ts</code>）解决「进程死了单还在」；人机回圈解决「单在，但人没点头就不能往下做」。没有检查点，恢复后调度器会把转账跑完；没有等待节点，单是裸放在内存里，重启就没了。
+                </div>
+                <div className="text-xs text-gray-600">
+                  step-1 三个 sub-page 已经演示了「哪些工具停、哪些工具自动走、改参数 ≠ 批准」；step-2 加一层——停了之后人可能很久才来，进程可能在这中间死掉，单要活到人点头那一刻。
+                </div>
+              </div>
+            </section>
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <div className="text-sm text-gray-500 mb-2">第二步的三个 sub-page（同一份 demo、同一端口、<code>lib/db.ts</code> 持久化）：</div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <a
+                  href="/pages/restart-recovery.html"
+                  className="border border-yellow-300 bg-yellow-50 rounded p-4 block hover:bg-yellow-100"
+                >
+                  <div className="text-sm font-semibold text-yellow-900">杀进程再批（变体 E）</div>
+                  <p className="text-xs text-yellow-800 mt-1">
+                    提议 → 杀进程 → 重启 → pending 仍在、runId 不变、钱没动。
+                  </p>
+                </a>
+                <a
+                  href="/pages/timeout-default.html"
+                  className="border border-red-300 bg-red-50 rounded p-4 block hover:bg-red-100"
+                >
+                  <div className="text-sm font-semibold text-red-900">超时默认拒绝（变体 G · 30 秒）</div>
+                  <p className="text-xs text-red-800 mt-1">
+                    提议 → 30 秒不点 → 后端 snapshot 检测过期 → 自动调 rejectTransfer。
+                  </p>
+                </a>
+                <a
+                  href="/pages/channel-failure.html"
+                  className="border border-orange-300 bg-orange-50 rounded p-4 block hover:bg-orange-100"
+                >
+                  <div className="text-sm font-semibold text-orange-900">渠道失败 ≠ 人拒绝（变体 F）</div>
+                  <p className="text-xs text-orange-800 mt-1">
+                    提议 → 点「通过（模拟渠道失败）」→ pending.status=failed、currentNode=executed_failed、transferCallCount 仍是 0。
+                  </p>
+                </a>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[80px]">
+              <p className="text-xs text-gray-500">
+                通过 / 拒绝 / 改参数 / 只读对照 走 step-1（端口 50127）；杀进程再批 / 超时默认拒绝 / 渠道失败 走 step-2（端口 50128）。Pending 卡片四色：<span className="text-yellow-700">黄 waiting</span> / <span className="text-green-700">绿 executed</span> / <span className="text-gray-700">灰 rejected</span> / <span className="text-orange-700">橙 failed</span>。
+              </p>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

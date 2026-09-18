@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人机回圈 · 第一步 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter } = window.DemoUI || {};
+    const { getJson } = window.DemoUtils;
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) { setEnv(body); setStatus("ok"); })
+          .catch(function () { setStatus("error"); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              人机回圈（Human-in-the-loop） · 第一步（step-1） · 总览
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页是 step-1 总览。step-1 拆成三个 sub-page：<b>通过</b>（点头才扣款）、<b>拒绝</b>（副作用为零）、<b>只读对照</b>（查余额自动走不拦）。三个 sub-page 共享同一份内存账本——一个 sub-page 提议的转账，在另一个 sub-page 上能看到待审批；一个 sub-page 查的余额计数，三个 sub-page 都看得见。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>打开「只读对照」那一页：点「查余额」→ getBalanceCallCount 立刻变 1、pending 不变、transferCallCount 仍是 0。</li>
+                <li>在同页点「发起转账提议」→ pending.status=waiting、transferCallCount 仍是 0；对照看同一个账本上的两个调用次数。</li>
+                <li>切到「通过」那一页：点通过 → executeTransfer 跑一次，transferCallCount 变 1。</li>
+                <li>点「重置账本」回到初始状态，再切到「拒绝」那一页：点拒绝 → pending.status=rejected、currentNode=cancelled，transferCallCount <b>仍是 0</b>。</li>
+                <li>看输出区三个调用次数：getBalanceCallCount（自动 +N）/ transferCallCount（通过=1，拒绝=0）/ pending 状态。这三个数把通过 / 拒绝 / 只读三条边的差别钉死了。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  三条边的对照：<b>通过</b>→ executeTransfer 跑一次；<b>拒绝</b>→ executeTransfer 一次不进；<b>只读</b>→ 不进 executeTransfer 也不进 pending，直接返回。判定方式：执行函数调用次数 + pending 状态。
+                </div>
+                <div className="text-xs text-gray-600">
+                  必须停 vs 不必停：执行之后那一毫秒就回不去、且代价由人或公司承担——转账 / 删数据要停；查余额这种只读查询自动走。把只读也做成审批 = 人点 20 次才能看到一个数字，对真正的转账已经麻木。
+                </div>
+              </div>
+            </section>
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <div className="text-sm text-gray-500 mb-2">第一步的三个 sub-page（同一份 demo、同一端口、同一 `lib/flow/` 核心）：</div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <a
+                  href="/pages/approve.html"
+                  className="border border-blue-300 bg-blue-50 rounded p-4 block hover:bg-blue-100"
+                >
+                  <div className="text-sm font-semibold text-blue-900">通过（点头才扣款）</div>
+                  <p className="text-xs text-blue-800 mt-1">
+                    提议 → 待审批 → 点通过 → executeTransfer 跑一次 → transferCallCount 变 1。
+                  </p>
+                </a>
+                <a
+                  href="/pages/reject.html"
+                  className="border border-gray-300 bg-gray-50 rounded p-4 block hover:bg-gray-100"
+                >
+                  <div className="text-sm font-semibold text-gray-900">拒绝（副作用为零）</div>
+                  <p className="text-xs text-gray-700 mt-1">
+                    提议 → 待审批 → 点拒绝 → pending.status=rejected、currentNode=cancelled → transferCallCount 仍是 0。
+                  </p>
+                </a>
+                <a
+                  href="/pages/readonly.html"
+                  className="border border-green-300 bg-green-50 rounded p-4 block hover:bg-green-100"
+                >
+                  <div className="text-sm font-semibold text-green-900">只读对照（自动走）</div>
+                  <p className="text-xs text-green-800 mt-1">
+                    点查余额 → getBalanceCallCount 立刻 +1 → 不写 pending、不进等待节点、不调 executeTransfer。
+                  </p>
+                </a>
+              </div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[80px]">
+              <p className="text-xs text-gray-500">
+                总览不展示账本。请进 sub-page 操作。三个 sub-page 共享同一份内存账本（重启会丢单；杀进程再批是下一步的事）。
+              </p>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

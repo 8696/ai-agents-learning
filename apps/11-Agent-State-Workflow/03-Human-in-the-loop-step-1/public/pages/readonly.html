@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人机回圈 · 第一步 · 只读对照（查余额自动走）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/api.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/ledger-panel.js"></script>
+  <script type="text/babel" src="../components/pending-panel.js"></script>
+  <script type="text/babel" src="../components/trace-panel.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter, LedgerPanel, PendingPanel, TracePanel } = window.DemoUI || {};
+    const { getJson, postJson } = window.DemoUtils;
+
+    function ReadOnlyIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：<b>只读工具不需要人点头</b>。点「查余额」一次点完，数字立刻回来，<b>没有</b>「通过 / 拒绝」按钮弹出来。点「发起转账提议」就走老路径，停住等人。两件事对照看 mustPause 名单能选工具：只读白名单（getBalance）放行，危险黑名单（transfer）停住。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>页面加载时 GET /api/snapshot，看见初始余额 10000、transferCallCount=0、getBalanceCallCount=0。</li>
+            <li>点「查余额」→ POST /api/read。getBalanceCallCount 立刻变成 1；<b>不</b>写 pending、不进等待节点、不调 executeTransfer。</li>
+            <li>点「发起转账提议」→ POST /api/propose（带收款人 / 金额）。pending 卡片出现；transferCallCount 仍是 0。</li>
+            <li>对照：getBalanceCallCount 自动 +1 vs pending 等人点头才动。两个工具的差别就在「不可逆 + 谁承担代价」。</li>
+            <li>本页不做通过 / 拒绝 / 改参数 / 杀进程再批 / 超时。点「重置账本」清两个调用次数，再来一次。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">
+              必须停 vs 不必停——判定只问一件事：<b>执行之后那一毫秒就回不去、且代价由人或公司承担</b>。转账 / 删数据要停；查余额这种只读查询自动走。判错会怎样：把「查余额」也做成审批，人点 20 次才能看到一个数字，对真正的转账已经麻木。
+            </div>
+            <div className="text-xs text-gray-600">
+              怎么观察：点查余额之后 getBalanceCallCount +1、pending 不变、transferCallCount 仍是 0。点提议之后 pending=waiting、transferCallCount 仍是 0。同一份账本上两个调用次数对照看。
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [to, setTo] = useState("张三");
+      const [amount, setAmount] = useState("5000");
+      const [snapshot, setSnapshot] = useState(null);
+      const [lastCall, setLastCall] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        getJson("/health")
+          .then(function (body) { setEnv(body); })
+          .catch(function () { setStatus("error"); });
+        getJson("/api/snapshot")
+          .then(function (body) {
+            setSnapshot(body.snapshot);
+            setStatus("ok");
+          })
+          .catch(function () { setStatus("error"); });
+      }, []);
+
+      const loading = status === "loading";
+
+      function run(method, url, request, sender) {
+        setStatus("loading");
+        setErrorText("");
+        return sender()
+          .then(function (body) {
+            if (body.snapshot) setSnapshot(body.snapshot);
+            setLastCall({ method: method, url: url, request: request, response: body, httpStatus: 200 });
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            const httpStatus = err.status || 0;
+            setLastCall({
+              method: method,
+              url: url,
+              request: request,
+              response: err.body || { error: err.message },
+              httpStatus: httpStatus,
+            });
+            setErrorText(err.message || "请求失败");
+            setStatus("error");
+          });
+      }
+
+      function onRead() {
+        run("POST", "/api/read", {}, function () {
+          return postJson("/api/read", {});
+        });
+      }
+
+      function onPropose() {
+        const payload = { to: to, amount: amount };
+        run("POST", "/api/propose", payload, function () {
+          return postJson("/api/propose", payload);
+        });
+      }
+
+      function onReset() {
+        run("POST", "/api/reset", {}, function () {
+          return postJson("/api/reset", {});
+        });
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              人机回圈（Human-in-the-loop） · 第一步（step-1） · 只读对照（查余额自动走）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="read" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <ReadOnlyIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                  disabled={loading}
+                  onClick={onRead}
+                >
+                  查余额（只读工具 · 自动走 · getBalance）
+                </button>
+                <span className="text-xs text-gray-500 self-center">vs</span>
+                <span className="text-xs text-gray-700 self-center">危险工具演示 →</span>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="text-sm text-gray-700">
+                  收款人（to）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={to}
+                    disabled={loading}
+                    onChange={function (e) { setTo(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">点「发起转账提议」会把这个名字写进待审批。</span>
+                </label>
+                <label className="text-sm text-gray-700">
+                  金额（amount · 元）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={amount}
+                    disabled={loading}
+                    onChange={function (e) { setAmount(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">正整数。提议后这个数会被待审批卡片原样摊开。</span>
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                  disabled={loading}
+                  onClick={onPropose}
+                >
+                  发起转账提议（写入待审批 · 不扣款 · propose）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50"
+                  disabled={loading}
+                  onClick={onReset}
+                >
+                  重置账本（回到 10000 · 两个调用次数清零 · reset）
+                </button>
+              </div>
+              {errorText ? (
+                <p className="text-sm text-red-700">页面能看见的失败：{errorText}</p>
+              ) : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <p className="text-xs text-gray-500">
+                {snapshot && snapshot.lastEvent ? snapshot.lastEvent : "输出区空态：还没有跑过主路径。"}
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <LedgerPanel ledger={snapshot && snapshot.ledger} />
+                <PendingPanel
+                  pending={snapshot && snapshot.pending}
+                  currentNode={snapshot && snapshot.currentNode}
+                />
+              </div>
+              <TracePanel lastCall={lastCall} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

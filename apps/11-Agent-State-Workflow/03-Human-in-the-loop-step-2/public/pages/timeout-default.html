@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人机回圈 · 第二步 · 超时默认拒绝（30 秒演示）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/api.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/ledger-panel.js"></script>
+  <script type="text/babel" src="../components/pending-panel.js"></script>
+  <script type="text/babel" src="../components/trace-panel.js"></script>
+  <script type="text/babel">
+    const { useEffect, useState } = React;
+    const { PageNav, StatusPill, EnvFooter, LedgerPanel, PendingPanel, TracePanel } = window.DemoUI || {};
+    const { getJson, postJson } = window.DemoUtils;
+
+    function TimeoutIntro() {
+      return (
+        <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+          <p className="text-sm text-gray-700">
+            本页只演示：<b>超时默认拒绝，不是默认通过</b>。本 demo 的超时设成 30 秒（<code>PENDING_TIMEOUT_MS</code>）方便演示；生产场景通常用几分钟到几小时。挂在等待节点的转账/删数据不能挂到天荒地老——支付渠道会过期、库存会变、攻击者会碰运气。
+          </p>
+          <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+            <li>点「发起转账提议」→ 等待节点启动；倒计时 30 秒（前端 setInterval 每秒拉一次 <code>/api/snapshot</code>）。</li>
+            <li>在 30 秒内点「通过」→ executeTransfer 跑一次，扣款、pending.status=executed。</li>
+            <li>如果 30 秒内不点通过：下一次拉 snapshot 那一刻，后端检测到过期 → 自动调 rejectTransfer → 写盘 → pending.status=rejected、currentNode=cancelled。</li>
+            <li>超时后再点「通过」→ 后端返 400「已超时，按默认拒绝收场」。账本未动。</li>
+            <li>变体 G 不影响 step-2 杀进程再批：磁盘上 pending 带着 waitingStartedAt，重启后从原时刻继续算（不是从进程起算）。</li>
+          </ol>
+          <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+            <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+            <div className="text-xs text-gray-800">
+              「没人反对」不是同意。超时 = 走与「人拒绝」同一条安全边；不能把审批关卡交给时钟。如果把超时默认设成通过 = 凌晨没人值班，大额转账自己走了。
+            </div>
+            <div className="text-xs text-gray-600">
+              怎么观察：发起提议之后看「剩余 X 秒」倒计时；点通过 → 余额减少；如果放着不点，30 秒后 pending.status 自动从 waiting 变 rejected；transferCallCount 仍是 0（自动拒绝不调 executeTransfer）。
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [to, setTo] = useState("张三");
+      const [amount, setAmount] = useState("5000");
+      const [snapshot, setSnapshot] = useState(null);
+      const [secondsLeft, setSecondsLeft] = useState(0);
+      const [lastCall, setLastCall] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      // 加载 /health 一次
+      useEffect(function () {
+        getJson("/health").then(function (body) { setEnv(body); setStatus("ok"); }).catch(function () { setStatus("error"); });
+      }, []);
+
+      // 每秒拉一次 snapshot：拿倒计时；后端在这条路由上检测过期并自动拒绝
+      useEffect(function () {
+        let cancelled = false;
+        function tick() {
+          if (cancelled) return;
+          getJson("/api/snapshot")
+            .then(function (body) {
+              if (cancelled) return;
+              setSnapshot(body.snapshot);
+              setSecondsLeft(body.secondsLeft || 0);
+            })
+            .catch(function () { /* 服务死了就静默；下次 tick 再试 */ });
+        }
+        tick(); // 立即拉一次
+        const id = setInterval(tick, 1000);
+        return function () {
+          cancelled = true;
+          clearInterval(id);
+        };
+      }, []);
+
+      const waiting = snapshot && snapshot.pending && snapshot.pending.status === "waiting";
+      const isRejected = snapshot && snapshot.pending && snapshot.pending.status === "rejected";
+      const loading = status === "loading";
+
+      function run(method, url, request, sender) {
+        setStatus("loading");
+        setErrorText("");
+        return sender()
+          .then(function (body) {
+            if (body.snapshot) setSnapshot(body.snapshot);
+            if (typeof body.secondsLeft === "number") setSecondsLeft(body.secondsLeft);
+            setLastCall({ method: method, url: url, request: request, response: body, httpStatus: 200 });
+            setStatus("ok");
+          })
+          .catch(function (err) {
+            const httpStatus = err.status || 0;
+            setLastCall({
+              method: method,
+              url: url,
+              request: request,
+              response: err.body || { error: err.message },
+              httpStatus: httpStatus,
+            });
+            setErrorText(err.message || "请求失败");
+            setStatus("error");
+          });
+      }
+
+      function onPropose() {
+        run("POST", "/api/propose", { to: to, amount: amount }, function () {
+          return postJson("/api/propose", { to: to, amount: amount });
+        });
+      }
+      function onApprove() {
+        const runId = snapshot && snapshot.pending ? snapshot.pending.runId : "";
+        run("POST", "/api/approve", { runId: runId }, function () {
+          return postJson("/api/approve", { runId: runId });
+        });
+      }
+      function onReset() {
+        run("POST", "/api/reset", {}, function () {
+          return postJson("/api/reset", {});
+        });
+      }
+
+      const countdownColor =
+        waiting && secondsLeft <= 5 ? "text-red-700"
+        : waiting && secondsLeft <= 10 ? "text-orange-700"
+        : "text-gray-700";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              人机回圈（Human-in-the-loop） · 第二步（step-2） · 超时默认拒绝（30 秒演示）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="timeout" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <TimeoutIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="text-sm text-gray-700">
+                  收款人（to）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={to}
+                    disabled={loading}
+                    onChange={function (e) { setTo(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">提议时写入。</span>
+                </label>
+                <label className="text-sm text-gray-700">
+                  金额（amount · 元）
+                  <input
+                    className="mt-1 w-full border rounded px-2 py-1"
+                    value={amount}
+                    disabled={loading}
+                    onChange={function (e) { setAmount(e.target.value); }}
+                  />
+                  <span className="block text-xs text-gray-500 mt-1">正整数。</span>
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                  disabled={loading}
+                  onClick={onPropose}
+                >
+                  发起转账提议（启动 30 秒倒计时 · propose）
+                </button>
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white text-sm px-3 py-1 rounded disabled:opacity-50"
+                  disabled={loading || !waiting}
+                  onClick={onApprove}
+                >
+                  通过（30 秒内才有效 · approve）
+                </button>
+                <button
+                  type="button"
+                  className="border border-gray-300 text-sm px-3 py-1 rounded disabled:opacity-50"
+                  disabled={loading}
+                  onClick={onReset}
+                >
+                  重置账本（回到 10000 · 清 pending · 清盘 · reset）
+                </button>
+                <span className={"text-sm font-semibold ml-2 " + countdownColor}>
+                  {waiting
+                    ? "剩余 " + secondsLeft + " 秒"
+                    : isRejected && snapshot.pending.args
+                      ? "已超时（pending.status=rejected · 自动按默认拒绝收场）"
+                      : "（还没发起提议）"}
+                </span>
+              </div>
+              {errorText ? (
+                <p className="text-sm text-red-700">页面能看见的失败：{errorText}</p>
+              ) : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <p className="text-xs text-gray-500">
+                {snapshot && snapshot.lastEvent ? snapshot.lastEvent : "输出区空态：还没有跑过主路径。"}
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <LedgerPanel ledger={snapshot && snapshot.ledger} />
+                <PendingPanel
+                  pending={snapshot && snapshot.pending}
+                  currentNode={snapshot && snapshot.currentNode}
+                />
+              </div>
+              <TracePanel lastCall={lastCall} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

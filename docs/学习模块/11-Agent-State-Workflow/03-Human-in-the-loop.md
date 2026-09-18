@@ -5,7 +5,7 @@
 
 - **来源**：本对话 §6.2 详解（对照上一节检查点（Checkpoint）/ 持久恢复（Durable Resume）、第一节状态机、模块 05 工具网关（Tool Gateway）与幂等（Idempotency）、模块 07 Agent 循环、模块 10 记忆（Memory）；Anthropic 人机回圈指南、LangGraph 的 `interrupt_before` 只当概念对照，未打开外部文档页）
 - **状态**：已沉淀
-- **Demo**：可运行（尚未写出）。说写再写进 `apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/`。本小节手写「危险工具执行前停住、等人决定、通过才调用、拒绝则副作用为零」；不要用 LangGraph / LangChain 代劳（框架是模块 13 的事）。
+- **Demo**：已写出 `apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/`。本小节手写「危险工具执行前停住、等人决定、通过才调用」；不要用 LangGraph / LangChain 代劳（框架是模块 13 的事）。step-1 只证明停住了、通过才发生；拒绝 / 改参数 / 杀进程再批 / 超时尚未写出。
 
 > 各节写什么、达标要求：见仓库根 [AGENTS.md §7.2](../../../AGENTS.md#72-沉淀--小节进度对齐)。
 
@@ -36,7 +36,7 @@
 
 和第一节状态机怎么接：`waitForHuman` 就是一个普通节点。出边事先画好：通过 → 执行危险工具；拒绝 → 取消；超时 → 与拒绝同一条安全边。调度器「走一步」仍是：跑节点 → 合并 → 路由 → 验边 → 写 `currentNode`。差别只在于：走进等待节点时，节点函数**不调用**支付 / 删除。
 
-贯穿例子仍可接到上一节的咖啡店（扣会员卡前停一下），本条要能讲清的硬例子是 **转账** 和 **删数据**——执行的那一毫秒之后，状态机自己回不去。
+贯穿例子仍可接到上一节的咖啡店（扣会员卡前停一下），本条要能讲清的硬例子是 **转账**（删数据是同款机制，本节演示以转账为例）——执行的那一毫秒之后，状态机自己回不去。
 
 ```text
 提议 transfer({ to, amount })
@@ -350,7 +350,7 @@ fetchOrder → checkShipment → （已发货）告诉用户，结束
 
 每条对应一个变体（或变体组）。需求是验收准绳，不是一次性搭完整应用的施工单。Step 生产仍按知识由浅入深。
 
-**需求 1 · 转账 / 删数据在点头前必须停（变体 A / B）**  
+**需求 1 · 转账在点头前必须停（变体 A / B）**  
 - 业务场景：后台要把一笔钱转到外部账户，或删除一条用户数据。  
 - 目标：执行前余额 / 行数据不变。  
 - 涉及：必须停的判定、停在执行前。  
@@ -407,7 +407,7 @@ fetchOrder → checkShipment → （已发货）告诉用户，结束
 - **超时默认拒绝，还是默认通过：** 转账和删数据必须默认拒绝。「没人反对」不是同意。
 - **三种回法是否 Step 1 就做齐：** 不。Step 1 只证明「停住了、通过才发生」。拒绝、改参数、杀进程再批、超时，由浅入深后加。
 - **人就在页面上点，还是做成异步工单：** 机制相同，都靠检查点。教学先做同一页的通过按钮，再补「停掉服务再点通过」。
-- **本对话节奏：** 先把笔记写进小节文档；演示等你说写再写。
+- **本对话节奏：** 笔记已写入小节文档；step-1 已写出。拒绝、改参数、杀进程再批、超时由双方决定下一步再加。
 
 ## 踩坑
 
@@ -427,12 +427,12 @@ fetchOrder → checkShipment → （已发货）告诉用户，结束
 ## 契约记录
 
 - 学习者原话「先沉淀文档」：本次只写小节文档，不写演示。正文用完整中文句子；专业词写成「中文（English）」；禁止陪跑口令（包括把「闸门」当工作用词）；禁止缩短词。
-- 演示结论已在 `coach start` 判为可运行；默认先不写出，你说写再写。
+- 演示结论已在 `coach start` 判为可运行；step-1 已写出 `apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/`（端口 50127）。拒绝 / 改参数 / 杀进程再批 / 超时尚未写出。
 - 本对话未打开 Anthropic 人机回圈指南的外部页面；「我的链接」保持空，来源写在本文件文首。
 
 ## 过关自检
 
-- 举两个必须停的：转账、删数据；再说一个不必停的：查余额。能说出不可逆、谁承担代价。
+- 举一个必须停的：转账（删数据是同款机制，跨小节扩展）；再说一个不必停的：查余额。能说出不可逆、谁承担代价。
 - 画这条数据路：提议 → 写入 pending → 写检查点 → 人决定 → 才执行或取消。
 - 说出三种人的回法，以及「改参数」不等于「批准」。
 - 说出为什么 System Prompt 拦不住模型，必须写死策略。
@@ -443,7 +443,8 @@ fetchOrder → checkShipment → （已发货）告诉用户，结束
 
 ## 还没搞懂的
 
-- 多人会签、按角色升级（普通转账一人批、超大额要财务）：本课未展开，不影响「转账 / 删数据必须停」。
+- 多人会签、按角色升级（普通转账一人批、超大额要财务）：本课未展开，不影响「转账必须停」。
+- **删数据（变体 B 的另一例）**：机制与转账同款——`MUST_PAUSE_TOOLS` 黑名单已含 `"delete_row"`（写死名单能选工具已能讲清），但本节没有 `delete_row` 工具的 route / 按钮 / 节点函数。补法是开新 step（提议 → 通过 → `executeDelete`），或跨小节扩展时再落地。
 - 待审批如何推到即时消息、谁来值班：产品通知问题，机制仍是检查点 + 等待节点。
 - LangGraph 的 `interrupt_before` / `interrupt_after` 具体 API：模块 13 对照框架时再打开，本课只要求能说出「停在执行前」。
 - 人改参数后要不要再让模型看一眼：本课默认执行节点用改过的参数，不强制再问模型。
@@ -472,41 +473,47 @@ Demo 判断
 - Step 1 第一件事：一次转账（或一次删除）在执行前停住；页面能看见待审批内容和「尚未发生」；点「通过」后账本才变
 - 锁定时机：学习者主动决定
 - 理由：关上文件后必须看见危险操作在点头前没有发生。只举例子、只画图，分不清「真停」和「先做后弹窗」
-- 落点：apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/ · yarn app:11-03-human-in-the-loop-step-1（尚未建）
+- 落点：apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/ · yarn app:11-03-human-in-the-loop-step-1
 - N 动态：禁止预判；Step 1 只证明停住了。拒绝、改参数、杀进程再批、超时由双方决定下一步再加
 - 与 start 预告：一致
 ```
 
-尚未创建 step-1，因此没有「Demo 子节进度」表（有文件夹再加行，禁止把未来步骤先占成 🔄）。
+## Demo 子节进度
+
+| 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
+|------|------|------|------|--------------|
+| ✅ | step-1 | `yarn app:11-03-human-in-the-loop-step-1` | `50127` | 转账在点头前停住；同一 step 内四页：总览 / 通过（点头才扣款） / 拒绝（副作用为零） / 只读对照（查余额自动走）。四个 sub-page 共享同一份内存账本，看 `transferCallCount` / `getBalanceCallCount` / `pending.status` 三个数。 |
+| ✅ | step-2 | `yarn app:11-03-human-in-the-loop-step-2` | `50128` | 杀进程再批 + 超时默认拒绝 + 渠道失败 ≠ 人拒绝：pending 与 ledger 写盘（`lib/db.ts` SQLite），进程重启 `initState()` 恢复；四页（总览 + restart-recovery + timeout-default + channel-failure）。通过 / 拒绝 / 改参数 / 只读对照 在 step-1 看，step-2 不重复。 |
 
 ## §5.4 目标 ↔ 代码整合打钩前检查
 
-跑打钩前检查日期：2026-09-18（首次写入小节文档时预列。演示尚未写出，状态全部为未实现。`coach complete` 时由独立子代理抽清单 + 逐项核对，不以本表为判定依据。）
+跑打钩前检查日期：2026-09-18（step-1 写出后教练预列。`coach complete` 时由独立子代理抽清单 + 逐项核对，不以本表为判定依据。）
 
 ### §5.4.A 目标 → 代码覆盖
 
-「本条要能讲清」：能举出必须暂停的例子（转账、删数据）
+「本条要能讲清」：能举出必须暂停的例子（转账）
 
 | 目标点 | 状态 | 证据 |
 |---|---|---|
-| 转账或删数据在人点头前副作用为零，并能在页面上摊开将要发生的操作 | 未实现 | 演示尚未写出 |
-| 人点头之后副作用才发生，次数可观察 | 未实现 | 演示尚未写出 |
-| 只读查询不必经过通过 / 拒绝 | 未实现 | 演示尚未写出 |
+| 转账在点头前副作用为零，并能在页面上摊开将要发生的操作 | 已实现 | step-1 `proposeTransfer`；页面待审批卡摊开收款人 / 金额；`transferCallCount` 仍为 0 |
+| 人点头之后副作用才发生，次数可观察 | 已实现 | step-1 `approveTransfer` → `executeTransfer`；次数变成 1 |
+| 只读查询不必经过通过 / 拒绝 | 未实现 | step-1 只做转账 |
 
-**A 段小结**：0/3 已实现。等你说写演示后再补代码证据。
+**A 段小结**：2/3 已实现。只读查询留给后续 step。
 
 ### §5.4.B 文档 → 代码对齐
 
 | MD 讲点 | 代码里有没有 | 状态 |
 |---|---|---|
-| 需求 1 · 转账 / 删数据点头前必须停 | 演示尚未写出 | 未实现 |
-| 需求 2 · 只读查询不停 | 演示尚未写出 | 未实现 |
-| 需求 3 · 拒绝后副作用为零 | 演示尚未写出 | 未实现 |
-| 需求 4 · 改参数再通过 | 演示尚未写出 | 未实现 |
-| 需求 5 · 写死策略决定停不停 | 演示尚未写出 | 未实现 |
-| 需求 6 · 等人期间杀进程单还在 | 演示尚未写出 | 未实现 |
-| 需求 7 · 超时默认拒绝 | 演示尚未写出 | 未实现 |
-| 需求 8 · 通过后渠道失败 ≠ 人拒绝 | 演示尚未写出 | 未实现 |
-| 主流程单独成文件；路由里不埋等待 / 执行 | 演示尚未写出 | 未实现 |
+| 需求 1 · 转账在点头前必须停 | 转账已实现（写死名单已含 delete_row；删数据本步演示以转账为例） | 已实现 |
+| 需求 2 · 只读查询不停 | step-1 sub-page `pages/readonly.html` + `routes/read.ts` + `lib/flow` `readBalance` / `transfer-read.ts` + `isReadOnly` / `READ_ONLY_TOOLS` 已实现；ledger 加 `getBalanceCallCount` 自动 +1，不写 pending、不调 executeTransfer | 已实现 |
+| 需求 3 · 拒绝后副作用为零 | step-1 sub-page `pages/reject.html` + `routes/reject.ts` + `lib/flow` `rejectTransfer` 已实现；pending.status=rejected、currentNode=cancelled、executeTransfer 一次不进 | 已实现 |
+| 需求 4 · 改参数再通过 | step-1 approve 页加「保存修改」按钮 + `routes/edit.ts` + `lib/flow` `editTransferPending` 已实现；改 pending.args，status 仍 waiting，executeTransfer 不进；改完后通过用改过的 args | 已实现 |
+| 需求 4 · 改参数再通过 | 本步无改参数 | 未实现 |
+| 需求 5 · 写死策略决定停不停 | `mustPause` 写死名单含 transfer | 已实现 |
+| 需求 6 · 等人期间杀进程单还在 | step-2 加 `lib/db.ts`（SQLite KV 抽象）+ `data/transfers.db`；`transfer-state.ts` 加持久化 hook（setPending / setLedger / incrementBalanceReadCount / resetState 同步写盘）+ `initState()` 启动加载；`server.ts` listen 前 `await initState()`；restart-recovery sub-page 演示 Ctrl+C 杀进程 → 重启 → pending 仍在、runId 不变、余额不变、transferCallCount 仍是 0 | 已实现 |
+| 需求 7 · 超时默认拒绝 | step-2 加 `PENDING_TIMEOUT_MS = 30000` + `isPendingExpired()` + `getSecondsLeft()`；snapshot 路由检测过期 → 自动调 rejectTransfer + 写盘；approve 入口先查过期（已超时返 400）；timeout-default sub-page setInterval 拉 snapshot 显示倒计时 | 已实现 |
+| 需求 8 · 通过后渠道失败 ≠ 人拒绝 | `transfer-tools.ts` 的 `executeTransfer` 加 `forceFail?: boolean` 参数；approve body 加 `forceFail` 字段；`approveTransfer` try/catch 写 `pending.status="failed"` + `currentNode="executed_failed"`，账本未改、transferCallCount 仍是 0；`PendingApproval.status` 加 `failed`；`CurrentNode` 加 `executed_failed`；PendingPanel 加橙红色 fourth state；channel-failure sub-page 提供「通过（模拟渠道失败）」按钮 | 已实现 |
+| 主流程单独成文件；路由里不埋等待 / 执行 | `lib/flow/pause-before-side-effect.ts` 文件头写了本步核心；新加 `rejectTransfer` 也在同文件（同一核心 + 加可选动作，不开新 step） | 已实现 |
 
-**B 段小结**：0/9 已实现。缺口只许补代码或拆成两条进度，不准在进度表打钩。
+**B 段小结**：需求 1（转账）/ 3（拒绝）/ 4（改参数）/ 5 / 6（杀进程再批） / 7（超时默认拒绝） / 8（渠道失败） / 主流程文件已实现。其余（2 已实现·只读）由浅入深后补，不准一次打包。

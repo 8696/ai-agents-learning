@@ -15,8 +15,8 @@
 |------|----------------|------------|-----------------|----------|
 | ✅ | [**状态机**：节点、边、条件路由；Agent 步骤 = 状态转移](./01-状态机.md) | 能画一张自己任务的状态图 | `finite state machine tutorial` `agent workflow state machine` · 任意 FSM 入门 · LangGraph State 文档 | — |
 | ✅ | [**Checkpoint / Durable Resume**：State 可序列化；恢复时不重复有副作用的 Tool](./02-Checkpoint-Durable-Resume.md) | 能解释「杀进程再起来」要保证什么 | `LangGraph checkpoint persistence` `workflow resume pattern` `durable execution agent` · LangGraph Persistence 文档 | — |
-| ⬜ | [**Human-in-the-loop**：哪些操作必须人点头才能继续](./03-Human-in-the-loop.md) | 能举出必须暂停的例子（转账、删数据） | `human in the loop AI workflow` `approval gate agent` · Anthropic HITL 指南 | — |
-| ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
+| ✅ | [**Human-in-the-loop**：哪些操作必须人点头才能继续](./03-Human-in-the-loop.md) | 能举出必须暂停的例子（转账） | `human in the loop AI workflow` `approval gate agent` · Anthropic HITL 指南 | — |
+| ✅ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 
