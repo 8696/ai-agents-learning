@@ -160,6 +160,7 @@
 | `yarn app:12-03-skills-vs-mcp-step-1` | `50136` | 模块 12 · 03 · Skills vs MCP step-1：同一句点单三条装配对照（只有 MCP / 只有技能 / 两边都有）；固定剧本，不调大模型 |
 | `yarn app:12-03-skills-vs-mcp-step-2` | `50137` | 模块 12 · 03 · Skills vs MCP step-2：分类题（apply_latte_policy 应判进哪 + 技能里塞 HTTP+Token 应判进哪）+ 三种提示词入口（MCP 提示词模板 / 技能 / 系统提示词 三栏对照）；固定剧本，不调大模型（三装配 + system prompt 装载见 step-1 端口 50136）|
 | `yarn app:12-03-skills-vs-mcp-step-3` | `50138` | 模块 12 · 03 · Skills vs MCP step-3：10 个技能短目录 + 三种装载模式对照（full 全加载 / catalog-only 仅短目录 / on-demand 短目录 + 命中加载）；固定剧本，不调大模型（分类题 + 三种提示词入口见 step-2 端口 50137）|
+| `yarn app:13-01-framework-solves-what-step-1` | `50139` | 模块 13 · 01 · 框架解决什么 step-1：首页手写 while 出一杯拿铁；子页同一句话走 Vercel AI SDK generateText；真调模型 |
 | （口不回收 · 原 step-2 已删，收进 step-1 最小发现） | `50130` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。

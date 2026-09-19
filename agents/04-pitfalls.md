@@ -290,6 +290,15 @@
 - **反模式**：subagent 报告已收就当收完；只改 README 进度表 ⬜→✅ 不改 §5.4 表；保留旧的「A 段小结：不过」措辞当 backlog 用
 - **关联**：[agents/07-notes.md §5.4.B](../agents/07-notes.md) 增量更新规则；[agents/05-demo.md §5.4](../agents/05-demo.md#54-目标--代码整合打钩前检查先抽清单再逐项核对新) 报告模板；模块 11 · 01 状态机 2026-09-17
 
+### P-027  ·  Node ESM 缺包文案是 Cannot find package
+
+- **症状**：动态 `import("ai")` 失败后页面拿到 500，`error` 是 `Cannot find package 'ai' imported from ...`，没有 503、也没有安装命令
+- **触发**：模块 13 · 01 step-1 烟雾测试里 POST `/api/framework-loop`，当时 `apps/` 尚未安装 `ai`；`loadAiSdk` 只按 `Cannot find module|ERR_MODULE_NOT_FOUND` 去认「没装库」
+- **根因**：当前 Node（v24 ESM）缺包时 `error.message` 写的是 `Cannot find package`，不是旧的 `Cannot find module`；只匹配后一种就会漏掉，被路由当成普通 500
+- **修复**：认没装库时同时看 `error.code === "ERR_MODULE_NOT_FOUND"` 和文案 `Cannot find package` / `Cannot find module`；匹配到就抛 `AiSdkNotInstalledError`，路由返回 503 + `yarn add` 命令
+- **反模式**：只 `test(/Cannot find module/)` 来判断「包没装」
+- **关联**：`apps/13-Agent-Framework/01-框架解决什么-step-1/lib/flow/framework-loop.ts`；2026-09-19 模块 13 · 01 step-1 烟雾测试
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

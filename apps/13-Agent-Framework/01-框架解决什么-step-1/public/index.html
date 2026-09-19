@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/fetch-json.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/run-result.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, PageIntro, StatusPill, EnvFooter, RunResult } = window.DemoUI || {};
+    const { postJson, loadHealth } = window.DemoUtils || {};
+    const DEFAULT_UTTERANCE = "来一杯中杯热拿铁。";
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [request, setRequest] = useState(null);
+      const [result, setResult] = useState(null);
+      const busy = status === "loading";
+      const noKey = env && env.hasKey === false;
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50139, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      async function run(body) {
+        setStatus("loading");
+        setError("");
+        setRequest({ url: "/api/handwritten-loop", method: "POST", body: body });
+        setResult(null);
+        try {
+          const data = await postJson("/api/handwritten-loop", body);
+          setResult(data.result);
+          setStatus("ok");
+        } catch (err) {
+          setError((err && err.message) || String(err));
+          setStatus("error");
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第一步（step-1） · 手写循环出一杯拿铁
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="overview" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="手写 while：同一句「来一杯中杯热拿铁。」，你能在轨迹里数出第几圈、有没有真的执行 make_latte。"
+              steps={[
+                "点「跑手写循环」会 POST /api/handwritten-loop，body 里是客人口述（utterance）。",
+                "服务端 lib/flow/handwritten-loop.ts 里有你写的 while：问模型 → 若有 tool_calls 就执行 make_latte → 把 tool_result 塞回 messages。",
+                "下面输出区出现：请求参数、每一圈、最终对客人说的话。期望至少 1 次 make_latte，业务代码里 hasWhileInBusinessCode=true。",
+              ]}
+              takeaway="框架还没上场。先看清你自己的循环长什么样：圈数在你的文件里，make_latte 是你在 while 里调的。"
+              observe="看调用流程卡：hasWhileInBusinessCode 应为 true；toolExecutedCount 至少为 1；停止原因多为 final_answer。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（utterance）
+                <textarea
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  rows="2"
+                  value={utterance}
+                  disabled={busy}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点「跑手写循环」会真调模型。期望模型调用 make_latte，而不是空口说做好了。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={busy || noKey}
+                  onClick={function () { run({ utterance: utterance }); }}
+                >
+                  跑手写循环（while + make_latte）
+                </button>
+                <button
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run({ utterance: "" }); }}
+                >
+                  演示空输入 4xx
+                </button>
+                <button
+                  className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { run({ utterance: utterance, forceError: true }); }}
+                >
+                  演示后端 5xx
+                </button>
+              </div>
+              {noKey ? <p className="text-xs text-red-700">缺 密钥，主按钮已禁用。请配 apps/.env。</p> : null}
+              {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px]">
+              <RunResult request={request} result={result} />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -147,9 +147,11 @@
     "app:12-02-stdio-vs-http-step-2-mcp-client": "PORT=50135 tsx 12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/server.ts",
     "app:12-03-skills-vs-mcp-step-1": "PORT=50136 tsx 12-MCP/03-Skills-vs-MCP-step-1/server.ts",
     "app:12-03-skills-vs-mcp-step-2": "PORT=50137 tsx 12-MCP/03-Skills-vs-MCP-step-2/server.ts",
-    "app:12-03-skills-vs-mcp-step-3": "PORT=50138 tsx 12-MCP/03-Skills-vs-MCP-step-3/server.ts"
+    "app:12-03-skills-vs-mcp-step-3": "PORT=50138 tsx 12-MCP/03-Skills-vs-MCP-step-3/server.ts",
+    "app:13-01-framework-solves-what-step-1": "PORT=50139 tsx 13-Agent-Framework/01-框架解决什么-step-1/server.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.71",
     "@anthropic-ai/sdk": "^0.39.0",
     "@koa/bodyparser": "^6.1.0",
     "@koa/router": "^13.1.0",
@@ -158,6 +160,7 @@
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@types/better-sqlite3": "^9.6.0",
+    "ai": "^7.0.107",
     "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.7",
     "gpt-tokenizer": "^2.9.0",
