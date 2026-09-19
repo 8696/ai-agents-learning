@@ -17,6 +17,8 @@ import { mountHttpListPrompts } from "./routes/http-list-prompts.js";
 import { mountHttpListResources } from "./routes/http-list-resources.js";
 import { mountHttpListTools } from "./routes/http-list-tools.js";
 import { mountHttpReadResource } from "./routes/http-read-resource.js";
+import { mountHttpTest401 } from "./routes/http-test-401.js";
+import { mountHttpTestAudience } from "./routes/http-test-audience.js";
 
 const app = new Koa();
 const router = new Router();
@@ -30,6 +32,8 @@ mountHttpListResources(router);
 mountHttpReadResource(router);
 mountHttpListPrompts(router);
 mountHttpGetPrompt(router);
+mountHttpTest401(router);
+mountHttpTestAudience(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));

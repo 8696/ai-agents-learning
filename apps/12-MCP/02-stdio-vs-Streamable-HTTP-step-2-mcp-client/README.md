@@ -73,6 +73,19 @@ Server 端
 | 每个响应卡上的 `调用方 <userId>` | 服务端实际看到的身份 = 页面顶部选择的身份 |
 | list_my_tickets 跨身份对照 | alice 2 / bob 1 / god 3（反例标红） |
 | 切换身份后耗时几毫秒 | 连接复用，省 initialize 握手 |
+| 底部「OAuth 2.1」按钮 | audience 不匹配 → 远端 401 + WWW-Authenticate（OAuth 2.1 §5.2 标准形状） |
+
+## OAuth 2.1 角色图 + audience 不匹配演示（A7）
+
+底部「OAuth 2.1 角色图 + Audience 受众校验」区：
+- ASCII 角色图（用户 → 授权服务器 → MCP Client → MCP Server / Resource Server）
+- **演示按钮**「用「发给别的 MCP server 的 token」试一次」：调 `/api/http/test-audience` 路由；路由用原生 fetch POST 远端 `/mcp`，硬编码 `token-for-other-server`（audience="other-mcp"）
+- 远端 checkBearer 校验 audience 不匹配 → HTTP 401 + `WWW-Authenticate: Bearer realm="mcp", error="invalid_token", error_description="audience mismatch: this token was issued for 'other-mcp', not 'mcp'"` + body 里的中文 error_description
+- 结果卡同时展示 **body + WWW-Authenticate header** 三栏对照
+
+- **为什么 Client demo 端不存 token**：每次 fetch 浏览器带 Authorization 头，Client demo route 从请求头解 token → 通过 AsyncLocalStorage 注入 dynamicAuthFetch
+- **Audience = 令牌发给谁 vs 服务端是谁 = 资源服务器**：OAuth 2.1 防 confused deputy 的核心机制；token 不能跨资源服务器乱用
+- 跨小节对照：跟模块 05 工具网关委托授权（用户 → Agent → 外部 HTTP 用谁的身份）、模块 11 Agent state、模块 20 安全审计（凭据轮换、最小权限）是同一类机制的**最底层**
 
 ## 页面
 

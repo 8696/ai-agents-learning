@@ -304,9 +304,9 @@ Node.js 在本机起一份 MCP 服务端：工具 `create_ticket`、资源退货
 | A4 能看见 HTTP 服务端独立存活、同一端点可被多次请求打到 | 已实现 | step-2-mcp-server 在 50134 同端口 POST /mcp；多次 `/api/http/call-tool` 走 `StreamableHTTPClientTransport` 复用同一 transport，sessionId 复用 |
 | A5 能看见 HTTP 无令牌 / 错令牌返回 HTTP 401 | 已实现 | 服务端 `lib/flow/auth.ts` 的 `checkBearer` + `routes/mcp-endpoint.ts` route 层在 transport.handleRequest 之前先校验；客户端 `lib/flow/mcp-http-client.ts` `setClientToken` 支持切 null / 错 / 对三态；页面 `public/components/auth-section.js` 三按钮对照，红卡 / 绿卡 |
 | A6 能看见按用户隔离 | 已实现 | 服务端 `lib/flow/tickets-store.ts` 硬编码 3 张工单（alice 2 / bob 1）+ `listTicketsForUser(userId)`；`lib/flow/request-context.ts` AsyncLocalStorage 把 userId 从 route 传到 Tool handler；`lib/flow/auth.ts` `TOKEN_TO_USER` 映射 `alice-secret/bob-secret/god-mode-token` → userId + isGod；`routes/mcp-endpoint.ts` `runWithUser(userId, ...)`；新增 Tool `list_my_tickets`；客户端**一条连接走到底**：自定义 fetch（`dynamicAuthFetch`）每次请求动态读 `getCurrentToken()` 拼 Authorization 头，不重建连接；页面顶部「当前登录身份」选择器（alice/bob/god 三按钮）+ 自动 connect + 默认登录 alice；三个 MCP 模块（Tools/Resources/Prompts）每个 handler 响应末尾附 `[调用方] <userId>`；客户端调用方身份在每个响应卡顶部显示 |
-| A7 能讲清 OAuth 2.1 角色；实现可最简 | 未实现 | 概念卡已写在「是什么 · 管子上的身份」与易混点；代码未做 |
+| A7 能讲清 OAuth 2.1 角色；实现可最简 | 已实现 | 服务端 `lib/flow/auth.ts` `TOKEN_TO_USER` 加 audience 字段 + `token-for-other-server`（audience="other-mcp"）示例；`checkBearer` 新增 `wrong_audience` 失败原因 + `error_description`（body 中文）+ `errorDescriptionHeader`（header ASCII）；`routes/mcp-endpoint.ts` 401 响应升级为 OAuth 2.1 形状：`WWW-Authenticate: Bearer realm="mcp", error="<reason>", error_description="<ASCII>"` + body `error_description`（中文）；`routes/server-info.ts` 加 `oauth: { spec, protectedResource, roles }` 元数据 + `knownUsers` 每项带 `audience`；客户端 `public/components/oauth-section.js` 概念卡（ASCII 角色图 + audience 校验文字）+ 演示按钮「用「发给别的 MCP server 的 token」试一次」；`routes/http-test-audience.ts` 用原生 fetch 发硬编码错 audience token → 抓 401 + WWW-Authenticate 透传给 page |
 
-**A 段小结**：A1+A2+A3+A4+A5+A6 已实现；A7 未实现。A6 已落（`tickets-store` 硬编码 alice 2 张 / bob 1 张 + AsyncLocalStorage 跨层传 userId + `list_my_tickets` Tool 按 userId 强制过滤 + 页面三身份对照 + god 红字反例）。A7（OAuth 2.1）仍按 backlog 走。
+**A 段小结**：A1+A2+A3+A4+A5+A6+A7 已实现。A7 已落（`auth.ts` TOKEN_TO_USER 加 audience 字段 + `token-for-other-server` 错 audience 示例 + `checkBearer` 新增 `wrong_audience` 失败原因 + 401 响应符合 OAuth 2.1 §5.2 标准形状 + `server-info` 加 oauth 元数据 + 页面 ASCII 角色图 + 演示按钮 + body / header 三栏对照）。§5.4.A 全部 已实现 → 可以在进度表给这一小节打钩（最后一步）。
 
 ### §5.4.B 文档 → 代码对齐
 
@@ -319,15 +319,15 @@ Node.js 在本机起一份 MCP 服务端：工具 `create_ticket`、资源退货
 | 过时 HTTP+SSE 不要当现行（注解） | 没专门做对照 demo；写在「是什么 · Streamable HTTP 数据怎么走」末段 | 已覆盖（注解） |
 | 无令牌 HTTP 401 vs JSON-RPC 业务错 | step-2-mcp-server `routes/mcp-endpoint.ts` 在 `transport.handleRequest` 之前先 `checkBearer`，不通过直接写 HTTP 401 + `WWW-Authenticate: Bearer`；客户端 `lib/flow/mcp-http-client.ts` `setClientToken` + `routes/http-auth-test.ts` 切 token；页面 `public/components/auth-section.js` 红 / 绿卡对照 | 已实现 |
 | API 令牌 ≠ 按用户隔离；上帝令牌反例 | step-2-mcp-server `lib/flow/tickets-store.ts` 硬编码 alice 2 张 / bob 1 张；`listTicketsForUser(userId)` 普通 user 返自己、userId=`god` 返全部；`lib/flow/request-context.ts` AsyncLocalStorage 把 userId 传到 Tool handler；`list_my_tickets` Tool 注册在 `lib/flow/mcp-http-server.ts`；客户端 `routes/http-list-as-user.ts` + `public/components/user-section.js` 三按钮对照（alice/bob 绿卡各自 2/1 张，god 红卡 3 张 + ⚠ 反例标注） | 已实现 |
-| OAuth 2.1 角色图 / 受众 | 无 | 未实现（落 A7 时一起） |
+| OAuth 2.1 角色图 / 受众 | 服务端 `lib/flow/auth.ts` TOKEN_TO_USER 每项带 audience 字段（alice/bob/god = "mcp"；token-for-other-server = "other-mcp"）；`checkBearer` 校验 token.audience == SERVER_AUDIENCE；不一致 → 401 + reason="wrong_audience" + WWW-Authenticate 描述 audience mismatch；客户端 `routes/http-test-audience.ts` 用硬编码错 audience token 发一次 + 抓响应；页面 `public/components/oauth-section.js` ASCII 角色图 + 演示按钮 + body / header 三栏对照 | 已实现 |
 | 云上 Agent 不能 spawn 员工本机子进程 | step-1 「核心教学点」卡片 + 「为什么」段对照说明 | 已覆盖（解释） |
 
-**B 段小结**：与 A 段对应。stdio / HTTP / 反向耦合 / HTTP API Token 鉴权 / 按用户隔离 + 上帝令牌反例 全部已在 step-1 + step-2 三个 demo 里实证；OAuth（A7）是后续 step 的活。
+**B 段小结**：与 A 段对应。stdio / HTTP / 反向耦合 / HTTP API Token 鉴权 / 按用户隔离 + 上帝令牌反例 / OAuth 2.1 角色图 + audience 不匹配 全部已在 step-1 + step-2 三个 demo 里实证。**A 段全实现 → 可以在进度表给这一小节打钩**（最后一步）。
 
-### 后续 step 计划（A7 仍未落；当前不在进度表打钩阻塞的 backlog）
+### 后续 step 计划（已全部落 · 当前不在进度表打钩阻塞）
 
 | 缺口 | 计划放哪 |
 | --- | --- |
 | ~~A5 + 鉴权对比（无令牌 401 vs 错令牌 401 vs 对令牌放行）~~ | ~~step-2 后半：API Token 鉴权（同 demo 加 endpoint 校验 + 错误演示）~~ **已落 2026-09-18**（详见 `lib/flow/auth.ts` + `routes/mcp-endpoint.ts` + `public/components/auth-section.js`） |
 | ~~A6 + 上帝令牌反例~~ | ~~step-3：按用户隔离（每个请求带 userId；同 Tool 返回按 user 过滤）~~ **已落 2026-09-19**（详见 `lib/flow/tickets-store.ts` 硬编码种子 + `lib/flow/request-context.ts` AsyncLocalStorage + `list_my_tickets` Tool + `public/components/user-section.js` 三身份对照 + god 红字反例） |
-| A7 + OAuth 角色图 | step-3 后或 step-4：OAuth 2.1 概念卡 + 受众校验形状 |
+| ~~A7 + OAuth 角色图~~ | ~~step-3 后或 step-4：OAuth 2.1 概念卡 + 受众校验形状~~ **已落 2026-09-19**（详见 `lib/flow/auth.ts` TOKEN_TO_USER 加 audience + `token-for-other-server` 错 audience 示例 + `checkBearer` `wrong_audience` 失败原因 + `routes/mcp-endpoint.ts` 401 响应符合 OAuth 2.1 §5.2 形状 + `routes/server-info.ts` oauth 元数据 + `public/components/oauth-section.js` ASCII 角色图 + 演示按钮 + body / header 三栏对照） |

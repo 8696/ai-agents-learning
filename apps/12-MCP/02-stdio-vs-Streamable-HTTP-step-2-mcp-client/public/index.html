@@ -15,13 +15,15 @@
   <!-- utils（普通 script）+ components（babel src）-->
   <script src="/utils/api-handlers.js"></script>
   <script type="text/babel" src="/components/prompts.js"></script>
+  <script type="text/babel" src="/components/oauth-section.js"></script>
+  <script type="text/babel" src="/components/test-auth-section.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const { PromptsSection } = window.DemoUI || {};
+    const { PromptsSection, OauthSection, TestAuthSection } = window.DemoUI || {};
     const { callJson } = window.DemoUtils || {};
 
     // ── 用户身份表 ──
@@ -47,6 +49,8 @@
       const [resourceRead, setResourceRead] = useState(null);
       const [prompts, setPrompts] = useState(null);
       const [promptGet, setPromptGet] = useState(null);
+      const [oauthResult, setOauthResult] = useState(null);
+      const [testAuthResult, setTestAuthResult] = useState(null);
       const [customerName, setCustomerName] = useState("张三");
       const [cupSize, setCupSize] = useState("中杯");
 
@@ -150,6 +154,58 @@
         });
       }
 
+      // OAuth 2.1 audience 不匹配演示：调 /api/http/test-audience 路由
+      // 路由内部用原生 fetch POST 远端 /mcp，token 硬编码为 token-for-other-server
+      async function onTestAudience() {
+        setBusy(true);
+        setErrMsg("");
+        setStatus("🔄 请求中");
+        const t0 = Date.now();
+        try {
+          const res = await fetch("/api/http/test-audience", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          const data = await res.json();
+          setOauthResult({ ...data, elapsedMs: Date.now() - t0 });
+          setStatus(data.httpStatus === 401 ? "✅ 完成（演示预期：401）" : "❌ 异常");
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          setOauthResult({ ok: false, error: message, elapsedMs: Date.now() - t0 });
+          setErrMsg(message);
+          setStatus("❌ 错误");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      // A5：浏览器侧「无 token 401」+「错 token 401」演示 —— 调专门 /api/http/test-401 路由做 raw fetch
+      async function testAuthCall(scenario) {
+        setBusy(true);
+        setErrMsg("");
+        setStatus("🔄 请求中");
+        const t0 = Date.now();
+        try {
+          const res = await fetch("/api/http/test-401", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scenario }),
+          });
+          const data = await res.json();
+          setTestAuthResult({ ...data, elapsedMs: Date.now() - t0 });
+          setStatus(data.httpStatus === 401 ? "✅ 完成（401）" : "❌ 异常");
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          setErrMsg(message);
+          setStatus("❌ 错误");
+        } finally {
+          setBusy(false);
+        }
+      }
+      function onTestNoToken() {
+        return testAuthCall("missing");  // 服务端 reason="missing"
+      }
+      function onTestWrongToken() {
+        return testAuthCall("wrong");  // 服务端 reason="wrong"
+      }
+
       const currentUserLabel = USERS.find(u => u.key === currentUserKey)?.label ?? "未选择";
 
       return (
@@ -173,6 +229,8 @@
                 <li>Client demo 的 route handler 从请求头解 token → 通过 AsyncLocalStorage 注入到 dynamicAuthFetch</li>
                 <li>三个 MCP 模块（Tools / Resources / Prompts）所有请求都按当前身份调用；响应里都回 <code>[调用方] &lt;userId&gt;</code></li>
                 <li>Tools 里的 <code>list_my_tickets</code> 按 userId 过滤工单；切到 god 看全部（反例对照）</li>
+                <li>底部「OAuth 2.1」演示：用「发给别的 MCP server 的 token」试一次 → 远端返 401 + WWW-Authenticate（OAuth 2.1 标准形状）</li>
+                <li>底部「401 触发演示」两个按钮：点「无 token」/「错 token」→ 看到 401 + reason + body 中文 error_description + header 英文</li>
               </ol>
               <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
                 <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
@@ -184,6 +242,20 @@
                 <div className="text-xs text-gray-600">
                   怎么在结果里观察这个核心点：底部 Output 区每张响应卡都标「调用方 &lt;userId&gt;」——和顶部「当前登录身份」一致；
                   切换身份后下一次请求的 Authorization 头立刻换成新 token（不需要重连、Client demo 也不需要知道身份）。
+                </div>
+              </div>
+
+              {/* OAuth 2.1 概念卡 */}
+              <div id="core-takeaway-oauth" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">OAuth 2.1 核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  <b>OAuth 2.1 = 委托授权</b>。access token 不是「一把钥匙」，是「一张写着『我是谁、我能干什么、这令牌是发给哪个资源服务器的』的有效期证书」。四角色：用户 / 授权服务器 / MCP Client（持 token 转请求）/ MCP Server（Resource Server，验 audience）。
+                </div>
+                <div className="text-xs text-gray-800 mt-1">
+                  <b>Audience（受众）校验</b>：token 上写的 <code>aud</code> 必须等于 MCP Server（Resource Server）的 <code>realm</code>。一把发给 "other-mcp" 的令牌，拿到我们的 "mcp" 端点来用 → <b>HTTP 401</b> + <code>WWW-Authenticate: Bearer realm="mcp", error="invalid_token", error_description="audience mismatch: this token was issued for 'other-mcp', not 'mcp'"</code>。这是 OAuth 2.1 防「confused deputy」的核心机制——token 不能跨资源服务器乱用。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么在结果里观察这个核心点：底部「OAuth 2.1」区点「用「发给别的 MCP server 的 token」试一次」按钮 → 看到远端返 HTTP 401 + body 里的中文 error_description + header 里的英文 error_description，对照 OAuth 2.1 §5.2 标准形状。
                 </div>
               </div>
             </section>
@@ -274,6 +346,19 @@
                   onCustomerNameChange={setCustomerName}
                 />
               </div>
+
+              <TestAuthSection
+                busy={busy}
+                lastResult={testAuthResult}
+                onTestNoToken={onTestNoToken}
+                onTestWrongToken={onTestWrongToken}
+              />
+
+              <OauthSection
+                busy={busy}
+                lastResult={oauthResult}
+                onTestAudience={onTestAudience}
+              />
 
               {errMsg && (
                 <div className="bg-red-50 border border-red-300 text-red-800 text-sm rounded p-2">

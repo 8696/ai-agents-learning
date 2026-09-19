@@ -56,6 +56,58 @@ A5 把「不带 / 错 / 对 token」对照三态做出来——这只是「能�
 - **连接复用**：客户端用 SDK 自定义 fetch（`dynamicAuthFetch`），Authorization 头每次请求动态拼——切换身份不需要重建连接
 - **跨小节对照**：跟模块 05 工具网关委托授权（用户 → Agent → 外部 HTTP 用谁的身份）、模块 11 Agent state（session 里挂 userId）、模块 20 安全审计（凭据轮换、最小权限）是同一类机制的**最底层**——把 userId 从 HTTP 层传到业务 handler
 
+## OAuth 2.1 角色图 + 受众校验（A7）
+
+每个 token 标了 audience，服务端 checkBearer 校验 `token.audience == "mcp"`。一把发给 "other-mcp" 的 token 拿到 "mcp" 端点来用 → 401 + WWW-Authenticate（OAuth 2.1 §5.2 标准形状）+ error_description body。
+
+### 四种 401 失败
+
+| reason | error（OAuth 2.1 标准值） | error_description 中文（body） | error_description 英文（WWW-Authenticate header） |
+| ------ | ------------------------ | ----------------------------- | --------------------------------------------- |
+| `missing` | `invalid_request` | 请求头里没有 Authorization —— OAuth 2.1 客户端必须在每次请求里带 Bearer token | missing Authorization header |
+| `malformed` | `invalid_request` | Authorization 头不是「Bearer <token>」形状——OAuth 2.1 标准格式是 Bearer scheme | Authorization header is not in 'Bearer <token>' format |
+| `wrong` | `invalid_token` | token 不在已知列表里——OAuth 2.1 客户端应该从授权服务器拿有效 token | token does not match any known credential |
+| `wrong_audience` | `invalid_token` | audience mismatch: this token was issued for 'other-mcp', not 'mcp' | audience mismatch: this token was issued for 'other-mcp', not 'mcp' |
+
+### 已知 token 清单
+
+```ts
+TOKEN_TO_USER = {
+  "alice-secret":           { userId: "alice", isGod: false, audience: "mcp" },
+  "bob-secret":             { userId: "bob",   isGod: false, audience: "mcp" },
+  "god-mode-token":         { userId: "god",   isGod: true,  audience: "mcp" },
+  "token-for-other-server": { userId: null,    isGod: false, audience: "other-mcp" },
+}
+```
+
+**前三把发给本 MCP 服务端（realm="mcp"），第四把发给别的 MCP 服务端（realm="other-mcp"）**——演示 OAuth 2.1 防 confused deputy。
+
+### 为什么 HTTP header 用英文 error_description
+
+HTTP header 只允许 ASCII（RFC 7230 §3.2.6）。中文版完整 error_description 放 body 字段；WWW-Authenticate header 用 ASCII 短描述。这样 page 直接读 body 即可拿到中文错误，无需解析 header。
+
+### 角色图（页面 ASCII 卡同款）
+
+```
+  用户（Resource Owner）                  授权服务器（Authorization Server）
+       │                                              │
+       │ 点「连接工单系统」                            │ 颁发 access token
+       ▼                                              ▼
+  ┌──────────────────────────────────────────────────────┐
+  │ access token（含 aud=工单系统-mcp）                  │
+  └──────────────────────────────────────────────────────┘
+       │ 每次 HTTP POST 放进 Authorization: Bearer ...
+       ▼
+  MCP Client（Co-pilot / Cursor / 自己的 Agent）
+       │ 转发带 Authorization 的请求
+       ▼
+  MCP Server（Resource Server，aud=mcp） ← 本 server
+       │ ① checkBearer：解析 Bearer
+       │ ② audience 校验：token.aud 必须等于本 server 的 realm
+       │ ③ audience 不匹配 → 401 + WWW-Authenticate
+       │ ③ audience 匹配 → runWithUser(userId) → Tool handler 按 userId 过滤
+```
+
 ## 当前能做什么
 
 1. 浏览器打开 `http://127.0.0.1:50134/`，看「我是 Server」状态：进程 ID、MCP endpoint URL
