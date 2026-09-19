@@ -144,7 +144,10 @@
     "app:12-01-mcp-architecture-step-3": "PORT=50132 tsx 12-MCP/01-MCP-架构-step-3/server.ts",
     "app:12-02-stdio-vs-http-step-1": "PORT=50133 tsx 12-MCP/02-stdio-vs-Streamable-HTTP-step-1/server.ts",
     "app:12-02-stdio-vs-http-step-2-mcp-server": "PORT=50134 tsx 12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/server.ts",
-    "app:12-02-stdio-vs-http-step-2-mcp-client": "PORT=50135 tsx 12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/server.ts"
+    "app:12-02-stdio-vs-http-step-2-mcp-client": "PORT=50135 tsx 12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/server.ts",
+    "app:12-03-skills-vs-mcp-step-1": "PORT=50136 tsx 12-MCP/03-Skills-vs-MCP-step-1/server.ts",
+    "app:12-03-skills-vs-mcp-step-2": "PORT=50137 tsx 12-MCP/03-Skills-vs-MCP-step-2/server.ts",
+    "app:12-03-skills-vs-mcp-step-3": "PORT=50138 tsx 12-MCP/03-Skills-vs-MCP-step-3/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

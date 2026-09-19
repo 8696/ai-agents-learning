@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills vs MCP · 第二步 · 三种提示词入口</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+
+    const SOURCE_IDS = [
+      { id: "mcp-prompt",    btn: "btn-mcp-prompt",    title: "MCP 提示词模板",      url: "/api/prompt-source/mcp-prompt",    pillColor: "bg-blue-100 text-blue-800" },
+      { id: "skill",         btn: "btn-skill",         title: "技能（Skill）",       url: "/api/prompt-source/skill",         pillColor: "bg-purple-100 text-purple-800" },
+      { id: "system-prompt", btn: "btn-system-prompt", title: "系统提示词",          url: "/api/prompt-source/system-prompt", pillColor: "bg-amber-100 text-amber-800" },
+    ];
+
+    function SourceColumn(props) {
+      const pack = props.pack;
+      const r = pack && pack.result;
+      return (
+        <article className="border border-gray-200 rounded p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">{props.title}</h3>
+            <span className={"text-xs px-2 py-0.5 rounded " + props.pillColor}>
+              {props.id}
+            </span>
+          </div>
+          {!pack ? (
+            <p className="text-xs text-gray-500">{props.emptyText}</p>
+          ) : pack.error ? (
+            <p className="text-xs text-red-700">{pack.title} 失败（HTTP {pack.status}）：{pack.error}</p>
+          ) : (
+            <>
+              <div className="bg-gray-50 text-gray-700 rounded p-2 text-xs space-y-1">
+                <div><b>谁决定用：</b>{r.whoDecides}</div>
+                <div><b>住在哪：</b>{r.where}</div>
+                <div><b>点咖啡里是什么：</b>{r.cafeExample}</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded p-2 text-xs">
+                <div className="font-semibold text-gray-700 mb-1">messages 形态</div>
+                <pre className="whitespace-pre-wrap text-xs text-gray-800 bg-gray-50 rounded p-2">
+                  {r.exampleMessages.map(function (m, i) {
+                    return (i + 1) + ". [" + m.role + "]\n   " + m.content + "\n";
+                  }).join("")}
+                </pre>
+              </div>
+              <div className="text-xs text-gray-600 bg-yellow-50 border border-yellow-200 rounded p-2">
+                {r.note}
+              </div>
+            </>
+          )}
+        </article>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [tone, setTone] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState("");
+      const [utterance, setUtterance] = useState("我牛奶过敏，来一杯拿铁");
+      const [packs, setPacks] = useState({});
+
+      useEffect(function () {
+        getJson("/health").then(function (res) { if (res.ok) setEnv(res.data); });
+      }, []);
+
+      async function loadOne(sourceId) {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const meta = SOURCE_IDS.find(function (s) { return s.id === sourceId; });
+          const res = await postJson(meta.url, { guestUtterance: utterance });
+          const pack = {
+            title: meta.title,
+            url: meta.url,
+            status: res.status,
+            elapsedMs: res.elapsedMs,
+            result: res.data && res.data.result,
+            error: res.ok ? "" : res.error,
+          };
+          setPacks(Object.assign({}, packs, { [sourceId]: pack }));
+          if (!res.ok) { setTone("err"); setErr(res.error); } else { setTone("ok"); }
+        } catch (e) {
+          setTone("err"); setErr(e && e.message ? e.message : "网络失败");
+        } finally { setBusy(false); }
+      }
+
+      async function loadAll() {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const promises = SOURCE_IDS.map(function (meta) {
+            return postJson(meta.url, { guestUtterance: utterance }).then(function (res) {
+              return {
+                sourceId: meta.id,
+                pack: {
+                  title: meta.title,
+                  url: meta.url,
+                  status: res.status,
+                  elapsedMs: res.elapsedMs,
+                  result: res.data && res.data.result,
+                  error: res.ok ? "" : res.error,
+                },
+              };
+            });
+          });
+          const results = await Promise.all(promises);
+          const next = {};
+          results.forEach(function (r) { next[r.sourceId] = r.pack; });
+          setPacks(next);
+          setTone("ok");
+        } catch (e) {
+          setTone("err"); setErr(e && e.message ? e.message : "网络失败");
+        } finally { setBusy(false); }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Skills vs MCP · 第二步（step-2） · 三种提示词入口（MCP 提示词模板 / 技能 / 系统提示词）
+            </h1>
+            <StatusPill tone={tone} />
+          </header>
+          <PageNav current="prompt-source" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页演示「需求 7」：同一家店、同一句客人原话，走三种不同的「提示词」入口——每条独立 POST，messages 形态不一样，三栏并排对照「谁决定用 / 住在哪 / 在点咖啡里是什么」。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>三个按钮各打各的 URL：<code>/api/prompt-source/mcp-prompt</code> · <code>/api/prompt-source/skill</code> · <code>/api/prompt-source/system-prompt</code>（独立请求，禁止一个接口打包跑三栏）。</li>
+                <li>服务端 <code>lib/flow/prompt-source.ts</code>：按 id 查 PROMPT_SOURCES + 把客人原话塞进 user 段。</li>
+                <li>「一次跑三栏」按钮 = 前端 <code>Promise.all</code> 三条独立 POST 并行触发；服务端不打包。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  三种入口、三种控制权：MCP 提示词模板 = 用户点选；技能 = 任务相关按需加载；系统提示词 = 每轮必带。**不要做成同一个「提示词」按钮**。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：三栏 system 段长什么样 / 谁决定用 / 住在哪 / 在点咖啡里的对照例子。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人那句话（guestUtterance）
+                <input
+                  id="input-utterance"
+                  className="mt-1 w-full border rounded px-2 py-1 text-sm"
+                  value={utterance}
+                  disabled={busy}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-600">点了会发生什么：每个按钮独立 POST 对应 URL；点「一次跑三栏」= 三条并行独立 POST。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  id="btn-mcp-prompt"
+                  disabled={busy}
+                  onClick={function () { loadOne("mcp-prompt"); }}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >MCP 提示词模板</button>
+                <button
+                  id="btn-skill"
+                  disabled={busy}
+                  onClick={function () { loadOne("skill"); }}
+                  className="bg-purple-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >技能</button>
+                <button
+                  id="btn-system-prompt"
+                  disabled={busy}
+                  onClick={function () { loadOne("system-prompt"); }}
+                  className="bg-amber-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >系统提示词</button>
+                <button
+                  id="btn-load-all"
+                  disabled={busy}
+                  onClick={loadAll}
+                  className="border border-gray-400 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >一次跑三栏（前端 Promise.all 三条独立 POST）</button>
+              </div>
+              {err ? <p className="text-sm text-red-700">{err}</p> : null}
+            </section>
+
+            <section id="output" className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {SOURCE_IDS.map(function (s) {
+                  return (
+                    <SourceColumn
+                      key={s.id}
+                      id={s.id}
+                      title={s.title}
+                      pillColor={s.pillColor}
+                      pack={packs[s.id]}
+                      emptyText={"还没跑「" + s.title + "」。点上面按钮。"}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

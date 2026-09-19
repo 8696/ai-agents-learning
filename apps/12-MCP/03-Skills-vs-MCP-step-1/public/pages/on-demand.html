@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills vs MCP · 第一步 · 按需加载技能</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+
+    const SAMPLE_ALLERGY = "我牛奶过敏，来一杯拿铁";
+    const SAMPLE_MENU    = "今天有摩卡吗";
+    const SAMPLE_REPORT  = "本周销量周报怎么写";
+
+    function Badge(props) {
+      return (
+        <span className={"text-xs px-2 py-0.5 rounded " + (props.on ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")}>
+          {props.label}：{props.on ? "是" : "否"}
+        </span>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [tone, setTone] = useState("idle");
+      const [err, setErr] = useState("");
+      const [utterance, setUtterance] = useState(SAMPLE_ALLERGY);
+      const [showPrompt, setShowPrompt] = useState(false);
+      const [pack, setPack] = useState(null);
+
+      useEffect(function () {
+        getJson("/health").then(function (res) { if (res.ok) setEnv(res.data); });
+      }, []);
+
+      async function run() {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const res = await postJson("/api/assembly/on-demand", { guestUtterance: utterance });
+          const next = {
+            title: "按需加载技能（on-demand）",
+            url: "/api/assembly/on-demand",
+            status: res.status,
+            elapsedMs: res.elapsedMs,
+            result: res.data && res.data.result,
+            error: res.ok ? "" : res.error,
+          };
+          setPack(next);
+          if (!res.ok) { setTone("err"); setErr(res.error); } else { setTone("ok"); }
+        } catch (e) {
+          setTone("err"); setErr(e && e.message ? e.message : "网络失败");
+        } finally { setBusy(false); }
+      }
+
+      const r = pack && pack.result;
+      const obs = r && r.observed;
+      const chars = r ? r.systemPromptChars : 0;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Skills vs MCP · 第一步（step-1） · 按需加载技能（AGENTS.md 常驻 + SKILL.md 按需）
+            </h1>
+            <StatusPill tone={tone} />
+          </header>
+          <PageNav current="on-demand" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页演示「需求 4 验收另一侧 + 需求 8 验收」：system prompt 只带 AGENTS.md 仓库底线 + 技能目录短目录；宿主发现任务命中某册才把对应全文读进上下文。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点按钮 → POST <code>/api/assembly/on-demand</code>，body = 客人那句话。</li>
+                <li>服务端 <code>lib/flow/run-assembly.ts</code> 走 <code>buildPrompt("on-demand", ...)</code>：AGENTS.md + 短目录 + 按 utterance 命中的技能全文。</li>
+                <li>输出区留下：system prompt 字符数、本次加载的技能列表（按命中）、业务轨迹（仍正确：先读过敏原 → 改推美式）。</li>
+                <li>把 utterance 切到「今天有摩卡吗」——本次加载的技能列表变小、周报全文不在 prompt。</li>
+                <li>把 utterance 切到「本周销量周报怎么写」——本次加载 = 周报；出杯 / 过敏全文不加载。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  仓库规则文件（AGENTS.md）管常驻底线（不准假装做好了）；技能（SKILL.md）按需加载——任务命中才把全文读进上下文。System prompt 不背全店制度库。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：system prompt 字符数随 utterance 变化 / 本次加载的技能列表随 utterance 变化 / 「周报全文是否在本次加载」= 否（除非 utterance 命中周报）。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人那句话（guestUtterance）
+                <input
+                  id="input-utterance"
+                  className="mt-1 w-full border rounded px-2 py-1 text-sm"
+                  value={utterance}
+                  disabled={busy}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  id="btn-sample-allergy"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_ALLERGY); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「我牛奶过敏，来一杯拿铁」</button>
+                <button
+                  id="btn-sample-menu"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_MENU); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「今天有摩卡吗」</button>
+                <button
+                  id="btn-sample-report"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_REPORT); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「本周销量周报怎么写」</button>
+                <button
+                  id="btn-run"
+                  disabled={busy}
+                  onClick={run}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >跑一次（POST /api/assembly/on-demand）</button>
+              </div>
+              {err ? <p className="text-sm text-red-700">{err}</p> : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!pack ? (
+                <p className="text-sm text-gray-500">还没跑。先点「跑一次」。</p>
+              ) : (
+                <article className="border border-gray-200 rounded p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold">{pack.title}</h3>
+                    <span className="text-xs text-gray-500">{pack.elapsedMs} ms · {pack.url}</span>
+                  </div>
+
+                  <div className="bg-gray-50 text-gray-700 rounded p-2 text-xs space-y-1">
+                    <div>客人说：「{r.guestUtterance}」</div>
+                    <div>system prompt 字符数（systemPromptChars）：<b>{chars}</b></div>
+                    <div>技能目录里都有：{r.skillCatalog.join("、")}</div>
+                    <div>本次加载的技能（loadedSkills）：<b>{r.loadedSkills.join("、") || "（无）"}</b></div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    <Badge on={obs.readAllergy}            label="读了过敏原（readAllergy）" />
+                    <Badge on={obs.calledMakeLatte}        label="调用了 make_latte（calledMakeLatte）" />
+                    <Badge on={obs.weeklyReportInPrompt}   label="周报全文在 prompt 里（weeklyReportInPrompt）" />
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded p-2 space-y-2">
+                    <button
+                      id="btn-toggle-prompt"
+                      type="button"
+                      onClick={function () { setShowPrompt(!showPrompt); }}
+                      className="text-xs text-blue-700 underline"
+                    >
+                      {showPrompt ? "收起 system prompt 全文" : "展开 system prompt 全文"}
+                    </button>
+                    {showPrompt ? (
+                      <pre className="whitespace-pre-wrap text-xs text-gray-700 bg-gray-50 rounded p-2 max-h-80 overflow-auto">{r.systemPromptText}</pre>
+                    ) : null}
+                  </div>
+
+                  <ol className="text-xs text-gray-700 list-decimal pl-5 space-y-1 bg-white border border-gray-200 rounded p-2">
+                    {r.trace.map(function (step, i) {
+                      return <li key={i}><b>{step.title}</b> — {step.detail}</li>;
+                    })}
+                  </ol>
+
+                  <div className="bg-green-50 border border-green-300 rounded p-2 text-sm text-green-900">
+                    最终回复：{r.finalReply}
+                  </div>
+                </article>
+              )}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

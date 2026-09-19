@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills vs MCP · 第二步 · 总览</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { getJson } = window.DemoUtils;
+
+    function SubPageLink(props) {
+      return (
+        <a
+          id={"link-" + props.id}
+          href={props.href}
+          className="block bg-white border border-gray-200 rounded p-4 hover:bg-gray-50"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-semibold text-gray-800">{props.title}</h3>
+            <span className="text-xs text-gray-500">{props.tag}</span>
+          </div>
+          <div className="text-xs text-gray-700">{props.detail}</div>
+          <div className="text-xs text-blue-700 mt-2">打开 → {props.href}</div>
+        </a>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [tone, setTone] = useState("idle");
+      useEffect(function () {
+        getJson("/health").then(function (res) { if (res.ok) setEnv(res.data); });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Skills vs MCP · 第二步（step-2） · 总览
+            </h1>
+            <StatusPill tone={tone} />
+          </header>
+          <PageNav current="classify" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页是 step-2 总览：两个独立 sub-page，分别对应需求 5 / 6（分类题）和需求 7（三种提示词入口）。三装配对照 + system prompt 装载见 step-1（端口 50136），本步不再重复。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>点下面任一链接卡 → 跳到对应 sub-page。</li>
+                <li>每个 sub-page 顶部有 PageNav 跨页导航 + 教学点说明 + 「点了会发生什么」注解。</li>
+                <li>分类题和三种提示词入口都是独立 POST（一个业务 URL 一个 route 文件），不打包装运。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  step-2 解决两类错配：① 做法知识被做成 MCP 工具 / 工具能力被只写在技能里（分类题）② MCP 提示词模板 / 技能 / 系统提示词三种入口混成同一个按钮（三栏对照）。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：分类题选错会显示正确选项 + 解释；三栏入口对照各自 system 段长什么样。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-2">
+              <div className="text-sm text-gray-700">点下面的链接卡跳到对应 sub-page。</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                <SubPageLink
+                  id="classify"
+                  href="/pages/classify.html"
+                  title="分类题（需求 5 / 6）"
+                  tag="两题独立 POST"
+                  detail="apply_latte_policy 应判进哪 + 技能里塞 HTTP+Token 应判进哪；选完看判定 + 解释 + reasoning。"
+                />
+                <SubPageLink
+                  id="prompt-source"
+                  href="/pages/prompt-source.html"
+                  title="三种提示词入口（需求 7）"
+                  tag="三按钮各打各的 URL"
+                  detail="MCP 提示词模板（用户点选）· 技能（任务相关按需）· 系统提示词（每轮必带）三栏对照。"
+                />
+              </div>
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm font-semibold text-gray-800">需求对照</div>
+              <div className="overflow-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="py-2 pr-2">需求</th>
+                      <th className="py-2 pr-2">教学点</th>
+                      <th className="py-2 pr-2">在哪验</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 pr-2">需求 5</td>
+                      <td className="py-2 pr-2">假政策工具 `apply_latte_policy` 应判错（不是真 MCP 工具）</td>
+                      <td className="py-2 pr-2"><code>pages/classify.html</code> 题 1</td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 pr-2">需求 6</td>
+                      <td className="py-2 pr-2">技能里写 HTTP + Token 应判错（连接层归 MCP）</td>
+                      <td className="py-2 pr-2"><code>pages/classify.html</code> 题 2</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-2">需求 7</td>
+                      <td className="py-2 pr-2">三种提示词入口分开（用户点选 / 任务相关按需 / 每轮必带）</td>
+                      <td className="py-2 pr-2"><code>pages/prompt-source.html</code> 三栏</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

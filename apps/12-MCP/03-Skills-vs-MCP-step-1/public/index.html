@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills vs MCP · 第一步</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel" src="/components/page-intro.js"></script>
+  <script type="text/babel" src="/components/assembly-result.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageIntro, AssemblyResultCard, PageNav } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+    const DEFAULT_UTTERANCE = "我牛奶过敏，来一杯拿铁";
+
+    function App() {
+      // env：页脚 GET /health；busy：防重复提交；err：面向人的红字；三侧结果各自保留。
+      const [env, setEnv] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [tone, setTone] = useState("idle");
+      const [err, setErr] = useState("");
+      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
+      const [mcpOnly, setMcpOnly] = useState(null);
+      const [skillOnly, setSkillOnly] = useState(null);
+      const [both, setBoth] = useState(null);
+
+      useEffect(function () {
+        getJson("/health").then(function (res) {
+          if (res.ok) setEnv(res.data);
+        });
+      }, []);
+
+      async function runOne(kind) {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        const url =
+          kind === "mcp-only" ? "/api/assembly/mcp-only" :
+          kind === "skill-only" ? "/api/assembly/skill-only" :
+          "/api/assembly/both";
+        const title =
+          kind === "mcp-only" ? "只接吧台（只有 MCP）" :
+          kind === "skill-only" ? "只读出杯技能（只有技能）" :
+          "吧台加技能（两边都有）";
+        try {
+          const res = await postJson(url, { guestUtterance: utterance });
+          const pack = {
+            title: title,
+            url: url,
+            status: res.status,
+            elapsedMs: res.elapsedMs,
+            result: res.data && res.data.result,
+            error: res.ok ? "" : res.error,
+          };
+          if (kind === "mcp-only") setMcpOnly(pack);
+          else if (kind === "skill-only") setSkillOnly(pack);
+          else setBoth(pack);
+          if (!res.ok) {
+            setTone("err");
+            setErr(res.error);
+          } else {
+            setTone("ok");
+          }
+        } catch (e) {
+          setTone("err");
+          setErr(e && e.message ? e.message : "网络失败");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runEmpty400() {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const res = await postJson("/api/assembly/mcp-only", { guestUtterance: "" });
+          setTone("err");
+          setErr("第一类失败（4xx）：" + res.error);
+        } catch (e) {
+          setTone("err");
+          setErr(e && e.message ? e.message : "网络失败");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runForce500() {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const res = await getJson("/api/force-error");
+          setTone("err");
+          setErr("第二类失败（5xx）：" + res.error);
+        } catch (e) {
+          setTone("err");
+          setErr(e && e.message ? e.message : "网络失败");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              技能 vs 模型上下文协议（Skills vs MCP） · 第一步（step-1） · 同一句点单三条装配
+            </h1>
+            <StatusPill tone={tone} />
+          </header>
+          <PageNav current="index" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人那句话（guestUtterance）
+                <input
+                  className="mt-1 w-full border rounded px-2 py-1 text-sm"
+                  value={utterance}
+                  disabled={busy}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-600">点了会发生什么：只打这一侧的 URL，另外两侧上次结果留着对照。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  id="btn-mcp-only"
+                  disabled={busy}
+                  onClick={function () { runOne("mcp-only"); }}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >
+                  只接吧台（只有 MCP · /api/assembly/mcp-only）
+                </button>
+                <button
+                  id="btn-skill-only"
+                  disabled={busy}
+                  onClick={function () { runOne("skill-only"); }}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >
+                  只读出杯技能（只有技能 · /api/assembly/skill-only）
+                </button>
+                <button
+                  id="btn-both"
+                  disabled={busy}
+                  onClick={function () { runOne("both"); }}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >
+                  吧台加技能（两边都有 · /api/assembly/both）
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  id="btn-empty-400"
+                  disabled={busy}
+                  onClick={runEmpty400}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >
+                  空点单（4xx · 第一类错误）
+                </button>
+                <button
+                  id="btn-force-500"
+                  disabled={busy}
+                  onClick={runForce500}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >
+                  演示后端 5xx（5xx · 第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {err ? <p className="text-sm text-red-700">{err}</p> : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              {!mcpOnly && !skillOnly && !both && !err ? (
+                <p className="text-sm text-gray-500">还没跑。先点「只接吧台」，再点另外两个，三张结果会留在这一区。</p>
+              ) : null}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <AssemblyResultCard pack={mcpOnly} emptyText="还没跑「只接吧台」。期望：会调用 make_latte，不读过敏原。" />
+                <AssemblyResultCard pack={skillOnly} emptyText="还没跑「只读出杯技能」。期望：没有 tools/call，会假装做好了。" />
+                <AssemblyResultCard pack={both} emptyText="还没跑「吧台加技能」。期望：先读过敏原，不调 make_latte，改推美式。" />
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills vs MCP · 第三步 · 短目录 vs 全文</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+
+    const SAMPLE_ALLERGY = "我牛奶过敏，来一杯拿铁";
+    const SAMPLE_MENU    = "今天有摩卡吗";
+    const SAMPLE_REPORT  = "本周销量周报怎么写";
+    const SAMPLE_COMPLAINT = "我要投诉";
+
+    const MODES = [
+      { id: "full",          btn: "btn-mode-full",          title: "full（短目录 + 10 个全文全加载）",      url: "/api/skills/mode-full",       pillColor: "bg-red-100 text-red-800" },
+      { id: "catalog-only",  btn: "btn-mode-catalog",       title: "catalog-only（短目录常驻，全文 0 项）", url: "/api/skills/mode-catalog",    pillColor: "bg-green-100 text-green-800" },
+      { id: "on-demand",     btn: "btn-mode-on-demand",     title: "on-demand（短目录常驻 + 命中加载）",     url: "/api/skills/mode-on-demand",  pillColor: "bg-blue-100 text-blue-800" },
+    ];
+
+    function ModeColumn(props) {
+      const pack = props.pack;
+      const r = pack && pack.result;
+      return (
+        <article className="border border-gray-200 rounded p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">{props.title}</h3>
+            <span className={"text-xs px-2 py-0.5 rounded " + props.pillColor}>
+              {props.id}
+            </span>
+          </div>
+          {!pack ? (
+            <p className="text-xs text-gray-500">{props.emptyText}</p>
+          ) : pack.error ? (
+            <p className="text-xs text-red-700">{pack.title} 失败（HTTP {pack.status}）：{pack.error}</p>
+          ) : (
+            <>
+              <div className="bg-gray-50 text-gray-700 rounded p-2 text-xs space-y-1">
+                <div>system prompt 字符数（systemPromptChars）：<b>{r.systemPromptChars}</b></div>
+                <div>加载的全文技能（fullSkillsLoaded · 共 {r.fullSkillsLoaded.length} 项）：<b>{r.fullSkillsLoaded.join("、") || "（无）"}</b></div>
+                <div>触发词命中（matchedSkills · 共 {r.matchedSkills.length} 项）：<b>{r.matchedSkills.join("、") || "（无）"}</b></div>
+                {r.matchedSkills.length > 0 ? (
+                  <div className="pl-2 border-l-2 border-gray-300">
+                    {Object.keys(r.matchedTriggerMap).map(function (k) {
+                      return (
+                        <div key={k} className="text-xs text-gray-600">
+                          {k} ← 触发词「{r.matchedTriggerMap[k].join("、")}」
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+              <details className="bg-white border border-gray-200 rounded p-2">
+                <summary className="text-xs cursor-pointer text-gray-700">
+                  展开 system prompt 全文
+                </summary>
+                <pre className="whitespace-pre-wrap text-xs text-gray-700 mt-2 bg-gray-50 rounded p-2 max-h-80 overflow-auto">{r.systemPromptText}</pre>
+              </details>
+            </>
+          )}
+        </article>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [tone, setTone] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState("");
+      const [utterance, setUtterance] = useState(SAMPLE_ALLERGY);
+      const [packs, setPacks] = useState({});
+
+      useEffect(function () {
+        getJson("/health").then(function (res) { if (res.ok) setEnv(res.data); });
+      }, []);
+
+      async function loadOne(modeId) {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const meta = MODES.find(function (m) { return m.id === modeId; });
+          const res = await postJson(meta.url, { guestUtterance: utterance });
+          const pack = {
+            title: meta.title,
+            url: meta.url,
+            status: res.status,
+            elapsedMs: res.elapsedMs,
+            result: res.data && res.data.result,
+            error: res.ok ? "" : res.error,
+          };
+          setPacks(Object.assign({}, packs, { [modeId]: pack }));
+          if (!res.ok) { setTone("err"); setErr(res.error); } else { setTone("ok"); }
+        } catch (e) {
+          setTone("err"); setErr(e && e.message ? e.message : "网络失败");
+        } finally { setBusy(false); }
+      }
+
+      async function loadAll() {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const promises = MODES.map(function (meta) {
+            return postJson(meta.url, { guestUtterance: utterance }).then(function (res) {
+              return {
+                modeId: meta.id,
+                pack: {
+                  title: meta.title,
+                  url: meta.url,
+                  status: res.status,
+                  elapsedMs: res.elapsedMs,
+                  result: res.data && res.data.result,
+                  error: res.ok ? "" : res.error,
+                },
+              };
+            });
+          });
+          const results = await Promise.all(promises);
+          const next = {};
+          results.forEach(function (r) { next[r.modeId] = r.pack; });
+          setPacks(next);
+          setTone("ok");
+        } catch (e) {
+          setTone("err"); setErr(e && e.message ? e.message : "网络失败");
+        } finally { setBusy(false); }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Skills vs MCP · 第三步（step-3） · 短目录 vs 全文（10 个技能 + 三种装载模式）
+            </h1>
+            <StatusPill tone={tone} />
+          </header>
+          <PageNav current="short-catalog" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页演示「短目录常驻 + 全文按需加载」机制：10 个技能（点咖啡 / 周报 / 退款 / 补货 / 排班 / 客诉 / 菜单 / 库存 / 培训 / 营销），三按钮各打各的 URL，三栏对照同一句 utterance 在三种装载模式下的 system prompt 体积、加载技能列表、触发词命中来源。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>三个按钮各打各的 URL：<code>/api/skills/mode-full</code> · <code>/api/skills/mode-catalog</code> · <code>/api/skills/mode-on-demand</code>（独立请求，禁止一个接口打包跑三栏）。</li>
+                <li>服务端 <code>lib/flow/skill-catalog.ts</code>：按 mode 路由三种装载策略 + 按 utterance 触发词匹配命中的技能。</li>
+                <li>「一次跑三栏」按钮 = 前端 <code>Promise.all</code> 三条独立 POST 并行触发；服务端不打包。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  Skill 按需加载有两层：「<b>短目录</b>（10 项元数据头 · 常驻）+ <b>技能全文</b>（命中才加载）」。短目录常驻让模型有全景视图可以跨技能做事；全文按需省 Token、不挤掉真正的工具返回值。full 全加载是最坏情况（客人只问菜单也背着 10 册全文）；catalog-only 是省 Token 但模型没正文；on-demand 是推荐做法（短目录 + 命中那一份正文）。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：同一句「好指令」下，full 模式 chars 很大，catalog-only 模式 chars 最小（只有短目录），on-demand 模式 chars 介于两者之间且随 utterance 命中多少项而变。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人那句话（guestUtterance）
+                <input
+                  id="input-utterance"
+                  className="mt-1 w-full border rounded px-2 py-1 text-sm"
+                  value={utterance}
+                  disabled={busy}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-600">点了会发生什么：每个按钮独立 POST 对应 URL；点「一次跑三栏」= 三条并行独立 POST。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  id="btn-mode-full"
+                  disabled={busy}
+                  onClick={function () { loadOne("full"); }}
+                  className="bg-red-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >full（全加载 10 项）</button>
+                <button
+                  id="btn-mode-catalog"
+                  disabled={busy}
+                  onClick={function () { loadOne("catalog-only"); }}
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >catalog-only（只短目录）</button>
+                <button
+                  id="btn-mode-on-demand"
+                  disabled={busy}
+                  onClick={function () { loadOne("on-demand"); }}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                >on-demand（短目录 + 命中加载）</button>
+                <button
+                  id="btn-load-all"
+                  disabled={busy}
+                  onClick={loadAll}
+                  className="border border-gray-400 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >一次跑三栏（前端 Promise.all 三条独立 POST）</button>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                <button
+                  id="btn-sample-allergy"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_ALLERGY); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「我牛奶过敏，来一杯拿铁」</button>
+                <button
+                  id="btn-sample-menu"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_MENU); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「今天有摩卡吗」</button>
+                <button
+                  id="btn-sample-report"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_REPORT); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「本周销量周报怎么写」</button>
+                <button
+                  id="btn-sample-complaint"
+                  disabled={busy}
+                  onClick={function () { setUtterance(SAMPLE_COMPLAINT); }}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >换成「我要投诉」</button>
+              </div>
+              {err ? <p className="text-sm text-red-700">{err}</p> : null}
+            </section>
+
+            <section id="output" className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {MODES.map(function (m) {
+                  return (
+                    <ModeColumn
+                      key={m.id}
+                      id={m.id}
+                      title={m.title}
+                      pillColor={m.pillColor}
+                      pack={packs[m.id]}
+                      emptyText={"还没跑「" + m.title + "」。点上面按钮。"}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

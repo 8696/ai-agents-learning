@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skills vs MCP · 第二步 · 分类题</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="/utils/api-client.js"></script>
+  <script type="text/babel" src="/components/layout.js"></script>
+  <script type="text/babel" src="/components/page-nav.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { StatusPill, EnvFooter, PageNav } = window.DemoUI;
+    const { postJson, getJson } = window.DemoUtils;
+
+    const SCENARIOS = [
+      {
+        id: "apply_latte_policy",
+        prompt: "有团队提了「apply_latte_policy」这个 MCP 工具，没有副作用，只返回一段长文本说「本店出杯须知…」",
+        options: [
+          { id: "mcpTool",      label: "写成 MCP 工具（Tool）" },
+          { id: "skill",        label: "写进技能 SKILL.md" },
+          { id: "resource",     label: "当成资源 cafe://policy" },
+          { id: "systemPrompt", label: "塞进系统提示词" },
+        ],
+      },
+      {
+        id: "skill_http_token",
+        prompt: "技能 SKILL.md 写了「请 POST https://cafe.example.com/latte，Token 放环境变量 CAFE_TOKEN」",
+        options: [
+          { id: "okSkill",  label: "没问题，技能里出现 HTTP 很正常" },
+          { id: "mcp",      label: "应做 MCP（加鉴权 / 按用户隔离）" },
+          { id: "resource", label: "改成资源 cafe://remote-latte" },
+          { id: "hardcode", label: "直接写死 URL 在技能里更稳" },
+        ],
+      },
+    ];
+
+    function ScenarioCard(props) {
+      const sc = props.scenario;
+      const pack = props.pack;
+      const onSubmit = props.onSubmit;
+      const busy = props.busy;
+      const [picked, setPicked] = useState("");
+
+      return (
+        <section className="bg-white shadow rounded p-4 space-y-3">
+          <div>
+            <div className="text-xs text-gray-500">场景 ID（scenarioId）</div>
+            <div className="text-sm font-mono text-gray-800">{sc.id}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">题面</div>
+            <div className="text-sm text-gray-800">{sc.prompt}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-1">选一个</div>
+            <div className="space-y-1">
+              {sc.options.map(function (o) {
+                return (
+                  <label key={o.id} className="flex items-start gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name={"opt-" + sc.id}
+                      value={o.id}
+                      checked={picked === o.id}
+                      disabled={busy}
+                      onChange={function () { setPicked(o.id); }}
+                      className="mt-1"
+                    />
+                    <span>{o.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <button
+            id={"btn-submit-" + sc.id}
+            disabled={busy || !picked}
+            onClick={function () { onSubmit(sc.id, picked); }}
+            className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+          >
+            提交分类（POST /api/classify/{sc.id}）
+          </button>
+          {pack ? (
+            <div className={"mt-3 rounded p-3 border " + (pack.isCorrect ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300")}>
+              <div className="text-sm font-semibold">
+                {pack.isCorrect ? "✅ 判对了" : "❌ 判错了"}（isCorrect）
+              </div>
+              <div className="text-xs text-gray-700 mt-1">
+                你选的：{pack.selectedLabel}（{pack.selectedOptionId}）
+              </div>
+              <div className="text-xs text-gray-700 mt-1">
+                该选项的解释：{pack.selectedExplanation}
+              </div>
+              {!pack.isCorrect ? (
+                <div className="text-xs text-gray-700 mt-1">
+                  正确选项：{pack.correctLabel}（{pack.correctOptionId}）
+                </div>
+              ) : null}
+              <div className="text-xs text-gray-800 mt-2 bg-white border border-gray-200 rounded p-2">
+                <b>本场景 reasoning</b>：{pack.reasoning}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [tone, setTone] = useState("idle");
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState("");
+      const [packs, setPacks] = useState({});
+
+      useEffect(function () {
+        getJson("/health").then(function (res) { if (res.ok) setEnv(res.data); });
+      }, []);
+
+      async function submit(scenarioId, optionId) {
+        if (busy || !optionId) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const res = await postJson("/api/classify/" + scenarioId, { optionId: optionId });
+          if (res.ok) {
+            setPacks(Object.assign({}, packs, { [scenarioId]: res.data.result }));
+            setTone(res.data.result.isCorrect ? "ok" : "err");
+          } else {
+            setErr(res.error);
+            setTone("err");
+          }
+        } catch (e) {
+          setErr(e && e.message ? e.message : "网络失败");
+          setTone("err");
+        } finally { setBusy(false); }
+      }
+
+      async function runForce500() {
+        if (busy) return;
+        setBusy(true);
+        setTone("loading");
+        setErr("");
+        try {
+          const res = await postJson("/api/force-500", {});
+          setTone("err");
+          setErr("第二类失败（5xx）：" + res.error);
+        } catch (e) {
+          setTone("err");
+          setErr(e && e.message ? e.message : "网络失败");
+        } finally { setBusy(false); }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Skills vs MCP · 第二步（step-2） · 分类题（做法知识 vs 连接能力）
+            </h1>
+            <StatusPill tone={tone} />
+          </header>
+          <PageNav current="classify" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section id="page-intro" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                本页演示「需求 5 / 6」：给一个错配案例（做法知识做成假工具 / 工具能力只写在技能里），四选一；POST /api/classify/:scenarioId 返回「判对 / 判错 + 该选项的解释 + 本场景的 reasoning + 正确选项文案」。
+              </p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>每题独立 POST（对照两侧的拆请求原则——两题不能打包跑）。</li>
+                <li>服务端 <code>lib/flow/classify.ts</code>：按 scenarioId 查 SCENARIOS + 比对选项 → 返回 ClassifyResult。</li>
+                <li>错选项也返回解释，不掩盖；reasonsing 段写「正确答案为什么对 + 错答案为什么错」。</li>
+              </ol>
+              <div id="core-takeaway" className="bg-yellow-50 border border-yellow-300 rounded p-3 space-y-1 mt-2">
+                <div className="text-xs font-semibold text-yellow-900">本页核心教学点</div>
+                <div className="text-xs text-gray-800">
+                  「做法知识」和「连接能力」是两个桶——不要把店规当 MCP 工具（没副作用 = 不是工具协议），也不要把连接能力（HTTP + Token）只写在技能里。MCP 服务端只写「怎么调这个吧台」；店规进技能 / 资源；长流程按需加载。
+                </div>
+                <div className="text-xs text-gray-600">
+                  怎么观察：每题选完看 isCorrect + reasoning；如果错了看正确选项的 label + 解释段。
+                </div>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-2">
+              <p className="text-sm text-gray-700">
+                两题分类题。每题独立 POST <code>/api/classify/:scenarioId</code>（scenarioId = <code>apply_latte_policy</code> / <code>skill_http_token</code>）；错选项也返回解释，不掩盖学习点。
+              </p>
+              <p className="text-xs text-gray-600">点了会发生什么：选一个选项 + 点「提交分类」→ 那一题单独 POST；其他题不动。</p>
+              <div className="pt-2 border-t border-gray-200">
+                <button
+                  id="btn-force-500"
+                  disabled={busy}
+                  onClick={runForce500}
+                  className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50"
+                >演示后端 5xx（5xx · 第二类错误 · /api/force-500）</button>
+                <span className="text-xs text-gray-500 ml-2">与 4xx（空 optionId / 未知 scenarioId）不同通道。</span>
+              </div>
+            </section>
+
+            <section id="output" className="space-y-3">
+              {SCENARIOS.map(function (s) {
+                return <ScenarioCard key={s.id} scenario={s} pack={packs[s.id]} onSubmit={submit} busy={busy} />;
+              })}
+            </section>
+
+            {err ? <p className="text-sm text-red-700">{err}</p> : null}
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
