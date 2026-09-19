@@ -53,7 +53,7 @@ export async function listPrompts(): Promise<McpPrompt[]> {
 }
 
 // ── 公开接口：获取提示词模板（按名字 + 参数） ──
-export async function getPrompt(name: string, args: Record<string, string>): Promise<unknown> {
+export async function getPrompt(name: string, args: Record<string, unknown>): Promise<unknown> {
   const t0 = Date.now();
   logger.info(
     "│ 调用函数-getPrompt",
@@ -66,7 +66,8 @@ export async function getPrompt(name: string, args: Record<string, string>): Pro
   );
 
   const { client } = await getOrCreateClient();
-  const result = await client.getPrompt({ name, arguments: args });
+  // SDK getPrompt 要求 arguments 值为 string；本 demo 全部入参都是字符串
+  const result = await client.getPrompt({ name, arguments: args as Record<string, string> });
 
   logger.info(
     "│ 调用函数-getPrompt",

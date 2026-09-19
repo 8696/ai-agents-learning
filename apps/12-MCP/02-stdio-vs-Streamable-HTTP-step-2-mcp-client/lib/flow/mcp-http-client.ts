@@ -1,31 +1,33 @@
 /**
- * 本步核心：Streamable HTTP MCP Client。
+ * 本步核心：Streamable HTTP MCP Client（持久连接 + 请求级 Authorization）。
  *
- * 职责：单例 MCP Client。连远端 HTTP MCP endpoint（不是 spawn 子进程）。
- *       第一次请求时 new StreamableHTTPClientTransport + client.connect；
- *       后续请求走同一个 client。Client 进程死了不影响远端 Server。
+ * 职责：单例 Client **一条连接走到底**；HTTP 请求的 Authorization 头**每次从
+ *       当前 koa 请求带过来的 token 动态拼**（不是模块级状态，是 AsyncLocalStorage）。
  *
  * 数据流：
- *   浏览器 fetch
- *     → routes/*.ts
- *     → callHttp({ method: "tools/list" | "tools/call" | "resources/list" | "resources/read" })
- *     → getOrCreateClient()（首次才 connect）
- *       → new StreamableHTTPClientTransport(new URL(SERVER_URL))
- *       → new Client({...}) + client.connect(transport)
- *     → client.listTools() / client.callTool() / client.listResources() / client.readResource()
- *     → 返回 JSON-RPC 响应 → ctx.body
+ *   浏览器 fetch → koa route handler
+ *     → runWithRequestContext({ token }, () => callTool(...))
+ *       → getCurrentRequestToken() 拿到当前请求的 token
+ *     → callTool → SDK callTool({ name, arguments })
+ *       → SDK 内部 fetch(url, init) → dynamicAuthFetch(input, init)
+ *         → getCurrentRequestToken() 读 ALS store（请求级 token）
+ *         → 拼 Authorization 头 → 原生 fetch
+ *     → 远端 transport → route checkBearer → runWithUser → Tool handler 按 userId 过滤
  *
- * 为什么单独成文件：Streamable HTTP Transport 的全部主路径都在这里 —— connect 远端、调用。
+ * 为什么用 AsyncLocalStorage：transport 是单例（连接复用），但 token 每次请求不同；
+ * 模块级 currentToken 会并发冲突；ALS 是 Node 22 内置的「请求级状态」原语。
+ *
+ * 为什么单独成文件：Streamable HTTP Transport 的全部主路径都在这里 —— 连接、动态头、调用。
  * route 只做"校验入参 → 调本文件 → 写 ctx.body"，不埋 Client。
+ *
+ * Client demo 自身**不存任何用户信息**——token 跟着每个 HTTP 请求进来，跟着请求出去。
  */
-// 注：MCP SDK Client 主包就 export 了 StreamableHTTPClientTransport。
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { logger } from "../logger.js";
+import { getCurrentRequestToken } from "./request-context.js";
 
 // ── 远端 Server endpoint（Server demo 的 koa 同端口，POST /mcp）──
-// 这里默认硬指 50134（学习者跑默认 yarn 脚本时的 Server demo 端口）。
-// 跑端到端 smoke 时允许用 SERVER_URL env 覆盖（例如 PORT=50034 时配 SERVER_URL=http://127.0.0.1:50034/mcp）。
 export const SERVER_URL = process.env.SERVER_URL ?? "http://127.0.0.1:50134/mcp";
 
 interface McpTool {
@@ -43,6 +45,7 @@ interface McpResource {
 
 interface ConnectedClient {
   client: Client;
+  transport: StreamableHTTPClientTransport;
   sessionId: string | undefined;
   startedAt: number;
   endpoint: string;
@@ -51,7 +54,25 @@ interface ConnectedClient {
 let singleton: ConnectedClient | null = null;
 let connectingPromise: Promise<ConnectedClient> | null = null;
 
-// ── 启动或拿现成的 Client（首次才 connect） ──
+/**
+ * 自定义 fetch：每次 SDK 发 HTTP 请求时从 ALS 读当前请求的 token，
+ * 动态拼 Authorization 头。连接持久，token 是请求级的。
+ */
+const dynamicAuthFetch: typeof fetch = async (input, init) => {
+  const token = getCurrentRequestToken();
+  const headers = new Headers(init?.headers ?? {});
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  } else {
+    headers.delete("Authorization");
+  }
+  return fetch(input, { ...init, headers });
+};
+
+/**
+ * 启动或拿现成的 Client（首次才 connect）。**不因请求 token 不同而重建**——
+ * 持久 transport 跨多个请求、多个 token 复用同一条连接。
+ */
 export async function getOrCreateClient(): Promise<ConnectedClient> {
   if (singleton) return singleton;
   if (connectingPromise) return connectingPromise;
@@ -61,14 +82,16 @@ export async function getOrCreateClient(): Promise<ConnectedClient> {
     logger.info(
       "调用函数-getOrCreateClient",
       "调用函数开始：getOrCreateClient",
-      "为什么写这条日志：Streamable HTTP Transport 的灵魂在「连远端 HTTP」。第一次进来才真去握手 + 建立 session。当前：客户端第一次请求。",
+      "为什么写这条日志：Streamable HTTP Transport 的灵魂在「连远端 HTTP」。首次进来才真去握手 + 建立 transport。当前：客户端第一次请求（一次性 connect，后续请求复用同一条连接、token 每次都从请求头拿）。",
       {
         入参: { url: SERVER_URL },
-        __code: "new StreamableHTTPClientTransport(new URL(SERVER_URL))",
+        __code: "new StreamableHTTPClientTransport(new URL(SERVER_URL), { fetch: dynamicAuthFetch })",
       },
     );
 
-    const transport = new StreamableHTTPClientTransport(new URL(SERVER_URL));
+    const transport = new StreamableHTTPClientTransport(new URL(SERVER_URL), {
+      fetch: dynamicAuthFetch,
+    });
     const client = new Client(
       { name: "demo-cafe-client-http", version: "0.1.0" },
       { capabilities: {} },
@@ -78,6 +101,7 @@ export async function getOrCreateClient(): Promise<ConnectedClient> {
 
     singleton = {
       client,
+      transport,
       sessionId: transport.sessionId,
       startedAt: Date.now(),
       endpoint: SERVER_URL,
@@ -86,7 +110,7 @@ export async function getOrCreateClient(): Promise<ConnectedClient> {
     logger.info(
       "调用函数-getOrCreateClient",
       "调用函数结束：getOrCreateClient",
-      "为什么写这条日志：握手成功才给用户返能力清单。当前：Client 已 ready，可以走 HTTP 调 tools/list、tools/call 等。",
+      "为什么写这条日志：握手成功才给用户返能力清单。当前：Client 已 ready，连接持久 —— 后续请求都走 dynamicAuthFetch 从 ALS 读当前请求的 token（无模块级状态）。",
       {
         返回值: { sessionId: transport.sessionId, endpoint: SERVER_URL },
         耗时ms: Date.now() - t0,
@@ -108,7 +132,7 @@ export async function listTools(): Promise<McpTool[]> {
   logger.info(
     "│ 调用函数-listTools",
     "调用函数开始：listTools",
-    "为什么写这条日志：listTools 是 MCP 协议 tools/list 的封装，要给页面看见远端吧台有什么工具。当前：Client 已 connect 之后。",
+    "为什么写这条日志：listTools 是 MCP 协议 tools/list 的封装，要给页面看见远端吧台有什么工具。当前：Client 已 connect 之后。Authorization 头从 dynamicAuthFetch 读当前请求的 token。",
     { __code: "client.listTools()" },
   );
 
@@ -128,7 +152,7 @@ export async function listTools(): Promise<McpTool[]> {
     {
       返回值: { tools },
       耗时ms: Date.now() - t0,
-      字段释义: { tools: "远端 MCP Server 注册的全部工具；本 demo 期望只有 make_latte" },
+      字段释义: { tools: "远端 MCP Server 注册的全部工具" },
     },
   );
   return tools;
@@ -140,7 +164,7 @@ export async function callTool(name: string, args: Record<string, unknown>): Pro
   logger.info(
     "│ 调用函数-callTool",
     "调用函数开始：callTool",
-    "为什么写这条日志：callTool 是 MCP 协议 tools/call 的封装，要真去远端吧台做事。当前：在 Client 已 connect 之后。",
+    "为什么写这条日志：callTool 是 MCP 协议 tools/call 的封装，要真去远端吧台做事。Authorization 头从 dynamicAuthFetch 读当前请求的 token。当前：在 Client 已 connect 之后。",
     {
       入参: { name, arguments: args },
       __code: "client.callTool({ name, arguments })",
@@ -190,7 +214,7 @@ export async function listResources(): Promise<McpResource[]> {
     {
       返回值: { resources },
       耗时ms: Date.now() - t0,
-      字段释义: { resources: "远端 MCP Server 注册的资源；本 demo 期望只有 menu://today" },
+      字段释义: { resources: "远端 MCP Server 注册的资源" },
     },
   );
   return resources;
@@ -219,7 +243,7 @@ export async function readResource(uri: string): Promise<unknown> {
     {
       返回值: result,
       耗时ms: Date.now() - t0,
-      字段释义: { contents: "远端资源的实际内容；本 demo 是文本（menu://today）" },
+      字段释义: { contents: "远端资源的实际内容" },
     },
   );
   return result;

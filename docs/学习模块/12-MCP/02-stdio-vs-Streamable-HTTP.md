@@ -298,36 +298,36 @@ Node.js 在本机起一份 MCP 服务端：工具 `create_ticket`、资源退货
 
 | 目标点 | 状态 | 证据 |
 | --- | --- | --- |
-| A1 本 Demo 有 Node MCP 服务端，三种原语都能被本 Demo 的客户端调到 | 已实现 | step-1 `lib/mcp-server/server.ts` 注册 `make_latte` (Tool) + `menu://today` (Resource)；step-2 两个 demo 的 `mcp-http-server.ts` 同款（Prompt 留到 step-2 后半或 step-3） |
+| A1 本 Demo 有 Node MCP 服务端，三种原语都能被本 Demo 的客户端调到 | 已实现 | step-1 `lib/mcp-server/server.ts` 注册 `make_latte` (Tool) + `menu://today` (Resource) + greeting/refund_response (Prompt)；step-2-mcp-server `lib/flow/mcp-http-server.ts` 同款；客户端 `step-1/lib/flow/stdio-prompts.ts` + `step-2-mcp-client/lib/flow/mcp-http-prompts.ts` 都有 listPrompts / getPrompt 封装 |
 | A2 能对照 stdio 与 Streamable HTTP：同一份 JSON-RPC，管子不同 | 已实现 | step-1 stdio 子进程 vs step-2-mcp-client HTTP POST；两者 MCP 方法名都是 `tools/list` `tools/call` `resources/list` `resources/read` |
 | A3 能看见 stdio 由客户端拉起子进程、随客户端结束 | 已实现 | step-1 `lib/flow/stdio-client.ts` 的 `getOrCreateClient()` 调 `new StdioClientTransport({ command: "tsx", args: [server.ts] })`；前端 Status 卡片返 `pid` + `startedAt` |
 | A4 能看见 HTTP 服务端独立存活、同一端点可被多次请求打到 | 已实现 | step-2-mcp-server 在 50134 同端口 POST /mcp；多次 `/api/http/call-tool` 走 `StreamableHTTPClientTransport` 复用同一 transport，sessionId 复用 |
-| A5 能看见 HTTP 无令牌 / 错令牌返回 HTTP 401 | 未实现 | 这一节没接鉴权；落 A6 + A7 时一起做（下一步 / 后续） |
-| A6 能看见按用户隔离 | 未实现 | 同上 |
+| A5 能看见 HTTP 无令牌 / 错令牌返回 HTTP 401 | 已实现 | 服务端 `lib/flow/auth.ts` 的 `checkBearer` + `routes/mcp-endpoint.ts` route 层在 transport.handleRequest 之前先校验；客户端 `lib/flow/mcp-http-client.ts` `setClientToken` 支持切 null / 错 / 对三态；页面 `public/components/auth-section.js` 三按钮对照，红卡 / 绿卡 |
+| A6 能看见按用户隔离 | 已实现 | 服务端 `lib/flow/tickets-store.ts` 硬编码 3 张工单（alice 2 / bob 1）+ `listTicketsForUser(userId)`；`lib/flow/request-context.ts` AsyncLocalStorage 把 userId 从 route 传到 Tool handler；`lib/flow/auth.ts` `TOKEN_TO_USER` 映射 `alice-secret/bob-secret/god-mode-token` → userId + isGod；`routes/mcp-endpoint.ts` `runWithUser(userId, ...)`；新增 Tool `list_my_tickets`；客户端**一条连接走到底**：自定义 fetch（`dynamicAuthFetch`）每次请求动态读 `getCurrentToken()` 拼 Authorization 头，不重建连接；页面顶部「当前登录身份」选择器（alice/bob/god 三按钮）+ 自动 connect + 默认登录 alice；三个 MCP 模块（Tools/Resources/Prompts）每个 handler 响应末尾附 `[调用方] <userId>`；客户端调用方身份在每个响应卡顶部显示 |
 | A7 能讲清 OAuth 2.1 角色；实现可最简 | 未实现 | 概念卡已写在「是什么 · 管子上的身份」与易混点；代码未做 |
 
-**A 段小结**：A1+A2+A3+A4 已实现；A5+A6+A7 未实现。这三条是模块验收「HTTP 至少做到 API 令牌 / 按用户隔离」要求，**属于这一小节需要继续 step 加深的项**，不是当前锁定时阻塞。
+**A 段小结**：A1+A2+A3+A4+A5+A6 已实现；A7 未实现。A6 已落（`tickets-store` 硬编码 alice 2 张 / bob 1 张 + AsyncLocalStorage 跨层传 userId + `list_my_tickets` Tool 按 userId 强制过滤 + 页面三身份对照 + god 红字反例）。A7（OAuth 2.1）仍按 backlog 走。
 
 ### §5.4.B 文档 → 代码对齐
 
 | MD 讲点 | 代码里有没有 | 状态 |
 | --- | --- | --- |
-| 需求 1：官方 SDK 服务端三种原语 + 本 Demo 客户端调本地服务 | `apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/mcp-server/server.ts` + `apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/flow/mcp-http-client.ts` | 已实现（Tool + Resource；Prompt 留待） |
+| 需求 1：官方 SDK 服务端三种原语 + 本 Demo 客户端调本地服务 | `apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/mcp-server/server.ts` + `apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/flow/mcp-http-client.ts` | 已实现（Tool + Resource + Prompt 三种原语，两端都齐） |
 | stdio 子进程 + stdin/stdout | step-1 `lib/flow/stdio-client.ts` 用 `StdioClientTransport`；子进程 `lib/mcp-server/server.ts` 用 `StdioServerTransport` | 已实现 |
 | Streamable HTTP 单端点 POST | step-2-mcp-server `lib/flow/mcp-http-server.ts` 用 `NodeStreamableHTTPServerTransport`；step-2-mcp-client `lib/flow/mcp-http-client.ts` 用 `StreamableHTTPClientTransport` | 已实现 |
 | 换管子方法名不变，两侧独立请求 | step-1 `routes/stdio-*.ts` 与 step-2-mcp-client `routes/http-*.ts` 各打各的 URL | 已实现 |
 | 过时 HTTP+SSE 不要当现行（注解） | 没专门做对照 demo；写在「是什么 · Streamable HTTP 数据怎么走」末段 | 已覆盖（注解） |
-| 无令牌 HTTP 401 vs JSON-RPC 业务错 | 无 | 未实现（落 A5 时一起） |
-| API 令牌 ≠ 按用户隔离；上帝令牌反例 | 无 | 未实现（落 A6 时一起） |
+| 无令牌 HTTP 401 vs JSON-RPC 业务错 | step-2-mcp-server `routes/mcp-endpoint.ts` 在 `transport.handleRequest` 之前先 `checkBearer`，不通过直接写 HTTP 401 + `WWW-Authenticate: Bearer`；客户端 `lib/flow/mcp-http-client.ts` `setClientToken` + `routes/http-auth-test.ts` 切 token；页面 `public/components/auth-section.js` 红 / 绿卡对照 | 已实现 |
+| API 令牌 ≠ 按用户隔离；上帝令牌反例 | step-2-mcp-server `lib/flow/tickets-store.ts` 硬编码 alice 2 张 / bob 1 张；`listTicketsForUser(userId)` 普通 user 返自己、userId=`god` 返全部；`lib/flow/request-context.ts` AsyncLocalStorage 把 userId 传到 Tool handler；`list_my_tickets` Tool 注册在 `lib/flow/mcp-http-server.ts`；客户端 `routes/http-list-as-user.ts` + `public/components/user-section.js` 三按钮对照（alice/bob 绿卡各自 2/1 张，god 红卡 3 张 + ⚠ 反例标注） | 已实现 |
 | OAuth 2.1 角色图 / 受众 | 无 | 未实现（落 A7 时一起） |
 | 云上 Agent 不能 spawn 员工本机子进程 | step-1 「核心教学点」卡片 + 「为什么」段对照说明 | 已覆盖（解释） |
 
-**B 段小结**：与 A 段对应。stdio / HTTP / 反向耦合 全部已在 step-1 + step-2 三个 demo 里实证；鉴权 / 用户隔离 / OAuth 是后续 step 的活。
+**B 段小结**：与 A 段对应。stdio / HTTP / 反向耦合 / HTTP API Token 鉴权 / 按用户隔离 + 上帝令牌反例 全部已在 step-1 + step-2 三个 demo 里实证；OAuth（A7）是后续 step 的活。
 
-### 后续 step 计划（不在本节锁定阻塞）
+### 后续 step 计划（A7 仍未落；当前不在进度表打钩阻塞的 backlog）
 
 | 缺口 | 计划放哪 |
 | --- | --- |
-| A5 + 鉴权对比（无令牌 401 vs 错令牌 401 vs 对令牌放行） | step-2 后半：API Token 鉴权（同 demo 加 endpoint 校验 + 错误演示） |
-| A6 + 上帝令牌反例 | step-3：按用户隔离（每个请求带 userId；同 Tool 返回按 user 过滤） |
+| ~~A5 + 鉴权对比（无令牌 401 vs 错令牌 401 vs 对令牌放行）~~ | ~~step-2 后半：API Token 鉴权（同 demo 加 endpoint 校验 + 错误演示）~~ **已落 2026-09-18**（详见 `lib/flow/auth.ts` + `routes/mcp-endpoint.ts` + `public/components/auth-section.js`） |
+| ~~A6 + 上帝令牌反例~~ | ~~step-3：按用户隔离（每个请求带 userId；同 Tool 返回按 user 过滤）~~ **已落 2026-09-19**（详见 `lib/flow/tickets-store.ts` 硬编码种子 + `lib/flow/request-context.ts` AsyncLocalStorage + `list_my_tickets` Tool + `public/components/user-section.js` 三身份对照 + god 红字反例） |
 | A7 + OAuth 角色图 | step-3 后或 step-4：OAuth 2.1 概念卡 + 受众校验形状 |

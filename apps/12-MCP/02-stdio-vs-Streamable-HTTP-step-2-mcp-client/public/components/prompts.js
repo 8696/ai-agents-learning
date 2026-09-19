@@ -13,6 +13,7 @@
     const promptGet = props.promptGet;
     const customerName = props.customerName;
     const busy = props.busy;
+    const currentUserKey = props.currentUserKey;
     const onListPromptsClick = props.onListPromptsClick;
     const onGetGreetingClick = props.onGetGreetingClick;
     const onGetRefundClick = props.onGetRefundClick;
@@ -63,7 +64,7 @@
         {prompts && (
           <div className="bg-blue-50 border border-blue-300 rounded p-3 space-y-1">
             <div className="text-xs font-semibold text-blue-900">
-              MCP 协议响应 · prompts/list · 耗时 {prompts.elapsedMs} ms
+              MCP 协议响应 · prompts/list · 调用方 <code>{currentUserKey ?? "未识别"}</code> · 耗时 {prompts.elapsedMs} ms
             </div>
             <pre className="text-xs whitespace-pre-wrap max-h-48 overflow-auto">
               {JSON.stringify(prompts.prompts, null, 2)}
@@ -77,7 +78,7 @@
         {promptGet && (
           <div className="bg-green-50 border border-green-300 rounded p-3 space-y-1">
             <div className="text-xs font-semibold text-green-900">
-              MCP 协议响应 · prompts/get · {promptGet.label} · 耗时 {promptGet.elapsedMs} ms
+              MCP 协议响应 · prompts/get · {promptGet.label} · 调用方 <code>{currentUserKey ?? "未识别"}</code> · 耗时 {promptGet.elapsedMs} ms
             </div>
             {promptGet.error ? (
               <div className="text-xs text-red-700">
