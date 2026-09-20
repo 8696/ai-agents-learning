@@ -217,10 +217,22 @@
               />
               <button
                 id="btn-run"
-                className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
-                disabled={!query.trim() || noKey}
+                className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                disabled={!query.trim() || noKey || status === "loading"}
                 onClick={run}
-              >跑一次</button>
+              >
+                {status === "loading" ? (
+                  <>
+                    <span
+                      className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"
+                      aria-hidden="true"
+                    ></span>
+                    <span>正在跑…（streamText 拆流中）</span>
+                  </>
+                ) : (
+                  <span>跑一次</span>
+                )}
+              </button>
               {noKey ? <p className="text-xs text-red-700">缺 密钥，按钮已禁用。请配 apps/.env。</p> : null}
             </section>
             <section id="output" className="bg-white shadow rounded p-4 space-y-3">
