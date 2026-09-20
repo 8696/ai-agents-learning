@@ -7,20 +7,31 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
-  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
   <div id="root"></div>
-  <script src="../utils/fetch-json.js"></script>
-  <script type="text/babel" src="../components/page-nav.js"></script>
-  <script type="text/babel" src="../components/layout.js"></script>
-  <script type="text/babel" src="../components/run-result.js"></script>
-  <script type="text/babel">
-    const { useState, useEffect } = React;
-    const { PageNav, PageIntro, StatusPill, EnvFooter, RunResult } = window.DemoUI || {};
-    const { postJson, loadHealth } = window.DemoUtils || {};
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="module" src="../components/run-result.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { postJson, loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+    import { RunResult } from "../components/run-result.js";
     const DEFAULT_UTTERANCE = "来一杯中杯热拿铁。";
 
     function App() {
@@ -121,7 +132,7 @@
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
+    const root = createRoot(document.getElementById("root"));
     root.render(<App />);
   </script>
 </body>
