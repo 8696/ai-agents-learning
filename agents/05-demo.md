@@ -343,9 +343,20 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
 - **不引**：express / fastify / sirv / 任何非 koa web 框架；htm / preact / 任何 React 替代品；vite / webpack / parcel / esbuild / 任何打包器。
 - **README**：§5.1 四项保留，新增「端口 + 浏览器访问地址」一行。
 
-#### 5.3.4 HTML 固定骨架（强制）
+#### 5.3.4 HTML 固定骨架（强制 · 2026-09-12 起 ESM 主、UMD 留作 legacy）
 
 每个 `public/*.html` 页面（含 `index.html` 与按 §5.3.8 拆出的场景页）**必须**按下述结构写，禁止替换。这就是 HTTP Demo 的 HTML 模板（不要改去对齐某条现有 `apps/.../public/*.html`）。多场景时每页各自复制这份骨架，用页内导航跳转，**不要**把无关场景堆进同一个 HTML 用 tab / 按钮充数。
+
+**模式分流（2026-09-12 起）**
+
+| | 何时走 | 落在哪 |
+| --- | --- | --- |
+| **ESM 模式（新写默认）** | 2026-09-12 后新写 demo；含 `@ai-sdk/react` 等纯 ESM 包必须走这条 | §5.3.4.a |
+| **UMD 模式（legacy）** | 2026-09-12 前已锁定的老 demo；默认不回头改（[AGENTS.md §3.1 已锁定旧 demo 不回头改](../AGENTS.md#31-当前小节锁定对话中途绝不换成别的小节)） | §5.3.4.b |
+
+`check-demo` 自动识别：HTML 含 `<script type="importmap">` 且含 `react` 映射 → ESM 分支；否则 UMD 分支。两种模式各自自洽，**不要**混着写。
+
+#### §5.3.4.a ESM 模式（新写默认）
 
 ```html
 <!DOCTYPE html>
@@ -360,18 +371,164 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
 
-  <!-- §5.3.4 强制：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap）。
-       注：React 19 移除了 UMD bundle 只发 ESM；§5.3.4 用 React 18 UMD。 -->
+  <!-- §5.3.4.a 强制：Babel Standalone **锁定 7.26.4**（仅作 JSX → React.createElement 转译；React 走下面 importmap） -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4.a 强制：导入映射（import map）
+       把 "react" / "react-dom" / "react-dom/client" 路由到 esm.sh 那份 ESM。
+       整页 React 全程只发这一份 ESM React；不再另发 UMD。
+       含 "@ai-sdk/react" / "ai" 的页面：追加 import map 条目（每家一份）。 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+
+  <!-- §5.3.4.a 强制：**JSX 块内不允许 TypeScript 语法**
+       Babel Standalone 默认只编译 JSX → JS，**不解析 TS 类型注解**。
+       浏览器运行时遇到 TS 泛型 / 类型注解 → ReferenceError。
+       禁止：useRef<number>(null) · interface Foo {} · type Bar = ... · const x: string = ...
+       允许：纯 JS · 运行时类型用 propTypes / 注释 · type 断言全删。 -->
+
+  <!-- 自定义 CSS 仅当 public/app.css 真实存在时才加这一行；禁止用它替换 Tailwind -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- 多页时 public/utils/*.js：无 JSX 合法 ESM，普通 <script src> 即可（如本 demo 不用 ESM import）；
+       或 <script type="module">（当 utils 内部要 import 别人时）。 -->
+  <script type="module" src="../utils/fetch-json.js"></script>
+
+  <!-- 多页时 public/components/*.js：合法 ESM。
+       共享组件本身必须是合法 ESM——两种写法：
+         ① 用 React.createElement(...) 写（推荐；不需要 Babel 转译）
+         ② 或外链文本先经 Babel data-type="module" 转译 + runtime:"automatic"（不推荐；多一步运行时编译）
+       文件头写「职责 + 数据流」。本页内联块之前。
+       页面侧直接 `import { PageNav } from "../components/page-nav.js"`。 -->
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+
+  <!-- type="text/babel" data-type="module"：内联块经 Babel 转译后作为 ESM 注入；
+       顶部可直接 `import { useState } from "react"`，走上面 importmap。
+       页面自己的 React（含 JSX）写在本页内联块里，**不**另起 app.tsx。
+       多页共享的 JSX 放 public/components/，无 JSX 放 public/utils/（§5.3.8）。 -->
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+    import { postJson, loadHealth } from "../utils/fetch-json.js";
+    const DEFAULT_UTTERANCE = "来一杯中杯热拿铁。";
+
+    // ── 主组件：按 §5.3.4 强制骨架渲染 id ──
+    function App() {
+      const [env, setEnv] = useState(null);
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50139, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header
+            id="page-header"
+            className="border-b p-4 flex items-center justify-between bg-white"
+          >
+            <h1 id="page-title" className="text-xl font-semibold">
+              {小节名}
+            </h1>
+            <StatusPill status="idle" />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <section
+              id="page-intro"
+              className="bg-white shadow rounded p-4 space-y-2"
+            >
+              {/* §5.3.11：本页演示什么 + 数据流步骤 */}
+              <p className="text-sm text-gray-700">本页只演示：<b>{一句话教学点}</b></p>
+              <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+                <li>{步骤 1：点了按钮会发出什么请求}</li>
+                <li>{步骤 2：服务端做了什么}</li>
+                <li>{步骤 3：结果怎么回到下面输出区}</li>
+              </ol>
+            </section>
+            <section
+              id="controls"
+              className="bg-white shadow rounded p-4"
+            >
+              {/* 该小节交互区：按 demo 业务填充；每个控件旁一句「点了会发生什么」 */}
+              <div className="text-sm text-gray-500">{小节名} Demo</div>
+            </section>
+            <section
+              id="output"
+              className="bg-white shadow rounded p-4 min-h-[200px]"
+            >
+              {/* 该小节输出区；空态也要有文案，见 §5.3.10 */}
+            </section>
+          </main>
+
+          <footer
+            id="page-footer"
+            className="border-t p-2 text-xs text-gray-500 text-center"
+          >
+            {/* §5.3.9：环境元信息来自 GET /health，禁止写死模型名 */}
+            <EnvFooter env={env} />
+          </footer>
+        </div>
+      );
+    }
+
+    // ── 入口：React 18 ESM createRoot ──
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+```
+
+**ESM 模式加载顺序（严格按此序；React 未定义会全炸）**：
+
+1. Tailwind 4 browser CDN（含 integrity）
+2. Babel Standalone 7.26.4
+3. `<script type="importmap">`
+4. （多页时）`public/utils/*.js` / `public/components/*.js`：`<script type="module">`（必须在本页内联块**之前**）
+5. `<script type="text/babel" data-type="module">` 本页内联 ESM 块（**必须最后**）
+
+#### §5.3.4.b UMD 模式（legacy · 老 demo 留用）
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{小节名}</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4.b 强制（legacy）：React 18.3.1 UMD CDN（普通 script，不用 module 也不用 importmap）。
+       注：React 19 移除了 UMD bundle 只发 ESM；§5.3.4.b 老 demo 仍用 React 18 UMD。 -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 
-  <!-- §5.3.4 强制：Babel Standalone **锁定 7.26.4**。
+  <!-- §5.3.4.b 强制（legacy）：Babel Standalone **锁定 7.26.4**。
        8.x 默认 preset-react 是 automatic runtime（输出 import { jsx } from "react/jsx-runtime"），
        与本规则"完全 ESM 禁用"冲突。7.26.4 默认是 classic runtime（输出 React.createElement）。
        不要在 script type="text/babel" 块上加 data-presets / data-plugins——Babel 默认行为即可。 -->
   <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 
-  <!-- §5.3.4 强制：**JSX 块内不允许 TypeScript 语法**（2026-09-08 写入小节文档 · step-2 白屏事故）
+  <!-- §5.3.4.b 强制：**JSX 块内不允许 TypeScript 语法**
        Babel Standalone 默认只编译 JSX → JS，**不解析 TS 类型注解**。
        浏览器运行时遇到 TS 泛型 / 类型注解 → ReferenceError（如 "number is not defined"）。
        禁止：useRef<number>(null) · interface Foo {} · type Bar = ... · const x: string = ...
@@ -458,26 +615,8 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
 </html>
 ```
 
-**强制命名约定**（id 全小写连字符，**由 React 组件渲染出来**）：
-- `#page-header`（含 `#page-title` + `#status-pill`；**只放**页名和状态，环境信息不放这里）
-- `#page-main`（含 `#page-intro` + `#controls` + `#output` 三个 section）
-- `#page-footer`（含 `#env-info`：端口写这一小节 §5.3.3 算出的默认 PORT，禁止抄死数字、禁止抄别条；provider / model 由 `GET /health` 填，**禁止写死** `MiniMax-M3` 之类。见 [§5.3.9](#539-环境元信息health--页脚强制)）
+**UMD 模式加载顺序（严格按此序；React 未定义会全炸）**：
 
-**`#status-pill` 四态**：`⏸待连接` / `🔄请求中` / `✅完成` / `❌错误`（由 React 组件根据请求状态切换 className / textContent）。
-
-**禁止**：
-- 替换 §5.0 的 Tailwind 脚本（CDN / 版本 / integrity）
-- 替换 §5.3.4 的 React UMD / Babel Standalone CDN（URL / 版本 / UMD 路径）
-- Babel 升级到 8.x（会触发 automatic runtime 注入 import）
-- 在 `<script type="text/babel">` 块上加 `data-presets` / `data-plugins`（默认 classic runtime 即可；显式加 attribute 反而会踩坑）
-- 用 `<script type="module">` / importmap / `import` 语法（**完全 ESM 禁用**）
-- 在 HTML 里加第三方包（htm / preact / React 替代品均不允许）
-- 用 `<div>` 全替 `<header>` / `<main>` / `<footer>`（JSX 里就是 `<header>` / `<main>` / `<footer>` 标签）
-- 改 id 命名（保持可被 grep 检索）
-- 页脚写死模型名（`MiniMax-M3` 等）；模型跟 `apps/.env` 的 `LLM_PROVIDER` / `LLM_MODEL`，跟 `apps/llm.ts`
-- 省掉 `#page-intro`（§5.3.11 必须）或 `#env-info`（§5.3.9 必须）
-
-**`<script>` 加载顺序**（严格按此序；React 未定义会全炸）：
 1. Tailwind 4 browser CDN（含 integrity）
 2. React 18.3.1 UMD
 3. ReactDOM 18.3.1 UMD
@@ -485,6 +624,38 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
 5. （多页时）`public/utils/*.js`：无 JSX，**普通** `<script src>`（禁止 `type="module"`）
 6. （多页时）`public/components/*.js`：共享 JSX，各用 `<script type="text/babel" src="…">`，必须在本页内联块**之前**；组件挂 `window.DemoUI`
 7. `<script type="text/babel">` 本页内联 JSX 块（**必须最后**）
+
+#### §5.3.4.c 共用强制（两种模式都一样）
+
+**强制命名约定**（id 全小写连字符，**由 React 组件渲染出来**）：
+
+- `#page-header`（含 `#page-title` + `#status-pill`；**只放**页名和状态，环境信息不放这里）
+- `#page-main`（含 `#page-intro` + `#controls` + `#output` 三个 section）
+- `#page-footer`（含 `#env-info`：端口写这一小节 §5.3.3 算出的默认 PORT，禁止抄死数字、禁止抄别条；provider / model 由 `GET /health` 填，**禁止写死** `MiniMax-M3` 之类。见 [§5.3.9](#539-环境元信息health--页脚强制)）
+
+**`#status-pill` 四态**：`⏸待连接` / `🔄请求中` / `✅完成` / `❌错误`（由 React 组件根据请求状态切换 className / textContent）。
+
+**共用禁止**：
+
+- 替换 §5.0 的 Tailwind 脚本（CDN / 版本 / integrity）
+- Babel 升级到 8.x（会触发 automatic runtime 注入 import）
+- 在 `<script type="text/babel">` / `<script type="text/babel" data-type="module">` 块上加 `data-presets` / `data-plugins`（默认 classic runtime 即可；显式加 attribute 反而会踩坑）
+- 在 HTML 里加第三方包（htm / preact / React 替代品均不允许）
+- 用 `<div>` 全替 `<header>` / `<main>` / `<footer>`（JSX 里就是 `<header>` / `<main>` / `<footer>` 标签）
+- 改 id 命名（保持可被 grep 检索）
+- 页脚写死模型名（`MiniMax-M3` 等）；模型跟 `apps/.env` 的 `LLM_PROVIDER` / `LLM_MODEL`，跟 `apps/llm.ts`
+- 省掉 `#page-intro`（§5.3.11 必须）或 `#env-info`（§5.3.9 必须）
+
+**ESM 模式额外禁止**：
+
+- 再挂 `react@18.3.1/umd/react.production.min.js` 或 `react-dom@18.3.1/umd/react-dom.production.min.js`（走 importmap 那一份就够了）
+- 共享组件写 IIFE + `window.DemoUI` 又 `export function`（统一选一种）
+
+**UMD 模式额外禁止**：
+
+- 用 `<script type="module">` / importmap / `import` 语法（**完全 ESM 禁用**）
+- 替换 §5.3.4.b 的 React UMD / Babel Standalone CDN（URL / 版本、UMD 路径）
+- 共享组件用 `export function`（UMD 模式下 `export` 在非模块脚本里是语法错）
 
 **`<` 写在哪：JSX 文本节点 vs JS 字符串（实测踩坑）**
 
@@ -572,20 +743,42 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
 
 **CORS**：开发期同源（`http://127.0.0.1:{port}` ↔ `{port}`）够用；跨域时显式声明，**不**做 `*`。
 
-#### 5.3.6 React 组件规范（HTML 内联 `<script type="text/babel">` 块）
+#### 5.3.6 React 组件规范（HTML 内联 `<script type="text/babel">` 块 · 双模式）
 
-- **位置**：该页自己的 JSX 写在本 HTML 内联 `<script type="text/babel">` 块。无 app.tsx / src/。多页复用：JSX → `public/components/`，无 JSX → `public/utils/`（见 §5.3.8），挂 `window.DemoUI` / `window.DemoUtils`。
+**先看 §5.3.4 是哪种模式**——`§5.3.4.a` ESM 还是 `§5.3.4.b` UMD，决定下面这些怎么写。两种模式**不要混**。
+
+##### §5.3.6.a ESM 模式（§5.3.4.a）
+
+- **位置**：该页自己的 JSX 写在本 HTML 内联 `<script type="text/babel" data-type="module">` 块。无 app.tsx / src/。多页复用：JSX → `public/components/`（合法 ESM，`export function`），无 JSX → `public/utils/`（合法 ESM，`export function` / `export async function`），页面侧直接 `import`。
+- **运行时变量**：浏览器里 `React` / `ReactDOM` 由导入映射提供；**不**走全局，**不**挂 `window`。组件顶部 `import React, { useState, useEffect } from "react"`；`createRoot` `import { createRoot } from "react-dom/client"`。
+- **状态**：组件内 `useState` / `useEffect` / `useRef`（import 后直接调；或 `React.useState`）；**禁止** Redux / Zustand / Recoil / 任何状态库。
+- **副作用**：直接 `fetch(...)`；**禁止** React Query / SWR / axios。
+- **样式**：Tailwind className 写在 JSX 上；自定义 CSS（要的话）写到 `public/app.css`。
+- **JSX**：直接写 JSX；Babel 7.26.4 默认 classic runtime（输出 `React.createElement(...)`），与 ESM 模式兼容（`React` 已在 import 里）；不要加 `data-presets` / `data-plugins`。
+- **入口**：内联块末尾写
+  ```js
+  import { createRoot } from "react-dom/client";
+  const root = createRoot(document.getElementById("root"));
+  root.render(<App />);
+  ```
+- **类型**：HTML 内联 JS 不走 TS；无类型检查。状态/事件处理写注释解释意图。
+
+##### §5.3.6.b UMD 模式（§5.3.4.b · legacy）
+
+- **位置**：该页自己的 JSX 写在本 HTML 内联 `<script type="text/babel">` 块。无 app.tsx / src/。多页复用：JSX → `public/components/`，无 JSX → `public/utils/`，挂 `window.DemoUI` / `window.DemoUtils`。
 - **运行时变量**：浏览器里 `React` / `ReactDOM` 是 UMD 全局变量；**不** import。
 - **状态**：组件内 `React.useState` / `React.useEffect` / `React.useRef`（显式调用 React 前缀；或解构全局 `const { useState } = React;`）；**禁止** Redux / Zustand / Recoil / 任何状态库。
 - **副作用**：直接 `fetch(...)`；**禁止** React Query / SWR / axios。
 - **样式**：Tailwind className 写在 JSX 上；自定义 CSS（要的话）写到 `public/app.css`。
-- **JSX**：直接写 JSX；不要加 `data-presets` / `data-plugins`（§5.3.4：Babel 7.26.4 默认 classic runtime 即可）。
-- **入口**：内联块末尾写（与 §5.3.4 骨架一致）
+- **JSX**：直接写 JSX；不要加 `data-presets` / `data-plugins`（§5.3.4.b：Babel 7.26.4 默认 classic runtime 即可）。
+- **入口**：内联块末尾写（与 §5.3.4.b 骨架一致）
   ```js
   const root = ReactDOM.createRoot(document.getElementById("root"));
   root.render(<App />);
   ```
 - **类型**：HTML 内联 JS 不走 TS；无类型检查。状态/事件处理写注释解释意图。
+
+##### §5.3.6.c 共用约束（ESM / UMD 都守）
 
 - **JSX attribute 三种合法写法**（避坑 · 2026-09-14 立）：
 
@@ -601,7 +794,7 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
 
   **为什么必须**：Babel Standalone 在浏览器运行时才解析 JSX，那时一整页已经写完，定位代价大。**写完即跑 = 预防式**（每写一个内联块就校验），不是触发式（不是等错了才跑）。
 
-  **命令模板**（替换 `{demo}/{path}`，其它一字不动；外链 `components/*.js` 各自单独跑）：
+  **命令模板**（替换 `{demo}/{path}`，其它一字不动；外链 `components/*.js` 各自单独跑；`sourceType` 自动识别首段是否含 `import` / `export`，匹配 `scripts/check-demo/check-frontend.cjs` 里的 `babelCheck`）：
 
   ```bash
   cd apps && node -e '
@@ -609,13 +802,14 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
   const parser = require("@babel/parser");
   function scan(file) {
     const html = fs.readFileSync(file, "utf8");
-    const re = /<script type="text\/babel"(?:\s+src="[^"]*")?>([\s\S]*?)<\/script>/g;
+    const re = /<script type="text\/babel"(?:\s+data-type="module")?(?:\s+src="[^"]*")?\s*>([\s\S]*?)<\/script>/g;
     let m, idx = 0, allOk = true;
     while ((m = re.exec(html))) {
       idx++;
       const code = m[1] || "";
       if (!code) { console.log(file + " block " + idx + " SKIP (src 外链)"); continue; }
-      try { parser.parse(code, { sourceType: "script", plugins: ["jsx"] }); console.log(file + " block " + idx + ": OK"); }
+      const isEsm = /^\s*(?:import|export)\s/m.test(code.slice(0, 8000));
+      try { parser.parse(code, { sourceType: isEsm ? "module" : "script", plugins: ["jsx"] }); console.log(file + " block " + idx + ": OK (" + (isEsm ? "module" : "script") + ")"); }
       catch (e) { allOk = false; console.log(file + " block " + idx + ": ERR " + e.message); }
     }
     return allOk;
@@ -790,8 +984,7 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
 | `utils/` | 无 JSX 的公共方法（`api-client.js`、`wait-demo-ui.js` …）。普通 `<script src>`，挂 `window.DemoUtils` |
 
 - 页与页用普通 `<a href="/pages/serial.html">` 跳；禁止单页 tab 把无关场景叠回去。
-- 仍禁止 `type="module"` / `import` / 打包器；每页 `<head>` 各自引入 Tailwind / React / ReactDOM / Babel。
-- 加载顺序见 [§5.3.4](#534-html-固定骨架强制)：utils（普通 script）→ components（babel src）→ 本页内联块。
+- 加载顺序见 [§5.3.4](#534-html-固定骨架强制)：ESM 模式按 §5.3.4.a（允许 `type="module"` + `import` + importmap），UMD 模式按 §5.3.4.b（仍禁止）。
 
 **注释（前后端同一套，与 [§5.0](#50-代码约定node--ts--注释--key--选型) 对齐并加严）**
 
@@ -1883,6 +2076,8 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 
 **位置**：每个 demo 自己一个 `apps/{demo}/public/components/page-nav.js`。**禁止**写到顶层 `apps/components/`、**禁止**跨 demo import（与 §5.3.12 独立性一致）。
 
+**模式分流（2026-09-12 起）**：新写 demo 按 §5.3.4.a ESM 模式时，`page-nav.js` 用 §5.3.18.a 的 ESM 模板（`export function PageNav` + 合法 ESM + `React.createElement(...)` 或 JSX+Babel 都行）；老 demo 按 §5.3.4.b UMD 模式时仍用 §5.3.18.b 的 IIFE 模板（挂 `window.DemoUI`）。两种模板**视觉一致**，仅内部 ESM vs UMD 不同。`check-demo` 对应两套都认。
+
 **路径约定**（脚本批处理时一条规则）：
 
 | HTML 位置 | `<script>` src |
@@ -1893,7 +2088,9 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 **JSX 调用**（写在 `</header>` 之后、`<main>` 之前）：
 
 ```jsx
-// index.html：base 为空
+// ESM 模式：直接 import，base 由 props 传入
+import { PageNav } from "../components/page-nav.js";
+// 或 UMD 模式：base 为空
 <PageNav current="overview" base="" />
 
 // pages/*.html：base 是 ../
@@ -1902,14 +2099,55 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 
 `base` 在 page-nav.js 内部 `props.base || ""` 兜底。
 
-**destructure 必带 PageNav**（避坑 · 2026-09-14 立 · 实测踩坑）：inline JSX 用 `<PageNav>` 之前必须把 `PageNav` 从 `window.DemoUI` 解构出来，否则 Babel 转译后 `React.createElement(PageNav, ...)` 找不到标识符 → 运行时 `ReferenceError: PageNav is not defined`。
+**destructure / import 必带 PageNav**（避坑 · 2026-09-14 立 · 实测踩坑）：inline JSX 用 `<PageNav>` 之前必须拿到引用，否则 Babel 转译后 `React.createElement(PageNav, ...)` 找不到标识符 → 运行时 `ReferenceError: PageNav is not defined`。
 
-| 情况 | 怎么写 |
+| 模式 | 怎么拿 |
 | --- | --- |
-| 已有 `const { ... } = window.DemoUI;` | 把 `PageNav` 加进同一行（加在最前） |
-| 没有 `window.DemoUI` 解构 | 在 `const { useState, ... } = React;` 后**新增一行**：`const { PageNav } = window.DemoUI \|\| {};` |
+| ESM 模式 | 顶部 `import { PageNav } from "../components/page-nav.js"`（与别的 import 一行） |
+| UMD 模式 | `const { PageNav } = window.DemoUI \|\| {};`（已有 `const { ... } = window.DemoUI;` 把 `PageNav` 加进同一行；没有就新增一行） |
 
-**组件标准代码**（贴在 `public/components/page-nav.js`）：
+#### §5.3.18.a ESM page-nav.js 模板（§5.3.4.a 配套）
+
+```js
+/**
+ * 职责：顶部跨页导航。手写循环首页 / 框架循环子页 / 试用 useChat 子页。
+ * 数据流：props.current 高亮；props.base 拼 href。
+ *
+ * 加载方式：本文件没有 JSX，全部用 React.createElement，
+ *          因此是「直接可被浏览器当 ESM 解析」的合法模块。
+ *          业务代码里直接 `import { PageNav } from ".../page-nav.js"` 即可。
+ */
+import React from "react";
+
+const PAGES = [
+  { key: "overview", label: "手写循环（Agent Loop）", href: "index.html" },
+  { key: "framework", label: "框架循环（Framework Loop）", href: "pages/framework.html" },
+  { key: "use-chat", label: "试用 useChat（JSX）", href: "pages/use-chat.html" },
+];
+
+export function PageNav(props) {
+  const current = props.current;
+  const base = props.base || "";
+  return React.createElement(
+    "nav",
+    { className: "bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm" },
+    PAGES.map(function (item) {
+      const active = item.key === current;
+      return React.createElement(
+        "a",
+        {
+          key: item.key,
+          href: base + item.href,
+          className: active ? NAV_CLASS_ACTIVE : NAV_CLASS_IDLE,
+        },
+        item.label
+      );
+    })
+  );
+}
+```
+
+#### §5.3.18.b UMD page-nav.js 模板（§5.3.4.b 配套 · legacy）
 
 ```jsx
 (function () {
@@ -1945,7 +2183,7 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 })();
 ```
 
-样式含义（**钉死的色卡**）：
+样式含义（**钉死的色卡** · ESM / UMD 一致）：
 - 容器：`bg-white border border-gray-200 rounded p-3`（卡状，不是顶部 bar）
 - 当前页：`border-blue-500 bg-blue-50 text-blue-700 font-semibold`（白底蓝边 + 浅蓝底）
 - 其他页：`border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100`（灰边白底）
@@ -1964,10 +2202,11 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 - 跨 demo 共享 `page-nav.js`（独立性）
 - 把 items 数组写到 `page-nav.js` 之外的全局 / 配置中心
 - 在 PageNav 里再加"分隔符 `|`"或回退链
+- ESM 模式与 UMD 模式互相串（ESM page-nav.js 不要写 IIFE + `window.DemoUI`；UMD page-nav.js 不要写 `export function`）
 
-**一次性迁移脚本**（已跑过 · 一次性）：`apps/scripts/add-page-nav.mjs` 在 2026-09-14 把 98 个 demo 都加上了 / 覆盖成了标准 PageNav。**新写 demo 不要重跑这个脚本**——按本节手写一份 `public/components/page-nav.js` + 在 HTML 里加 `<script>` 和 `<PageNav>` 调用。
+**一次性迁移脚本**（已跑过 · 一次性）：`apps/scripts/add-page-nav.mjs` 在 2026-09-14 把 98 个 demo 都加上了 / 覆盖成了标准 PageNav（UMD 模板）。**新写 demo 不要重跑这个脚本**——按 §5.3.18.a（ESM）或 §5.3.18.b（UMD）手写一份 `public/components/page-nav.js` + 在 HTML 里加 `<script>` 和 `<PageNav>` 调用。
 
-**已锁定旧 demo 的特殊处理**：2026-09-14 之前打钩的旧 demo，**当时 PageNav 写在哪（layout.js 内 / 独立 page-nav.js / 不同样式）都先按本节标准覆盖一次**——功能不受影响（page-nav.js 加载顺序在后，`window.DemoUI.PageNav` 被新组件覆盖）。旧 layout.js 里的 `function PageNav()` 与 `window.DemoUI.PageNav = PageNav` 是死代码（无害），后续如要清，按 §5.3.14「cp -r step-N → step-(N+1) 必改清单」思路单独做一轮清理。
+**已锁定旧 demo 的特殊处理**：2026-09-14 之前打钩的旧 demo（UMD 模板），**当时 PageNav 写在哪（layout.js 内 / 独立 page-nav.js / 不同样式）都先按本节标准覆盖一次**——功能不受影响（page-nav.js 加载顺序在后，`window.DemoUI.PageNav` 被新组件覆盖）。旧 layout.js 里的 `function PageNav()` 与 `window.DemoUI.PageNav = PageNav` 是死代码（无害），后续如要清，按 §5.3.14「cp -r step-N → step-(N+1) 必改清单」思路单独做一轮清理。新写 demo 不写 UMD 模板，避免再产生死代码。
 
 ### 5.4 目标 ↔ 代码整合打钩前检查（先抽清单再逐项核对）·新
 

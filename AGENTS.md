@@ -199,6 +199,8 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 演示写到哪
 
 全文：[agents/05-demo.md](agents/05-demo.md)（搜 `### 5.3`）。禁止无页面 CLI Demo。写完按验收顺序：**check-demo → `cd apps && yarn typecheck` → 烟雾测试**（三步分开；禁止把 typecheck 并进 `check-demo.cjs`）。细则搜 [agents/05-demo.md](agents/05-demo.md) `写完后验收顺序`。
 
+**页面写法分流（2026-09-12 起）**：HTML 骨架按 §5.3.4 双模板写——新写 demo 默认走 **§5.3.4.a ESM 模式**（导入映射 + `<script type="module">` + 共享组件合法 ESM；`@ai-sdk/react` 等纯 ESM 包必须走这条）；2026-09-12 之前已锁定的老 demo 默认走 **§5.3.4.b UMD 模式**（React UMD + `<script type="text/babel">`），默认不回头改。`check-demo` 自动识别：HTML 含 `<script type="importmap">` 且含 `react` 映射 → ESM 分支；否则 UMD 分支。组件规范 §5.3.6 / PageNav §5.3.18 也分两套写法（§5.3.6.a + §5.3.18.a 是 ESM；§5.3.6.b + §5.3.18.b 是 UMD legacy）。
+
 页面要展示什么（高频遗忘）：**请求参数 / 调用流程 / 响应结果**三件都得上页——对照 [§5.3.10](agents/05-demo.md#5310-颜色色块-高对比可读)、[§5.3.11](agents/05-demo.md#5311-页面必须自解释教学注解强制)、[§5.3.2 #4](agents/05-demo.md#532-完整版--必做的-6-项替代-52-最低标准)；不要只露成功按钮。小节文档里写了几步人机交互，页面就几步；对照两侧各自请求、主流程单独成文件——见 [§5.7](#57-demo-怎么拆才好懂高频错误表层摘要)。
 
 **用户可见文案格式 · 中文为主 + 英文括注（2026-09-09 立 · 强制）**：照 [§5.3.11.a](agents/05-demo.md#5311a-用户可见文案格式--中文为主--英文括注2026-09-09-立--强制) 写 — 中文为主，关键术语用括号附英文。**禁止**：完全用英文写（中文学习者看不懂）；完全去掉英文（代码 / 字段名 / 端点对不上）；括注里塞长句子（括注是术语，不是翻译）；关键概念词（`messages` / `dropped` / `summary` / `history` / `budget` / `output` / `triggered`）不带括注直接消失；check-demo 关键字（`Key` / `provider` / `model` / `summarizeFrom`）单独裸展示（应译成「密钥 / 模型服务商 / 模型 / 远期喂摘要的条数（summarizeFrom）」）。例：`Token 预算管理（Token Budget） · 第一步` / `历史对话轮数（historyCount）` / `给模型输出的预留（output budget）`。
