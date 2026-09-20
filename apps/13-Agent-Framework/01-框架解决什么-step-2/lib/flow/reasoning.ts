@@ -3,7 +3,9 @@
  *
  * 数据流：query + providerId + protocol → getLlmForProvider → createModel → streamText
  *   → toUIMessageStream → pipeUIMessageStreamToResponse。
- *   OpenAI 协议：extractReasoningMiddleware 拆 `<think>...</think>`。
+ *   OpenAI 协议：minimax 走 extractReasoningMiddleware 拆 <think>...</think>；
+ *     zhipu / deepseek / qwen 走 createOpenAICompatible，SDK 内部读 delta.reasoning_content
+ *     拆出 reasoning 段（OpenAI 网关扩展字段，@ai-sdk/openai 不读，@ai-sdk/openai-compatible 读）。
  *   Anthropic 协议：@ai-sdk/anthropic 自己把原生 thinking blocks 翻成 reasoning 段；
  *     且 streamText 传 providerOptions.anthropic.thinking = { type:"enabled", budgetTokens }，
  *     并把 maxTokens 抬到 budgetTokens + 1024（Anthropic Messages API 强制 budget < max）。
@@ -55,7 +57,9 @@ export async function pipeReasoning(
   });
 
   const 入参 = {
-    modelProvider: protocol === "openai" ? "openai(wrap+extractReasoningMiddleware)" : "anthropic(原生 thinking blocks)",
+    modelProvider: protocol === "openai"
+      ? (providerId === "minimax" ? "openai(wrap+extractReasoningMiddleware)" : "openai-compatible(createOpenAICompatible，SDK 内部拆 delta.reasoning_content)")
+      : "anthropic(原生 thinking blocks)",
     modelId: protocol === "openai" ? llm.modelA : llm.modelB,
     baseURL: protocol === "openai" ? llm.baseUrlA : `${llm.baseUrlB}/v1/messages`,
     prompt: query,

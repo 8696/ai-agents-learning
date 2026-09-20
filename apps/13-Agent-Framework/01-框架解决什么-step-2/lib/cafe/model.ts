@@ -2,8 +2,13 @@
  * 职责：按 (provider, protocol) 拼一个能喂 streamText 的 LanguageModel。
  *
  * 数据流：
- *   protocol=openai → createOpenAI(XXX_BASE_URL).chat(XXX_MODEL)
- *     → wrapLanguageModel + extractReasoningMiddleware({ tagName: "think" })
+ *   protocol=openai → 按 provider 选 SDK：
+ *     · minimax：createOpenAI（@ai-sdk/openai）+ extractReasoningMiddleware({ tagName: "think" })
+ *       —— minimax 把思考写在 content 里包 `` 文本
+ *     · zhipu / deepseek / qwen：createOpenAICompatible（@ai-sdk/openai-compatible）
+ *       —— 这三家把思考放在 delta.reasoning_content（OpenAI 网关扩展字段）；
+ *         @ai-sdk/openai 不读它，@ai-sdk/openai-compatible 原生支持，
+ *         SDK 内部直接把 delta.reasoning_content 合成 reasoning-start/delta/end。
  *
  *   protocol=anthropic → createAnthropic(经过补 /v1 的 XXX_ANTHROPIC_BASE_URL).chat(XXX_ANTHROPIC_MODEL)
  *     · SDK 拼装策略（@ai-sdk/anthropic@2.0.102）：
@@ -35,6 +40,7 @@
  */
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
   extractReasoningMiddleware,
   wrapLanguageModel,
@@ -80,21 +86,42 @@ export function createModel(providerId: ProductionProviderId, protocol: Protocol
     });
     return rawModel;
   }
-  const provider = createOpenAI({
-    apiKey: llm.apiKey,
-    baseURL: llm.baseUrlA,
-    name: llm.provider,
-  });
-  const rawModel = provider.chat(llm.modelA);
-  logger.info("│ createModel.openai", "调用函数：createOpenAI", `provider=${providerId} · model=${llm.modelA} · baseURL=${llm.baseUrlA}。`, {
-    入参: { providerId, apiKeyLen: llm.apiKey.length, baseUrl: llm.baseUrlA, modelId: llm.modelA },
-  });
-  const wrapped = wrapLanguageModel({
-    model: rawModel as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
-    middleware: extractReasoningMiddleware({ tagName: "think" }),
-  });
-  logger.info("createModel", "结束：createModel", `protocol=openai · provider=${providerId} · wrap extractReasoningMiddleware(tagName=think) 把 <think>…</think> 切成独立 reasoning 段。`, {
-    返回值: { provider: providerId, protocol, modelId: llm.modelA, middleware: "extractReasoningMiddleware(tagName=think)" },
+  // 按 provider 选 SDK：
+  //   minimax → createOpenAI（用 /chat/completions）+ extractReasoningMiddleware
+  //     （minimax 把思考写在 content 里包 `` 文本）
+  //   zhipu / deepseek / qwen → createOpenAICompatible（用 /chat/completions，
+  //     但 SDK 内部会读 delta.reasoning_content 拆出 reasoning 段）
+  const useOpenAICompatible =
+    providerId === "zhipu" || providerId === "deepseek" || providerId === "qwen";
+  let wrapped: LanguageModel;
+  if (useOpenAICompatible) {
+    const provider = createOpenAICompatible({
+      name: llm.provider,
+      apiKey: llm.apiKey,
+      baseURL: llm.baseUrlA,
+    });
+    const rawModel = provider(llm.modelA);
+    logger.info("│ createModel.openai", "调用函数：createOpenAICompatible", `provider=${providerId} · model=${llm.modelA} · baseURL=${llm.baseUrlA}。`, {
+      入参: { providerId, apiKeyLen: llm.apiKey.length, baseUrl: llm.baseUrlA, modelId: llm.modelA },
+    });
+    wrapped = rawModel;
+  } else {
+    const provider = createOpenAI({
+      apiKey: llm.apiKey,
+      baseURL: llm.baseUrlA,
+      name: llm.provider,
+    });
+    const rawModel = provider.chat(llm.modelA);
+    logger.info("│ createModel.openai", "调用函数：createOpenAI", `provider=${providerId} · model=${llm.modelA} · baseURL=${llm.baseUrlA}。`, {
+      入参: { providerId, apiKeyLen: llm.apiKey.length, baseUrl: llm.baseUrlA, modelId: llm.modelA },
+    });
+    wrapped = wrapLanguageModel({
+      model: rawModel as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
+      middleware: extractReasoningMiddleware({ tagName: "think" }),
+    });
+  }
+  logger.info("createModel", "结束：createModel", `protocol=openai · provider=${providerId} · ${useOpenAICompatible ? "createOpenAICompatible：SDK 内部把 delta.reasoning_content 合成 reasoning-start/delta/end" : "createOpenAI + extractReasoningMiddleware(tagName=think)：拆 <think>…</think> 文本"}。`, {
+    返回值: { provider: providerId, protocol, modelId: llm.modelA, sdk: useOpenAICompatible ? "createOpenAICompatible" : "createOpenAI+wrap+extractReasoningMiddleware" },
   });
   return wrapped;
 }

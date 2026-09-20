@@ -154,6 +154,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/openai": "^4.0.71",
+    "@ai-sdk/openai-compatible": "^3.0.53",
     "@anthropic-ai/sdk": "^0.39.0",
     "@koa/bodyparser": "^6.1.0",
     "@koa/router": "^13.1.0",
