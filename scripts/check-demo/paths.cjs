@@ -20,9 +20,17 @@ function walk(dir) {
   return out;
 }
 
+// 只把 step 根目录的 server.ts 认成 demo；lib/.../server.ts 是被父进程 spawn 的子进程代码库，
+// 不是独立 demo（如 12-MCP step-1 的 lib/mcp-server/server.ts 是 stdio 子进程，被父进程 spawn）。
+// 同理 lib/ 下任意深度的 server.ts 都不算。
+function isDemoRoot(serverTsAbsPath) {
+  const rel = posixRel(APPS, serverTsAbsPath);
+  return !rel.includes("/lib/");
+}
+
 function listDemos() {
   return walk(APPS)
-    .filter((f) => f.endsWith(`${path.sep}server.ts`) || f.endsWith("/server.ts"))
+    .filter((f) => (f.endsWith(`${path.sep}server.ts`) || f.endsWith("/server.ts")) && isDemoRoot(f))
     .map((f) => path.dirname(f))
     .sort();
 }
@@ -43,7 +51,7 @@ function expandTargets(args) {
       continue;
     }
     const subs = walk(a)
-      .filter((f) => f.endsWith(`${path.sep}server.ts`) || f.endsWith("/server.ts"))
+      .filter((f) => (f.endsWith(`${path.sep}server.ts`) || f.endsWith("/server.ts")) && isDemoRoot(f))
       .map((f) => path.dirname(f))
       .sort();
     if (subs.length > 0) out.push(...subs);
