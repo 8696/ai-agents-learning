@@ -299,6 +299,15 @@
 - **反模式**：只 `test(/Cannot find module/)` 来判断「包没装」
 - **关联**：`apps/13-Agent-Framework/01-框架解决什么-step-1/lib/flow/framework-loop.ts`；2026-09-19 模块 13 · 01 step-1 烟雾测试
 
+### P-028  ·  check-demo 把 data-type=module 当成 type=module
+
+- **症状**：`check-demo` 报 `pages/use-chat.html : 用了 type=module（禁止）`，但页面写的是 `<script type="text/babel" data-type="module">`，并没有 `<script type="module">`
+- **触发**：试验页用 Babel Standalone 的 `data-type="module"` 去 `import` 官方 `useChat`，同时外壳仍走 UMD + 内联 Babel
+- **根因**：旧正则 `/type="module"/` 会匹配 `data-type="module"` 里的子串
+- **修复**：`scripts/check-demo/check-frontend.cjs` 改成 `/<script\b[^>]*\stype="module"/`，只拦属性名就是 `type` 的模块脚本
+- **反模式**：用 `/type="module"/` 这种子串去扫 HTML
+- **关联**：agents/05-demo.md §5.3.4；2026-09-20 模块 13 · 01 试用 useChat 试验页
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

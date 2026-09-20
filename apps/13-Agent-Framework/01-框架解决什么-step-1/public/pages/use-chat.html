@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第一步 · 试用 useChat</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "ai": "https://esm.sh/ai@7.0.107?external=react,react-dom",
+      "@ai-sdk/react": "https://esm.sh/@ai-sdk/react@4.0.108?external=react,react-dom,ai"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script src="../utils/fetch-json.js"></script>
+  <script type="text/babel" src="../components/page-nav.js"></script>
+  <script type="text/babel" src="../components/layout.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { PageNav, PageIntro, StatusPill, EnvFooter } = window.DemoUI || {};
+    const { loadHealth } = window.DemoUtils || {};
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50139, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      useEffect(function () {
+        function onStatus(event) {
+          setStatus(event.detail || "idle");
+        }
+        window.addEventListener("use-chat-status", onStatus);
+        return function () {
+          window.removeEventListener("use-chat-status", onStatus);
+        };
+      }, []);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第一步（step-1） · 试用 useChat
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="use-chat" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="外壳用仓库共用组件；发送区用官方 useChat。两棵 React 树不交叉传元素。"
+              steps={[
+                "本页引用 page-nav.js 和 layout.js，和另外两页同一套导航、说明、页脚。",
+                "官方 useChat 是 ES 模块，只能在导入映射拉来的那份 React 里调用，所以聊天区单独挂到 #use-chat-island。",
+                "点发送走 POST /api/framework-chat。原来的 generateText 页和 /api/framework-loop 没改。",
+              ]}
+              takeaway="useChat 和 JSX 可以一起用。缺的是「和 UMD 组件同一份 React」。做不到就拆成外壳 + 聊天岛，不要混在一棵树里。"
+              observe="check-demo 扫的是外壳：UMD、内联 Babel、共用组件上的 id。聊天岛仍走 Babel data-type=module。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div id="use-chat-island"></div>
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4">
+              <p className="text-xs text-gray-500">
+                请求参数和调用流程画在上一个卡片里。官方 useChat 的 messages 必须和发送按钮在同一棵 ESM 树，不能再拆到 UMD 外壳。
+              </p>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+  <script type="text/babel" data-type="module">
+    /**
+     * 职责：聊天岛。只在 ESM React 里调用官方 useChat，画发送区和轨迹。
+     * 数据流：sendMessage → POST /api/framework-chat → 界面消息流 → 往 window 派状态给外壳 StatusPill。
+     */
+    import React, { useEffect, useMemo, useState } from "react";
+    import { createRoot } from "react-dom/client";
+    import { useChat } from "@ai-sdk/react";
+    import { DefaultChatTransport } from "ai";
+
+    const DEFAULT_UTTERANCE = "来一杯中杯热拿铁。";
+
+    function emitStatus(kind) {
+      window.dispatchEvent(new CustomEvent("use-chat-status", { detail: kind }));
+    }
+
+    function partText(part) {
+      if (part.type === "text") return part.text || "";
+      if (String(part.type).indexOf("tool-") === 0) {
+        return "工具（" + (part.toolName || part.type) + "）状态：" + (part.state || "（进行中）");
+      }
+      return "";
+    }
+
+    function ChatIsland() {
+      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
+      const [localError, setLocalError] = useState("");
+      const [demoStatus, setDemoStatus] = useState("idle");
+      const [hasSent, setHasSent] = useState(false);
+      const [noKey, setNoKey] = useState(false);
+      const transport = useMemo(function () {
+        return new DefaultChatTransport({ api: "/api/framework-chat" });
+      }, []);
+      const chat = useChat({ transport: transport });
+      const busy = chat.status === "submitted" || chat.status === "streaming";
+      const pill = (function () {
+        if (demoStatus === "loading" || busy) return "loading";
+        if (demoStatus === "error" || chat.status === "error" || localError) return "error";
+        if (hasSent && chat.status === "ready") return "ok";
+        if (demoStatus === "ok") return "ok";
+        return "idle";
+      })();
+
+      useEffect(function () {
+        emitStatus(pill);
+      }, [pill]);
+
+      useEffect(function () {
+        fetch("/health")
+                .then(function (res) { return res.json(); })
+                .then(function (env) { setNoKey(env && env.hasKey === false); })
+                .catch(function () { setNoKey(true); });
+      }, []);
+
+      async function send() {
+        setLocalError("");
+        setDemoStatus("loading");
+        setHasSent(true);
+        try {
+          await chat.sendMessage({ text: utterance });
+          setDemoStatus(chat.status === "error" ? "error" : "ok");
+        } catch (err) {
+          setLocalError((err && err.message) || String(err));
+          setDemoStatus("error");
+        }
+      }
+
+      async function demoHttp(body, label) {
+        setLocalError("");
+        setDemoStatus("loading");
+        try {
+          const res = await fetch("/api/framework-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setLocalError(label + "：HTTP " + res.status + " " + ((data && data.error) || ""));
+            setDemoStatus("error");
+            return;
+          }
+          setDemoStatus("ok");
+        } catch (err) {
+          setLocalError((err && err.message) || String(err));
+          setDemoStatus("error");
+        }
+      }
+
+      return (
+              <div className="space-y-4">
+                <label className="block text-sm text-gray-700">
+                  客人口述（utterance）
+                  <textarea
+                          className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                          rows={2}
+                          value={utterance}
+                          disabled={busy}
+                          onChange={function (e) { setUtterance(e.target.value); }}
+                  />
+                </label>
+                <p className="text-xs text-gray-500">点发送会真调模型。拆流由 useChat 做；循环仍在服务端 streamText 里。</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                          className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                          disabled={busy || noKey}
+                          onClick={send}
+                  >
+                    用 useChat 发送（streamText + make_latte）
+                  </button>
+                  <button
+                          className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                          disabled={busy}
+                          onClick={function () {
+                            demoHttp({
+                              messages: [{ id: "empty-user", role: "user", parts: [{ type: "text", text: "" }] }],
+                            }, "空输入");
+                          }}
+                  >
+                    演示空输入 4xx
+                  </button>
+                  <button
+                          className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                          disabled={busy}
+                          onClick={function () { demoHttp({ messages: [], forceError: true }, "后端错误"); }}
+                  >
+                    演示后端 5xx
+                  </button>
+                </div>
+                {noKey ? <p className="text-xs text-red-700">缺 密钥，主按钮已禁用。请配 apps/.env。</p> : null}
+                {localError ? <p className="text-sm text-red-700">{localError}</p> : null}
+                {chat.error ? <p className="text-sm text-red-700">{String(chat.error.message || chat.error)}</p> : null}
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-semibold text-gray-700">请求参数（Request）</div>
+                  <pre className="text-xs text-gray-700 whitespace-pre-wrap mt-1">
+          {"POST /api/framework-chat\nuseChat + DefaultChatTransport\n客人口述：" + utterance}
+        </pre>
+                </div>
+                <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">调用流程（Trajectory）</div>
+                  <p className="text-xs text-gray-600">
+                    本页用官方 useChat 拆流。服务端没有你写的 while。消息条数：{chat.messages.length} · 状态（status）：{chat.status}
+                  </p>
+                  {chat.messages.length === 0 ? (
+                          <p className="text-sm text-gray-500">还没发。点发送后，助手正文会边到边出现。</p>
+                  ) : chat.messages.map(function (message) {
+                    const text = (message.parts || []).map(partText).filter(Boolean).join("\n");
+                    return (
+                            <div key={message.id} className="border border-gray-200 rounded p-2">
+                              <div className="text-xs text-gray-500">角色（role）：{message.role}</div>
+                              <pre className="text-xs text-gray-700 whitespace-pre-wrap mt-1">
+                {text || "（这一条还没有正文）"}
+              </pre>
+                            </div>
+                    );
+                  })}
+                </div>
+              </div>
+      );
+    }
+
+    function mountIsland(tries) {
+      const mount = document.getElementById("use-chat-island");
+      if (mount) {
+        createRoot(mount).render(<ChatIsland />);
+        return;
+      }
+      if (tries < 60) requestAnimationFrame(function () { mountIsland(tries + 1); });
+    }
+    mountIsland(0);
+
+  </script>
+</body>
+</html>

@@ -52,7 +52,7 @@ function checkHtmlPages(ctx) {
     for (const [needle, name] of REQUIRED_CDN) {
       if (!html.includes(needle)) fail(label + " : 缺/换了 " + name + "（§5.3.4 禁止）");
     }
-    if (/type="module"/.test(html)) fail(label + " : 用了 type=module（禁止）");
+    if (/<script\b[^>]*\stype="module"/.test(html)) fail(label + " : 用了 type=module（禁止）");
     if (/data-presets|data-plugins/.test(html))
       fail(label + " : script 上加了 data-presets/plugins（禁止）");
 

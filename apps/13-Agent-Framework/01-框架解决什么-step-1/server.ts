@@ -1,7 +1,7 @@
 /**
  * 职责：装配 HTTP 服务。只挂路由和静态页，不写业务 while / 不调模型。
  *
- * 数据流：解析 PORT → bodyParser → health / handwritten-loop / framework-loop → 静态 public/ → listen。
+ * 数据流：解析 PORT → bodyParser → health / handwritten-loop / framework-loop / framework-chat → 静态 public/ → listen。
  */
 import { bodyParser } from "@koa/bodyparser";
 import Router from "@koa/router";
@@ -10,6 +10,7 @@ import serve from "koa-static";
 import { fileURLToPath } from "node:url";
 import { parseRuntimeCtx } from "./lib/http/runtime-ctx.js";
 import { logger } from "./lib/logger.js";
+import { mountFrameworkChatRoutes } from "./routes/framework-chat.js";
 import { mountFrameworkLoopRoutes } from "./routes/framework-loop.js";
 import { mountHandwrittenLoopRoutes } from "./routes/handwritten-loop.js";
 import { mountHealthRoutes } from "./routes/health.js";
@@ -22,6 +23,7 @@ app.use(bodyParser());
 mountHealthRoutes(router);
 mountHandwrittenLoopRoutes(router);
 mountFrameworkLoopRoutes(router);
+mountFrameworkChatRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
