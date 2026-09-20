@@ -84,7 +84,6 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     modelAEnv: "MINIMAX_MODEL",
     modelBEnv: "MINIMAX_ANTHROPIC_MODEL",
     embedEnv: "MINIMAX_EMBEDDING_MODEL",
-    // 国内站；不要默认成 api.minimax.io（海外账密不通用）
     defaultBaseA: "https://api.minimaxi.com/v1",
     defaultBaseB: "https://api.minimaxi.com/anthropic",
     defaultModel: "MiniMax-M3",
@@ -111,7 +110,6 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     modelAEnv: "DEEPSEEK_MODEL",
     modelBEnv: "DEEPSEEK_ANTHROPIC_MODEL",
     embedEnv: "DEEPSEEK_EMBEDDING_MODEL",
-    // 官方文档写的是不带 /v1；OpenAI SDK 会拼 /chat/completions
     defaultBaseA: "https://api.deepseek.com",
     defaultBaseB: "https://api.deepseek.com/anthropic",
     defaultModel: "deepseek-v4-flash",
@@ -126,7 +124,6 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     modelAEnv: "QWEN_MODEL",
     modelBEnv: "QWEN_ANTHROPIC_MODEL",
     embedEnv: "QWEN_EMBEDDING_MODEL",
-    // 国内百炼；协议 A 带 /compatible-mode/v1，协议 B 停在 /apps/anthropic（不要再加 /v1）
     defaultBaseA: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     defaultBaseB: "https://dashscope.aliyuncs.com/apps/anthropic",
     defaultModel: "qwen-plus",
@@ -140,7 +137,6 @@ const CATALOG: Record<ProviderId, ProviderCatalog> = {
     modelAEnv: "CUSTOM_MODEL",
     modelBEnv: "CUSTOM_ANTHROPIC_MODEL",
     embedEnv: "CUSTOM_EMBEDDING_MODEL",
-    // 协议 A 带 /v1（OpenAI SDK 会拼 /chat/completions）；协议 B 不带 /v1（Anthropic SDK 自己拼路径）
     defaultBaseA: "https://llm.goaichat.top/v1",
     defaultBaseB: "https://llm.goaichat.top",
     // 自定义网关没有「全仓库默认模型」，必须填 CUSTOM_MODEL 或顶层 LLM_MODEL

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第二步 · 推理内容统一处理</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "ai": "https://esm.sh/ai@7.0.107?external=react,react-dom",
+      "@ai-sdk/react": "https://esm.sh/@ai-sdk/react@4.0.108?external=react,react-dom,ai"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef, useCallback } from "react";
+    import { createRoot } from "react-dom/client";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+
+    const DEFAULT_QUERY = "鸡兔同笼，头共 35，脚共 94，问鸡和兔各几只？请一步步推理。";
+    const PROVIDERS = [
+      { id: "minimax", label: "MiniMax（默认）" },
+      { id: "zhipu", label: "智谱 GLM" },
+      { id: "deepseek", label: "DeepSeek" },
+      { id: "qwen", label: "千问 DashScope" },
+    ];
+    const PROTOCOLS = [
+      { id: "openai", label: "协议 A · OpenAI 兼容（Chat Completions）", apiUrl: "/api/reasoning-openai" },
+      { id: "anthropic", label: "协议 B · Anthropic 兼容（Messages API）", apiUrl: "/api/reasoning-anthropic" },
+    ];
+
+    /**
+     * 浏览器侧按 AI SDK 的 SSE 协议（`data: {...}\n\n`）拆帧，只挑 reasoning-delta / text-delta 两类事件累加。
+     */
+    async function consumeUIMessageStream(url, body, onChunk, onError) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        let data = null;
+        try { data = await res.json(); } catch (_e) { /* ignore */ }
+        onError("HTTP " + res.status + " " + ((data && data.error) || ""));
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const frame = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const lines = frame.split("\n");
+          for (const line of lines) {
+            if (line.indexOf("data: ") === 0) {
+              try {
+                const chunk = JSON.parse(line.slice(6));
+                onChunk(chunk);
+              } catch (_e) { /* ignore */ }
+            }
+          }
+        }
+      }
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [provider, setProvider] = useState("minimax");
+      const [protocol, setProtocol] = useState("openai");
+      const [runToken, setRunToken] = useState(0);
+      const [status, setStatus] = useState("idle");
+      const [reasoning, setReasoning] = useState("");
+      const [finalText, setFinalText] = useState("");
+      const [error, setError] = useState("");
+      const [elapsed, setElapsed] = useState(null);
+      const reasonRef = useRef("");
+      const textRef = useRef("");
+      const lastKeyRef = useRef("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50140, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      const onStatusChange = useCallback(function (s) { setStatus(s); }, []);
+      const noKey = env && env.hasKey === false;
+
+      const currentProtocol = PROTOCOLS.find(function (p) { return p.id === protocol; });
+
+      function run() {
+        if (!query.trim()) return;
+        setRunToken(function (n) { return n + 1; });
+      }
+
+      useEffect(function () {
+        if (!runToken) return;
+        let aborted = false;
+        const key = protocol + "|" + provider + "|" + runToken;
+        if (lastKeyRef.current === key) return;
+        lastKeyRef.current = key;
+        reasonRef.current = "";
+        textRef.current = "";
+        setReasoning("");
+        setFinalText("");
+        setError("");
+        setStatus("loading");
+        setElapsed(null);
+        const started = Date.now();
+        consumeUIMessageStream(currentProtocol.apiUrl, { query: query, provider: provider },
+          function (chunk) {
+            if (aborted) return;
+            if (chunk.type === "reasoning-delta" && typeof chunk.delta === "string") {
+              reasonRef.current += chunk.delta;
+              setReasoning(reasonRef.current);
+            } else if (chunk.type === "text-delta" && typeof chunk.delta === "string") {
+              textRef.current += chunk.delta;
+              setFinalText(textRef.current);
+            }
+          },
+          function (msg) {
+            if (aborted) return;
+            setError(msg);
+            setStatus("error");
+          }
+        ).then(function () {
+          if (aborted) return;
+          setElapsed(Date.now() - started);
+          setStatus((reasonRef.current || textRef.current) ? "ok" : "idle");
+        }).catch(function (err) {
+          if (aborted) return;
+          setError(err && err.message ? err.message : String(err));
+          setStatus("error");
+        });
+        return function () { aborted = true; };
+      }, [runToken]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第二步（step-2） · 推理内容统一处理
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="reasoning-extract" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="页面只演示一件事：在你选的（provider × 协议）组合下，模型能不能把思考过程拆出来。协议 A 走 streamText + extractReasoningMiddleware（拆 `<think>...</think>` 文本标签）；协议 B 走 @ai-sdk/anthropic（拆原生 thinking content blocks）。"
+              steps={[
+                "顶部下拉选 provider + 协议。",
+                "点「跑一次」打一次接口（按当前协议选 /api/reasoning-openai 或 /api/reasoning-anthropic），body = { query, provider }。",
+                "服务端根据协议走不同 SDK：协议 A 用 @ai-sdk/openai + streamText + extractReasoningMiddleware；协议 B 用 @ai-sdk/anthropic 直接拿原生 thinking 块，并给 streamText 传 providerOptions.anthropic.thinking + maxTokens > budgetTokens。",
+                "两条路都给浏览器吐 AI SDK 的 UI 消息流，浏览器只挑 reasoning-delta / text-delta 两类事件累加。",
+              ]}
+              takeaway="框架对「思考内容」有两条统一处理路径：OpenAI 兼容协议用中间件把 `<think>...</think>` 文本切成独立段；Anthropic 兼容协议直接走原生 thinking content blocks。UI 消费端不区分，对外只看到 reasoning 段 + text 段。"
+              observe="同 query、同一 provider：换协议看思考拆不拆得出来；思考拆不出来的，理由是模型本身没出 thinking（占位文案会写在 reasoning 段里）。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label htmlFor="provider-select" className="block text-sm text-gray-700">提供商（provider）</label>
+                <select
+                  id="provider-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white"
+                  value={provider}
+                  onChange={function (e) { setProvider(e.target.value); }}
+                >
+                  {PROVIDERS.map(function (p) {
+                    return React.createElement("option", { key: p.id, value: p.id }, p.label);
+                  })}
+                </select>
+                <label htmlFor="protocol-select" className="block text-sm text-gray-700">协议（protocol）</label>
+                <select
+                  id="protocol-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white"
+                  value={protocol}
+                  onChange={function (e) { setProtocol(e.target.value); }}
+                >
+                  {PROTOCOLS.map(function (p) {
+                    return React.createElement("option", { key: p.id, value: p.id }, p.label);
+                  })}
+                </select>
+                <span className="text-xs text-gray-500">
+                  当前 <code>{provider}</code> · <code>{protocol}</code>
+                  （{protocol === "openai" ? ".env 的 XXX_BASE_URL + XXX_MODEL" : ".env 的 XXX_ANTHROPIC_BASE_URL + XXX_ANTHROPIC_MODEL"}）
+                </span>
+              </div>
+              <label htmlFor="query-input" className="block text-sm text-gray-700">query</label>
+              <textarea
+                id="query-input"
+                className="w-full border border-gray-300 rounded p-2 text-sm"
+                rows={2}
+                value={query}
+                onChange={function (e) { setQuery(e.target.value); }}
+              />
+              <button
+                id="btn-run"
+                className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                disabled={!query.trim() || noKey}
+                onClick={run}
+              >跑一次</button>
+              {noKey ? <p className="text-xs text-red-700">缺 密钥，按钮已禁用。请配 apps/.env。</p> : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-gray-700">调用结果</div>
+                <div className="text-xs text-gray-500">耗时 {elapsed == null ? "—" : elapsed + " ms"}</div>
+              </div>
+              <details open className="border border-yellow-300 rounded p-2 bg-yellow-50">
+                <summary className="text-xs font-semibold text-yellow-900 cursor-pointer">
+                  思考（reasoning 段）· {reasoning.length} 字
+                </summary>
+                <pre className="text-xs text-gray-800 whitespace-pre-wrap mt-1 max-h-[360px] overflow-auto">
+                  {reasoning || "（未跑 / 模型本轮没出 reasoning）"}
+                </pre>
+              </details>
+              <div className="border border-gray-300 rounded p-2 bg-white">
+                <div className="text-xs font-semibold text-gray-700">最终回答（text 段）· {finalText.length} 字</div>
+                <pre className="text-xs text-gray-800 whitespace-pre-wrap mt-1 max-h-[360px] overflow-auto">
+                  {finalText || "（未跑）"}
+                </pre>
+              </div>
+              {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
