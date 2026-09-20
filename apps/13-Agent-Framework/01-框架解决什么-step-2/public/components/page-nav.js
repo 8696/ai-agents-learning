@@ -1,5 +1,5 @@
 /**
- * 职责：顶部跨页导航。step-2 内部页面（当前：基础聊天 basic-chat）。
+ * 职责：顶部跨页导航。step-2 内部页面（基础聊天 / 推理提取 / 结构化输出）。
  * 数据流：props.current 高亮；props.base 拼 href。
  *
  * 加载方式：本文件没有 JSX，全部用 React.createElement，
@@ -11,6 +11,7 @@ import React from "react";
 const PAGES = [
   { key: "basic-chat", label: "基础聊天（basic-chat）", href: "index.html" },
   { key: "reasoning-extract", label: "推理内容统一处理（extractReasoningMiddleware）", href: "pages/reasoning-extract.html" },
+  { key: "structured", label: "结构化输出（generateObject + zodSchema）", href: "pages/structured.html" },
 ];
 
 const NAV_CLASS_ACTIVE = "px-3 py-1 rounded border border-blue-500 bg-blue-50 text-blue-700 font-semibold";

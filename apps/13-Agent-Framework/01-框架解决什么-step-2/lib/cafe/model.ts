@@ -54,7 +54,23 @@ import { logger } from "../logger.js";
 
 export type Protocol = "openai" | "anthropic";
 
-export function createModel(providerId: ProductionProviderId, protocol: Protocol): LanguageModel {
+export interface CreateModelOptions {
+  /**
+   * 是否给 minimax 这条 OpenAI 路径包 extractReasoningMiddleware。
+   *   - 默认 true（reasoning 页要拆 reasoning 段）
+   *   - 结构化输出（generateObject）必须传 false——minimax 默认把 JSON 包在 `` 标签里，
+   *     中间件会先拆 reasoning、再把剩下的 text 喂给 generateObject，但 generateObject 拿不到
+   *     完整 JSON，会报 "response did not match schema"。
+   */
+  useReasoningMiddleware?: boolean;
+}
+
+export function createModel(
+  providerId: ProductionProviderId,
+  protocol: Protocol,
+  options: CreateModelOptions = {},
+): LanguageModel {
+  const useReasoningMiddleware = options.useReasoningMiddleware !== false;
   const llm = getLlmForProvider(providerId);
   if (!llm) {
     throw new Error(`提供商 ${providerId} 没在 apps/.env 配齐 Key / 模型 id。`);
@@ -112,16 +128,20 @@ export function createModel(providerId: ProductionProviderId, protocol: Protocol
       name: llm.provider,
     });
     const rawModel = provider.chat(llm.modelA);
-    logger.info("│ createModel.openai", "调用函数：createOpenAI", `provider=${providerId} · model=${llm.modelA} · baseURL=${llm.baseUrlA}。`, {
-      入参: { providerId, apiKeyLen: llm.apiKey.length, baseUrl: llm.baseUrlA, modelId: llm.modelA },
+    logger.info("│ createModel.openai", "调用函数：createOpenAI", `provider=${providerId} · model=${llm.modelA} · baseURL=${llm.baseUrlA} · useReasoningMiddleware=${useReasoningMiddleware}。`, {
+      入参: { providerId, apiKeyLen: llm.apiKey.length, baseUrl: llm.baseUrlA, modelId: llm.modelA, useReasoningMiddleware },
     });
-    wrapped = wrapLanguageModel({
-      model: rawModel as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
-      middleware: extractReasoningMiddleware({ tagName: "think" }),
-    });
+    if (useReasoningMiddleware) {
+      wrapped = wrapLanguageModel({
+        model: rawModel as unknown as Parameters<typeof wrapLanguageModel>[0]["model"],
+        middleware: extractReasoningMiddleware({ tagName: "think" }),
+      });
+    } else {
+      wrapped = rawModel;
+    }
   }
-  logger.info("createModel", "结束：createModel", `protocol=openai · provider=${providerId} · ${useOpenAICompatible ? "createOpenAICompatible：SDK 内部把 delta.reasoning_content 合成 reasoning-start/delta/end" : "createOpenAI + extractReasoningMiddleware(tagName=think)：拆 <think>…</think> 文本"}。`, {
-    返回值: { provider: providerId, protocol, modelId: llm.modelA, sdk: useOpenAICompatible ? "createOpenAICompatible" : "createOpenAI+wrap+extractReasoningMiddleware" },
+  logger.info("createModel", "结束：createModel", `protocol=openai · provider=${providerId} · ${useOpenAICompatible ? "createOpenAICompatible：SDK 内部把 delta.reasoning_content 合成 reasoning-start/delta/end" : (useReasoningMiddleware ? "createOpenAI + wrap + extractReasoningMiddleware(tagName=think)：拆 <think>…</think> 文本" : "createOpenAI 原生模型（未 wrap 中间件，结构化输出 / 单元测试用）")}。`, {
+    返回值: { provider: providerId, protocol, modelId: llm.modelA, sdk: useOpenAICompatible ? "createOpenAICompatible" : (useReasoningMiddleware ? "createOpenAI+wrap+extractReasoningMiddleware" : "createOpenAI") },
   });
   return wrapped;
 }

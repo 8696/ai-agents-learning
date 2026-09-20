@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第二步 · 结构化输出</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from "react";
+    import { createRoot } from "react-dom/client";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+
+    const DEFAULT_QUERY = "JavaScript 是哪一年发布的？它的主要作者是谁？请同时列出 1-3 个 1995 年同期相关的技术名词。";
+    const PROVIDERS = [
+      { id: "minimax", label: "MiniMax（默认）" },
+      { id: "zhipu", label: "智谱 GLM" },
+      { id: "deepseek", label: "DeepSeek" },
+      { id: "qwen", label: "千问 DashScope" },
+    ];
+    const PROTOCOLS = [
+      { id: "openai", label: "协议 A · OpenAI 兼容（Chat Completions）", apiUrl: "/api/structured" },
+      { id: "anthropic", label: "协议 B · Anthropic 兼容（Messages API）", apiUrl: "/api/structured" },
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [provider, setProvider] = useState("minimax");
+      const [protocol, setProtocol] = useState("openai");
+      const [status, setStatus] = useState("idle");
+      const [response, setResponse] = useState(null);
+      const [error, setError] = useState("");
+      const [elapsed, setElapsed] = useState(null);
+      const lastKeyRef = useRef("");
+      const inflightRef = useRef(null);
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50140, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      const noKey = env && env.hasKey === false;
+      const busy = status === "loading";
+
+      async function run() {
+        if (!query.trim()) return;
+        const key = protocol + "|" + provider + "|" + Date.now();
+        if (lastKeyRef.current === key) return;
+        lastKeyRef.current = key;
+        if (inflightRef.current) inflightRef.current.abort();
+        const ctrl = new AbortController();
+        inflightRef.current = ctrl;
+        setStatus("loading");
+        setError("");
+        setResponse(null);
+        setElapsed(null);
+        const started = Date.now();
+        try {
+          const res = await fetch("/api/structured", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query, provider: provider, protocol: protocol }),
+            signal: ctrl.signal,
+          });
+          const elapsedMs = Date.now() - started;
+          const data = await res.json();
+          setElapsed(elapsedMs);
+          if (!res.ok) {
+            setError("HTTP " + res.status + " " + ((data && data.error) || ""));
+            setStatus("error");
+            return;
+          }
+          setResponse(data);
+          setStatus(data.ok ? "ok" : "error");
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+          setError((err && err.message) || String(err));
+          setStatus("error");
+        }
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第二步（step-2） · 结构化输出
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="structured" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="页面只演示一件事：在你选的（provider × 协议）组合下，模型能不能按 zodSchema 强约束吐 JSON。query 是一道纯事实题（JavaScript 发布年份 + 作者 + 同期技术）——不需要推理，模型直接吐 JSON 是它的舒适区。"
+              steps={[
+                "顶部下拉选 provider + 协议。",
+                "点「跑一次」打一次接口（POST /api/structured），body = { query, provider, protocol }。",
+                "服务端按协议走同一条 SDK 拼装链：协议 A 用 createOpenAI（minimax）/ createOpenAICompatible（zhipu/deepseek/qwen）；协议 B 用 createAnthropic + 原生 thinking blocks。",
+                "调 streamText({ model, output: Output.object({ schema: zodSchema(z.object({...})) }), prompt, ...})，SDK 按 schema 强制对齐；模型吐出来不合 schema 时 SDK 走自动 repair。返回时 await result.output 拿解析后的强类型对象。",
+                "一次性 JSON 回浏览器（不是流）。",
+              ]}
+              takeaway="streamText({ output: Output.object({ schema }) }) 是 SDK 7.x 推荐的结构化输出写法（generateObject 已 deprecated）。不用自己解析字符串、try/catch、JSON.parse。对照推理页：那条用 streamText 把推理过程拆成 UI 消息流，这条用 streamText + Output.object 把推理结果压成强类型对象——同一 SDK 两种用法。"
+              observe="4 家 provider × 2 协议 = 8 个组合里预期都能稳定返回 { year, founder, related }——纯事实题模型不会先写思考再写 JSON。点不同 provider 看模型给的 year / founder / related 各家答案差异。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label htmlFor="provider-select" className="block text-sm text-gray-700">提供商（provider）</label>
+                <select
+                  id="provider-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white disabled:opacity-50"
+                  disabled={busy}
+                  value={provider}
+                  onChange={function (e) { setProvider(e.target.value); }}
+                >
+                  {PROVIDERS.map(function (p) {
+                    return React.createElement("option", { key: p.id, value: p.id }, p.label);
+                  })}
+                </select>
+                <label htmlFor="protocol-select" className="block text-sm text-gray-700">协议（protocol）</label>
+                <select
+                  id="protocol-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white disabled:opacity-50"
+                  disabled={busy}
+                  value={protocol}
+                  onChange={function (e) { setProtocol(e.target.value); }}
+                >
+                  {PROTOCOLS.map(function (p) {
+                    return React.createElement("option", { key: p.id, value: p.id }, p.label);
+                  })}
+                </select>
+                <span className="text-xs text-gray-500">
+                  当前 <code>{provider}</code> · <code>{protocol}</code>
+                  （{protocol === "openai" ? ".env 的 XXX_BASE_URL + XXX_MODEL" : ".env 的 XXX_ANTHROPIC_BASE_URL + XXX_ANTHROPIC_MODEL"}）
+                </span>
+              </div>
+              <label htmlFor="query-input" className="block text-sm text-gray-700">query</label>
+              <textarea
+                id="query-input"
+                className="w-full border border-gray-300 rounded p-2 text-sm disabled:opacity-50"
+                rows={2}
+                value={query}
+                disabled={busy}
+                onChange={function (e) { setQuery(e.target.value); }}
+              />
+              <button
+                id="btn-run"
+                className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                disabled={!query.trim() || noKey || busy}
+                onClick={run}
+              >
+                {busy ? (
+                  <>
+                    <span
+                      className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"
+                      aria-hidden="true"
+                    ></span>
+                    <span>正在跑…（streamText + Output.object 解析中）</span>
+                  </>
+                ) : (
+                  <span>跑一次</span>
+                )}
+              </button>
+              {noKey ? <p className="text-xs text-red-700">缺 密钥，按钮已禁用。请配 apps/.env。</p> : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-gray-700">调用结果（一次性 JSON）</div>
+                <div className="text-xs text-gray-500">耗时 {elapsed == null ? "—" : elapsed + " ms"}</div>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                <div className="text-xs font-semibold text-gray-700">请求参数（Request）</div>
+                <pre className="text-xs text-gray-700 whitespace-pre-wrap mt-1">
+                  {"POST /api/structured\nbody = { query, provider, protocol }\n当前组合：" + provider + " · " + protocol}
+                </pre>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
+                <div className="text-xs font-semibold text-gray-700">响应 JSON（解析后的对象）</div>
+                <pre className="text-xs text-gray-800 whitespace-pre-wrap mt-1 max-h-[480px] overflow-auto">
+                  {response ? JSON.stringify(response, null, 2) : "（未跑）"}
+                </pre>
+              </div>
+              {response && response.ok && response.object ? (
+                <div className="border border-green-300 bg-green-50 rounded p-3 space-y-1">
+                  <div className="text-xs font-semibold text-green-900">解析后的字段</div>
+                  <div className="text-xs text-gray-800">年份（year）：<b>{response.object.year}</b></div>
+                  <div className="text-xs text-gray-800">作者（founder）：<b>{response.object.founder}</b></div>
+                  <div className="text-xs text-gray-800">同期相关（related）：</div>
+                  <ul className="text-xs text-gray-800 list-disc pl-5 space-y-1">
+                    {(response.object.related || []).map(function (s, i) {
+                      return React.createElement("li", { key: i }, s);
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+              {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

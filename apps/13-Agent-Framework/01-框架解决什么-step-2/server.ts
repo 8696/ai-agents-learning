@@ -1,7 +1,7 @@
 /**
  * 职责：装配 HTTP 服务。只挂路由和静态页，不写业务 while / 不调模型。
  *
- * 数据流：解析 PORT → bodyParser → health / basic-chat / reasoning-openai / reasoning-anthropic → 静态 public/ → listen。
+ * 数据流：解析 PORT → bodyParser → health / basic-chat / reasoning-openai / reasoning-anthropic / structured → 静态 public/ → listen。
  */
 import { bodyParser } from "@koa/bodyparser";
 import Router from "@koa/router";
@@ -14,6 +14,7 @@ import { mountBasicChatRoutes } from "./routes/basic-chat.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountReasoningAnthropicRoutes } from "./routes/reasoning-anthropic.js";
 import { mountReasoningOpenAiRoutes } from "./routes/reasoning-openai.js";
+import { mountStructuredRoutes } from "./routes/structured.js";
 
 const { PORT } = parseRuntimeCtx();
 const app = new Koa();
@@ -24,6 +25,7 @@ mountHealthRoutes(router);
 mountBasicChatRoutes(router);
 mountReasoningOpenAiRoutes(router);
 mountReasoningAnthropicRoutes(router);
+mountStructuredRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
