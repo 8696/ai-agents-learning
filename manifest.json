@@ -16850,6 +16850,1760 @@
                 "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-6/server.ts"
               }
             ]
+          },
+          {
+            "label": "03-Human-in-the-loop-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "pause-before-side-effect.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/flow/pause-before-side-effect.ts"
+                      },
+                      {
+                        "label": "transfer-edit.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/flow/transfer-edit.ts"
+                      },
+                      {
+                        "label": "transfer-read.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/flow/transfer-read.ts"
+                      },
+                      {
+                        "label": "transfer-reject.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/flow/transfer-reject.ts"
+                      },
+                      {
+                        "label": "transfer-state.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/flow/transfer-state.ts"
+                      },
+                      {
+                        "label": "transfer-tools.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/flow/transfer-tools.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "ledger-panel.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/components/ledger-panel.js"
+                      },
+                      {
+                        "label": "page-intro.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/components/page-intro.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pending-panel.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/components/pending-panel.js"
+                      },
+                      {
+                        "label": "trace-panel.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/components/trace-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "approve.html",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/pages/approve.html"
+                      },
+                      {
+                        "label": "readonly.html",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/pages/readonly.html"
+                      },
+                      {
+                        "label": "reject.html",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/pages/reject.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "approve.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/approve.ts"
+                  },
+                  {
+                    "label": "edit.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/edit.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "propose.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/propose.ts"
+                  },
+                  {
+                    "label": "read.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/read.ts"
+                  },
+                  {
+                    "label": "reject.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/reject.ts"
+                  },
+                  {
+                    "label": "reset.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/reset.ts"
+                  },
+                  {
+                    "label": "snapshot.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/routes/snapshot.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Human-in-the-loop-step-2",
+            "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": ".gitkeep",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/.gitkeep"
+                  },
+                  {
+                    "label": "transfers.db",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/transfers.db"
+                  },
+                  {
+                    "label": "transfers.db-shm",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/transfers.db-shm"
+                  },
+                  {
+                    "label": "transfers.db-wal",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/transfers.db-wal"
+                  }
+                ]
+              },
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "db.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/db.ts"
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "pause-before-side-effect.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/flow/pause-before-side-effect.ts"
+                      },
+                      {
+                        "label": "transfer-edit.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/flow/transfer-edit.ts"
+                      },
+                      {
+                        "label": "transfer-read.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/flow/transfer-read.ts"
+                      },
+                      {
+                        "label": "transfer-reject.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/flow/transfer-reject.ts"
+                      },
+                      {
+                        "label": "transfer-state.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/flow/transfer-state.ts"
+                      },
+                      {
+                        "label": "transfer-tools.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/flow/transfer-tools.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "ledger-panel.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/components/ledger-panel.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "pending-panel.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/components/pending-panel.js"
+                      },
+                      {
+                        "label": "trace-panel.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/components/trace-panel.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "channel-failure.html",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/pages/channel-failure.html"
+                      },
+                      {
+                        "label": "restart-recovery.html",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/pages/restart-recovery.html"
+                      },
+                      {
+                        "label": "timeout-default.html",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/pages/timeout-default.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api.js",
+                        "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/public/utils/api.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "approve.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/approve.ts"
+                  },
+                  {
+                    "label": "edit.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/edit.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "propose.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/propose.ts"
+                  },
+                  {
+                    "label": "read.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/read.ts"
+                  },
+                  {
+                    "label": "reject.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/reject.ts"
+                  },
+                  {
+                    "label": "reset.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/reset.ts"
+                  },
+                  {
+                    "label": "snapshot.ts",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/routes/snapshot.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "12-MCP",
+        "children": [
+          {
+            "label": "01-MCP-架构-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "exchange.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/lib/flow/exchange.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "mcp",
+                    "children": [
+                      {
+                        "label": "catalog.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/lib/mcp/catalog.ts"
+                      },
+                      {
+                        "label": "jsonrpc-server.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/lib/mcp/jsonrpc-server.ts"
+                      },
+                      {
+                        "label": "primitives.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/lib/mcp/primitives.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-intro.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/components/page-intro.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "protocol-card.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/components/protocol-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "prompts.html",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/pages/prompts.html"
+                      },
+                      {
+                        "label": "resources.html",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/pages/resources.html"
+                      },
+                      {
+                        "label": "tools-call.html",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/pages/tools-call.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-1/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/01-MCP-架构-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "initialize.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/initialize.ts"
+                  },
+                  {
+                    "label": "prompts-get.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/prompts-get.ts"
+                  },
+                  {
+                    "label": "prompts-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/prompts-list.ts"
+                  },
+                  {
+                    "label": "resources-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/resources-list.ts"
+                  },
+                  {
+                    "label": "resources-read.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/resources-read.ts"
+                  },
+                  {
+                    "label": "tools-call.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/tools-call.ts"
+                  },
+                  {
+                    "label": "tools-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-1/routes/tools-list.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/01-MCP-架构-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-MCP-架构-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "exchange.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/lib/flow/exchange.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/lib/logger.ts"
+                  },
+                  {
+                    "label": "mcp",
+                    "children": [
+                      {
+                        "label": "catalog.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/lib/mcp/catalog.ts"
+                      },
+                      {
+                        "label": "jsonrpc-server.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/lib/mcp/jsonrpc-server.ts"
+                      },
+                      {
+                        "label": "primitives.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/lib/mcp/primitives.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "protocol-card.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/public/components/protocol-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "compare.html",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/public/pages/compare.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-2/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/01-MCP-架构-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "initialize.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/routes/initialize.ts"
+                  },
+                  {
+                    "label": "prompts-get.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/routes/prompts-get.ts"
+                  },
+                  {
+                    "label": "resources-read.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/routes/resources-read.ts"
+                  },
+                  {
+                    "label": "tools-call.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-2/routes/tools-call.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/01-MCP-架构-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-MCP-架构-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "exchange.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/lib/flow/exchange.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "mcp-context.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/lib/http/mcp-context.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/lib/logger.ts"
+                  },
+                  {
+                    "label": "mcp",
+                    "children": [
+                      {
+                        "label": "catalog.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/lib/mcp/catalog.ts"
+                      },
+                      {
+                        "label": "jsonrpc-server.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/lib/mcp/jsonrpc-server.ts"
+                      },
+                      {
+                        "label": "primitives.ts",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/lib/mcp/primitives.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "protocol-card.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/public/components/protocol-card.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/12-MCP/01-MCP-架构-step-3/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/01-MCP-架构-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "kb-initialize.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-initialize.ts"
+                  },
+                  {
+                    "label": "kb-prompts-get.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-prompts-get.ts"
+                  },
+                  {
+                    "label": "kb-prompts-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-prompts-list.ts"
+                  },
+                  {
+                    "label": "kb-resources-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-resources-list.ts"
+                  },
+                  {
+                    "label": "kb-resources-read.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-resources-read.ts"
+                  },
+                  {
+                    "label": "kb-tools-call.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-tools-call.ts"
+                  },
+                  {
+                    "label": "kb-tools-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/kb-tools-list.ts"
+                  },
+                  {
+                    "label": "ticket-initialize.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-initialize.ts"
+                  },
+                  {
+                    "label": "ticket-prompts-get.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-prompts-get.ts"
+                  },
+                  {
+                    "label": "ticket-prompts-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-prompts-list.ts"
+                  },
+                  {
+                    "label": "ticket-resources-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-resources-list.ts"
+                  },
+                  {
+                    "label": "ticket-resources-read.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-resources-read.ts"
+                  },
+                  {
+                    "label": "ticket-tools-call.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-tools-call.ts"
+                  },
+                  {
+                    "label": "ticket-tools-list.ts",
+                    "path": "apps/12-MCP/01-MCP-架构-step-3/routes/ticket-tools-list.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/01-MCP-架构-step-3/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-stdio-vs-Streamable-HTTP-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "stdio-client.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/flow/stdio-client.ts"
+                      },
+                      {
+                        "label": "stdio-prompts.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/flow/stdio-prompts.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/logger.ts"
+                  },
+                  {
+                    "label": "mcp-server",
+                    "children": [
+                      {
+                        "label": "server.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/lib/mcp-server/server.ts"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "prompts.js",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/public/components/prompts.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/health.ts"
+                  },
+                  {
+                    "label": "stdio-call-bogus-tool.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-call-bogus-tool.ts"
+                  },
+                  {
+                    "label": "stdio-call-tool.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-call-tool.ts"
+                  },
+                  {
+                    "label": "stdio-connect.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-connect.ts"
+                  },
+                  {
+                    "label": "stdio-get-prompt.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-get-prompt.ts"
+                  },
+                  {
+                    "label": "stdio-list-prompts.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-list-prompts.ts"
+                  },
+                  {
+                    "label": "stdio-list-resources.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-list-resources.ts"
+                  },
+                  {
+                    "label": "stdio-list-tools.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-list-tools.ts"
+                  },
+                  {
+                    "label": "stdio-read-bogus-resource.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-read-bogus-resource.ts"
+                  },
+                  {
+                    "label": "stdio-read-resource.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/routes/stdio-read-resource.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-stdio-vs-Streamable-HTTP-step-2-mcp-client",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "mcp-http-client.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/flow/mcp-http-client.ts"
+                      },
+                      {
+                        "label": "mcp-http-prompts.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/flow/mcp-http-prompts.ts"
+                      },
+                      {
+                        "label": "request-context.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/flow/request-context.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "oauth-section.js",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/public/components/oauth-section.js"
+                      },
+                      {
+                        "label": "output-cards.js",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/public/components/output-cards.js"
+                      },
+                      {
+                        "label": "prompts.js",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/public/components/prompts.js"
+                      },
+                      {
+                        "label": "test-auth-section.js",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/public/components/test-auth-section.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-handlers.js",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/public/utils/api-handlers.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "_with-token.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/_with-token.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/health.ts"
+                  },
+                  {
+                    "label": "http-call-tool.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-call-tool.ts"
+                  },
+                  {
+                    "label": "http-connect.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-connect.ts"
+                  },
+                  {
+                    "label": "http-get-prompt.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-get-prompt.ts"
+                  },
+                  {
+                    "label": "http-list-prompts.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-list-prompts.ts"
+                  },
+                  {
+                    "label": "http-list-resources.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-list-resources.ts"
+                  },
+                  {
+                    "label": "http-list-tools.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-list-tools.ts"
+                  },
+                  {
+                    "label": "http-read-resource.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-read-resource.ts"
+                  },
+                  {
+                    "label": "http-test-401.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-test-401.ts"
+                  },
+                  {
+                    "label": "http-test-audience.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/routes/http-test-audience.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-client/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "02-stdio-vs-Streamable-HTTP-step-2-mcp-server",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "auth.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/lib/flow/auth.ts"
+                      },
+                      {
+                        "label": "mcp-http-server.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/lib/flow/mcp-http-server.ts"
+                      },
+                      {
+                        "label": "request-context.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/lib/flow/request-context.ts"
+                      },
+                      {
+                        "label": "tickets-store.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/lib/flow/tickets-store.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": []
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/routes/health.ts"
+                  },
+                  {
+                    "label": "mcp-endpoint.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/routes/mcp-endpoint.ts"
+                  },
+                  {
+                    "label": "server-info.ts",
+                    "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/routes/server-info.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Skills-vs-MCP-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "mcp-actions.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/lib/flow/mcp-actions.ts"
+                      },
+                      {
+                        "label": "run-assembly.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/lib/flow/run-assembly.ts"
+                      },
+                      {
+                        "label": "skill-loader.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/lib/flow/skill-loader.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "guest-body.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/lib/http/guest-body.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "assembly-result.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/components/assembly-result.js"
+                      },
+                      {
+                        "label": "layout.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-intro.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/components/page-intro.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "on-demand.html",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/pages/on-demand.html"
+                      },
+                      {
+                        "label": "system-prompt-full.html",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/pages/system-prompt-full.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "assembly-both.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/assembly-both.ts"
+                  },
+                  {
+                    "label": "assembly-mcp-only.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/assembly-mcp-only.ts"
+                  },
+                  {
+                    "label": "assembly-on-demand.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/assembly-on-demand.ts"
+                  },
+                  {
+                    "label": "assembly-skill-only.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/assembly-skill-only.ts"
+                  },
+                  {
+                    "label": "assembly-system-prompt-full.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/assembly-system-prompt-full.ts"
+                  },
+                  {
+                    "label": "force-error.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/force-error.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/03-Skills-vs-MCP-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Skills-vs-MCP-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "classify.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/lib/flow/classify.ts"
+                      },
+                      {
+                        "label": "prompt-source.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/lib/flow/prompt-source.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "classify-body.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/lib/http/classify-body.ts"
+                      },
+                      {
+                        "label": "guest-body.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/lib/http/guest-body.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "classify.html",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/public/pages/classify.html"
+                      },
+                      {
+                        "label": "prompt-source.html",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/public/pages/prompt-source.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "classify.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/routes/classify.ts"
+                  },
+                  {
+                    "label": "force-500.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/routes/force-500.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "prompt-source-mcp-prompt.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/routes/prompt-source-mcp-prompt.ts"
+                  },
+                  {
+                    "label": "prompt-source-skill.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/routes/prompt-source-skill.ts"
+                  },
+                  {
+                    "label": "prompt-source-system-prompt.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/routes/prompt-source-system-prompt.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/03-Skills-vs-MCP-step-2/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "03-Skills-vs-MCP-step-3",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "skill-catalog.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/lib/flow/skill-catalog.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "guest-body.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/lib/http/guest-body.ts"
+                      },
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": []
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "api-client.js",
+                        "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/public/utils/api-client.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "force-500.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/routes/force-500.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/routes/health.ts"
+                  },
+                  {
+                    "label": "skills-mode-catalog.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/routes/skills-mode-catalog.ts"
+                  },
+                  {
+                    "label": "skills-mode-full.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/routes/skills-mode-full.ts"
+                  },
+                  {
+                    "label": "skills-mode-on-demand.ts",
+                    "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/routes/skills-mode-on-demand.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/server.ts"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "13-Agent-Framework",
+        "children": [
+          {
+            "label": "01-框架解决什么-step-1",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "cafe",
+                    "children": [
+                      {
+                        "label": "cafe-shared.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/cafe/cafe-shared.ts"
+                      },
+                      {
+                        "label": "sdk-runtime.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/cafe/sdk-runtime.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "framework-chat.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/flow/framework-chat.ts"
+                      },
+                      {
+                        "label": "framework-loop.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/flow/framework-loop.ts"
+                      },
+                      {
+                        "label": "handwritten-loop.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/flow/handwritten-loop.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/components/page-nav.js"
+                      },
+                      {
+                        "label": "run-result.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/components/run-result.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "framework.html",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/pages/framework.html"
+                      },
+                      {
+                        "label": "use-chat.html",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/pages/use-chat.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "fetch-json.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/public/utils/fetch-json.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "framework-chat.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/routes/framework-chat.ts"
+                  },
+                  {
+                    "label": "framework-loop.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/routes/framework-loop.ts"
+                  },
+                  {
+                    "label": "handwritten-loop.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/routes/handwritten-loop.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/routes/health.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/13-Agent-Framework/01-框架解决什么-step-1/server.ts"
+              }
+            ]
+          },
+          {
+            "label": "01-框架解决什么-step-2",
+            "children": [
+              {
+                "label": "lib",
+                "children": [
+                  {
+                    "label": "cafe",
+                    "children": [
+                      {
+                        "label": "cafe-shared.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/cafe/cafe-shared.ts"
+                      },
+                      {
+                        "label": "model.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/cafe/model.ts"
+                      },
+                      {
+                        "label": "sdk-runtime.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/cafe/sdk-runtime.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": [
+                      {
+                        "label": "basic-chat.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/flow/basic-chat.ts"
+                      },
+                      {
+                        "label": "reasoning.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/flow/reasoning.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "http",
+                    "children": [
+                      {
+                        "label": "runtime-ctx.ts",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/http/runtime-ctx.ts"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "logger.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/lib/logger.ts"
+                  }
+                ]
+              },
+              {
+                "label": "public",
+                "children": [
+                  {
+                    "label": "components",
+                    "children": [
+                      {
+                        "label": "layout.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/public/components/layout.js"
+                      },
+                      {
+                        "label": "page-nav.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/public/components/page-nav.js"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "index.html",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": [
+                      {
+                        "label": "reasoning-extract.html",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/public/pages/reasoning-extract.html"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "utils",
+                    "children": [
+                      {
+                        "label": "fetch-json.js",
+                        "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/public/utils/fetch-json.js"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "README.md",
+                "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/README.md"
+              },
+              {
+                "label": "routes",
+                "children": [
+                  {
+                    "label": "basic-chat.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/routes/basic-chat.ts"
+                  },
+                  {
+                    "label": "health.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/routes/health.ts"
+                  },
+                  {
+                    "label": "reasoning-anthropic.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/routes/reasoning-anthropic.ts"
+                  },
+                  {
+                    "label": "reasoning-openai.ts",
+                    "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/routes/reasoning-openai.ts"
+                  }
+                ]
+              },
+              {
+                "label": "server.ts",
+                "path": "apps/13-Agent-Framework/01-框架解决什么-step-2/server.ts"
+              }
+            ]
           }
         ]
       },
@@ -16946,6 +18700,10 @@
       {
         "label": "gen-manifest.js",
         "path": "scripts/gen-manifest.js"
+      },
+      {
+        "label": "probe-all-providers.js",
+        "path": "scripts/probe-all-providers.js"
       },
       {
         "label": "start-all-demo.js",
