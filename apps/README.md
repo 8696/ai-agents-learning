@@ -163,6 +163,7 @@
 | `yarn app:13-01-framework-solves-what-step-1` | `50139` | 模块 13 · 01 · 框架解决什么 step-1：首页手写 while 出一杯拿铁；子页同一句话走 Vercel AI SDK generateText；真调模型 |
 | `yarn app:13-01-framework-solves-what-step-2` | `50140` | 模块 13 · 01 · 框架解决什么 step-2：基础聊天（@ai-sdk/react useChat + body.system，无工具） |
 | `yarn app:13-01-framework-solves-what-step-3` | `50141` | 模块 13 · 01 · 框架解决什么 step-3：嵌入模型向量化（embed / embedMany / 余弦检索 Top-K 三 mode 同源对照） |
+| `yarn app:13-02-state-graph-step-1` | `50142` | 模块 13 · 02 · 状态图 step-1：线性图 START → takeOrder → brewHot → serve → END；页面摊开声明源代码再 stream 每一站（不调 LLM） |
 | （口不回收 · 原 step-2 已删，收进 step-1 最小发现） | `50130` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。

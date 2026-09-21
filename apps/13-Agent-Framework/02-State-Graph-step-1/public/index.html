@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>状态图 · 第一步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const DEFAULT_DRINK = "来一杯中杯热拿铁。";
+    const INTRO_STEPS = [
+      "先看上半页「画路」：START → 点单 → 热饮制作 → 出餐 → END。这时候咖啡还没做。",
+      "再看订单夹四格：现在只有客人口述有字。点按钮才会一站一站填另外三格。",
+      "点「按这张图走一单」：服务端 compile 之后按箭头走。下半页每张卡看绿格 = 这一站新写的。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [drinkName, setDrinkName] = useState(DEFAULT_DRINK);
+      const [declaration, setDeclaration] = useState([]);
+      const [edges, setEdges] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50142, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/linear-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setEdges(data.edges || []);
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runGraph() {
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/linear-graph", { drinkName: drinkName });
+          setRunResult(data);
+          if (data.declaration) setDeclaration(data.declaration);
+          if (data.edges) setEdges(data.edges);
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              状态图（State Graph） · 第一步（step-1） · 线性出杯：点单 → 热饮制作 → 出餐
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：先把路画死，再按路走完这一单热拿铁。不分流，也不调大模型。"
+              steps={INTRO_STEPS}
+              takeaway="上半页是画路，下半页是走路。每一站只交回自己改的那一格（补丁 patch）；框架把它贴回四格夹子，再按已经画死的箭头喊下一站。"
+              observe="点完后看三张卡的绿格：点单写 orderSlip，热饮写 cupLabel，出餐写 pickupCall。最终状态里没有 currentNode。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">店长在画流程图。compile 还没发生，一滴咖啡都没做。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。三张卡 = 三个工位，各交回一格。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（drinkName · 入口状态里唯一事先有值的字段）
+                <input
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  value={drinkName}
+                  disabled={busy}
+                  onChange={function (event) { setDrinkName(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端 compile 这张线性图，再按箭头走出点单、热饮制作、出餐。期望看到三张卡，绿格分别是订单条、杯盖、取餐广播。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runGraph}
+                >
+                  按这张图走一单（compile → stream）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList steps={declaration} edges={edges} />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              <RuntimeList
+                drinkName={drinkName}
+                input={runResult && runResult.input}
+                runtime={runResult && runResult.runtime}
+                finalState={runResult && runResult.finalState}
+              />
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
