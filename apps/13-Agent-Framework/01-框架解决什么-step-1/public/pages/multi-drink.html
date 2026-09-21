@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>框架解决什么 · 第一步 · 框架循环 · maxSteps 对照</title>
+  <title>框架解决什么 · 第一步 · 两杯能否并行</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
       integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
       crossorigin="anonymous"></script>
@@ -32,11 +32,9 @@
     import { PageNav } from "../components/page-nav.js";
     import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
     import { RunResult } from "../components/run-result.js";
-    const DEFAULT_UTTERANCE = "先看今日菜单再做一杯中杯热拿铁。";
 
     function App() {
       const [env, setEnv] = useState(null);
-      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
       const [busy, setBusy] = useState(false);
       const [error, setError] = useState("");
       const [leftReq, setLeftReq] = useState(null);
@@ -51,11 +49,10 @@
         });
       }, []);
 
-      async function run(side, maxSteps) {
+      async function run(side, endpoint) {
         setBusy(true);
         setError("");
-        const body = { utterance: utterance, maxSteps: maxSteps };
-        const reqShape = { url: "/api/framework-loop", method: "POST", body: body };
+        const reqShape = { url: endpoint, method: "POST", body: {} };
         if (side === "left") {
           setLeftReq(reqShape);
           setLeftRes(null);
@@ -64,7 +61,7 @@
           setRightRes(null);
         }
         try {
-          const data = await postJson("/api/framework-loop", body);
+          const data = await postJson(endpoint, {});
           if (side === "left") setLeftRes(data.result);
           else setRightRes(data.result);
         } catch (err) {
@@ -75,57 +72,50 @@
       }
 
       const bothDone = leftRes && rightRes;
+      const leftElapsed = leftRes ? leftRes.elapsedMs : null;
+      const rightElapsed = rightRes ? rightRes.elapsedMs : null;
       const leftExec = leftRes ? (leftRes.toolExecutedCount || 0) : null;
       const rightExec = rightRes ? (rightRes.toolExecutedCount || 0) : null;
-      const leftRounds = leftRes ? (leftRes.modelCallCount || 0) : null;
-      const rightRounds = rightRes ? (rightRes.modelCallCount || 0) : null;
+      const leftRound0 = leftRes && leftRes.rounds && leftRes.rounds[0] ? leftRes.rounds[0] : null;
+      const rightRound0 = rightRes && rightRes.rounds && rightRes.rounds[0] ? rightRes.rounds[0] : null;
+      const rightRound1 = rightRes && rightRes.rounds && rightRes.rounds[1] ? rightRes.rounds[1] : null;
 
       return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
           <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
             <h1 id="page-title" className="text-xl font-semibold">
-              框架解决什么（What Frameworks Solve） · 第一步（step-1） · 框架循环 · maxSteps 对照
+              框架解决什么（What Frameworks Solve） · 第一步（step-1） · 两杯能否并行
             </h1>
             <StatusPill status={busy ? "loading" : (error ? "error" : (bothDone ? "ok" : "idle"))} />
           </header>
-          <PageNav current="framework" base="../" />
+          <PageNav current="multi-drink" base="../" />
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <PageIntro
-              lead="同一个问句「先看今日菜单再做一杯中杯热拿铁。」，分别用 maxSteps=1 和 maxSteps=5 跑一次，对照「假循环」和「真循环」差在哪。"
+              lead="同一句 query「热美式和冰拿铁各来一杯。」，两条路径 —— 左栏 SDK 默认并行（一次 generateText 拿 2 个 tool_calls 并行执行），右栏手动串行（分 2 次 generateText，每轮只做 1 杯）。"
               steps={[
-                "左栏按钮「跑假循环（stopWhen: stepCountIs(1) · maxSteps=1）」→ POST /api/framework-loop，body 里 maxSteps=1。",
-                "右栏按钮「跑真循环（stopWhen: stepCountIs(5) · maxSteps=5）」→ POST /api/framework-loop，body 里 maxSteps=5。",
-                "两个独立请求（不是 /api/compare 打包跑两条轨迹）。左栏只跑 1 步 = 只读菜单，不调 make_latte；右栏至少 1 次 make_latte。",
+                "左栏按钮「并行（POST /api/multi-drink-parallel）」→ 一次 generateText；模型一次返回 2 个 tool_calls；SDK 默认并行执行。",
+                "右栏按钮「串行（POST /api/multi-drink-serial）」→ 分 2 次 generateText；第 1 轮 stopWhen: hasToolCall 拿 1 杯；第 2 轮把第 1 轮消息塞回去继续做第 2 杯。",
+                "对照两栏耗时（elapsedMs）：并行 ≈ 1 杯；串行 ≈ 2 杯。两个独立请求（不是 /api/compare 打包）。",
               ]}
-              takeaway="框架的 stopWhen 默认值是 1 步（变体 E + 变体 G）：你没显式设 = 默认 1 步 = 假循环。客人说「先看菜单再出杯」，默认只跑 1 步——只看了菜单，咖啡没做。"
-              observe="看两栏结果：左栏 modelCallCount = 1、toolExecutedCount = 0（只跑了 1 步，没调 make_latte）；右栏 modelCallCount ≥ 2、toolExecutedCount ≥ 1（至少读菜单 + 做拿铁）。"
+              takeaway="框架默认并行工具调用（变体 C）：注册两个工具 make_americano + make_latte，模型一次返回 2 个 tool_calls，库内部类似 Promise.all 同时执行。要让两杯串行：必须拆 query + 分批注册工具（每轮只注册一个，模型只能调那一个），分 2 次 generateText。"
+              observe="对照两栏：左栏 rounds[0] 的 toolCallCount = 2（一轮同时调 make_americano + make_latte 并行执行）；右栏 rounds[0] toolCallCount = 1（只调 make_americano）+ rounds[1] toolCallCount = 1（只调 make_latte），两轮串行。耗时（elapsedMs）受网络抖动影响，不作为并行/串行对照的硬指标。"
             />
             <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
-              <label className="block text-sm text-gray-700">
-                客人口述（utterance）
-                <textarea
-                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
-                  rows="2"
-                  value={utterance}
-                  disabled={busy}
-                  onChange={function (e) { setUtterance(e.target.value); }}
-                />
-              </label>
-              <p className="text-xs text-gray-500">两个按钮各发一次独立请求（不是接口打包跑两条轨迹）。左栏 maxSteps=1、右栏 maxSteps=5。</p>
+              <p className="text-xs text-gray-500">两栏按钮各发一次独立请求（不是接口打包）。query 固定为「热美式和冰拿铁各来一杯。」。重点对照耗时（elapsedMs）。</p>
               <div className="flex flex-wrap gap-2">
-                <button
-                  className="bg-yellow-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
-                  disabled={busy || noKey}
-                  onClick={function () { run("left", 1); }}
-                >
-                  跑假循环（stopWhen: stepCountIs(1) · maxSteps=1）
-                </button>
                 <button
                   className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
                   disabled={busy || noKey}
-                  onClick={function () { run("right", 5); }}
+                  onClick={function () { run("left", "/api/multi-drink-parallel"); }}
                 >
-                  跑真循环（stopWhen: stepCountIs(5) · maxSteps=5）
+                  并行（POST /api/multi-drink-parallel · SDK 默认）
+                </button>
+                <button
+                  className="bg-orange-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={busy || noKey}
+                  onClick={function () { run("right", "/api/multi-drink-serial"); }}
+                >
+                  串行（POST /api/multi-drink-serial · 分 2 轮）
                 </button>
               </div>
               {noKey ? <p className="text-xs text-red-700">缺 密钥，主按钮已禁用。请配 apps/.env。</p> : null}
@@ -133,26 +123,26 @@
             </section>
             <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 border border-yellow-300 bg-yellow-50 rounded p-3">
-                  <div className="text-xs font-semibold text-yellow-900">左栏 · 假循环 maxSteps=1</div>
+                <div className="space-y-2 border border-blue-300 bg-blue-50 rounded p-3">
+                  <div className="text-xs font-semibold text-blue-900">左栏 · 并行（SDK 默认）</div>
                   <RunResult request={leftReq} result={leftRes} />
                 </div>
-                <div className="space-y-2 border border-blue-300 bg-blue-50 rounded p-3">
-                  <div className="text-xs font-semibold text-blue-900">右栏 · 真循环 maxSteps=5</div>
+                <div className="space-y-2 border border-orange-300 bg-orange-50 rounded p-3">
+                  <div className="text-xs font-semibold text-orange-900">右栏 · 串行（分 2 轮 generateText）</div>
                   <RunResult request={rightReq} result={rightRes} />
                 </div>
               </div>
               {bothDone ? (
                 <div className="bg-white border border-gray-300 rounded p-3 space-y-1">
-                  <div className="text-xs font-semibold text-gray-700">对照数字（同一问句 · 两种 stopWhen · 两个独立请求）</div>
+                  <div className="text-xs font-semibold text-gray-700">对照数字（同一 query · 两条路径 · 两个独立请求）</div>
                   <div className="text-xs text-gray-700">
-                    左栏（maxSteps=1） · 模型调用轮次（modelCallCount）：<b>{leftRounds}</b> · 工具调用次数（toolExecutedCount）：<b>{leftExec}</b>
+                    左栏（并行 · 注册两个工具 · 模型一次返回 2 个 tool_calls） · rounds[0] toolCallCount：<b>{leftRound0 ? leftRound0.toolCallCount : 0}</b> · rounds[0] toolNames：<b>{leftRound0 && leftRound0.toolNames ? leftRound0.toolNames.join(" + ") : "—"}</b>
                   </div>
                   <div className="text-xs text-gray-700">
-                    右栏（maxSteps=5） · 模型调用轮次（modelCallCount）：<b>{rightRounds}</b> · 工具调用次数（toolExecutedCount）：<b>{rightExec}</b>
+                    右栏（串行 · 每轮注册 1 个工具 · query 拆开） · rounds[0] toolCallCount：<b>{rightRound0 ? rightRound0.toolCallCount : 0}</b> · rounds[0] toolNames：<b>{rightRound0 && rightRound0.toolNames ? rightRound0.toolNames.join(" + ") : "—"}</b> · rounds[1] toolCallCount：<b>{rightRound1 ? rightRound1.toolCallCount : 0}</b> · rounds[1] toolNames：<b>{rightRound1 && rightRound1.toolNames ? rightRound1.toolNames.join(" + ") : "—"}</b>
                   </div>
                   <div className="text-xs text-gray-600">
-                    结论：maxSteps=1 时工具调用次数（toolExecutedCount）应为 0；maxSteps=5 时工具调用次数（toolExecutedCount）应 ≥ 1。这就是「默认步数 1 = 假循环」的可观察对照。
+                    结论：左栏一轮调了 2 个不同工具（make_americano + make_latte 并行执行）；右栏两轮各调 1 个工具（先 make_americano、再 make_latte 串行）。两栏最终都出 2 杯，但工具执行策略不同。耗时（elapsedMs）作为参考：左栏 {leftElapsed} 毫秒 · 右栏 {rightElapsed} 毫秒（受网络抖动影响，不作为对照硬指标）。
                   </div>
                 </div>
               ) : null}

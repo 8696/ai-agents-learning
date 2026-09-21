@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第一步 · 扣卡被默默重试</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="module" src="../components/run-result.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { postJson, loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+    import { RunResult } from "../components/run-result.js";
+    const DEFAULT_UTTERANCE = "用会员卡支付这单。";
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
+      const [busy, setBusy] = useState(false);
+      const [error, setError] = useState("");
+      const [request, setRequest] = useState(null);
+      const [result, setResult] = useState(null);
+      const noKey = env && env.hasKey === false;
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50139, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      async function run() {
+        setBusy(true);
+        setError("");
+        const body = { utterance: utterance };
+        setRequest({ url: "/api/retry-charge", method: "POST", body: body });
+        setResult(null);
+        try {
+          const data = await postJson("/api/retry-charge", body);
+          setResult(data.result);
+        } catch (err) {
+          setError((err && err.message) || String(err));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const charged = result ? (result.charged || 0) : null;
+      const attempts = result ? (result.attempts || []) : [];
+      const attemptCount = result ? (result.attempt || 0) : 0;
+      const idempotencyKey = result ? result.idempotencyKey : null;
+      const isDoubleCharge = attemptCount > 1;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第一步（step-1） · 扣卡被默默重试
+            </h1>
+            <StatusPill status={busy ? "loading" : (error ? "error" : (result ? "ok" : "idle"))} />
+          </header>
+          <PageNav current="retry-charge" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="扣会员卡时，框架默认重试（Vercel AI SDK maxRetries 默认 2）。execute 函数每次被调用都「扣款」（30% 概率模拟网关超时抛错），框架自动重试时 execute 仍被触发——结果客人账上被扣多次。"
+              steps={[
+                "点「扣一次会员卡」按钮会 POST /api/retry-charge。",
+                "服务端 charge_member_card 工具：每次 execute 调用都记账 attempts 数组；30% 概率模拟网关超时抛错。",
+                "框架默认重试：maxRetries = 2（AI SDK 默认）。execute 被多次触发 → attempts 数组累计多次扣款 = 双扣事故。",
+              ]}
+              takeaway="变体 E「默认策略」的可观察证据：实际扣款次数（charged） = attempts 数组里 result=charged 的条数。如果 charged > 1 = 双扣。每次 attempt 的幂等键（idempotencyKey）相同——框架重试时没换键，但网关是否去重是网关的事，业务方看不到。"
+              observe="看 attempts 列表：每次 attempt 的 attempt 编号 + result（charged / timeout）+ idempotencyKey。如果 charged > 1 = 双扣事故；如果 attempts 里 charged = 1 = 单次扣款（这次没碰到超时）。多次跑几次，统计 charged 的分布。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（utterance）
+                <textarea
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  rows="2"
+                  value={utterance}
+                  disabled={busy}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点「扣一次会员卡」会真调模型 + 工具 execute。每点一次 attempts 数组重置（每次请求独立计数）。</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-red-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={busy || noKey}
+                  onClick={run}
+                >
+                  扣一次会员卡（POST /api/retry-charge）
+                </button>
+              </div>
+              {noKey ? <p className="text-xs text-red-700">缺 密钥，主按钮已禁用。请配 apps/.env。</p> : null}
+              {error ? <p className="text-sm text-red-700">{error}</p> : null}
+            </section>
+            <section id="output" className="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+              {request ? (
+                <div className="bg-gray-50 border border-gray-300 rounded p-2 text-xs text-gray-700">
+                  请求参数 · <code className="font-mono">{request.method} {request.url}</code> · body: utterance = "{request.body.utterance}"
+                </div>
+              ) : null}
+
+              {result ? (
+                <React.Fragment>
+                  {isDoubleCharge ? (
+                    <div className="bg-red-50 border border-red-300 rounded p-3 space-y-1">
+                      <div className="text-xs font-semibold text-red-900">⚠ 双扣风险（attempts &gt; 1）</div>
+                      <div className="text-xs text-red-700">
+                        execute 被调用了 <b>{attemptCount}</b> 次（其中 {charged} 次真正成功）。每次 execute = 一次扣款尝试；<b>超时的那几次可能已扣款</b>（网关扣了但没响应）→ 客人账上可能扣了 {attemptCount} 次。
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className={"border rounded p-3 " + (isDoubleCharge ? "border-red-300 bg-red-50" : "border-green-300 bg-green-50")}>
+                      <div className="text-xs font-semibold text-gray-700">尝试次数（execute 被调用几次）</div>
+                      <div className={"text-2xl font-bold mt-1 " + (isDoubleCharge ? "text-red-700" : "text-green-700")}>{attemptCount}</div>
+                      <div className="text-xs text-gray-500 mt-1">每次 execute = 一次扣款尝试</div>
+                    </div>
+                    <div className="border border-gray-300 bg-white rounded p-3">
+                      <div className="text-xs font-semibold text-gray-700">真正成功扣款（result = charged）</div>
+                      <div className="text-2xl font-bold text-gray-900 mt-1">{charged}</div>
+                      <div className="text-xs text-gray-500 mt-1">execute 没抛错的那几次</div>
+                    </div>
+                    <div className="border border-gray-300 bg-white rounded p-3">
+                      <div className="text-xs font-semibold text-gray-700">幂等键（idempotencyKey）</div>
+                      <div className="text-xs font-mono text-gray-900 mt-1 break-all">{idempotencyKey || "—"}</div>
+                      <div className="text-xs text-gray-500 mt-1">每次 attempt 用同一键 → 框架重试时**不换**键 → 双扣风险</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">attempts 列表（每次 execute 调用的记录）</div>
+                    <div className="border border-gray-200 rounded">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="px-2 py-1 text-left">attempt</th>
+                            <th className="px-2 py-1 text-left">结果</th>
+                            <th className="px-2 py-1 text-left">orderId</th>
+                            <th className="px-2 py-1 text-left">idempotencyKey</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {attempts.map(function (a, i) {
+                            const rowCls = a.result === "charged" ? "bg-red-50" : "bg-yellow-50";
+                            return (
+                              <tr key={i} className={rowCls + " border-t border-gray-200"}>
+                                <td className="px-2 py-1 font-mono">{a.attempt}</td>
+                                <td className={"px-2 py-1 font-semibold " + (a.result === "charged" ? "text-red-700" : "text-yellow-700")}>
+                                  {a.result === "charged" ? "扣款" : "超时"}
+                                </td>
+                                <td className="px-2 py-1 font-mono">{a.orderId}</td>
+                                <td className="px-2 py-1 font-mono">{a.idempotencyKey}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      结论：attempts 里有 <b>{attempts.filter(function (a) { return a.result === "charged"; }).length}</b> 条「扣款」、<b>{attempts.filter(function (a) { return a.result === "timeout"; }).length}</b> 条「超时」。框架默默调了 execute {attemptCount} 次（其中 {attempts.filter(function (a) { return a.result === "charged"; }).length} 次真扣了款）。
+                    </div>
+                  </div>
+                </React.Fragment>
+              ) : null}
+
+              {!result && !busy && !error ? (
+                <p className="text-sm text-gray-500">还没扣款。点上面的按钮会请求 /api/retry-charge。每次请求 attempts 数组重置。</p>
+              ) : null}
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

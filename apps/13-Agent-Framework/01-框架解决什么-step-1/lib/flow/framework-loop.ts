@@ -46,11 +46,15 @@ function mapSteps(steps: SdkStep[]): { rounds: TrajectoryRound[]; toolExecutedCo
   return { rounds, toolExecutedCount };
 }
 
-export async function runFrameworkLoop(utterance: string): Promise<LoopRunResult> {
+export async function runFrameworkLoop(
+  utterance: string,
+  options?: { maxSteps?: number }
+): Promise<LoopRunResult> {
   const started = Date.now();
   const text = utterance.trim() || DEFAULT_UTTERANCE;
+  const maxSteps = options?.maxSteps ?? 5;
   logger.info("runFrameworkLoop", "调用函数：runFrameworkLoop", "入口：业务代码里没有 while，循环交给 AI SDK。", {
-    入参: { utterance: text },
+    入参: { utterance: text, maxSteps },
   });
   logger.info("runFrameworkLoop", "调用函数：runFrameworkLoop", "函数体：createOpenAI + generateText + tool(make_latte)。", {
     __code: runFrameworkLoop.toString(),
@@ -88,7 +92,7 @@ export async function runFrameworkLoop(utterance: string): Promise<LoopRunResult
     system: SYSTEM_PROMPT,
     prompt: text,
     tools: { [MAKE_LATTE_NAME]: "tool(make_latte)" },
-    stopWhen: "isStepCount(5)",
+    stopWhen: `isStepCount(${maxSteps})`,
   };
   logger.info(
     "│ generateText",
@@ -103,7 +107,7 @@ export async function runFrameworkLoop(utterance: string): Promise<LoopRunResult
     system: SYSTEM_PROMPT,
     prompt: text,
     tools: { [MAKE_LATTE_NAME]: makeLatteTool },
-    stopWhen: isStepCount(5),
+    stopWhen: isStepCount(maxSteps),
   });
   logger.info("│ generateText", "结束：generateText", "库把圈转完了，text 是最终对客人说的话。", {
     耗时ms: Date.now() - generateStarted,

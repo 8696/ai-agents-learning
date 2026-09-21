@@ -13,7 +13,7 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**框架解决什么**：对照自己手写的 Loop / State，看它省了什么、藏了什么](./01-框架解决什么.md) | 能列「省了 / 多了」各 3 条 | `LangGraph vs handwritten agent` `Vercel AI SDK useChat` · 各框架 Getting Started · 模块 07 自己的代码 | — |
+| ✅ | [**框架解决什么**：对照自己手写的 Loop / State，看它省了什么、藏了什么](./01-框架解决什么.md) | 能列「省了 / 多了」各 3 条 | `LangGraph vs handwritten agent` `Vercel AI SDK useChat` · 各框架 Getting Started · 模块 07 自己的代码 | [沉淀](./01-框架解决什么.md) |
 | ⬜ | [**State Graph**：用图表达工作流，和手写 if/else 循环的差别](./02-State-Graph.md) | 能对照模块 07/11 的代码逐条 diff | `LangGraph tutorial state graph` · [LangGraph.js 文档](https://langchain-ai.github.io/langgraphjs/) | — |
 | ⬜ | [**Agents as Tools vs Handoff**：当工具调用（调用方还在）vs 任务移交（控制权换人）](./03-Agents-as-Tools-vs-Handoff.md) | 能一句话划界；实现放到模块 14 | `agents as tools langchain` `agent handoff vs tool` · 模块 14 卡片 | — |
 | ⬜ | [**Dify 等编排产品**：体验即可，不当学习主线](./04-Dify-等编排产品.md) | 能讲：它替你藏了 Loop/State | `Dify agent workflow` · Dify 官方入门（1h 内） | — |

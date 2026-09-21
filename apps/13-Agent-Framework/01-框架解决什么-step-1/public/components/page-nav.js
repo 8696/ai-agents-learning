@@ -13,6 +13,10 @@ const PAGES = [
   { key: "framework", label: "框架循环（Framework Loop）", href: "pages/framework.html" },
   { key: "use-chat", label: "试用 useChat（JSX）", href: "pages/use-chat.html" },
   { key: "no-loop", label: "仓库里没有 loop.ts", href: "pages/no-loop.html" },
+  { key: "faq", label: "FAQ 不该上出杯图", href: "pages/faq.html" },
+  { key: "multi-drink", label: "两杯能否并行", href: "pages/multi-drink.html" },
+  { key: "retry-charge", label: "扣卡被默默重试", href: "pages/retry-charge.html" },
+  { key: "allergy-gate", label: "过敏拦截 · 网关", href: "pages/allergy-gate.html" },
 ];
 
 const NAV_CLASS_ACTIVE = "px-3 py-1 rounded border border-blue-500 bg-blue-50 text-blue-700 font-semibold";

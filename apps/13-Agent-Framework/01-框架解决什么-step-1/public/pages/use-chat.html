@@ -49,7 +49,7 @@
       const [localError, setLocalError] = useState("");
       const [hasSent, setHasSent] = useState(false);
       const transport = useMemo(function () {
-        return new DefaultChatTransport({ api: "/api/framework-chat" });
+        return new DefaultChatTransport({ api: "/api/chat-stream" });
       }, []);
       const chat = useChat({ transport: transport });
       const busy = chat.status === "submitted" || chat.status === "streaming";
@@ -111,7 +111,7 @@
               disabled={busy || props.noKey}
               onClick={send}
             >
-              用 useChat 发送（streamText + make_latte）
+              用 useChat 发送（POST /api/chat-stream · streamText + make_latte）
             </button>
             <button
               className="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50"
@@ -138,7 +138,7 @@
           <div className="bg-gray-50 border border-gray-200 rounded p-3">
             <div className="text-xs font-semibold text-gray-700">请求参数（Request）</div>
             <pre className="text-xs text-gray-700 whitespace-pre-wrap mt-1">
-              {"POST /api/framework-chat\nuseChat + DefaultChatTransport\n客人口述：" + utterance}
+              {"POST /api/chat-stream\nuseChat + DefaultChatTransport\n客人口述：" + utterance}
             </pre>
           </div>
           <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
@@ -191,14 +191,14 @@
           <PageNav current="use-chat" base="../" />
           <main id="page-main" className="container mx-auto p-4 space-y-4">
             <PageIntro
-              lead="外壳和聊天区在同一棵 React 树里：外壳用仓库共用组件，聊天区直接嵌进来用 useChat。"
+              lead="聊天框边生成边出现「正在做热拿铁…」。模块 02 你拆过的 SSE 帧 / 消息数组样板，useChat + DefaultChatTransport 一个 Hook 全收走。"
               steps={[
-                "本页和另外两页用同一套 page-nav.js / layout.js（合法 ESM，直接 import）。",
-                "官方 useChat 嵌在 App 里渲染——状态由 props 回调给外壳 StatusPill，不再走 window 事件。",
-                "点发送走 POST /api/framework-chat。原来的 generateText 页和 /api/framework-loop 没改。",
+                "点「用 useChat 发送」会真调模型，发 POST /api/chat-stream。",
+                "服务端 lib/flow/chat-stream.ts 顶部直接 import pipeFrameworkChat；文件里没有 while。",
+                "库内部把工具调用 / 循环 / 拆帧收走：useChat 接住 chunk 合并进 messages，「正在做拿铁」这类状态由 SDK 自动插进列表。",
               ]}
-              takeaway="UMD 删掉后：共享 UI 用 React.createElement 写成合法 ESM，整页只剩导入映射里的那一份 React。"
-              observe="整页 React 一棵 ESM 树。原来 UMD + ESM 双实例、window 事件桥都不需要了。"
+              takeaway="流式 UI 样板被框架收走：你没写 EventSource 解析器，也没维护 messages 数组——useChat 接住 SDK 推送的 UIMessage 流。while 仍在服务端 streamText 里，你看不见。"
+              observe="点发送：消息数组从 1 条 user 边到边涨；调用 make_latte 的 tool 状态自动插进消息列表，对应模块 02 你手写过的「正在做」半句话。"
             />
             <section id="controls" className="bg-white shadow rounded p-4">
               <ChatIsland onStatusChange={onStatusChange} noKey={noKey} />
