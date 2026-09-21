@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第三步 · 嵌入模型向量化</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="module" src="../components/embed-panels.js"></script>
+  <script type="module" src="../components/cosine-recall-panel.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, EnvFooter } from "../components/layout.js";
+    import { EmbedPanel, EmbedManyPanel } from "../components/embed-panels.js";
+    import { CosineRecallPanel } from "../components/cosine-recall-panel.js";
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50141, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 bg-white flex items-center justify-between">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第三步（step-3） · 嵌入模型向量化（embed / embedMany / 余弦检索）
+            </h1>
+            <span id="status-pill" className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700">⏸ 待连接</span>
+          </header>
+          <PageNav current="embed" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="AI SDK 的 embed（单条字符串 → 一条向量）和 embedMany（字符串数组 → 二维向量数组）一次性返回，不推流。对照它们在「点咖啡小程序」检索里的最小用法：用户问题嵌入成一条向量，候选文档库嵌入成 N 条向量，用余弦相似度排序取 Top-K——这就构成 RAG 的「检索阶段」。"
+              steps={[
+                "模式 A：在「模式 A」输入框里写一句点咖啡小程序的用户话，点「跑一次 embed」——服务端调 ai.embed({ model, value })，返回 number[] + dim + token 用量。",
+                "模式 B：在「模式 B」文本框里一行写一条候选文档，点「跑一次 embedMany」——服务端调 ai.embedMany({ model, values })，返回 number[][] + 聚合 token。",
+                "模式 C：填 query + documents + Top-K，点「跑一次余弦检索」——服务端并发 embed + embedMany，算每条的余弦相似度，按 score 降序写回 Top-K + 其余。",
+                "对照看：相同的 query + documents，模式 C 的 Top-K 里「点单相关」的会排在「订单/会员/外卖」前面——这就是「语义近」的工程含义。",
+              ]}
+              takeaway="embed / embedMany 是 AI SDK 的非文本生成入口：输入字符串（数组），输出 number[]（或 number[][]），共享同一份 model 拼装链（createEmbeddingModel）。同 generateText / streamText 比，无 reasoning、无流式、无 prompt——专门为「把字变成位置」服务。模块 08 RAG 的检索阶段（query vs document 库）= 单条 embed + 批量 embedMany + 余弦相似度排序取 Top-K。"
+              observe="看模式 C 的 Top-K 排序：「今日菜单：中杯热拿铁 ¥28」排在最前（score 应该接近 1）——这就是「语义近」在几何上的含义。两个数字相同，方向不同就完全无关；方向相同，长度不同也只是「重点不一样」。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-700">三 mode 共用同一个嵌入模型（同 provider、同 baseURL、同 embedding model id）。三请求独立发（对照拆请求；不打成一个接口跑多轨迹）。</div>
+            </section>
+            <section id="output" className="space-y-4">
+              <EmbedPanel />
+              <EmbedManyPanel />
+              <CosineRecallPanel />
+            </section>
+          </main>
+          <footer id="page-footer" className="border-t p-2 text-xs text-gray-500 text-center">
+            <EnvFooter env={env} />
+          </footer>
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

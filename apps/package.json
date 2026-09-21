@@ -149,7 +149,8 @@
     "app:12-03-skills-vs-mcp-step-2": "PORT=50137 tsx 12-MCP/03-Skills-vs-MCP-step-2/server.ts",
     "app:12-03-skills-vs-mcp-step-3": "PORT=50138 tsx 12-MCP/03-Skills-vs-MCP-step-3/server.ts",
     "app:13-01-framework-solves-what-step-1": "PORT=50139 tsx 13-Agent-Framework/01-框架解决什么-step-1/server.ts",
-    "app:13-01-framework-solves-what-step-2": "PORT=50140 tsx 13-Agent-Framework/01-框架解决什么-step-2/server.ts"
+    "app:13-01-framework-solves-what-step-2": "PORT=50140 tsx 13-Agent-Framework/01-框架解决什么-step-2/server.ts",
+    "app:13-01-framework-solves-what-step-3": "PORT=50141 tsx 13-Agent-Framework/01-框架解决什么-step-3/server.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
