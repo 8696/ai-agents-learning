@@ -10,10 +10,10 @@
  */
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-// 注：MCP SDK 2.0 硬依赖 zod v4。apps 顶层 zod 是 3.25，v3/v4 的 ZodType 是不同 prototype。
-// 这里 import step-1 自己 node_modules/zod（链到 SDK 自带的 zod 4.6.5），
+// 注：MCP SDK 2.0 硬依赖 zod v4。顶层 zod 是 3.25（v3/v4 的 ZodType 是不同 prototype），
+// 这里 import 独立的 zod-v4 包（别名 npm:zod@4.6.5，跟 SDK 自带 zod 版本完全一致），
 // 绕开顶层 zod 3，类型 + 运行时都对得上 SDK。
-import { z } from "zod/v4";
+import { z } from "zod-v4";
 
 const server = new McpServer(
   {

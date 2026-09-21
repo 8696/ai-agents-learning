@@ -15,7 +15,7 @@
  */
 import { McpServer } from "@modelcontextprotocol/server";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
-import { z } from "zod/v4";
+import { z } from "zod-v4";
 import { logger } from "../logger.js";
 import { getCurrentUserId } from "./request-context.js";
 import { listTicketsForUser } from "./tickets-store.js";

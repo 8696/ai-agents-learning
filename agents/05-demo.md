@@ -49,6 +49,28 @@
 
 Demo 只用 `getLlm()` / `getLlmOptional()`，不要再直接读 `PROVIDER_IDS` 或 `MINIMAX_*` 等具体变量；选家由 `apps/.env` 顶层 `LLM_PROVIDER` 决定。
 
+#### §5.0.y zod 版本约束（新写 Demo 默认 v4 · 2026-09-21 立）
+
+`apps/node_modules` 同时存在两个 zod 版本，**新写 Demo 一律走 `zod-v4`**，不要走顶层 `zod`：
+
+| 包名 | 版本族 | 谁在用 |
+| ---- | ---- | ---- |
+| `zod`（顶层） | v3.x | 老 Demo / 老业务代码默认走这个，**保留不动** |
+| `zod-v4`（`package.json` 里的 `npm:zod@^4` 别名） | v4.x | 新写 Demo 默认走这个；MCP SDK 内嵌也是 v4 版本族 |
+
+**默认规则**：
+
+- 新写 / 改写可运行 Demo：`import { z } from "zod-v4"`，写 v4 语法、v4 API（`z.toJSONSchema` / `z.templateLiteral` / `z.iso` / `z.codec` / `z.strictObject` 等 v4 专属 API 直接可用）
+- 老 Demo 写的是 `import { z } from "zod"`：**保留不动**，不要为升而升去触发模块级 zod 迁移（影响 509 个文件，不是修 typecheck 的范围）
+- 必须跟第三方 SDK 类型对齐（如 MCP 模块的 `registerTool` / `registerPrompt`）：走 `zod-v4`，跟 SDK 自带 v4 版本完全一致 → typecheck 0 报错
+
+**为什么这么分**（背景，2026-09-21 MCP step-1/step-2 typecheck 5 处报错时确认）：MCP SDK 2.0 硬依赖 zod v4，`.d.ts` 期望 v4 的 `ZodObject` / `ZodString` / `StandardSchemaWithJSON` 签名。顶层 zod v3 的 `zod/v4` 子路径是 v3.25 自带的 compat shim，类型跟 SDK 不完全对齐（`Props<{cupSize:...}, {cupSize:...}>` 推不到 `Props<unknown, unknown>`，v4 的 `ZodString` 缺 v3 的 `with` / `validate` 等属性）；独立的 `zod-v4` 走的是 v4 版本族，跟 SDK 自带 v4 完全一致 → 一步过 typecheck。
+
+**禁止**：
+
+- 禁止把顶层 zod 一次性升到 v4（项目级迁移，会引出 30~80 处 `.refine` / `.brand` / `.deepPartial` / 错误对象结构差异）
+- 禁止同一份文件里同时 `import { z } from "zod"` 和 `import { z } from "zod-v4"`（一份文件只走一个，便于回查）
+
 ### 5.1 apps/ 子文件夹结构
 
 `apps/` 下**两类子文件夹**（模块复盘**不**在此处把代码写进 apps/）：
