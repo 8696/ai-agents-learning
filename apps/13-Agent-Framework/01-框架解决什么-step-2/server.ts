@@ -10,6 +10,7 @@ import serve from "koa-static";
 import { fileURLToPath } from "node:url";
 import { parseRuntimeCtx } from "./lib/http/runtime-ctx.js";
 import { logger } from "./lib/logger.js";
+import { mountAgentLoopRoutes } from "./routes/agent-loop.js";
 import { mountBasicChatRoutes } from "./routes/basic-chat.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountReasoningAnthropicRoutes } from "./routes/reasoning-anthropic.js";
@@ -26,13 +27,14 @@ mountBasicChatRoutes(router);
 mountReasoningOpenAiRoutes(router);
 mountReasoningAnthropicRoutes(router);
 mountStructuredRoutes(router);
+mountAgentLoopRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "step-2：基础聊天 + 两种协议下的推理提取。", {
+  logger.info("server.start", "listening", "step-2：基础聊天 + 推理提取 + 结构化输出 + 工具调用循环。", {
     url: `http://127.0.0.1:${PORT}/`,
     protocol: "A",
   });

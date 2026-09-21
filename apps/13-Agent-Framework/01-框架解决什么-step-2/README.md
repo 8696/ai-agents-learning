@@ -17,9 +17,13 @@
 | --- | --- |
 | `index.html` | 基础聊天（系统提示词可改 + 多轮 + 4 个控件） |
 | `pages/reasoning-extract.html` | 推理内容统一处理（左右对照） |
+| `pages/structured.html` | 结构化输出（`streamText + Output.object`，4 家 provider × 2 协议切换） |
+| `pages/agent-loop.html` | 工具调用循环（`streamText + tools + stopWhen`，左右对照默认 1 步 vs 显式 3 步） |
 - 系统提示词 textarea：默认「通用中文助手」，用户可改。下一次发送时随 `body.system` 一起送到服务端。
 - 四个控件：发送、取消请求（`stop`）、重新生成（`regenerate`）、清空对话；每条消息右侧可单独删除。
 - 多轮：`useChat` 自动累计 messages；改系统提示词后历史不清空，下一条按新提示词走。
+- 结构化输出：4 家 provider × 2 协议共 8 个组合用同一下拉切换；query 是一道纯事实题，模型走 `Output.object` 强约束吐 JSON。
+- 工具调用循环：左右两栏共用同一下拉与同一 query，并发打同接口但 mode 不同；左栏不传 `stopWhen`（默认 `stepCountIs(1)`）→ 模型只读菜单就停；右栏显式 `stopWhen: stepCountIs(3)` → 读菜单 → `makeLatte` → 出正文。工具调用轨迹按时间序变成轨迹卡；`中途取消` 按钮 abort 当前两条 fetch。
 
 ## 数据流
 

@@ -308,6 +308,42 @@
 - **反模式**：用 `/type="module"/` 这种子串去扫 HTML
 - **关联**：agents/05-demo.md §5.3.4；2026-09-20 模块 13 · 01 试用 useChat 试验页
 
+### P-029  ·  useEffect 里 setState 基于闭包旧 state，finish() 覆盖累加数据
+
+- **症状**：流式响应结束后面板「清空」——轨迹卡 / 最终正文全部消失；多次 setState 的最后一次基于 stale 的初始 state 把累积字段覆盖
+- **触发**：`useEffect` 内定义 `pushStep / pushText / pushReasoning / finish`，每次写 `setLeftPanel(Object.assign({}, leftPanel, { steps }))`，`leftPanel` 是 effect 闭包里的初始空值
+- **根因**：React 18 把多次 `setState` 合并为最后一次；最后一次是 `finish()`，它用 stale `leftPanel` 当 base，`Object.assign({}, emptyPanel, { done: true })` 会把 `steps: []` 重新写进去，覆盖前面 `pushStep` 累加的轨迹
+- **修复**：writer 函数（pushStep / pushText / pushReasoning / finish）全部不读 `leftPanel` state，统一从 ref（`leftRef.current`）拿累加数据，自己重新构造 next 对象再 `setLeftPanel(next)`
+- **反模式**：`useEffect` 里写 `setX(Object.assign({}, x, { field }))` 把 state 当 base——state 是闭包旧值
+- **关联**：agents/05-demo.md §5.3.8（一个业务 URL 一个 route 文件；本条是组件内推流 + 状态累加的同源教训）；2026-09-21 模块 13 · 01 step-2 `pages/agent-loop.html`
+
+### P-030  ·  AI SDK 7.x UI 消息流 step 事件名是 start-step / finish-step
+
+- **症状**：前端只识别到 `tool-input-available` / `tool-output-available` / `text-delta` 等事件，**step 边界事件（蓝色 ▶ 开始、灰色 ■ 结束）不显示**；轨迹卡只见工具调用不见 step 圈数
+- **触发**：浏览器解析 `toUIMessageStream({ stream: result.stream })` 的事件类型名猜错，写成 `step-start` / `step-finish`
+- **根因**：AI SDK 7.x 实际推送的事件名是 `start-step` / `finish-step`（动词在前，名词在后），不是常见的 `*-start` / `*-finish`
+- **修复**：前端 onChunk 改成 `if (chunk.type === "start-step") pushStep(..., "step-start", chunk);` + `else if (chunk.type === "finish-step") pushStep(..., "step-finish", chunk);`（内部轨迹卡的 kind 仍用 `step-start` / `step-finish`，只把外部事件名对齐）
+- **反模式**：凭直觉写事件名；不先 curl 一次后端确认 `data: {...}` 里的 type 字段
+- **关联**：agents/05-demo.md §5.3.8（主流程单独成文件 → 顺路在浏览器侧验证事件名）；2026-09-21 模块 13 · 01 step-2 `pages/agent-loop.html`
+
+### P-031  ·  minimax 这条 OpenAI 路径默认把 reasoning 写在 text 里包 <think>
+
+- **症状**：「模型最终正文」段里出现 `<think>...</think>` 噪声；「思考（reasoning 段）」永远是空
+- **触发**：`createModel(providerId, "openai", { useReasoningMiddleware: false })` 或根本没传 `useReasoningMiddleware`（默认 true 之外的判断）
+- **根因**：minimax 直调 Chat Completions 接口把 reasoning 写在 `content` 里包 `` 文本标签；不开 `extractReasoningMiddleware({ tagName: "think" })` 就不拆
+- **修复**：工具调用循环 / 通用聊天场景 `createModel(..., { useReasoningMiddleware: true })`；只有结构化输出（`streamText({ output: Output.object })`）必须传 `false`，否则 generateObject / Output.object 拿不到完整 JSON
+- **反模式**：照抄 structured 那条「必须 false」关掉 reasoning，套到工具调用循环整页都用不上
+- **关联**：[lib/flow/agent-loop.ts](../../apps/13-Agent-Framework/01-框架解决什么-step-2/lib/flow/agent-loop.ts)；2026-09-21 模块 13 · 01 step-2 工具调用循环页优化
+
+### P-032  ·  Babel Standalone 对外链 src JSX 跑不通（仅内联块能 JSX）
+
+- **症状**：`Uncaught SyntaxError: Unexpected token '<'`，浏览器把 JSX 组件文件当普通 ESM 加载，看到 JSX `<` 报错
+- **触发**：组件文件 `*.js` 写 JSX，HTML 里 `<script type="text/babel" data-type="module" src="../components/foo.js">` 加载
+- **根因**：Babel Standalone 7.26.4 **只对内联** `<script type="text/babel">` 块做 JSX 转译；外链 src 文件被 Babel 异步 fetch + 转译 + 注入 `<script type="module">` Blob 时，**与内联块 ESM 注入有 race condition**，内联块的 import 经常拿到原始 JSX 文件
+- **修复**：JSX 组件代码必须留在主页 `<script type="text/babel" data-type="module">` 内联块里；`public/components/*.js` 只能写 `React.createElement(...)`（外链 `<script type="module">` 标准 ESM 立即生效）
+- **反模式**：把组件 JSX 写到 `public/components/*.js` 后用 `<script type="text/babel" data-type="module" src=...>` 加载；以为 Babel Standalone 支持外链 JSX
+- **关联**：[agents/05-demo.md §5.3.4.a](../../agents/05-demo.md#534a-esm-模式新写默认)；2026-09-21 模块 13 · 01 step-2 工具调用循环页 `components/agent-loop-panel.js` → 改方案 B：JSX 留在主页内联块 + 控件 / summary / request-params 三个 createElement 组件
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

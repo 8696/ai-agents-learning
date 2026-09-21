@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第二步 · 工具调用循环（streamText + tools + stopWhen）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="module" src="../components/agent-loop-panel.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from "react";
+    import { createRoot } from "react-dom/client";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+    import { AgentLoopPanel } from "../components/agent-loop-panel.js";
+
+    const DEFAULT_QUERY = "请帮我做一杯中杯热拿铁。";
+    const PROVIDERS = [
+      { id: "minimax", label: "MiniMax（默认）" },
+      { id: "zhipu", label: "智谱 GLM" },
+      { id: "deepseek", label: "DeepSeek" },
+      { id: "qwen", label: "千问 DashScope" },
+    ];
+    const PROTOCOLS = [
+      { id: "openai", label: "协议 A · OpenAI 兼容（Chat Completions）" },
+      { id: "anthropic", label: "协议 B · Anthropic 兼容（Messages API）" },
+    ];
+
+    /**
+     * 拆 AI SDK 的 UI 消息流（data: {...}\n\n）。挑 step / tool-call / tool-result / text / reasoning 五类。
+     * 接受外部 AbortController 中途打断；客户端 abort → fetch reject with AbortError，本函数吞掉不报错。
+     */
+    async function consumeUIMessageStream(url, body, ctrl, onChunk, onError) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+        if (!res.ok) {
+          let data = null;
+          try { data = await res.json(); } catch (_e) {}
+          onError("HTTP " + res.status + " " + ((data && data.error) || ""));
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf("\n\n")) >= 0) {
+            const frame = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+            for (const line of frame.split("\n")) {
+              if (line.indexOf("data: ") === 0) {
+                try { onChunk(JSON.parse(line.slice(6))); } catch (_e) {}
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err && err.name === "AbortError") return;
+        onError(err && err.message ? err.message : String(err));
+      }
+    }
+
+    function emptyPanel() {
+      return { steps: [], finalText: "", reasoning: "", error: "", elapsedMs: null, done: false };
+    }
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [provider, setProvider] = useState("minimax");
+      const [protocol, setProtocol] = useState("openai");
+      const [runToken, setRunToken] = useState(0);
+      const [status, setStatus] = useState("idle");
+      const [leftPanel, setLeftPanel] = useState(emptyPanel());
+      const [rightPanel, setRightPanel] = useState(emptyPanel());
+      const leftRef = useRef({ steps: [], finalText: "", reasoning: "" });
+      const rightRef = useRef({ steps: [], finalText: "", reasoning: "" });
+      const ctrlsRef = useRef({ left: null, right: null });
+      const lastKeyRef = useRef("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50140, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      const noKey = env && env.hasKey === false;
+
+      function cancelAll() {
+        if (ctrlsRef.current.left) ctrlsRef.current.left.abort();
+        if (ctrlsRef.current.right) ctrlsRef.current.right.abort();
+        if (status === "loading") setStatus("idle");
+      }
+
+      function run() {
+        if (!query.trim()) return;
+        setRunToken(function (n) { return n + 1; });
+      }
+
+      useEffect(function () {
+        if (!runToken) return;
+        const key = provider + "|" + protocol + "|" + runToken;
+        if (lastKeyRef.current === key) return;
+        lastKeyRef.current = key;
+        // 取消上一次
+        if (ctrlsRef.current.left) ctrlsRef.current.left.abort();
+        if (ctrlsRef.current.right) ctrlsRef.current.right.abort();
+        leftRef.current = { steps: [], finalText: "", reasoning: "" };
+        rightRef.current = { steps: [], finalText: "", reasoning: "" };
+        setLeftPanel(emptyPanel());
+        setRightPanel(emptyPanel());
+        setStatus("loading");
+
+        const started = Date.now();
+
+        function pushStep(side, kind, data) {
+          const ref = side === "left" ? leftRef : rightRef;
+          ref.current.steps.push({ kind: kind, data: data, ts: Date.now() - started });
+          const next = {
+            steps: ref.current.steps.slice(),
+            finalText: ref.current.finalText,
+            reasoning: ref.current.reasoning,
+            error: "",
+            elapsedMs: null,
+            done: false,
+          };
+          if (side === "left") setLeftPanel(next); else setRightPanel(next);
+        }
+        function pushText(side, delta) {
+          const ref = side === "left" ? leftRef : rightRef;
+          ref.current.finalText += delta;
+          const next = {
+            steps: ref.current.steps.slice(),
+            finalText: ref.current.finalText,
+            reasoning: ref.current.reasoning,
+            error: "",
+            elapsedMs: null,
+            done: false,
+          };
+          if (side === "left") setLeftPanel(next); else setRightPanel(next);
+        }
+        function pushReasoning(side, delta) {
+          const ref = side === "left" ? leftRef : rightRef;
+          ref.current.reasoning += delta;
+          const next = {
+            steps: ref.current.steps.slice(),
+            finalText: ref.current.finalText,
+            reasoning: ref.current.reasoning,
+            error: "",
+            elapsedMs: null,
+            done: false,
+          };
+          if (side === "left") setLeftPanel(next); else setRightPanel(next);
+        }
+        function finish(side, errorMsg) {
+          const elapsed = Date.now() - started;
+          const ref = side === "left" ? leftRef : rightRef;
+          const next = {
+            steps: ref.current.steps.slice(),
+            finalText: ref.current.finalText,
+            reasoning: ref.current.reasoning,
+            error: errorMsg || "",
+            elapsedMs: elapsed,
+            done: true,
+          };
+          if (side === "left") setLeftPanel(next); else setRightPanel(next);
+        }
+
+        // 左栏 mode = default
+        const leftCtrl = new AbortController();
+        ctrlsRef.current.left = leftCtrl;
+        consumeUIMessageStream("/api/agent-loop", { query: query, provider: provider, protocol: protocol, mode: "default" }, leftCtrl,
+          function (chunk) {
+            if (chunk.type === "start-step") pushStep("left", "step-start", chunk);
+            else if (chunk.type === "finish-step") pushStep("left", "step-finish", chunk);
+            else if (chunk.type === "tool-input-available") pushStep("left", "tool-call", chunk);
+            else if (chunk.type === "tool-output-available") pushStep("left", "tool-result", chunk);
+            else if (chunk.type === "text-delta" && typeof chunk.delta === "string") pushText("left", chunk.delta);
+            else if (chunk.type === "reasoning-delta" && typeof chunk.delta === "string") pushReasoning("left", chunk.delta);
+          },
+          function (msg) { finish("left", msg); },
+        ).then(function () { finish("left", ""); });
+
+        // 右栏 mode = stopWhen3
+        const rightCtrl = new AbortController();
+        ctrlsRef.current.right = rightCtrl;
+        consumeUIMessageStream("/api/agent-loop", { query: query, provider: provider, protocol: protocol, mode: "stopWhen3" }, rightCtrl,
+          function (chunk) {
+            if (chunk.type === "start-step") pushStep("right", "step-start", chunk);
+            else if (chunk.type === "finish-step") pushStep("right", "step-finish", chunk);
+            else if (chunk.type === "tool-input-available") pushStep("right", "tool-call", chunk);
+            else if (chunk.type === "tool-output-available") pushStep("right", "tool-result", chunk);
+            else if (chunk.type === "text-delta" && typeof chunk.delta === "string") pushText("right", chunk.delta);
+            else if (chunk.type === "reasoning-delta" && typeof chunk.delta === "string") pushReasoning("right", chunk.delta);
+          },
+          function (msg) { finish("right", msg); },
+        ).then(function () { finish("right", ""); });
+
+        return function () {
+          leftCtrl.abort();
+          rightCtrl.abort();
+        };
+      }, [runToken]);
+
+      function summaryOf(panel) {
+        const steps = panel.steps.filter(function (s) { return s.kind === "step-start"; }).length;
+        const tools = panel.steps.filter(function (s) { return s.kind === "tool-call"; }).length;
+        const elapsed = panel.elapsedMs == null ? "—" : (panel.elapsedMs + " ms");
+        return { steps: steps, tools: tools, elapsed: elapsed };
+      }
+
+      // 两侧 done 后整体状态 ok；任一侧 error → error
+      useEffect(function () {
+        if (status !== "loading") return;
+        if (leftPanel.done && rightPanel.done) {
+          setStatus(leftPanel.error || rightPanel.error ? "error" : "ok");
+        }
+      }, [leftPanel.done, rightPanel.done, leftPanel.error, rightPanel.error, status]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第二步（step-2） · 工具调用循环（streamText + tools + stopWhen）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="agent-loop" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一句 query 在两种 stopWhen 模式下跑：左栏不传 stopWhen（默认 stepCountIs(1)）→ 模型调一次 readMenu 就停，拿铁没做；右栏显式 stopWhen: stepCountIs(3) → 模型读菜单 → makeLatte → 出正文「热拿铁好了」。这是 Vercel AI SDK 第一次把 Reason → Act → Observe 循环收走的演示（笔记变体 A · 循环样板被收走 + 变体 E · 默认 maxSteps=1 的踩坑）。"
+              steps={[
+                "顶部下拉选 provider + 协议（4 家 × 2 协议，跟 structured / reasoning 同一套）。",
+                "改 query 然后点「跑一次」，左栏跑 mode=default / 右栏跑 mode=stopWhen3，两栏并发打同接口 /api/agent-loop。",
+                "服务端注册了两个 mock 工具：readMenu（读 cafe://today-menu，返回当日饮品清单）+ makeLatte（让吧台做一杯拿铁）。",
+                "streamText({ tools, stopWhen }) 真发网络请求：默认 mode 下 stopWhen 是 stepCountIs(1) → 库内只跑 1 步（readMenu 后停）；stopWhen3 mode 下显式传 stepCountIs(3) → 库内跑 3 步（readMenu → makeLatte → 出正文）。",
+                "工具调用轨迹走 UI 消息流（tool-input-available / tool-output-available 事件）回到浏览器，按时间序变成轨迹卡；点「中途取消」会 abort 当前两条 fetch。",
+              ]}
+              takeaway="默认 stopWhen 是 stepCountIs(1)：你以为在跑「看菜单再出杯」的 Agent，实际是「带工具的一次问答」——只读了 cafe://today-menu 就停，拿铁没做。模块 07 验收明确反对过这种假循环。换 provider 时观察 8 个组合的轨迹差异：minimax / zhipu / deepseek / qwen 的工具调用能力各家不同，菜单 API 没返回时可能直接走到出正文。"
+              observe="对照两侧：左栏轨迹卡通常只有 1 张「读菜单」就停；右栏有「读菜单」「做拿铁」「出正文」三张。按不同 provider 看：Anthropic 协议下会先有 reasoning 段（thinking），OpenAI 兼容下各家节奏不一样。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label htmlFor="provider-select" className="block text-sm text-gray-700">提供商（provider）</label>
+                <select
+                  id="provider-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white"
+                  value={provider}
+                  onChange={function (e) { setProvider(e.target.value); }}
+                >
+                  {PROVIDERS.map(function (p) { return <option key={p.id} value={p.id}>{p.label}</option>; })}
+                </select>
+                <label htmlFor="protocol-select" className="block text-sm text-gray-700">协议（protocol）</label>
+                <select
+                  id="protocol-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white"
+                  value={protocol}
+                  onChange={function (e) { setProtocol(e.target.value); }}
+                >
+                  {PROTOCOLS.map(function (p) { return <option key={p.id} value={p.id}>{p.label}</option>; })}
+                </select>
+                <span className="text-xs text-gray-500">
+                  当前 <code>{provider}</code> · <code>{protocol}</code>
+                  （{protocol === "openai" ? ".env 的 XXX_BASE_URL + XXX_MODEL" : ".env 的 XXX_ANTHROPIC_BASE_URL + XXX_ANTHROPIC_MODEL"}）
+                </span>
+              </div>
+              <label htmlFor="query-input" className="block text-sm text-gray-700">query（左右两栏共用）</label>
+              <textarea
+                id="query-input"
+                className="w-full border border-gray-300 rounded p-2 text-sm"
+                rows={2}
+                value={query}
+                onChange={function (e) { setQuery(e.target.value); }}
+              />
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  id="btn-run"
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                  disabled={!query.trim() || noKey || status === "loading"}
+                  onClick={run}
+                >
+                  {status === "loading" ? (
+                    <>
+                      <span className="inline-block w-3 h-3 border-2 text-white border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+                      <span>正在跑…（左 + 右 两个 streamText）</span>
+                    </>
+                  ) : (<span>跑一次（左右并发打 /api/agent-loop）</span>)}
+                </button>
+                <button
+                  id="btn-cancel"
+                  className="bg-red-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={status !== "loading"}
+                  onClick={cancelAll}
+                >
+                  中途取消（abort）
+                </button>
+                {noKey ? <p className="text-xs text-red-700">缺 密钥，按钮已禁用。请配 apps/.env。</p> : null}
+              </div>
+            </section>
+
+            <section id="request-params" className="bg-white shadow rounded p-4 space-y-2">
+              <div className="text-xs font-semibold text-gray-700">请求参数（Request · 两侧并发同 body 仅 mode 不同）</div>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                {"POST /api/agent-loop\nbody = {\n  query: <query>,\n  provider: <provider>,\n  protocol: <protocol>,\n  mode: \"default\" | \"stopWhen3\"\n}\n左栏 mode = \"default\"   → streamText 不传 stopWhen → 默认 stepCountIs(1) → 预期只跑 1 步（readMenu）→ 没 makeLatte\n右栏 mode = \"stopWhen3\" → streamText 传 stopWhen: stepCountIs(3) → 预期跑 3 步（readMenu → makeLatte → 出正文）"}
+              </pre>
+            </section>
+
+            <section id="summary" className="bg-white shadow rounded p-4">
+              <div className="text-xs font-semibold text-gray-700 mb-2">对照一览（Summary · 跑完自动算）</div>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="text-xs text-gray-500">左栏（mode = default）</div>
+                  <div className="text-2xl font-semibold text-blue-700">{summaryOf(leftPanel).steps} 步</div>
+                  <div className="text-xs text-gray-700 mt-1">工具 {summaryOf(leftPanel).tools} 次</div>
+                  <div className="text-xs text-gray-500 mt-1">{summaryOf(leftPanel).elapsed}</div>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="text-xs text-gray-500 mb-1">对照</div>
+                  <div className="text-xs text-gray-700">{summaryOf(rightPanel).steps - summaryOf(leftPanel).steps > 0 ? "右栏多 " + (summaryOf(rightPanel).steps - summaryOf(leftPanel).steps) + " 步" : "两栏 step 数相同"}</div>
+                  <div className="text-xs text-gray-700">{summaryOf(rightPanel).tools - summaryOf(leftPanel).tools > 0 ? "右栏多 " + (summaryOf(rightPanel).tools - summaryOf(leftPanel).tools) + " 次工具" : "两栏工具数相同"}</div>
+                  <div className="text-xs text-gray-500 mt-1">看右栏轨迹卡即可见差异</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">右栏（mode = stopWhen3）</div>
+                  <div className="text-2xl font-semibold text-purple-700">{summaryOf(rightPanel).steps} 步</div>
+                  <div className="text-xs text-gray-700 mt-1">工具 {summaryOf(rightPanel).tools} 次</div>
+                  <div className="text-xs text-gray-500 mt-1">{summaryOf(rightPanel).elapsed}</div>
+                </div>
+              </div>
+            </section>
+
+            <section id="output" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AgentLoopPanel panel={leftPanel} title="左栏 · mode = default · 不传 stopWhen → 默认 stepCountIs(1)" />
+              <AgentLoopPanel panel={rightPanel} title="右栏 · mode = stopWhen3 · 显式 stopWhen: stepCountIs(3)" />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
