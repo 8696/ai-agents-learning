@@ -241,7 +241,7 @@ apps/00-环境准备/01-mini-app-step-1/      ← 模块 00 HTTP 演示写到哪
 - **一个业务 URL 一个 route 文件。** 对照两侧 = 两个文件；先规划再确认 = 两个文件。同一路径的 GET/POST，或 `/xxx` + `/xxx/:id`，可以同文件。
 - **交互跟笔记走**：笔记写了几步人机交互，页面就必须能逐步点完。禁止压成一个按钮一次跑完。
 - **对照可以同页，但每侧自己的请求，页面拆成多个组件。** 并排看见差异就是对照的教学点，不必拆成两个 HTML。禁止一个 `/api/compare` 打包跑多条轨迹。无关功能 / 另一个教学点才拆到 `public/pages/`。
-- **单页也要拆组件**：轨迹卡、计划卡、对照数字、副作用三栏，各自 `public/components/`。内联脚本只装配，不把两侧 JSX 全堆进 `index.html`。
+- **单页也要拆组件**：轨迹卡、计划卡、对照数字、副作用三栏，各自 `public/components/`。内联脚本只装配，不把两侧 JSX 全堆进 `index.html`。**组件文件默认 HTM 写**（`html\`...\`` tagged template literal；浏览器原生执行，不需 Babel 转译，外链 src ESM 立即生效）；HTM 不可用时退回 `React.createElement(...)`；JSX 不推荐——Babel Standalone 7.26.4 不处理外链 src + JSX，详见 [agents/04-pitfalls.md P-032](agents/04-pitfalls.md)。HTML 写 细则 [agents/05-demo.md §5.3.6.a](agents/05-demo.md#536a-esm-模式5314a)。
 - **文件行数硬上限**（`check-demo` 拦）：业务 route ≤ 280 行；单页 HTML ≤ 400 行；`lib/` 业务文件（不含 `logger.ts` / `runtime-ctx.ts`）≤ 280 行；`public/components/*.js` ≤ 250 行。超了先拆文件，不准「先写完再说」。
 
 ---

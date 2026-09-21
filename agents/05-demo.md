@@ -404,12 +404,19 @@ yarn 脚本仍只指向 `server.ts`；禁止为每个场景再开一个入口或
        或 <script type="module">（当 utils 内部要 import 别人时）。 -->
   <script type="module" src="../utils/fetch-json.js"></script>
 
-  <!-- 多页时 public/components/*.js：合法 ESM。
-       共享组件本身必须是合法 ESM——两种写法：
-         ① 用 React.createElement(...) 写（推荐；不需要 Babel 转译）
-         ② 或外链文本先经 Babel data-type="module" 转译 + runtime:"automatic"（不推荐；多一步运行时编译）
+  <!-- 多页时 public/components/*.js：合法 ESM，默认用 HTM 写（2026-09-21 起新约定）。
+       HTM 是 tagged template literal：`html\`...\``；浏览器原生执行，不需要 Babel 转译，外链 src + ESM 立即生效。
+       三种写法都允许：
+         ① HTM 写（默认；语法像 JSX，零转译）
+         ② React.createElement(...) 写（也合法；HTM 不可用时兜底）
+         ③ JSX 写：不推荐——Babel Standalone 7.26.4 不处理外链 src + JSX（详见 P-032）；JSX 必须留内联块
        文件头写「职责 + 数据流」。本页内联块之前。
-       页面侧直接 `import { PageNav } from "../components/page-nav.js"`。 -->
+       页面侧直接 `import { PageNav } from "../components/page-nav.js"`。
+       HTM 标准导入模式：
+         import React from "react";
+         import htm from "https://esm.sh/htm";
+         const html = htm.bind(React.createElement);
+       HTM 写法速记：反引号内 `<tag attr=${expr}>children</tag>`；表达式用 `${...}`（不是 JSX 的 `{...}`）；属性直接 `attr="val"`。 -->
   <script type="module" src="../components/page-nav.js"></script>
   <script type="module" src="../components/layout.js"></script>
 
@@ -749,8 +756,19 @@ app.listen(PORT, "127.0.0.1", () => console.log(`http://127.0.0.1:${PORT}/`));
 
 ##### §5.3.6.a ESM 模式（§5.3.4.a）
 
-- **位置**：该页自己的 JSX 写在本 HTML 内联 `<script type="text/babel" data-type="module">` 块。无 app.tsx / src/。多页复用：JSX → `public/components/`（合法 ESM，`export function`），无 JSX → `public/utils/`（合法 ESM，`export function` / `export async function`），页面侧直接 `import`。
-- **运行时变量**：浏览器里 `React` / `ReactDOM` 由导入映射提供；**不**走全局，**不**挂 `window`。组件顶部 `import React, { useState, useEffect } from "react"`；`createRoot` `import { createRoot } from "react-dom/client"`。
+- **位置**：该页自己的 JSX 写在本 HTML 内联 `<script type="text/babel" data-type="module">` 块。无 app.tsx / src/。多页复用：**默认 HTM 写 `public/components/`（合法 ESM，`export function`，浏览器原生执行无 Babel）**；HTM 不可用（公司网 esm.sh 拉不到）时退回 `React.createElement(...)`；JSX 不推荐——Babel Standalone 7.26.4 不处理外链 src + JSX（详见 P-032）。无 JSX → `public/utils/`（合法 ESM，`export function` / `export async function`），页面侧直接 `import`。
+- **HTM 标准三件套**：
+  ```js
+  import React from "react";
+  import htm from "https://esm.sh/htm";
+  const html = htm.bind(React.createElement);
+  ```
+- **HTM vs JSX 速记**：
+  - 反引号 `` ` `` 包整段；`<tag attr=${expr}>children</tag>` —— 看起来几乎一样
+  - 表达式用 `${...}`（不是 JSX 的 `{...}`）
+  - 属性直接 `attr="value"`；动态用 `attr=${expr}`
+  - 条件渲染：`${cond && html\`<X/>\`}`；列表：`${arr.map(x => html\`<li>${x}</li>\`)}`
+- **运行时变量**：浏览器里 `React` / `ReactDOM` 由导入映射提供；**不**走全局，**不**挂 `window`。组件顶部 `import React from "react"`（HTM 不直接用 React.createElement，但 htm.bind 需要 React 作参数）；`createRoot` `import { createRoot } from "react-dom/client"`。
 - **状态**：组件内 `useState` / `useEffect` / `useRef`（import 后直接调；或 `React.useState`）；**禁止** Redux / Zustand / Recoil / 任何状态库。
 - **副作用**：直接 `fetch(...)`；**禁止** React Query / SWR / axios。
 - **样式**：Tailwind className 写在 JSX 上；自定义 CSS（要的话）写到 `public/app.css`。
@@ -2076,7 +2094,7 @@ export async function kvList(userId: string): Promise<Record<string, unknown>> {
 
 **位置**：每个 demo 自己一个 `apps/{demo}/public/components/page-nav.js`。**禁止**写到顶层 `apps/components/`、**禁止**跨 demo import（与 §5.3.12 独立性一致）。
 
-**模式分流（2026-09-12 起）**：新写 demo 按 §5.3.4.a ESM 模式时，`page-nav.js` 用 §5.3.18.a 的 ESM 模板（`export function PageNav` + 合法 ESM + `React.createElement(...)` 或 JSX+Babel 都行）；老 demo 按 §5.3.4.b UMD 模式时仍用 §5.3.18.b 的 IIFE 模板（挂 `window.DemoUI`）。两种模板**视觉一致**，仅内部 ESM vs UMD 不同。`check-demo` 对应两套都认。
+**模式分流（2026-09-12 起；2026-09-21 起 ESM 默认改 HTM）**：新写 demo 按 §5.3.4.a ESM 模式时，`page-nav.js` 用 §5.3.18.a 的 ESM 模板——**默认 HTM 写**（`html\`...\`` tagged template literal；浏览器原生执行，不需 Babel 转译，外链 src ESM 立即生效）；HTM 不可用（公司网 esm.sh 拉不到）时退回 `React.createElement(...)`；JSX 不推荐（Babel Standalone 7.26.4 不处理外链 src + JSX，详见 P-032）。老 demo 按 §5.3.4.b UMD 模式时仍用 §5.3.18.b 的 IIFE 模板（挂 `window.DemoUI`）。两种模板**视觉一致**，仅内部 ESM vs UMD 不同。`check-demo` 对应两套都认。
 
 **路径约定**（脚本批处理时一条规则）：
 
@@ -2106,18 +2124,21 @@ import { PageNav } from "../components/page-nav.js";
 | ESM 模式 | 顶部 `import { PageNav } from "../components/page-nav.js"`（与别的 import 一行） |
 | UMD 模式 | `const { PageNav } = window.DemoUI \|\| {};`（已有 `const { ... } = window.DemoUI;` 把 `PageNav` 加进同一行；没有就新增一行） |
 
-#### §5.3.18.a ESM page-nav.js 模板（§5.3.4.a 配套）
+#### §5.3.18.a ESM page-nav.js 模板（§5.3.4.a 配套 · 2026-09-21 起默认 HTM）
 
 ```js
 /**
  * 职责：顶部跨页导航。手写循环首页 / 框架循环子页 / 试用 useChat 子页。
  * 数据流：props.current 高亮；props.base 拼 href。
  *
- * 加载方式：本文件没有 JSX，全部用 React.createElement，
- *          因此是「直接可被浏览器当 ESM 解析」的合法模块。
+ * 加载方式：本文件用 HTM 写（`html\`...\`` 是 tagged template literal），
+ *          浏览器原生执行，不需要 Babel 转译；
  *          业务代码里直接 `import { PageNav } from ".../page-nav.js"` 即可。
  */
 import React from "react";
+import htm from "https://esm.sh/htm";
+
+const html = htm.bind(React.createElement);
 
 const PAGES = [
   { key: "overview", label: "手写循环（Agent Loop）", href: "index.html" },
@@ -2128,24 +2149,26 @@ const PAGES = [
 export function PageNav(props) {
   const current = props.current;
   const base = props.base || "";
-  return React.createElement(
-    "nav",
-    { className: "bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm" },
-    PAGES.map(function (item) {
-      const active = item.key === current;
-      return React.createElement(
-        "a",
-        {
-          key: item.key,
-          href: base + item.href,
-          className: active ? NAV_CLASS_ACTIVE : NAV_CLASS_IDLE,
-        },
-        item.label
-      );
-    })
-  );
+  return html`
+    <nav className="bg-white border border-gray-200 rounded p-3 flex flex-wrap gap-2 text-sm">
+      ${PAGES.map(function (item) {
+        const active = item.key === current;
+        return html`
+          <a
+            key=${item.key}
+            href=${base + item.href}
+            className=${active ? NAV_CLASS_ACTIVE : NAV_CLASS_IDLE}
+          >${item.label}</a>
+        `;
+      })}
+    </nav>
+  `;
 }
 ```
+
+> 兜底：HTM 不可用（esm.sh 拉不到）时退回 `React.createElement(...)`，写法见 §5.3.6.a 注释。
+>
+> 禁止：JSX 写——Babel Standalone 7.26.4 不处理外链 src + JSX（详见 P-032）。
 
 #### §5.3.18.b UMD page-nav.js 模板（§5.3.4.b 配套 · legacy）
 

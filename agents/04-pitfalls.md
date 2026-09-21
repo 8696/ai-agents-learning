@@ -335,14 +335,14 @@
 - **反模式**：照抄 structured 那条「必须 false」关掉 reasoning，套到工具调用循环整页都用不上
 - **关联**：[lib/flow/agent-loop.ts](../../apps/13-Agent-Framework/01-框架解决什么-step-2/lib/flow/agent-loop.ts)；2026-09-21 模块 13 · 01 step-2 工具调用循环页优化
 
-### P-032  ·  Babel Standalone 对外链 src JSX 跑不通（仅内联块能 JSX）
+### P-032  ·  Babel Standalone 7.26.4 对外链 src JSX 实际跑不通
 
-- **症状**：`Uncaught SyntaxError: Unexpected token '<'`，浏览器把 JSX 组件文件当普通 ESM 加载，看到 JSX `<` 报错
-- **触发**：组件文件 `*.js` 写 JSX，HTML 里 `<script type="text/babel" data-type="module" src="../components/foo.js">` 加载
-- **根因**：Babel Standalone 7.26.4 **只对内联** `<script type="text/babel">` 块做 JSX 转译；外链 src 文件被 Babel 异步 fetch + 转译 + 注入 `<script type="module">` Blob 时，**与内联块 ESM 注入有 race condition**，内联块的 import 经常拿到原始 JSX 文件
-- **修复**：JSX 组件代码必须留在主页 `<script type="text/babel" data-type="module">` 内联块里；`public/components/*.js` 只能写 `React.createElement(...)`（外链 `<script type="module">` 标准 ESM 立即生效）
-- **反模式**：把组件 JSX 写到 `public/components/*.js` 后用 `<script type="text/babel" data-type="module" src=...>` 加载；以为 Babel Standalone 支持外链 JSX
-- **关联**：[agents/05-demo.md §5.3.4.a](../../agents/05-demo.md#534a-esm-模式新写默认)；2026-09-21 模块 13 · 01 step-2 工具调用循环页 `components/agent-loop-panel.js` → 改方案 B：JSX 留在主页内联块 + 控件 / summary / request-params 三个 createElement 组件
+- **症状**：`Uncaught SyntaxError: Unexpected token '<' (at agent-loop-panel.js:16:7)`，浏览器**直接**把 JSX 组件文件当 ESM 加载（看到 `<div>` 的 `<` 报错）
+- **触发**：组件文件 `*.js` 写 JSX，HTML 里 `<script type="text/babel" data-type="module" src="../components/foo.js">` 加载；硬刷新后仍报错（排除缓存）
+- **根因**：[Babel Standalone 文档](https://babeljs.io/docs/babel-standalone) 写明 v7.10+ 支持外链 src + ESM，但 v7.26.4 实际**没有处理**外链 src（`grep` 命中 `data-type` 字符串处理逻辑但未发现 fetch src 路径）。可能的实现细节差异 / 已知 bug 不详
+- **修复**：`public/components/*.js` 只能写 `React.createElement(...)`（外链 `<script type="module">` 标准 ESM 立即生效）；JSX 组件代码必须留在主页 `<script type="text/babel" data-type="module">` 内联块里
+- **反模式**：以为 Babel Standalone 支持外链 JSX，把组件 JSX 写到 `public/components/*.js` 后用 `<script type="text/babel" data-type="module" src=...>` 加载
+- **关联**：[agents/05-demo.md §5.3.4.a](../../agents/05-demo.md#534a-esm-模式新写默认)；2026-09-21 模块 13 · 01 step-2 工具调用循环页 `components/agent-loop-panel.js`
 
 ---
 
