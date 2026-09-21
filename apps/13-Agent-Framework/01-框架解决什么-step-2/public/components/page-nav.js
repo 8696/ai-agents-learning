@@ -15,6 +15,7 @@ const PAGES = [
   { key: "basic-chat", label: "基础聊天（basic-chat）", href: "index.html" },
   { key: "reasoning-extract", label: "推理内容统一处理（extractReasoningMiddleware）", href: "pages/reasoning-extract.html" },
   { key: "structured", label: "结构化输出（generateObject + zodSchema）", href: "pages/structured.html" },
+  { key: "generate-vs-stream", label: "非流式 vs 流式（generateText vs streamText）", href: "pages/generate-vs-stream.html" },
   { key: "agent-loop", label: "工具调用循环（streamText + tools + stopWhen）", href: "pages/agent-loop.html" },
   { key: "agent-prepare-step", label: "工具渐进（streamText + prepareStep）", href: "pages/agent-prepare-step.html" },
 ];

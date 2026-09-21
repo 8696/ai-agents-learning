@@ -13,6 +13,7 @@ import { logger } from "./lib/logger.js";
 import { mountAgentLoopRoutes } from "./routes/agent-loop.js";
 import { mountAgentPrepareStepRoutes } from "./routes/agent-prepare-step.js";
 import { mountBasicChatRoutes } from "./routes/basic-chat.js";
+import { mountGenerateVsStreamRoutes } from "./routes/generate-vs-stream.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountReasoningAnthropicRoutes } from "./routes/reasoning-anthropic.js";
 import { mountReasoningOpenAiRoutes } from "./routes/reasoning-openai.js";
@@ -30,13 +31,14 @@ mountReasoningAnthropicRoutes(router);
 mountStructuredRoutes(router);
 mountAgentLoopRoutes(router);
 mountAgentPrepareStepRoutes(router);
+mountGenerateVsStreamRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info("server.start", "listening", "step-2：基础聊天 + 推理提取 + 结构化输出 + 工具调用循环。", {
+  logger.info("server.start", "listening", "step-2：基础聊天 + 推理提取 + 结构化输出 + 工具调用循环 + 工具渐进 + 非流式 vs 流式。", {
     url: `http://127.0.0.1:${PORT}/`,
     protocol: "A",
   });

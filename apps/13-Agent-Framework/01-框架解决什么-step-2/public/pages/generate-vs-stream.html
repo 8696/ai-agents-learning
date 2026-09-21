@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第二步 · 非流式 vs 流式</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+          integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+          crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "ai": "https://esm.sh/ai@7.0.107?external=react,react-dom",
+      "@ai-sdk/react": "https://esm.sh/@ai-sdk/react@4.0.108?external=react,react-dom,ai"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useMemo, useRef } from "react";
+    import { createRoot } from "react-dom/client";
+    import { useChat } from "@ai-sdk/react";
+    import { DefaultChatTransport } from "ai";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+
+    const DEFAULT_QUERY = "请用两句话介绍点咖啡小程序最值得讲的一件事。";
+    const PROVIDERS = [
+      { id: "minimax", label: "MiniMax（默认）" },
+      { id: "zhipu", label: "智谱 GLM" },
+      { id: "deepseek", label: "DeepSeek" },
+      { id: "qwen", label: "千问 DashScope" },
+    ];
+    const PROTOCOLS = [
+      { id: "openai", label: "协议 A · OpenAI 兼容（Chat Completions）", apiUrl: "/api/generate-vs-stream" },
+      { id: "anthropic", label: "协议 B · Anthropic 兼容（Messages API）", apiUrl: "/api/generate-vs-stream" },
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [provider, setProvider] = useState("minimax");
+      const [protocol, setProtocol] = useState("openai");
+
+      // 左栏：generateText 一次性
+      const [statusL, setStatusL] = useState("idle");
+      const [resultL, setResultL] = useState(null);
+      const [errorL, setErrorL] = useState("");
+      const [elapsedL, setElapsedL] = useState(null);
+      const inflightLRef = useRef(null);
+
+      // 右栏：useChat + streamText 流式
+      const transport = useMemo(function () {
+        return new DefaultChatTransport({
+          api: "/api/generate-vs-stream",
+          body: { provider: provider, protocol: protocol, mode: "stream" },
+        });
+      }, [provider, protocol]);
+      const chat = useChat({ id: "stream-side", transport: transport });
+      const [streamStartedAt, setStreamStartedAt] = useState(null);
+      const [streamFirstAt, setStreamFirstAt] = useState(null);
+      const [streamTotalAt, setStreamTotalAt] = useState(null);
+      const previousStatusRef = useRef(chat.status);
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50140, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      // 监听 chat.status 变化计算首字时延 + 总耗时
+      useEffect(function () {
+        const prev = previousStatusRef.current;
+        const next = chat.status;
+        if (prev !== "streaming" && next === "streaming") {
+          setStreamFirstAt(null);
+          setStreamTotalAt(null);
+          setStreamStartedAt(Date.now());
+        }
+        if (prev === "streaming" && (next === "ready" || next === "error")) {
+          setStreamTotalAt(Date.now() - (streamStartedAt || Date.now()));
+        }
+        previousStatusRef.current = next;
+      }, [chat.status, streamStartedAt]);
+
+      const noKey = env && env.hasKey === false;
+      const streamBusy = chat.status === "submitted" || chat.status === "streaming";
+      const busy = statusL === "loading" || streamBusy;
+
+      async function runGenerate() {
+        if (!query.trim()) return;
+        if (inflightLRef.current) inflightLRef.current.abort();
+        const ctrl = new AbortController();
+        inflightLRef.current = ctrl;
+        setStatusL("loading");
+        setErrorL("");
+        setResultL(null);
+        setElapsedL(null);
+        const started = Date.now();
+        try {
+          const res = await fetch("/api/generate-vs-stream", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query, provider: provider, protocol: protocol, mode: "generate" }),
+            signal: ctrl.signal,
+          });
+          const data = await res.json();
+          setElapsedL(Date.now() - started);
+          if (!res.ok) {
+            setErrorL("HTTP " + res.status + " " + ((data && data.error) || ""));
+            setStatusL("error");
+            return;
+          }
+          setResultL(data);
+          setStatusL(data.ok ? "ok" : "error");
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+          setErrorL((err && err.message) || String(err));
+          setStatusL("error");
+        }
+      }
+
+      function runStream() {
+        if (!query.trim()) return;
+        // 先清空之前累积的 messages；再用 chat.sendMessage({ text }) 推 user 消息 + 自动发请求。
+        // AI SDK 4.x 的 useChat 用 sendMessage。
+        chat.setMessages([]);
+        chat.sendMessage({ text: query });
+      }
+
+      function runBoth() {
+        runGenerate();
+        runStream();
+      }
+
+      // 取最后一条 assistant 消息的 text 拼成完整文本
+      const assistantMessages = (chat.messages || []).filter(function (m) { return m.role === "assistant"; });
+      const lastAssistant = assistantMessages.slice(-1)[0];
+      const streamedText = (lastAssistant && lastAssistant.parts ? lastAssistant.parts : [])
+        .filter(function (p) { return p.type === "text"; })
+        .map(function (p) { return p.text; })
+        .join("") || "";
+      // 首字时延：第一次出现非空文本片段时记录
+      useEffect(function () {
+        if (streamFirstAt == null && streamedText.length > 0) {
+          setStreamFirstAt(Date.now() - (streamStartedAt || Date.now()));
+        }
+      }, [streamedText, streamFirstAt, streamStartedAt]);
+
+      const streamStatus = streamBusy ? "loading" : (chat.status === "error" ? "error" : (streamedText ? "ok" : "idle"));
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第二步（step-2） · 非流式 vs 流式
+            </h1>
+            <StatusPill status={busy ? "loading" : (statusL === "error" || chat.status === "error" ? "error" : (statusL === "ok" || streamedText ? "ok" : "idle"))} />
+          </header>
+          <PageNav current="generate-vs-stream" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="AI SDK 的 generateText（一次性 await result.text）对照 streamText（流式推 UI 消息流给 useChat）。同句 query、同 provider、同 protocol、同 model，两种出口形态对照看。"
+              steps={[
+                "顶部下拉选 provider + 协议；两栏共用同一组下拉。",
+                "点「两边一起跑」并发跑：左栏 fetch mode=generate 一次性返回 JSON；右栏 useChat 把 query 当作 user message 发到 mode=stream。",
+                "左栏：服务端 await generateText({ model, prompt })，把 result.text + charCount + totalMs + usage 装成 JSON 写回浏览器。",
+                "右栏：服务端 streamText({ model, messages }) → toUIMessageStream → pipeUIMessageStreamToResponse 推 SSE（Server-Sent Events，服务器推送事件）；浏览器 useChat 自动把每条 data: {\"type\":\"text-delta\",\"delta\":\"...\"} 帧拆进 chat.messages 的 assistant text parts。",
+                "对照看的指标：左栏等多久才出文字（整段生成时间）；右栏多久出第一个字（首字时延）→ 后续逐字追加。",
+              ]}
+              takeaway="同一句 query，generateText 是「模型全说完 → 一次性返回」的同步语义；streamText 是「模型边说边推 → 浏览器边收边显示」的流式语义。AI SDK 把它们收成两个不同的入口函数，同一份 model 配置可以照搬过去。对照 step-2 现有 subpage：基础聊天 / agent-loop / agent-prepare-step 都用 streamText + useChat；这一页第一次把 generateText 拿出来对照。"
+              observe="对比两栏：左栏从按下到看到完整文字 = 整段文本生成时间；右栏 useChat 一进 streaming 就有 assistant message 在累积。两个数字之差就是流式真正的收益。"
+            />
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label htmlFor="provider-select" className="block text-sm text-gray-700">提供商（provider）</label>
+                <select
+                  id="provider-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white disabled:opacity-50"
+                  disabled={busy}
+                  value={provider}
+                  onChange={function (e) { setProvider(e.target.value); }}
+                >
+                  {PROVIDERS.map(function (p) {
+                    return React.createElement("option", { key: p.id, value: p.id }, p.label);
+                  })}
+                </select>
+                <label htmlFor="protocol-select" className="block text-sm text-gray-700">协议（protocol）</label>
+                <select
+                  id="protocol-select"
+                  className="border border-gray-300 rounded p-1.5 text-sm bg-white disabled:opacity-50"
+                  disabled={busy}
+                  value={protocol}
+                  onChange={function (e) { setProtocol(e.target.value); }}
+                >
+                  {PROTOCOLS.map(function (p) {
+                    return React.createElement("option", { key: p.id, value: p.id }, p.label);
+                  })}
+                </select>
+                <span className="text-xs text-gray-500">
+                  当前 <code>{provider}</code> · <code>{protocol}</code> · 两栏共用
+                </span>
+              </div>
+              <label htmlFor="query-input" className="block text-sm text-gray-700">query</label>
+              <textarea
+                id="query-input"
+                className="w-full border border-gray-300 rounded p-2 text-sm disabled:opacity-50"
+                rows={2}
+                value={query}
+                disabled={busy}
+                onChange={function (e) { setQuery(e.target.value); }}
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  id="btn-run-generate"
+                  className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                  disabled={!query.trim() || noKey || statusL === "loading"}
+                  onClick={runGenerate}
+                  title="左栏：fetch mode=generate 一次性返回完整文本"
+                >
+                  {statusL === "loading" ? "左栏 generateText 跑着…" : "只跑左栏 generate"}
+                </button>
+                <button
+                  id="btn-run-stream"
+                  className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                  disabled={!query.trim() || noKey || streamBusy}
+                  onClick={runStream}
+                  title="右栏：useChat + streamText 流式推 UI 消息流"
+                >
+                  {streamBusy ? "右栏 streamText 跑着…" : "只跑右栏 stream"}
+                </button>
+                <button
+                  id="btn-run-both"
+                  className="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                  disabled={!query.trim() || noKey || busy}
+                  onClick={runBoth}
+                  title="并发跑：左 fetch generate，右 useChat stream"
+                >
+                  两边一起跑（对照）
+                </button>
+                <button
+                  id="btn-clear"
+                  className="bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-sm disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { setResultL(null); setStatusL("idle"); setErrorL(""); chat.setMessages([]); }}
+                  title="清空左栏响应 + 右栏 useChat messages"
+                >
+                  清空两边
+                </button>
+              </div>
+              {noKey ? <p className="text-xs text-red-700">缺 密钥，按钮已禁用。请配 apps/.env。</p> : null}
+            </section>
+            <section id="output" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 左栏：generateText 一次性 */}
+              <div id="output-generate" className="bg-white shadow rounded p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-gray-700">左栏 · generateText（一次性 · fetch + JSON）</div>
+                  <StatusPill status={statusL} />
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-semibold text-gray-700">请求参数（Request）</div>
+                  <pre className="text-xs text-gray-700 whitespace-pre-wrap mt-1">
+                    {"POST /api/generate-vs-stream\nbody = { query, provider, protocol, mode: \"generate\" }\n当前组合：" + provider + " · " + protocol}
+                  </pre>
+                </div>
+                <div className="text-xs text-gray-500">
+                  总耗时 <b>{elapsedL == null ? "—" : elapsedL + " ms"}</b>
+                  {resultL && resultL.ok ? "　·　字符数 " + resultL.charCount : null}
+                  {resultL && resultL.ok ? "　·　finishReason " + resultL.finishReason : null}
+                </div>
+                <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">响应 JSON（一次性解析）</div>
+                  <pre className="text-xs text-gray-800 whitespace-pre-wrap mt-1 max-h-[360px] overflow-auto">
+                    {resultL ? JSON.stringify(resultL, null, 2) : "（未跑）"}
+                  </pre>
+                </div>
+                {resultL && resultL.ok ? (
+                  <div className="border border-green-300 bg-green-50 rounded p-3 space-y-1">
+                    <div className="text-xs font-semibold text-green-900">完整文本</div>
+                    <div className="text-sm text-gray-800 whitespace-pre-wrap">{resultL.text}</div>
+                  </div>
+                ) : null}
+                {errorL ? <p className="text-sm text-red-700">{errorL}</p> : null}
+              </div>
+
+              {/* 右栏：streamText + useChat */}
+              <div id="output-stream" className="bg-white shadow rounded p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-gray-700">右栏 · streamText（流式 · useChat）</div>
+                  <StatusPill status={streamStatus} />
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-semibold text-gray-700">请求参数（Request）</div>
+                  <pre className="text-xs text-gray-700 whitespace-pre-wrap mt-1">
+                    {"POST /api/generate-vs-stream\nbody = { messages: UIMessage[], provider, protocol, mode: \"stream\" }\n当前组合：" + provider + " · " + protocol}
+                  </pre>
+                </div>
+                <div className="text-xs text-gray-500">
+                  chat.messages 数 <b>{(chat.messages || []).length}</b>
+                  {"　·　assistant text parts 数 " + assistantMessages.length}
+                  {streamFirstAt != null ? "　·　首字时延 " + streamFirstAt + " ms" : null}
+                  {streamTotalAt != null ? "　·　总耗时 " + streamTotalAt + " ms" : null}
+                </div>
+                <div className="border border-gray-300 bg-white rounded p-3 space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">流式累积文本（useChat 自动解 SSE 帧 → assistant.text）</div>
+                  <div id="streamed-text" className="text-sm text-gray-800 whitespace-pre-wrap min-h-[120px] max-h-[360px] overflow-auto">
+                    {streamedText || "（未跑）"}
+                  </div>
+                </div>
+                {chat.error ? <p className="text-sm text-red-700">{"chat.error：" + String(chat.error && chat.error.message ? chat.error.message : chat.error)}</p> : null}
+              </div>
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

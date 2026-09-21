@@ -18,6 +18,7 @@
 | `index.html` | 基础聊天（系统提示词可改 + 多轮 + 4 个控件） |
 | `pages/reasoning-extract.html` | 推理内容统一处理（左右对照） |
 | `pages/structured.html` | 结构化输出（`streamText + Output.object`，4 家 provider × 2 协议切换） |
+| `pages/generate-vs-stream.html` | 非流式 vs 流式（`generateText` 一次性 对照 `streamText` 流式推 UI 消息流；左 generate / 右 stream 并发打同一接口） |
 | `pages/agent-loop.html` | 工具调用循环（`streamText + tools + stopWhen`，左右对照默认 1 步 vs 显式 3 步） |
 - 系统提示词 textarea：默认「通用中文助手」，用户可改。下一次发送时随 `body.system` 一起送到服务端。
 - 四个控件：发送、取消请求（`stop`）、重新生成（`regenerate`）、清空对话；每条消息右侧可单独删除。

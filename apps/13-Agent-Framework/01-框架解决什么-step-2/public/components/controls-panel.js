@@ -74,7 +74,7 @@ export function ControlsPanel(props) {
           （${state.protocol === "openai" ? ".env 的 XXX_BASE_URL + XXX_MODEL" : ".env 的 XXX_ANTHROPIC_BASE_URL + XXX_ANTHROPIC_MODEL"}）
         </span>
       </div>
-      <label htmlFor="query-input" className="block text-sm text-gray-700">query（左右两栏共用）</label>
+      <label htmlFor="query-input" className="block text-sm text-gray-700">query</label>
       <textarea
         id="query-input"
         className="w-full border border-gray-300 rounded p-2 text-sm"
@@ -93,10 +93,10 @@ export function ControlsPanel(props) {
             ? html`
                 <span>
                   <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
-                  正在跑…（左 + 右 两个 streamText）
+                  正在跑…（streamText）
                 </span>
               `
-            : "跑一次（左右并发打 /api/${props.endpoint || 'agent-loop'}）"}
+            : "跑一次"}
         </button>
         <button
           id="btn-cancel"
