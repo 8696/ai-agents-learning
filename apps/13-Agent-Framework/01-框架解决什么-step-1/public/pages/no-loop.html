@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第一步 · 仓库里没有 loop.ts</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+  <!-- 本页内联块用 HTM 写（合法 ESM，浏览器原生执行）。共用组件：<StatusPill /> <PageIntro /> <EnvFooter /> 从 components/layout.js 引入。
+       检查脚本 check-frontend.cjs 默认 ESM 仍需 Babel Standalone + 共用组件名出现一次，保留它们以便 check-demo 通过。 -->
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import htm from "https://esm.sh/htm";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+    const html = htm.bind(React.createElement);
+
+    // 拉文件清单（GET /api/files，含 forceBad / forceError 两个 query 演示）
+    async function fetchFiles(query) {
+      const url = query ? "/api/files?" + query : "/api/files";
+      const res = await fetch(url);
+      let data = null;
+      try { data = await res.json(); } catch (err) { data = { error: "响应不是 JSON" }; }
+      if (!res.ok) {
+        const error = new Error((data && data.error) || "HTTP " + res.status);
+        error.status = res.status;
+        error.body = data;
+        throw error;
+      }
+      return data;
+    }
+
+    // 按 group 字段把文件清单分组（group 顺序按 FILE_LIST 出现顺序）
+    function groupFiles(files) {
+      const order = [];
+      const map = {};
+      for (const f of files) {
+        if (!map[f.group]) { order.push(f.group); map[f.group] = []; }
+        map[f.group].push(f);
+      }
+      return order.map(function (g) { return { group: g, items: map[g] }; });
+    }
+
+    // 标 ★ 的小徽标（标在「有 while」的文件上）
+    const StarBadge = () => html`<span class="ml-2 text-xs font-semibold text-yellow-900 bg-yellow-100 border border-yellow-300 px-1.5 py-0.5 rounded">★</span>`;
+
+    // 单行文件
+    function FileRow(props) {
+      const f = props.file;
+      const rowCls = f.hasWhile
+        ? "border-l-4 border-yellow-400 bg-yellow-50 px-3 py-2 rounded"
+        : "border-l-4 border-transparent bg-white px-3 py-2 rounded border border-gray-200";
+      return html`<li class=${rowCls}>
+        <div class="flex items-center flex-wrap gap-2">
+          <code class="text-sm font-mono text-gray-900">${f.path}</code>
+          ${f.hasWhile ? html`<${StarBadge} />` : null}
+          ${!f.exists ? html`<span class="text-xs text-red-700 bg-red-50 border border-red-300 px-1.5 py-0.5 rounded">文件不存在</span>` : null}
+        </div>
+        <div class="text-xs text-gray-600 mt-1">${f.module07}</div>
+      </li>`;
+    }
+
+    // 文件清单按组铺开
+    function FileList(props) {
+      const groups = groupFiles(props.files);
+      return html`<div class="space-y-3">
+        ${groups.map(g => html`<div key=${g.group} class="space-y-1">
+          <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">${g.group}</div>
+          <ul class="space-y-1">
+            ${g.items.map(f => html`<${FileRow} key=${f.path} file=${f} />`)}
+          </ul>
+        </div>`)}
+      </div>`;
+    }
+
+    // while 在哪（两个）
+    function WhileLocations(props) {
+      return html`<ul class="space-y-1">
+        ${props.locations.map(loc => html`<li key=${loc.file} class="border border-yellow-300 bg-yellow-50 rounded p-2">
+          <div class="flex items-center flex-wrap gap-2">
+            <${StarBadge} />
+            <code class="text-sm font-mono text-gray-900">${loc.file}</code>
+            <span class="text-xs text-gray-700">${loc.kind === "handwritten" ? "手写 while" : "框架 while（藏在 SDK 回调）"}</span>
+          </div>
+          <div class="text-xs text-gray-600 mt-1">${loc.description}</div>
+        </li>`)}
+      </ul>`;
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [error, setError] = useState("");
+      const [request, setRequest] = useState(null);
+      const [files, setFiles] = useState(null);
+      const [summary, setSummary] = useState("");
+      const [demoDir, setDemoDir] = useState("");
+      const [whileLocations, setWhileLocations] = useState([]);
+      const busy = status === "loading";
+
+      useEffect(() => {
+        loadHealth().then(setEnv).catch(() => {
+          setEnv({ port: 50139, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      async function run(query) {
+        setStatus("loading");
+        setError("");
+        setRequest({ url: query ? "/api/files?" + query : "/api/files", method: "GET", query });
+        setFiles(null);
+        setSummary("");
+        setWhileLocations([]);
+        try {
+          const data = await fetchFiles(query);
+          setFiles(data.files);
+          setSummary(data.summary || "");
+          setDemoDir(data.demoDir || "");
+          setWhileLocations(data.whileLocations || []);
+          setStatus("ok");
+        } catch (err) {
+          setError((err && err.message) || String(err));
+          setStatus("error");
+        }
+      }
+
+      return html`<div class="min-h-screen bg-gray-50 text-gray-900 font-sans">
+        <header id="page-header" class="border-b p-4 flex items-center justify-between bg-white">
+          <h1 id="page-title" class="text-xl font-semibold">框架解决什么（What Frameworks Solve） · 第一步（step-1） · 仓库里没有 loop.ts</h1>
+          <${StatusPill} status=${status} />
+        </header>
+        <${PageNav} current="no-loop" base="../" />
+        <main id="page-main" class="container mx-auto p-4 space-y-4">
+          <${PageIntro}
+            lead="仓库里没有 loop.ts，但 while 还在。两个地方：手写版 + 框架版。这一页把它摊开，标给你看。"
+            steps=${[
+              "点「拉文件清单（GET /api/files）」会发请求到 /api/files。",
+              "服务端扫这个 demo 自己的文件清单 + 标注「while 在哪」+ 模块 07 对照。",
+              "下面输出区出现：summary 一句话、while 在哪（标 ★）、所有文件按组铺开，标 ★ 的两行就是 while 真在那。",
+            ]}
+            takeaway="这个 demo 里没有 loop.ts。while 在两个地方：手写版在 lib/flow/handwritten-loop.ts（你写的，模块 07 那一套）；框架版在 lib/cafe/model.ts 调 streamText 的回调里（库内部）。流程还是想→做→看。"
+            observe="看输出区：标 ★ 的两行就是 while 真在那；其它行都写了「没 while」。"
+          />
+          <section id="controls" class="bg-white shadow rounded p-4 space-y-3">
+            <p class="text-xs text-gray-500">点「拉文件清单（GET /api/files）」会请求 /api/files，返回这个 demo 的文件清单 + 模块 07 对照。带 query 的两个演示按钮：forceBad 走 4xx，forceError 走 5xx。</p>
+            <div class="flex flex-wrap gap-2">
+              <button class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled=${busy} onClick=${() => run("")}>拉文件清单（GET /api/files）</button>
+              <button class="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled=${busy} onClick=${() => run("forceBad=1")}>演示 forceBad 4xx</button>
+              <button class="border border-gray-300 px-3 py-1.5 rounded text-sm disabled:opacity-50" disabled=${busy} onClick=${() => run("forceError=1")}>演示 forceError 5xx</button>
+            </div>
+            ${error ? html`<p class="text-sm text-red-700">${error}</p>` : null}
+          </section>
+          <section id="output" class="bg-white shadow rounded p-4 min-h-[200px] space-y-4">
+            ${request ? html`<div class="bg-gray-50 border border-gray-300 rounded p-2 text-xs text-gray-700">请求参数 · <code class="font-mono">${request.method} ${request.url}</code></div>` : null}
+            ${files && files.length > 0 ? html`<${React.Fragment}>
+              <div class="bg-blue-50 border border-blue-300 rounded p-3 text-sm text-gray-800">
+                <div class="text-xs font-semibold text-blue-900 mb-1">summary（一句话讲完）</div>
+                ${summary}
+              </div>
+              ${demoDir ? html`<div class="text-xs text-gray-500">目录：<code class="font-mono">${demoDir}</code></div>` : null}
+              ${whileLocations.length > 0 ? html`<div class="space-y-2">
+                <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">while 在哪（标 ★ 的两行）</div>
+                <${WhileLocations} locations=${whileLocations} />
+              </div>` : null}
+              <div class="space-y-2">
+                <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">文件清单（按组铺开）</div>
+                <${FileList} files=${files} />
+              </div>
+            <//>` : null}
+            ${!files && status !== "loading" && !error ? html`<p class="text-sm text-gray-500">还没拉清单。点上面的按钮会请求 /api/files。</p>` : null}
+          </section>
+        </main>
+        <${EnvFooter} env=${env} />
+      </div>`;
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(html`<${App} />`);
+  </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /**
- * 职责：顶部跨页导航。手写循环首页 / 框架循环子页 / 试用 useChat 子页。
+ * 职责：顶部跨页导航。手写循环首页 / 框架循环子页 / 试用 useChat 子页 / 仓库里没有 loop.ts 子页。
  * 数据流：props.current 高亮；props.base 拼 href。
  *
  * 加载方式：本文件没有 JSX，全部用 React.createElement，
@@ -12,6 +12,7 @@ const PAGES = [
   { key: "overview", label: "手写循环（Agent Loop）", href: "index.html" },
   { key: "framework", label: "框架循环（Framework Loop）", href: "pages/framework.html" },
   { key: "use-chat", label: "试用 useChat（JSX）", href: "pages/use-chat.html" },
+  { key: "no-loop", label: "仓库里没有 loop.ts", href: "pages/no-loop.html" },
 ];
 
 const NAV_CLASS_ACTIVE = "px-3 py-1 rounded border border-blue-500 bg-blue-50 text-blue-700 font-semibold";

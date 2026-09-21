@@ -14,6 +14,7 @@ import { mountFrameworkChatRoutes } from "./routes/framework-chat.js";
 import { mountFrameworkLoopRoutes } from "./routes/framework-loop.js";
 import { mountHandwrittenLoopRoutes } from "./routes/handwritten-loop.js";
 import { mountHealthRoutes } from "./routes/health.js";
+import { mountNoLoopRoutes } from "./routes/no-loop.js";
 
 const { PORT } = parseRuntimeCtx();
 const app = new Koa();
@@ -24,6 +25,7 @@ mountHealthRoutes(router);
 mountHandwrittenLoopRoutes(router);
 mountFrameworkLoopRoutes(router);
 mountFrameworkChatRoutes(router);
+mountNoLoopRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
