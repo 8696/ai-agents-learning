@@ -76,6 +76,12 @@ export const makeLatte = tool({
     temp: MakeLatteArgs["temp"];
     etaMinutes: number;
   }> => {
+    // 教学点：吧台**没有大杯**。input.size === "large" 时 execute 抛错，SDK 会把错误
+    // 信息塞进 tool-result，主循环**继续**——模型看到 tool-result 含错误后自己决定下一步
+    //（重新调 makeLatte 改中杯 / 直接出正文说「大杯做不了」）。
+    if (input.size === "large") {
+      throw new Error("吧台没有大杯（large），只能做 small / medium。");
+    }
     return {
       ok: true,
       drinkId: "drink-" + Date.now(),

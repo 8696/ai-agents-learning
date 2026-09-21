@@ -16,6 +16,7 @@ const PAGES = [
   { key: "reasoning-extract", label: "推理内容统一处理（extractReasoningMiddleware）", href: "pages/reasoning-extract.html" },
   { key: "structured", label: "结构化输出（generateObject + zodSchema）", href: "pages/structured.html" },
   { key: "agent-loop", label: "工具调用循环（streamText + tools + stopWhen）", href: "pages/agent-loop.html" },
+  { key: "agent-prepare-step", label: "工具渐进（streamText + prepareStep）", href: "pages/agent-prepare-step.html" },
 ];
 
 const NAV_CLASS_ACTIVE = "px-3 py-1 rounded border border-blue-500 bg-blue-50 text-blue-700 font-semibold";

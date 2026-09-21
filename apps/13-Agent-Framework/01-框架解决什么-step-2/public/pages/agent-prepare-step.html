@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>框架解决什么 · 第二步 · 工具渐进（streamText + prepareStep）</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <!-- §5.3.4 共用强制：#controls 在文档里字面出现；实际控件由 ControlsPanel 在 #root 内渲染 -->
+  <section id="controls" hidden></section>
+  <div id="root"></div>
+  <script type="module" src="../utils/fetch-json.js"></script>
+  <script type="module" src="../components/page-nav.js"></script>
+  <script type="module" src="../components/layout.js"></script>
+  <script type="module" src="../components/agent-loop-panel.js"></script>
+  <script type="module" src="../components/controls-panel.js"></script>
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from "react";
+    import { createRoot } from "react-dom/client";
+    import { loadHealth } from "../utils/fetch-json.js";
+    import { PageNav } from "../components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "../components/layout.js";
+    import { AgentLoopPanel } from "../components/agent-loop-panel.js";
+    import { ControlsPanel } from "../components/controls-panel.js";
+
+    const DEFAULT_QUERY = "请帮我做一杯中杯热拿铁。";
+
+    async function consumeUIMessageStream(url, body, ctrl, onChunk, onError) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+        if (!res.ok) {
+          let data = null;
+          try { data = await res.json(); } catch (_e) {}
+          onError("HTTP " + res.status + " " + ((data && data.error) || ""));
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf("\n\n")) >= 0) {
+            const frame = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+            for (const line of frame.split("\n")) {
+              if (line.indexOf("data: ") === 0) {
+                try { onChunk(JSON.parse(line.slice(6))); } catch (_e) {}
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err && err.name === "AbortError") return;
+        onError(err && err.message ? err.message : String(err));
+      }
+    }
+
+    function emptyPanel() {
+      return { steps: [], finalText: "", reasoning: "", error: "", elapsedMs: null, done: false };
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [query, setQuery] = useState(DEFAULT_QUERY);
+      const [provider, setProvider] = useState("minimax");
+      const [protocol, setProtocol] = useState("openai");
+      const [runToken, setRunToken] = useState(0);
+      const [status, setStatus] = useState("idle");
+      const [panel, setPanel] = useState(emptyPanel());
+      const panelRef = useRef({ steps: [], finalText: "", reasoning: "" });
+      const ctrlRef = useRef(null);
+      const lastKeyRef = useRef("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50140, provider: null, model: null, hasKey: false });
+        });
+      }, []);
+
+      const noKey = env && env.hasKey === false;
+
+      function cancelAll() {
+        if (ctrlRef.current) ctrlRef.current.abort();
+        if (status === "loading") setStatus("idle");
+      }
+
+      function run() {
+        if (!query.trim()) return;
+        setRunToken(function (n) { return n + 1; });
+      }
+
+      useEffect(function () {
+        if (!runToken) return;
+        const key = provider + "|" + protocol + "|" + runToken;
+        if (lastKeyRef.current === key) return;
+        lastKeyRef.current = key;
+        if (ctrlRef.current) ctrlRef.current.abort();
+        panelRef.current = { steps: [], finalText: "", reasoning: "" };
+        setPanel(emptyPanel());
+        setStatus("loading");
+
+        const started = Date.now();
+
+        function pushStep(kind, data) {
+          panelRef.current.steps.push({ kind: kind, data: data, ts: Date.now() - started });
+          setPanel({
+            steps: panelRef.current.steps.slice(),
+            finalText: panelRef.current.finalText,
+            reasoning: panelRef.current.reasoning,
+            error: "",
+            elapsedMs: null,
+            done: false,
+          });
+        }
+        function pushText(delta) {
+          panelRef.current.finalText += delta;
+          setPanel({
+            steps: panelRef.current.steps.slice(),
+            finalText: panelRef.current.finalText,
+            reasoning: panelRef.current.reasoning,
+            error: "",
+            elapsedMs: null,
+            done: false,
+          });
+        }
+        function pushReasoning(delta) {
+          panelRef.current.reasoning += delta;
+          setPanel({
+            steps: panelRef.current.steps.slice(),
+            finalText: panelRef.current.finalText,
+            reasoning: panelRef.current.reasoning,
+            error: "",
+            elapsedMs: null,
+            done: false,
+          });
+        }
+        function finish(errorMsg) {
+          const elapsed = Date.now() - started;
+          setPanel({
+            steps: panelRef.current.steps.slice(),
+            finalText: panelRef.current.finalText,
+            reasoning: panelRef.current.reasoning,
+            error: errorMsg || "",
+            elapsedMs: elapsed,
+            done: true,
+          });
+        }
+
+        // 单栏：prepareStep 按 stepNumber 渐进放工具
+        const ctrl = new AbortController();
+        ctrlRef.current = ctrl;
+        consumeUIMessageStream("/api/agent-prepare-step", { query: query, provider: provider, protocol: protocol, mode: "progressive" }, ctrl,
+          function (chunk) {
+            if (chunk.type === "start-step") pushStep("step-start", chunk);
+            else if (chunk.type === "finish-step") pushStep("step-finish", chunk);
+            else if (chunk.type === "tool-input-available") pushStep("tool-call", chunk);
+            else if (chunk.type === "tool-output-available") pushStep("tool-result", chunk);
+            else if (chunk.type === "text-delta" && typeof chunk.delta === "string") pushText(chunk.delta);
+            else if (chunk.type === "reasoning-delta" && typeof chunk.delta === "string") pushReasoning(chunk.delta);
+          },
+          function (msg) { finish(msg); },
+        ).then(function () { finish(""); });
+
+        return function () { ctrl.abort(); };
+      }, [runToken]);
+
+      useEffect(function () {
+        if (status !== "loading") return;
+        if (panel.done) setStatus(panel.error ? "error" : "ok");
+      }, [panel.done, panel.error, status]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              框架解决什么（What Frameworks Solve） · 第二步（step-2） · 工具渐进（streamText + prepareStep）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+          <PageNav current="agent-prepare-step" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="演示 Vercel AI SDK 控制「每一步用什么 model / tools / messages」的入口 prepareStep。本步是：step 0（第一步）只给 readMenu、step 1（第二步）才解锁 makeLatte → 模型必须先读菜单再做拿铁（不会被允许「读完菜单就出正文」偷懒）。"
+              steps={[
+                "顶部下拉选 provider + 协议。",
+                "点「跑一次」，打 /api/agent-prepare-step，body.mode = \"progressive\"。",
+                "服务端复用 agent-loop 那两个 mock 工具（readMenu / makeLatte）；streamText({ tools, stopWhen: stepCountIs(3), prepareStep }) 真发网络请求。",
+                "prepareStep 按 stepNumber 返回不同 tools 集 → step 0 模型只能调 readMenu（必读菜单）；step 1 模型才能调 makeLatte。",
+                "工具调用轨迹走 UI 消息流（tool-input-available / tool-output-available 事件）回到浏览器，按时间序变成轨迹卡；中途取消 abort 当前 fetch。",
+              ]}
+              takeaway="prepareStep 是 Vercel AI SDK 控制「每一步用什么 model / tools / messages」的核心钩子。stopWhen 只控步数；prepareStep 控每步的运行时配置。生产环境防止模型乱调工具的常用手法：step 0 只给只读工具做意图检查，step 1+ 解锁写工具；或 step 0 用便宜模型分类，step 1+ 用强模型深做。"
+              observe="轨迹卡必然先有 readMenu 工具卡（step 0 必读菜单），再有 makeLatte 工具卡（step 1 解锁后做咖啡），最后出正文「拿铁好了」。把 query 改成「给我做一杯大杯热拿铁」能演示工具抛错：makeLatte 一遇 size=large 就 throw，SDK 把错误塞进 tool-result，主循环继续，模型可能再调一次 makeLatte 改中杯。"
+            />
+
+            <ControlsPanel
+              state={{ query: query, provider: provider, protocol: protocol, status: status, noKey: noKey }}
+              dispatchers={{ setQuery: setQuery, setProvider: setProvider, setProtocol: setProtocol, run: run, cancelAll: cancelAll }}
+              endpoint="agent-prepare-step"
+            />
+
+            <section id="request-params" className="bg-white shadow rounded p-4 space-y-2">
+              <div className="text-xs font-semibold text-gray-700">请求参数（Request）</div>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                {"POST /api/agent-prepare-step\nbody = {\n  query: <query>,\n  provider: <provider>,\n  protocol: <protocol>,\n  mode: \"progressive\"\n}\n服务端 streamText({ tools: {readMenu, makeLatte}, stopWhen: stepCountIs(3), prepareStep: async ({stepNumber}) => {\n  if (stepNumber === 0) return { tools: { readMenu } };          // step 0 只能查菜单\n  return { tools: { readMenu, makeLatte } };                  // step 1+ 才解锁做咖啡\n}})"}
+              </pre>
+            </section>
+
+            <section id="output">
+              <AgentLoopPanel panel={panel} title="prepareStep 渐进放工具（step 0 只读，step 1+ 解锁做咖啡）" />
+            </section>
+          </main>
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

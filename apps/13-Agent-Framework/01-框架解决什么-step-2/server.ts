@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { parseRuntimeCtx } from "./lib/http/runtime-ctx.js";
 import { logger } from "./lib/logger.js";
 import { mountAgentLoopRoutes } from "./routes/agent-loop.js";
+import { mountAgentPrepareStepRoutes } from "./routes/agent-prepare-step.js";
 import { mountBasicChatRoutes } from "./routes/basic-chat.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountReasoningAnthropicRoutes } from "./routes/reasoning-anthropic.js";
@@ -28,6 +29,7 @@ mountReasoningOpenAiRoutes(router);
 mountReasoningAnthropicRoutes(router);
 mountStructuredRoutes(router);
 mountAgentLoopRoutes(router);
+mountAgentPrepareStepRoutes(router);
 app.use(router.routes()).use(router.allowedMethods());
 
 const publicDir = fileURLToPath(new URL("./public", import.meta.url));
