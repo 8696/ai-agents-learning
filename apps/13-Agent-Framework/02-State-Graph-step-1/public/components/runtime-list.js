@@ -1,6 +1,8 @@
 /**
  * 职责：运行期按站摊开。每一站用工位图标出走到哪，用四格夹子标出改了哪一格。
- * 数据流：props.input / runtime / finalState / drinkName（空态预览用）。
+ * 数据流：props.input / runtime / finalState / drinkName / nodeCodes（空态预览用）。
+ * 注：本组件不再从 runtime[i].code 读源代码——运行时不含展示代码字段；
+ *     展示代码由 declaration 层从 source.ts 拿来一份 nodeCodes 映射，本组件按 node 名查。
  */
 import React from "react";
 import htm from "https://esm.sh/htm";
@@ -79,8 +81,8 @@ export function RuntimeList(props) {
             />
             <${SourceBlock}
               title=${"这一站的节点函数源代码"}
-              why="框架调用的就是下面这个函数。它只 return 自己改的字段，不会改「当前站」。"
-              code=${step.code}
+              why="框架调用的就是下面这个函数。它只 return 自己改的字段，不会改「当前站」。展示代码来自 lib/flow/linear-graph-source.ts，和运行时解耦。"
+              code=${(props.nodeCodes || {})[step.node] || "（这一站没有展示代码）"}
             />
             <div className="border border-gray-300 rounded p-2 bg-gray-50 space-y-1">
               <div className="text-xs font-semibold text-gray-700">这一站交回的小纸条（补丁 patch）</div>

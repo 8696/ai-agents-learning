@@ -1,17 +1,20 @@
 /**
  * 职责：把线性图的声明步骤和源代码整理成页面能直接渲染的说明。
- * 数据流：节点函数文案 + 边表文案 → DeclarationStep[]。
+ * 数据流：节点函数文案 + 边表文案 + 展示代码字面量（来自 linear-graph-source.ts）→ DeclarationStep[]。
  * 为什么单独成文件：跑图的主路径在 linear-graph.ts；本文件只服务「图还没跑时先看见源代码」。
+ * 注：本文件是展示层的中间站——从 source 拿展示代码字面量，吐给前端；运行时不经过这里。
  */
-import { logger } from "../logger.js";
+import {
+  DEFAULT_DRINK,
+} from "./linear-graph.js";
 import {
   BREW_HOT_CODE,
   BUILD_CODE,
-  DEFAULT_DRINK,
+  NODE_CODE_BY_NAME,
   SERVE_CODE,
   STATE_CODE,
   TAKE_ORDER_CODE,
-} from "./linear-graph.js";
+} from "./linear-graph-source.js";
 
 export type DeclarationStep = {
   id: string;
@@ -24,29 +27,23 @@ export type LinearGraphView = {
   drinkDefault: string;
   declaration: DeclarationStep[];
   edges: Array<{ from: string; to: string; why: string }>;
+  nodeCodes: Record<string, string>;
 };
 
 export function describeLinearGraph(): LinearGraphView {
-  const t0 = Date.now();
-  logger.info(
-    "调用函数-describeLinearGraph",
-    "调用函数开始：describeLinearGraph",
-    "为什么写这条日志：页面加载时先看见声明步骤和源代码，还没跑图。当前：只读装配说明。",
-    { 入参: {}, __code: describeLinearGraph.toString() },
-  );
-  const 返回值: LinearGraphView = {
+  return {
     drinkDefault: DEFAULT_DRINK,
     declaration: [
       {
         id: "state",
         title: "① 声明状态标注（State Annotation）",
-        why: "告诉框架这份状态有哪些字段、每个字段被更新时怎么合并。手写版你没有这一层，就是一个类型 + 对象展开。step-1 每个字段只有一个节点写，归约函数还看不出并行冲突。",
+        why: "告诉框架这份状态有哪些字段、每个字段被更新时怎么合并。手写版没有这一层。",
         code: STATE_CODE,
       },
       {
         id: "nodes",
         title: "② 登记三个节点（addNode）",
-        why: "节点函数签名和模块 11 一模一样：吃状态，只返回自己改的字段。业务函数不用重写，换的是谁在喊「下一步做什么」。",
+        why: "节点函数签名和模块 11 一模一样：吃状态，只返回自己改的字段。step-1 故意把每个节点内部升级成 await 一个本地 async 工具（模拟真实业务里调远程服务的延迟与回包），以后换真 HTTP 只改 URL。",
         code: [TAKE_ORDER_CODE, BREW_HOT_CODE, SERVE_CODE].join("\n\n"),
       },
       {
@@ -61,13 +58,13 @@ export function describeLinearGraph(): LinearGraphView {
       {
         id: "compile",
         title: "④ 编译（compile）",
-        why: "声明期和运行期的分界线。compile 把链式声明收成可运行对象，并做静态检查（边指向不存在的节点会在这里炸）。一行业务都还没跑。",
+        why: "声明期和运行期的分界线。compile 把链式声明收成可运行对象，并做静态检查。",
         code: BUILD_CODE,
       },
       {
         id: "run",
         title: "⑤ 运行（stream · 模式 updates）",
-        why: "stream 每走完一个超级步吐一份「哪个节点写了什么」。线性图里一个超级步 = 一站。这就是模块 11 stepOnce 被框架收走之后，你还能看见每一站的办法。",
+        why: "stream 每走完一个超级步吐一份「哪个节点写了什么」。线性图里一个超级步 = 一站。",
         code: `const stream = await graph.stream({ drinkName }, { streamMode: "updates" });
 for await (const chunk of stream) {
   // chunk 形如 { takeOrder: { orderSlip: "…" } }
@@ -80,12 +77,6 @@ for await (const chunk of stream) {
       { from: "brewHot", to: "serve", why: "杯盖写好，无条件去出餐。" },
       { from: "serve", to: "END", why: "取餐广播写好，图停。END 对应你手写的 okEnd，框架不分成功 / 失败两个终止站。" },
     ],
+    nodeCodes: NODE_CODE_BY_NAME,
   };
-  logger.info(
-    "调用函数-describeLinearGraph",
-    "调用函数结束：describeLinearGraph",
-    "为什么写这条日志：页面要用这份说明把声明流程摊开。当前：还没 compile、还没跑。",
-    { 返回值, 耗时ms: Date.now() - t0 },
-  );
-  return 返回值;
 }

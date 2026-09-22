@@ -9,7 +9,6 @@ import Koa from "koa";
 import serve from "koa-static";
 import { fileURLToPath } from "node:url";
 import { parseRuntimeCtx } from "./lib/http/runtime-ctx.js";
-import { logger } from "./lib/logger.js";
 import { mountForceErrorRoutes } from "./routes/force-error.js";
 import { mountHealthRoutes } from "./routes/health.js";
 import { mountLinearGraphRoutes } from "./routes/linear-graph.js";
@@ -28,15 +27,6 @@ const publicDir = fileURLToPath(new URL("./public", import.meta.url));
 app.use(serve(publicDir));
 
 app.listen(PORT, "127.0.0.1", () => {
-  logger.info(
-    "server.start",
-    "listening",
-    "step-1：线性状态图 START → takeOrder → brewHot → serve → END；页面摊开声明源代码再跑一遍。",
-    {
-      url: `http://127.0.0.1:${PORT}/`,
-      protocol: "local",
-    },
-  );
   console.log(`  浏览器:    http://127.0.0.1:${PORT}/`);
   console.log("  Ctrl+C 退出");
 });
