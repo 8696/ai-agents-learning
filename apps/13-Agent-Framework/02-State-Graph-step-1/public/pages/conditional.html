@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>条件分流 · 第一步 sub-page</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-conditional.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineConditional } from "/components/flow-pipeline-conditional.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "hot", label: "中杯热拿铁", drinkName: "来一杯中杯热拿铁。", expectedRoute: "hot → brewHot" },
+      { id: "ice", label: "大杯冰美式", drinkName: "来一杯大杯冰美式。", expectedRoute: "ice → brewIce" },
+      { id: "unknown", label: "来杯抹茶（菜单没有）", drinkName: "来一杯抹茶。", expectedRoute: "unknown → reject" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有" },
+      { key: "orderSlip", zh: "订单条", who: "点单站写" },
+      { key: "drinkType", zh: "分类结果", who: "classifyDrink 站写（hot/ice/unknown）" },
+      { key: "cupLabel", zh: "杯盖", who: "brewHot / brewIce 站写；unknown 路径不写" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 站写；reject 站写「菜单上没有」" },
+      { key: "errorReason", zh: "拒单说明", who: "reject 站写，其它站不写" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述有字。其它五格都是空的。drinkType 还没被路由函数读过，所以路由函数返回 unknown 是兜底。";
+    const INPUT_HINT = "只有客人口述有值。点单 / 分类 / 制作 / 出餐 都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：START → 点单 → 饮品分类 → 条件边选 brewHot / brewIce / reject。路线已经画死，但「选哪条」由运行时 classifyDrink 写出的 drinkType 决定。",
+      "选场景：热拿铁 / 冰美式 / 抹茶。点按钮后服务端 compile + stream 跑一遍。下半页每张卡 = 一站，看绿格 = 这一站新写的字段。",
+      "跑完后单独看「这次为什么走这条边」一张卡：服务端算出 routeChosen，告诉你读了 drinkType = 什么 → 走了谁。这是手写版 EDGES[].condition / readsField 两列在框架侧的等价信息（框架版要自己补）。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [drinkName, setDrinkName] = useState(SCENARIOS[0].drinkName);
+      const [declaration, setDeclaration] = useState([]);
+      const [pathMap, setPathMap] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50142, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/conditional-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setPathMap(data.pathMap || []);
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(drink) {
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/conditional-graph", { drinkName: drink });
+          setRunResult(data);
+          if (data.declaration) setDeclaration(data.declaration);
+          if (data.pathMap) setPathMap(data.pathMap);
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              条件分流（addConditionalEdges） · 第一步 sub-page · 同一份点单分流到 brewHot / brewIce / reject
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="condition" base="../" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：在线性图基础上加一条 addConditionalEdges，让「点单」之后由饮品分类自己选路——热饮 / 冰饮 / 拒单 三选一，路径映射写在声明期，运行时不再问 if。"
+              steps={INTRO_STEPS}
+              takeaway="addConditionalEdges(节点, 路由函数, 路径映射) = 把「路由函数读状态 + 查表翻名字」这一段从手写 pickRoute 收进框架。手写版 EDGES[].condition / readsField 两列框架不再给你——要在你自己的状态里留 drinkType，再在事后自己算 routeChosen 写回页面。"
+              observe="看右下「这次为什么走这条边」一张卡：三个场景分别对应路由函数返回 hot / ice / unknown，对应路径映射翻到 brewHot / brewIce / reject。第三个场景不在正常出杯图里——reject 直接进 END，不经过 serve。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">七个工位（含 classifyDrink / reject）+ 路径映射。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。每一站 = 一张卡，绿格 = 这一站新写的字段。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（drinkName · 入口状态里唯一事先有值的字段；自定义时按「冰 / 热 / 其它」三档决定路由）
+                <input
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  value={drinkName}
+                  disabled={busy}
+                  onChange={function (event) { setDrinkName(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端 compile 这张条件图，再按饮料类型走 brewHot / brewIce / reject。期望看下半页：每张卡绿格分别是订单条 / 分类结果 / 杯盖 / 取餐广播（或拒单说明）。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { setDrinkName(s.drinkName); runScenario(s.drinkName); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { runScenario(drinkName); }}
+                >
+                  按当前输入跑一遍
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={pathMap}
+                flowComponent={FlowPipelineConditional}
+                useConditionalGoal={true}
+                subCaption="下面五步是「把这张条件图画出来」的顺序。路径映射额外加在底部黄底框——运行时框架就查它。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              <RuntimeList
+                drinkName={drinkName}
+                input={runResult && runResult.input}
+                runtime={runResult && runResult.runtime}
+                finalState={runResult && runResult.finalState}
+                nodeCodes={runResult && runResult.nodeCodes}
+                fields={FIELDS}
+                emptyHint={EMPTY_HINT}
+                inputHint={INPUT_HINT}
+                flowComponent={FlowPipelineConditional}
+              />
+              {runResult && runResult.routeChosen ? (
+                <div className="border border-yellow-300 bg-yellow-50 rounded p-3 space-y-2">
+                  <div className="text-sm font-semibold text-yellow-900">这次为什么走这条边（routeChosen · 需求 2）</div>
+                  <p className="text-xs text-gray-800">
+                    路由函数{" "}
+                    <span className="font-mono">{runResult.routeChosen.fromNode}</span>{" "}
+                    读了{" "}
+                    <span className="font-mono">{runResult.routeChosen.readField}</span>{" "}
+                    ={" "}
+                    <span className="font-mono">{String(runResult.routeChosen.readValue)}</span>
+                    ，返回键{" "}
+                    <span className="font-mono">{runResult.routeChosen.pickedKey}</span>
+                    ，路径映射查表走到{" "}
+                    <span className="font-mono">{runResult.routeChosen.toNode}</span>
+                    。
+                  </p>
+                  <p className="text-xs text-gray-700">
+                    手写版这条信息写在 EDGES 表的 condition / readsField 两列里。框架版的路由函数不是节点，不能 return patch 写进 state——所以是服务端跑完后从合并后的 drinkType 反推 pickedKey，附给页面。这是「为什么框架版要自己补等价信息」的实际成本。
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

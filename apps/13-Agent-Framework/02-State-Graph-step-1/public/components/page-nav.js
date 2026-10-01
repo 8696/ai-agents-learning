@@ -1,6 +1,6 @@
 /**
- * 职责：顶部跨页导航。step-1 只有首页这一页。
- * 数据流：props.current 高亮；props.base 拼 href。
+ * 职责：顶部跨页导航。线性图（index.html）与条件分流（pages/conditional.html）共用同一根。
+ * 数据流：props.current 高亮；props.base 拼 href——根目录页传 ""、子页传 "../"。
  *
  * 加载方式：本文件用 HTM 写（`html\`...\`` 是 tagged template literal），
  *          浏览器原生执行，不需要 Babel 转译；
@@ -18,6 +18,7 @@ const NAV_CLASS_IDLE =
 
 const PAGES = [
   { key: "main", label: "线性状态图（State Graph）· 第一步", href: "index.html" },
+  { key: "condition", label: "条件分流（addConditionalEdges）· 第一步 sub-page", href: "pages/conditional.html" },
 ];
 
 export function PageNav(props) {

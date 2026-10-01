@@ -1,13 +1,15 @@
 /**
- * 职责：把这一单的四格状态画成「订单夹」。变绿的格子 = 这一站新写的；灰格 = 原样带着。
+ * 职责：把这一单的状态画成「订单夹」。变绿的格子 = 这一站新写的；灰格 = 原样带着。
  * 数据流：props.state + props.changedKeys（补丁里的字段名）。
+ *
+ * 默认走线性图的 4 格；条件分流页通过 props.fields 传自己的字段顺序与说明。
  */
 import React from "react";
 import htm from "https://esm.sh/htm";
 
 const html = htm.bind(React.createElement);
 
-const FIELDS = [
+const FIELDS_DEFAULT = [
   { key: "drinkName", zh: "客人口述", who: "进门时就有，三站都不改它" },
   { key: "orderSlip", zh: "订单条", who: "点单站写" },
   { key: "cupLabel", zh: "杯盖", who: "热饮站写" },
@@ -22,12 +24,13 @@ function displayValue(value) {
 export function StateBoard(props) {
   const state = props.state || {};
   const changed = props.changedKeys || [];
+  const fields = props.fields || FIELDS_DEFAULT;
   return html`
     <div className="space-y-2">
-      <div className="text-xs font-semibold text-gray-700">${props.title || "这一单的四格（状态 State）"}</div>
+      <div className="text-xs font-semibold text-gray-700">${props.title || "这一单的状态（State）"}</div>
       <p className="text-xs text-gray-600">${props.hint || ""}</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        ${FIELDS.map(function (field) {
+        ${fields.map(function (field) {
           const isEmpty = state[field.key] === null || state[field.key] === undefined || state[field.key] === "";
           const isChanged = changed.indexOf(field.key) !== -1;
           const box = isChanged

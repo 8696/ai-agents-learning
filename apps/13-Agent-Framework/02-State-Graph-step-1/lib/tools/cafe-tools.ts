@@ -12,7 +12,7 @@ export async function placeOrder(input: { drinkName: string }) {
   await sleepRandomMs(200, 450);
   return {
     slipId: `SLIP-${Date.now().toString().slice(-6)}`,
-    orderSlip: `${input.drinkName.replace(/[。.]$/, "")} → 双份浓缩，热`,
+    orderSlip: input.drinkName.replace(/[。.]$/, ""),
     recordedAt: new Date().toISOString(),
   };
 }
@@ -31,5 +31,28 @@ export async function notifyPickup(input: { orderSlip: string; cupLabel: string 
     pickupCall: `A07 号请到取餐口，${input.orderSlip} 好了。`,
     channel: "取餐屏-南",
     notifiedAt: new Date().toISOString(),
+  };
+}
+
+export type DrinkType = "hot" | "ice" | "unknown";
+
+/**
+ * 给条件分流图用：根据订单条文本判定饮品分类。极简规则：
+ * 含「冰」→ ice；含「热」→ hot；都不含 → unknown（交给 reject 节点拒单）。
+ * 真实业务里换成规则引擎 / 模型分类；这里只演示路由函数读什么、路径映射怎么查。
+ */
+export async function classifyDrink(input: { drinkName: string }): Promise<{ drinkType: DrinkType }> {
+  await sleepRandomMs(80, 180);
+  const text = input.drinkName || "";
+  if (/冰/.test(text)) return { drinkType: "ice" };
+  if (/热/.test(text)) return { drinkType: "hot" };
+  return { drinkType: "unknown" };
+}
+
+export async function brewIceDrink(input: { orderSlip: string }) {
+  await sleepRandomMs(450, 850);
+  return {
+    cupLabel: `冰杯。杯盖写着「${input.orderSlip}」。放在冰饮区。`,
+    brewedAt: new Date().toISOString(),
   };
 }
