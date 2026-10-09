@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>非法转移 · 第四步（step-4）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-invalid-edge.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineInvalidEdge } from "/components/flow-pipeline-invalid-edge.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "normal", label: "正常路径", drinkName: "来一杯中杯热拿铁。", expectedRoute: "classifyDrink → hot → brewHot → serve" },
+      { id: "invalid-edge", label: "非法转移", drinkName: "来一杯抹茶。", expectedRoute: "classifyDrink → 路由 unknown → framework 在 compile 阶段抛「Node reject is not reachable」" },
+      { id: "route-fallback", label: "路由函数兜底", drinkName: "来一杯抹茶。", expectedRoute: "classifyDrink → reject → END（路由函数对未识别 drinkType 返回 reject，pathMap 里加这一条）" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有" },
+      { key: "orderSlip", zh: "订单条", who: "点单站写" },
+      { key: "drinkType", zh: "分类结果", who: "classifyDrink 站写（hot/ice/unknown）" },
+      { key: "cupLabel", zh: "杯盖", who: "brewHot / brewIce 站写；unknown 路径不写" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 站写；reject 站写「菜单上没有」" },
+      { key: "errorReason", zh: "拒单说明", who: "reject 站写，其它站不写" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述有字。其它五格都是空的。classifyDrink 还没跑过，drinkType 仍是 null。";
+    const INPUT_HINT = "只有客人口述有值。点单 / 分类 / 制作 / 出餐 / 拒单 都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：START → 点单 → 饮品分类 → 条件边（路由函数读 drinkType 决定下一站）。正常路径 hot/ice 进对应制作 → 出餐；unknown 进无法制作 → END。",
+      "选三个场景按钮之一：正常路径（看 hot/ice 跑通）/ 非法转移（看 pathMap 缺 unknown 时 framework 抛异常）/ 路由函数兜底（看路由函数对未识别 drinkType 返回 reject，优雅走完）。",
+      "跑完后单独看「这次为什么走这条边」一张卡：服务端算出 routeChosen，告诉你读了 drinkType = 什么 → 走了谁。这是手写版 EDGES[].condition / readsField 两列在框架侧的等价信息。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("normal");
+      const [drinkName, setDrinkName] = useState(SCENARIOS[0].drinkName);
+      const [declaration, setDeclaration] = useState([]);
+      const [pathMap, setPathMap] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [errorStack, setErrorStack] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50145, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/invalid-edge")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setPathMap(data.pathMap || []);
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        // 对应的 drinkName
+        const s = SCENARIOS.find(function (x) { return x.id === scenarioId; });
+        const drink = s ? s.drinkName : drinkName;
+        setDrinkName(drink);
+        setStatus("loading");
+        setErrorText("");
+        setErrorStack("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/invalid-edge", { drinkName: drink, mode: scenarioId });
+          setRunResult(data);
+          if (data.declaration) setDeclaration(data.declaration);
+          if (data.pathMap) setPathMap(data.pathMap);
+          setStatus("ok");
+        } catch (err) {
+          setRunResult({ ok: false, error: err.message || "请求失败" });
+          setErrorText(err.message || "请求失败");
+          setErrorStack(err && err.stack ? String(err.stack) : "");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        setErrorStack("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+      const runtimeOk = runResult && runResult.ok && runResult.runtime;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              非法转移（pathMap 里没这个键） · 第四步（step-4） · 接口级报错 vs 业务级拦截
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：路由函数返回的键在 pathMap 里找不到时，LangGraph 在 compile 阶段就直接抛「Node `xxx` is not reachable」拦下（声明期接口级校验，比运行时抛异常更早）。手写版「边表里查不到」是业务级拦截（自定义错误文案 + 走失败终止站）。三个 mode 演示「正常路径 / 非法转移 / 路由函数兜底」。"
+              steps={INTRO_STEPS}
+              takeaway="非法转移 = 路由函数返回的键在 pathMap 里找不到。LangGraph 在 compile 阶段就报「Node xxx is not reachable」拦下（接口级校验，不是运行时异常，更早发现问题）。想要模块 11 那种「优雅收进 reject」就在路由函数里自己兜：返回 reject 键，pathMap 里加这一条。同一件事手写版能自定义错误文案，框架版要靠路由函数写兜底。"
+              observe="三个按钮对应三种结局：正常路径跑通、非法转移在 compile 阶段被 framework 拦下（不是运行时异常）、路由函数兜底走完。每条 pathMap 路径映射在页底黄底框——invalid-edge 模式那一行是「unknown 键被故意删掉」让 reject 节点不可达，compile 就报错；fallback 模式那一行是「reject 键被加回去」让 framework 优雅走完。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">六个工位 + 条件边 + 三种 pathMap（按 mode 切换）。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。非法转移模式直接显示异常；正常 / 兜底模式按站填状态。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（drinkName · 入口状态里唯一事先有值的字段；按钮按下时自动覆盖为对应场景的客人口述）
+                <input
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  value={drinkName}
+                  disabled={busy}
+                  onChange={function (event) { setDrinkName(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端按 mode 编译 + stream 跑一遍。normal / route-fallback 模式跑通；invalid-edge 模式 pathMap 缺 unknown，reject 节点不可达，framework 在 compile 阶段就抛「Node reject is not reachable」拦下。点完看 #status-pill + 下方 error 区 / runtime 卡。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="space-y-2">
+                  <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                    {errorText}
+                  </div>
+                  {errorStack ? (
+                    <pre className="border border-red-200 bg-red-50 text-red-700 text-xs rounded p-2 whitespace-pre-wrap max-h-40 overflow-auto">{errorStack}</pre>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={pathMap}
+                flowComponent={FlowPipelineInvalidEdge}
+                useConditionalGoal={true}
+                subCaption="下面五步是「把这张非法转移图画出来」的顺序。路径映射额外加在底部黄底框——三个 mode 下 pathMap 哪一行缺 / 多，是这一课的开关。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              {runtimeOk ? (
+                <RuntimeList
+                  drinkName={drinkName}
+                  input={runResult.input}
+                  runtime={runResult.runtime}
+                  finalState={runResult.finalState}
+                  nodeCodes={runResult.nodeCodes}
+                  fields={FIELDS}
+                  emptyHint={EMPTY_HINT}
+                  inputHint={INPUT_HINT}
+                  flowComponent={FlowPipelineInvalidEdge}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">还没走。点上面的「正常路径 / 非法转移 / 路由函数兜底」之一之后，这里会按站填这些格（或显示「Node reject is not reachable」错误）。</p>
+              )}
+              {runResult && runResult.routeChosen ? (
+                <div className="border border-yellow-300 bg-yellow-50 rounded p-3 space-y-2">
+                  <div className="text-sm font-semibold text-yellow-900">这次为什么走这条边（routeChosen · 需求 5）</div>
+                  <p className="text-xs text-gray-800">
+                    路由函数{" "}
+                    <span className="font-mono">{runResult.routeChosen.fromNode}</span>{" "}
+                    读了{" "}
+                    <span className="font-mono">{runResult.routeChosen.readField}</span>{" "}
+                    ={" "}
+                    <span className="font-mono">{String(runResult.routeChosen.readValue)}</span>
+                    ，返回键{" "}
+                    <span className="font-mono">{runResult.routeChosen.pickedKey}</span>
+                    ，pathMap 查表走到{" "}
+                    <span className="font-mono">{runResult.routeChosen.toNode}</span>
+                    。
+                  </p>
+                  <p className="text-xs text-gray-700">
+                    手写版这条信息写在 EDGES 表的 condition / readsField 两列里。框架版的路由函数不是节点，不能 return patch 写进 state——所以是服务端跑完后从合并后的 drinkType 反推 pickedKey，附给页面。「Node xxx is not reachable」是声明期接口级校验（不是运行时异常——这是「为什么用 addConditionalEdges 比手写 pickRoute 早一步发现问题」的实际成本）。
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

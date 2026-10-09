@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>检查点 + 中断 · 第五步（step-5）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-checkpoint.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineCheckpoint } from "/components/flow-pipeline-checkpoint.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "no-checkpoint", label: "无检查点", expectedRoute: "每次 invoke 独立运行；扣卡成功一次" },
+      { id: "memory-saver", label: "MemorySaver", expectedRoute: "同 thread_id 跨请求恢复；不传 interrupt 一次性跑通" },
+      { id: "memory-saver-interrupt", label: "MemorySaver + interrupt", expectedRoute: "第一次触发 interrupt → 前端弹「点确认 / 取消」 → 第二次带 resume 继续" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有" },
+      { key: "orderSlip", zh: "订单条", who: "点单站写；也是 idempotencyKey" },
+      { key: "chargeConfirmed", zh: "是否确认扣卡", who: "chargeRequest 节点写；memory-saver-interrupt 模式由 resume 值决定" },
+      { key: "chargeResult", zh: "扣卡结果", who: "chargeMemberCard 节点写；用 idempotencyKey 防重扣" },
+      { key: "cupLabel", zh: "杯盖", who: "brewHot 站写" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 站写；扣卡失败时提示错误" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述有字。其它五格都是空的。takeOrder 还没跑过，orderSlip 仍是空。";
+    const INPUT_HINT = "只有客人口述有值。点单 / 扣卡 / 制作 / 出餐 都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：START → 点单 → 扣卡请求（interrupt 候选）→ 扣会员卡（幂等）→ 热饮 → 出餐 → END。检查点写在每超级步之后；interrupt 在 chargeRequest 节点里调用。",
+      "选三个场景按钮之一：无检查点（看 baseline）/ MemorySaver（看同进程跨请求恢复）/ MemorySaver + interrupt（看 interrupt + resume 完整闭环）。",
+      "memory-saver-interrupt 模式需要两次调用：第一次触发 interrupt → 服务端返 status: interrupted → 前端显示「点确认 / 取消」按钮 → 第二次带 resume: true / false 继续。检查点保证从 chargeRequest 节点之后继续，不会重跑点单。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("no-checkpoint");
+      const [drinkName, setDrinkName] = useState("来一杯中杯热拿铁。");
+      const [threadId, setThreadId] = useState("A07");
+      const [declaration, setDeclaration] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50146, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/checkpoint-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setDrinkName(data.drinkDefault || "来一杯中杯热拿铁。");
+            setThreadId(data.threadIdDefault || "A07");
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/checkpoint-graph", { drinkName, mode: scenarioId, threadId });
+          setRunResult(data);
+          setStatus("ok");
+        } catch (err) {
+          setRunResult({ ok: false, error: err.message || "请求失败" });
+          setErrorText(err.message || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function resumeScenario(confirm) {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          // LangGraph 1.4.16 的 mapCommand 用 if(cmd.resume) 真值判断；传 object 绕过。
+          const data = await postJson("/api/checkpoint-graph", { drinkName, mode, threadId, resume: { confirm } });
+          setRunResult(data);
+          setStatus("ok");
+        } catch (err) {
+          setErrorText(err.message || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+      const isInterrupted = runResult && runResult.status === "interrupted";
+      const runtimeOk = runResult && runResult.runtime && runResult.runtime.length > 0;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              检查点 + 中断（thread_id + interrupt + resume） · 第五步（step-5） · 跨请求恢复 + 节点重跑防重扣
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：`compile({ checkpointer })` + 运行时 `{ configurable: { thread_id } }` 让图跨请求同进程能恢复；节点里 `interrupt(value)` 暂停图 + 写快照，第二次 `invoke(new Command({ resume }), config)` 从中断点继续。**恢复时节点会从头重跑**——所以 idempotencyKey 必须自己写。三个 mode 演示：无检查点 / MemorySaver / MemorySaver + interrupt。"
+              steps={INTRO_STEPS}
+              takeaway="检查点 = `compile({ checkpointer })` + `{ configurable: { thread_id } }`；每超级步写盘一次。interrupt = 节点里 `interrupt(value)` 暂停 + 写快照；`Command({ resume })` 恢复。MemorySaver 同进程能恢复，杀进程即丢；真实生产用 SqliteSaver / Redis-backed Saver。节点重跑时 idempotencyKey 拦截重复扣——这是「检查点省了写盘样板」的实际成本。"
+              observe="memory-saver-interrupt 模式两次调用：第一次触发 interrupt → 前端显示「点确认 / 取消」按钮 → 第二次带 resume 继续。点「确认」走完；点「取消」扣卡被拦截，serve 节点广播「扣卡失败」。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">五个工位 + interrupt 候选 + 幂等扣卡 + 路径。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。memory-saver-interrupt 模式可能需要两次调用。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <label className="block text-sm text-gray-700 md:col-span-2">
+                  客人口述（drinkName · 入口状态里唯一事先有值的字段）
+                  <input
+                    className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                    value={drinkName}
+                    disabled={busy}
+                    onChange={function (event) { setDrinkName(event.target.value); }}
+                  />
+                </label>
+                <label className="block text-sm text-gray-700">
+                  客户编号（threadId · 跨请求恢复用）
+                  <input
+                    className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                    value={threadId}
+                    disabled={busy}
+                    onChange={function (event) { setThreadId(event.target.value); }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端 invoke 跑一遍。memory-saver 模式同 thread_id 第二次调用恢复；memory-saver-interrupt 模式第一次返 interrupted → 第二次带 resume 继续。点完看 #status-pill + 下方 runtime 卡 / interrupt 提示。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">{errorText}</div>
+              ) : null}
+              {isInterrupted ? (
+                <div className="border border-yellow-300 bg-yellow-50 rounded p-3 space-y-2">
+                  <div className="text-sm font-semibold text-yellow-900">interrupt 暂停（status: interrupted）· 需求 7</div>
+                  <p className="text-xs text-gray-800">chargeRequest 节点调 <span className="font-mono">interrupt("{runResult.interruptValue}")</span>，图当场停住 + 写快照。点下面的按钮发第二次请求：</p>
+                  <div className="flex gap-2">
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { resumeScenario(true); }}
+                    >
+                      点确认（resume=true · 走完）
+                    </button>
+                    <button
+                      className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { resumeScenario(false); }}
+                    >
+                      点取消（resume=false · 扣卡被拒，serve 广播错误）
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={[]}
+                flowComponent={FlowPipelineCheckpoint}
+                useConditionalGoal={false}
+                subCaption="下面六步是「把这张检查点 + 中断图画出来」的顺序。重点：interrupt 在节点里调用、resume 用 Command({ resume })、idempotencyKey 防节点重跑时重复扣卡。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              {runtimeOk ? (
+                <RuntimeList
+                  drinkName={drinkName}
+                  input={null}
+                  runtime={runResult.runtime}
+                  finalState={runResult.finalState}
+                  nodeCodes={runResult.nodeCodes}
+                  fields={FIELDS}
+                  emptyHint={EMPTY_HINT}
+                  inputHint={INPUT_HINT}
+                  flowComponent={FlowPipelineCheckpoint}
+                />
+              ) : runResult && runResult.status === "interrupted" ? (
+                <p className="text-sm text-gray-500">图停在 chargeRequest 节点，等前端点确认 / 取消。runtime 会在第二次调用后填出来。</p>
+              ) : (
+                <p className="text-sm text-gray-500">还没走。点上面的「无检查点 / MemorySaver / MemorySaver + interrupt」之一之后，这里会按站填这些格。</p>
+              )}
+              {runResult && runResult.checkpointCount !== undefined ? (
+                <div className="border border-blue-300 bg-blue-50 rounded p-3 space-y-1">
+                  <div className="text-sm font-semibold text-blue-900">检查点状态（thread_id = {runResult.threadId}）· 变体 F</div>
+                  <p className="text-xs text-gray-800">本 thread_id 已有 <span className="font-mono">{runResult.checkpointCount}</span> 个检查点。每超级步写一个；同 thread_id 第二次 invoke 读最新检查点，从中断点继续。</p>
+                </div>
+              ) : null}
+              {runResult && (runResult.status === "completed" || runResult.status === "resumed") && runResult.chargeResult ? (
+                <div className={runResult.chargeResult.ok ? "border border-green-300 bg-green-50 rounded p-3 space-y-1" : "border border-red-300 bg-red-50 rounded p-3 space-y-1"}>
+                  <div className="text-sm font-semibold">扣卡结果 · idempotencyKey 防重扣</div>
+                  <p className="text-xs text-gray-800">
+                    {runResult.chargeResult.ok
+                      ? <>成功：<span className="font-mono">{runResult.chargeResult.transactionId}</span>。chargeMemberCard 节点用 idempotencyKey 拦截了重扣。</>
+                      : runResult.chargeResult.error && runResult.chargeResult.error.includes("用户取消")
+                        ? <>取消：<span className="font-mono">{runResult.chargeResult.error}</span>。chargeConfirmed=false → chargeMemberCard 节点跳过真实扣卡工具，直接写「用户取消」。</>
+                        : <>已拦截：<span className="font-mono">{runResult.chargeResult.error}</span>。chargeMemberCard 节点第二次执行时 idempotencyKey 已经在 Set 里——这是「检查点让节点重跑，但 idempotencyKey 守住重复扣」的教学点。即使点「确认」，同一 orderSlip 不会扣两次。</>}
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

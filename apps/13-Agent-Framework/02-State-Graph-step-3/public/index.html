@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>并行扇出扇入 · 第三步（step-3）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-parallel.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineParallel } from "/components/flow-pipeline-parallel.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "no-reducer", label: "不写归约函数", drinkName: "来一杯热美式 + 一杯冰拿铁。", expectedRoute: "并行冲突 → 框架报错" },
+      { id: "array-reducer", label: "写 array 归约函数", drinkName: "来一杯热美式 + 一杯冰拿铁。", expectedRoute: "并行合并 → cupLabel = [冰，热]" },
+      { id: "distinct-fields", label: "两字段不冲突", drinkName: "来一杯热美式 + 一杯冰拿铁。", expectedRoute: "热 / 冰各写一格 → 都跑通" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有" },
+      { key: "orderSlip", zh: "订单条", who: "点单站写" },
+      { key: "cupLabel", zh: "杯盖（共用）", who: "no-reducer / array-reducer 模式下两个分支都写" },
+      { key: "hotCupLabel", zh: "热杯盖（独立）", who: "distinct-fields 模式下热分支写" },
+      { key: "iceCupLabel", zh: "冰杯盖（独立）", who: "distinct-fields 模式下冰分支写" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 站写（汇合后）" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述有字。其它五格都是空的。takeOrder 还没跑过，orderSlip 仍是空。";
+    const INPUT_HINT = "只有客人口述有值。点单 / 两个并行分支 / 汇合出餐 都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：START → takeOrder → 两台机器并行（fan-out）→ 汇合到 serve（fan-in）。cupLabel 字段的 reducer 是开关——默认 lastWrite 撞冲突会报错，改 array 归约合并成数组，或让两台机器各写各的字段。",
+      "选三个场景按钮之一：不写归约函数（看框架接口级报错）/ 写 array 归约函数（合并成 [冰，热]）/ 两字段不冲突（热 / 冰各写一格）。",
+      "跑完后看「并行同 super-step」黄底卡：runtime 里会有一个 chunk 同时含 branchHot + branchIce——这就是同 super-step 并行（手写版要 await Promise.all，框架自己调度）。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("no-reducer");
+      const [drinkName, setDrinkName] = useState(SCENARIOS[0].drinkName);
+      const [declaration, setDeclaration] = useState([]);
+      const [pathMap, setPathMap] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+      const [errorStack, setErrorStack] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50144, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/parallel-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setPathMap(data.pathMap || []);
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        setStatus("loading");
+        setErrorText("");
+        setErrorStack("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/parallel-graph", { drinkName: drinkName, mode: scenarioId });
+          setRunResult(data);
+          if (data.declaration) setDeclaration(data.declaration);
+          if (data.pathMap) setPathMap(data.pathMap);
+          setStatus("ok");
+        } catch (err) {
+          // 服务端 500 走 fetch reject——错误体里含 error / errorStack
+          setRunResult({ ok: false, error: err.message || "请求失败" });
+          setErrorText(err.message || "请求失败");
+          setErrorStack(err && err.stack ? String(err.stack) : "");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        setErrorStack("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+      const runtimeOk = runResult && runResult.ok && runResult.runtime;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              并行扇出扇入（fan-out + fan-in） · 第三步（step-3） · 同一 super-step 并行跑两个分支
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：takeOrder 出两条边到 branchHot / branchIce，框架在同一个 super-step 里并行跑两台机器，再汇合到 serve。cupLabel 字段的 reducer 是这一课的开关——默认 lastWrite 撞冲突会报错，改 array 归约合并成数组，或干脆让两台机器各写各的字段。"
+              steps={INTRO_STEPS}
+              takeaway="fan-out 让父节点出多条边，框架同 super-step 并行；fan-in 让多个分支汇合到同一目标。归约函数 ≠ 手写的对象展开合并：手写是后写覆盖 + 不报错，框架是 reducer + 并行冲突直接抛异常。手写版一单两杯会静默丢一杯（更危险），框架版反而显式报错（更安全）。"
+              observe="三个按钮对应三种声明：no-reducer（看接口级报错）/ array-reducer（看合并成 [冰，热]）/ distinct-fields（看两台机器各写一格都跑通）。runtime 卡里能数 branchHot / branchIce 在同 super-step 一起出现（手写版要 await Promise.all 才能看出来）。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">四个工位 + fan-out 两条 + fan-in 两条 + 三选一状态标注。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。同一 super-step 内 branchHot / branchIce 一起出现。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（drinkName · 入口状态里唯一事先有值的字段）
+                <input
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  value={drinkName}
+                  disabled={busy}
+                  onChange={function (event) { setDrinkName(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端按 mode 编译 + stream 跑一遍。no-reducer 模式预期框架抛「并行冲突」错；array-reducer 模式预期 cupLabel 合并成 array；distinct-fields 模式预期两个字段各一杯。点完看 #status-pill + 下方 error 区 / runtime 卡。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="space-y-2">
+                  <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                    {errorText}
+                  </div>
+                  {errorStack ? (
+                    <pre className="border border-red-200 bg-red-50 text-red-700 text-xs rounded p-2 whitespace-pre-wrap max-h-40 overflow-auto">{errorStack}</pre>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={pathMap}
+                flowComponent={FlowPipelineParallel}
+                useConditionalGoal={false}
+                subCaption="下面五步是「把这张并行图画出来」的顺序。状态标注里有三种声明的代码（no-reducer / array-reducer / distinct-fields），按 mode 切换；路径映射额外加在底部黄底框——fan-out / fan-in 两条都在里面。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              {runtimeOk ? (
+                <RuntimeList
+                  drinkName={drinkName}
+                  input={runResult.input}
+                  runtime={runResult.runtime}
+                  finalState={runResult.finalState}
+                  nodeCodes={runResult.nodeCodes}
+                  fields={FIELDS}
+                  emptyHint={EMPTY_HINT}
+                  inputHint={INPUT_HINT}
+                  flowComponent={FlowPipelineParallel}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">还没走。点上面的「不写归约函数 / 写 array 归约函数 / 两字段不冲突」之一之后，这里会按站填这些格（或显示「并行冲突」错误）。</p>
+              )}
+              {runResult && runResult.parallelGroup && runResult.parallelGroup.nodes && runResult.parallelGroup.nodes.length > 1 ? (
+                <div className="border border-yellow-300 bg-yellow-50 rounded p-3 space-y-2">
+                  <div className="text-sm font-semibold text-yellow-900">并行同 super-step（{runResult.parallelGroup.superStep + 1}）· 需求 4 教学点</div>
+                  <p className="text-xs text-gray-800">
+                    runtime 的一次 chunk 里同时出现{" "}
+                    <span className="font-mono">{runResult.parallelGroup.nodes.join(" + ")}</span>
+                    {" "}——这两个节点在同一个 super-step 内被框架并行跑（手写循环里这一步要{" "}
+                    <span className="font-mono">await Promise.all([branchHot, branchIce])</span>{" "}才能看出来；状态图里只要父节点出多条边，框架就同 super-step 并行，不需要你显式 await）。
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

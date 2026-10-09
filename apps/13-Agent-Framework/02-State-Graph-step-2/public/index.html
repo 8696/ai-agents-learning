@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>回边循环 · 第二步（step-2）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-back-edge.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineBackEdge } from "/components/flow-pipeline-back-edge.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "smooth", label: "顺利", drinkName: "来一杯中杯热拿铁。", expectedRoute: "brewHot × 1 → serve" },
+      { id: "retry-once", label: "做坏一次", drinkName: "来一杯中杯热拿铁。", expectedRoute: "brewHot × 2 → serve" },
+      { id: "fail", label: "做坏到第三次", drinkName: "来一杯中杯热拿铁。", expectedRoute: "brewHot × 3 → reject" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有" },
+      { key: "mode", zh: "场景模式", who: "前端三个按钮决定：smooth / retry-once / fail" },
+      { key: "orderSlip", zh: "订单条", who: "点单站写" },
+      { key: "retryCount", zh: "重做次数", who: "brewHot 站每次 +1；上限 3" },
+      { key: "cupLabel", zh: "杯盖", who: "brewHot 站写；空杯时为 null" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 站写；reject 站写「无法出杯」" },
+      { key: "errorReason", zh: "拒单说明", who: "reject 站写，其它站不写" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述和场景模式有字。其它五格都是空的。brewHot 还没跑过，retryCount 仍是 0。";
+    const INPUT_HINT = "只有客人口述和场景模式有值。点单 / 重做 / 出餐 / 拒单 都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：START → 点单 → brewHot。brewHot 之后是回边——空杯就回自己，靠 retryCount 收敛；杯盖写好就出餐；重做 3 次仍空杯就走拒绝。",
+      "选三个场景按钮之一：顺利（一次出杯）/ 做坏一次（重做出杯）/ 做坏到第三次（走拒绝）。每个按钮各跑一单，下半页能数 brewHot 走了几次。",
+      "跑完后单独看「这次为什么走这条边」一张卡：服务端算出 routeChosen，告诉你读了 cupLabel / retryCount = 什么 → 走了谁。这是手写版 EDGES[].condition / readsField 两列在框架侧的等价信息。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("smooth");
+      const [drinkName, setDrinkName] = useState(SCENARIOS[0].drinkName);
+      const [declaration, setDeclaration] = useState([]);
+      const [pathMap, setPathMap] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50142, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/back-edge")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setPathMap(data.pathMap || []);
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/back-edge", { drinkName: drinkName, mode: scenarioId });
+          setRunResult(data);
+          if (data.declaration) setDeclaration(data.declaration);
+          if (data.pathMap) setPathMap(data.pathMap);
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              回边循环（addConditionalEdges 指向自己） · 第二步（step-2） · brewHot → brewHot · retryCount 收敛
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：brewHot 自己被条件边指回自己——空杯时回 brewHot 一次，杯盖写好就出餐；retryCount = 3 仍空杯就走拒绝。这就是回边：图里有环，靠状态字段收敛，靠递归上限兜底。"
+              steps={INTRO_STEPS}
+              takeaway="回边 = addConditionalEdges 的某条路径映射指回源节点。收敛条件写在路由函数里（这里 retryCount < 3）；超过上限走 reject。和模块 07 的 while 是同位物，但单位是「超级步」，不是「模型轮次」。"
+              observe="三个按钮对应三段站点序列：smooth = brewHot × 1 → serve；retry-once = brewHot × 2 → serve；fail = brewHot × 3 → reject。点完看下半页 runtime 卡能不能数出 brewHot 走过的次数；reject 那条不进 serve。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">四个工位 + 回边 + 路径映射。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。brewHot 卡可能亮多次（每次重做各亮一次）；绿格 = 这一站新写的字段。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <label className="block text-sm text-gray-700">
+                客人口述（drinkName · 入口状态里唯一事先有值的字段）
+                <input
+                  className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                  value={drinkName}
+                  disabled={busy}
+                  onChange={function (event) { setDrinkName(event.target.value); }}
+                />
+              </label>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端按 mode 跑 brewHot 节点；smooth 第 1 次出杯，retry-once 第 1 次空杯第 2 次出杯，fail 每次都空杯。下半页 runtime 卡会显示 brewHot 走过的次数。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={pathMap}
+                flowComponent={FlowPipelineBackEdge}
+                useConditionalGoal={true}
+                subCaption="下面五步是「把这张回边图画出来」的顺序。路径映射额外加在底部黄底框——回边那条 retry → brewHot 自己就在里面。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              <RuntimeList
+                drinkName={drinkName}
+                input={runResult && runResult.input}
+                runtime={runResult && runResult.runtime}
+                finalState={runResult && runResult.finalState}
+                nodeCodes={runResult && runResult.nodeCodes}
+                fields={FIELDS}
+                emptyHint={EMPTY_HINT}
+                inputHint={INPUT_HINT}
+                flowComponent={FlowPipelineBackEdge}
+              />
+              {runResult && runResult.routeChosen ? (
+                <div className="border border-yellow-300 bg-yellow-50 rounded p-3 space-y-2">
+                  <div className="text-sm font-semibold text-yellow-900">这次为什么走这条边（routeChosen · 需求 2）</div>
+                  <p className="text-xs text-gray-800">
+                    路由函数{" "}
+                    <span className="font-mono">{runResult.routeChosen.fromNode}</span>{" "}
+                    读了{" "}
+                    <span className="font-mono">{runResult.routeChosen.readField}</span>{" "}
+                    ={" "}
+                    <span className="font-mono">{String(runResult.routeChosen.readValue)}</span>
+                    ，返回键{" "}
+                    <span className="font-mono">{runResult.routeChosen.pickedKey}</span>
+                    ，路径映射查表走到{" "}
+                    <span className="font-mono">{runResult.routeChosen.toNode}</span>
+                    。
+                  </p>
+                  <p className="text-xs text-gray-700">
+                    回边这条「retry → brewHot（自己）」就是路径映射里 pickedKey = "retry" 对应的目标节点；图里允许有环，靠状态字段收敛。和模块 07 的 while 不同——那里你数「问了几轮」，这里数「走了几个超级步」。
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

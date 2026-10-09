@@ -164,6 +164,10 @@
 | `yarn app:13-01-framework-solves-what-step-2` | `50140` | 模块 13 · 01 · 框架解决什么 step-2：基础聊天（@ai-sdk/react useChat + body.system，无工具） |
 | `yarn app:13-01-framework-solves-what-step-3` | `50141` | 模块 13 · 01 · 框架解决什么 step-3：嵌入模型向量化（embed / embedMany / 余弦检索 Top-K 三 mode 同源对照） |
 | `yarn app:13-02-state-graph-step-1` | `50142` | 模块 13 · 02 · 状态图 step-1：线性图 START → takeOrder → brewHot → serve → END；页面摊开声明源代码再 stream 每一站（不调 LLM） |
+| `yarn app:13-02-state-graph-step-2` | `50143` | 模块 13 · 02 · 状态图 step-2：回边循环 brewHot → brewHot，靠 retryCount 收敛；三场景按钮（smooth / retry-once / fail）演示重做收尾（不调 LLM） |
+| `yarn app:13-02-state-graph-step-3` | `50144` | 模块 13 · 02 · 状态图 step-3：并行扇出扇入，takeOrder fan-out 到 branchHot / branchIce，cupLabel 字段三选一（no-reducer 报错 / array-reducer 合并 / distinct-fields 不冲突）（不调 LLM） |
+| `yarn app:13-02-state-graph-step-4` | `50145` | 模块 13 · 02 · 状态图 step-4：非法转移，路由函数返回的键在 pathMap 里找不到时 framework 抛异常；三 mode 演示 normal（pathMap 完整）/ invalid-edge（pathMap 缺 unknown → 异常）/ route-fallback（路由函数对未识别 drinkType 返回 reject 兜底）（不调 LLM） |
+| `yarn app:13-02-state-graph-step-5` | `50146` | 模块 13 · 02 · 状态图 step-5：检查点 + 中断，compile({ checkpointer }) + { thread_id } 跨请求恢复；interrupt + Command({ resume }) 完整闭环；idempotencyKey 防节点重扣（不调 LLM） |
 | （口不回收 · 原 step-2 已删，收进 step-1 最小发现） | `50130` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。

@@ -372,11 +372,15 @@ Demo 判断
 
 ## Demo 子节进度
 
-step-1 已建，尚未锁定。表行只写已建 step；禁止预判未来。
+step-1 已锁定（线性图 + 条件分流 sub-page，共用同一端口）。表行只写已建 step；禁止预判未来。
 
 | 状态 | 子节 | 入口 | 端口 | 本子节教学点 |
 |------|------|------|------|--------------|
-| 🔄 | step-1 | `yarn app:13-02-state-graph-step-1` | `50142` | 线性状态图：`START → takeOrder → brewHot → serve → END`。页面先展示声明每一步的源代码（状态标注 / 登记节点 / 连边 / 编译 / 运行），再点一次跑出每一站的补丁。不调大模型。 |
+| ✅ | step-1 | `yarn app:13-02-state-graph-step-1` | `50142` | 两个 mode 共用同一端口：`/` = 变体 A 线性图（`START → takeOrder → brewHot → serve → END`），`/pages/conditional.html` = 变体 B 条件分流（按 drinkType 选 brewHot / brewIce / reject）。页面先展示声明每一步的源代码（状态标注 / 登记节点 / 连边 / 编译 / 运行），再点一次跑出每一站的补丁；条件分流版另外展示 routeChosen（这次为什么走这条边）。不调大模型。 |
+| ✅ | step-2 | `yarn app:13-02-state-graph-step-2` | `50143` | 变体 C 回边循环（`brewHot → brewHot`，靠 `retryCount` 收敛；`smooth` / `retry-once` / `fail` 三场景按钮各跑一单）。页面摊开声明源代码 + 跑单 + routeChosen。不调大模型。 |
+| 🔄 | step-3 | `yarn app:13-02-state-graph-step-3` | `50144` | 变体 D 并行扇出扇入（takeOrder fan-out 到 branchHot / branchIce，框架同 super-step 并行跑两台机器；`cupLabel` 字段三选一：`no-reducer`（并行冲突 → 报错）/ `array-reducer`（合并成 `[冰，热]`）/ `distinct-fields`（热 / 冰各写一格）。页面摊开三份状态标注源代码 + 跑单 + 错误展示。不调大模型。 |
+| 🔄 | step-4 | `yarn app:13-02-state-graph-step-4` | `50145` | 变体 E 非法转移（路由函数返回的键在 pathMap 里找不到时 framework 抛异常；接口级报错，不是业务级拦截）。三 mode 演示 `normal`（pathMap 完整）/ `invalid-edge`（pathMap 缺 `unknown` → 异常）/ `route-fallback`（路由函数对未识别 drinkType 兜底返回 `reject`）。页面摊开三份 pathMap + 路由函数源代码 + 跑单 + 错误展示。不调大模型。 |
+| 🔄 | step-5 | `yarn app:13-02-state-graph-step-5` | `50146` | 变体 F 检查点 + 变体 G 中断（`compile({ checkpointer })` + 运行时 `{ thread_id }` 跨请求同进程能恢复；节点里 `interrupt(value)` 暂停图 + 写快照，第二次 `invoke(new Command({ resume }))` 从中断点继续；恢复时节点会从头重跑，靠 `idempotencyKey` 防重扣）。三 mode 演示 `no-checkpoint`（baseline）/ `memory-saver`（同进程跨请求恢复）/ `memory-saver-interrupt`（完整 interrupt 闭环）。页面摊开 interrupt / resume / idempotencyKey 源代码 + 走单 + 扣卡结果。不调大模型。 |
 
 ## 过关自检
 

@@ -151,7 +151,11 @@
     "app:13-01-framework-solves-what-step-1": "PORT=50139 tsx 13-Agent-Framework/01-框架解决什么-step-1/server.ts",
     "app:13-01-framework-solves-what-step-2": "PORT=50140 tsx 13-Agent-Framework/01-框架解决什么-step-2/server.ts",
     "app:13-01-framework-solves-what-step-3": "PORT=50141 tsx 13-Agent-Framework/01-框架解决什么-step-3/server.ts",
-    "app:13-02-state-graph-step-1": "PORT=50142 tsx 13-Agent-Framework/02-State-Graph-step-1/server.ts"
+    "app:13-02-state-graph-step-1": "PORT=50142 tsx 13-Agent-Framework/02-State-Graph-step-1/server.ts",
+    "app:13-02-state-graph-step-2": "PORT=50143 tsx 13-Agent-Framework/02-State-Graph-step-2/server.ts",
+    "app:13-02-state-graph-step-3": "PORT=50144 tsx 13-Agent-Framework/02-State-Graph-step-3/server.ts",
+    "app:13-02-state-graph-step-4": "PORT=50145 tsx 13-Agent-Framework/02-State-Graph-step-4/server.ts",
+    "app:13-02-state-graph-step-5": "PORT=50146 npx tsx 13-Agent-Framework/02-State-Graph-step-5/server.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
