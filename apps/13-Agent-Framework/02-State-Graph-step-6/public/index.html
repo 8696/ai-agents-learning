@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>递归上限 · 第六步（step-6）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-recursion.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+  <script type="module" src="/components/runtime-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineRecursion } from "/components/flow-pipeline-recursion.js";
+    import { RuntimeList } from "/components/runtime-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "well-behaved", label: "well-behaved 收敛", expectedRoute: "路由看 cupLabel + retryCount < 3 → 收敛" },
+      { id: "always-broken", label: "always-broken 抛错", expectedRoute: "路由忘写上限 → 跑满 recursionLimit → GraphRecursionError" },
+      { id: "graceful", label: "graceful 体面收场", expectedRoute: "同上忘写上限；但外层 try/catch → 200 返 stoppedReason = recursion_limit" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有；路由不读它" },
+      { key: "mode", zh: "mode", who: "路由按 mode 决定看哪些条件" },
+      { key: "orderSlip", zh: "订单条", who: "takeOrder 站写" },
+      { key: "cupLabel", zh: "杯盖", who: "brewHot 写；本步始终 null" },
+      { key: "retryCount", zh: "重做次数", who: "brewHot 写；每跑一次 +1" },
+      { key: "stoppedReason", zh: "停止原因", who: "graceful 模式外层写 \"recursion_limit\"；well-behaved 写 \"ok\"" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 站写" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述、mode、recursionLimit 有值。其它五格是空的。";
+    const INPUT_HINT = "入口状态：drinkName + mode + recursionLimit 有值；其它五格都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：START → takeOrder → brewHot（重做站）→（条件边）→ brewHot / serve → END。注意 brewHot 上方那条「↑ 回边」标识——这是图能循环的关键。",
+      "理解三个 mode 的路由函数差别：well-behaved 看了 cupLabel 和 retryCount 上限（< 3）；always-broken / graceful 只看 cupLabel（**忘写上限**）→ 永远 retry → 跑满 recursionLimit。",
+      "well-behaved 点一下就走完；always-broken 点一下返 5xx（GraphRecursionError）；graceful 点一下返 200 + stoppedReason: \"recursion_limit\"——体面收场，runtime 里仍能看见跑过几站。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("well-behaved");
+      const [drinkName, setDrinkName] = useState("来一杯中杯热拿铁。");
+      const [recursionLimit, setRecursionLimit] = useState(5);
+      const [declaration, setDeclaration] = useState([]);
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50147, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/recursion-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setDrinkName(data.drinkDefault || "来一杯中杯热拿铁。");
+            setRecursionLimit(data.recursionLimitDefault || 5);
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/recursion-graph", { drinkName, mode: scenarioId, recursionLimit });
+          setRunResult(data);
+          setStatus("ok");
+        } catch (err) {
+          setRunResult({ ok: false, error: err.message || "请求失败" });
+          setErrorText(err.message || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+      const runtimeOk = runResult && runResult.runtime && runResult.runtime.length > 0;
+      const isRecursionLimit = runResult && runResult.status === "recursion_limit";
+      const isCompleted = runResult && runResult.status === "completed";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              递归上限（recursionLimit） · 第六步（step-6） · GraphRecursionError + 体面收场
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：`graph.stream(input, { recursionLimit })` 给运行时一个硬上限（默认 25）。超了抛 `GraphRecursionError`。三个 mode：well-behaved（路由正确收敛）/ always-broken（路由忘写上限 → 抛错）/ graceful（同 always-broken，外层 try/catch 体面收场）。"
+              steps={INTRO_STEPS}
+              takeaway="递归上限 = `graph.stream(input, { recursionLimit })` 传入运行时配置；超了抛 `GraphRecursionError`（langgraph 1.x 的 compile 不接 recursionLimit）。**和模块 07 `maxRounds` 差两件事**：① 单位不同——超级步 ≠ 模型轮次（一个超级步里可多个并行节点、不一定调模型）；② 收场方式不同——模块 07 体面写 `stoppedReason`；状态图默认抛，要体面得外层 try/catch。graceful 模式就是外层 try/catch 的演示。"
+              observe="well-behaved 1~3 站就到 END；always-broken 点一下返 5xx + 完整 GraphRecursionError 文案；graceful 点一下返 200 + stoppedReason=recursion_limit，runtime 里仍能数出跑过几站（抛错前已经走了几站就记录几站）。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">五个工位 + brewHot 回边 + 三个 mode 路由函数对比 + compile({ recursionLimit }) + graceful try/catch。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">点按钮之后才填。always-broken 可能抛 GraphRecursionError；graceful 体面收场。runtime 记录抛错前跑过的站。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <label className="block text-sm text-gray-700 md:col-span-2">
+                  客人口述（drinkName · 入口状态里事先有值的字段）
+                  <input
+                    className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                    value={drinkName}
+                    disabled={busy}
+                    onChange={function (event) { setDrinkName(event.target.value); }}
+                  />
+                </label>
+                <label className="block text-sm text-gray-700">
+                  recursionLimit（compile 入参，2~50）
+                  <input
+                    type="number"
+                    min={2}
+                    max={50}
+                    className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                    value={recursionLimit}
+                    disabled={busy}
+                    onChange={function (event) { setRecursionLimit(Number(event.target.value) || 5); }}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端 invoke 跑一遍。well-behaved 收敛到 END；always-broken 跑满 recursionLimit 抛错（5xx）；graceful 同 always-broken 但外层 try/catch 体面返 200 + stoppedReason = \"recursion_limit\"。点完看 #status-pill + 下方 runtime 卡 / 异常文案。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2 whitespace-pre-wrap">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={[]}
+                flowComponent={FlowPipelineRecursion}
+                useConditionalGoal={false}
+                subCaption="下面八步是「把这张递归上限图画出来」的顺序。重点：① 三个 mode 路由函数对比 → 看是否漏写 retryCount 上限；② compile({ recursionLimit }) → 把上限显式化；③ graceful 模式独有 try/catch → 把异常变成完成态。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              {runtimeOk ? (
+                <RuntimeList
+                  drinkName={drinkName}
+                  input={null}
+                  runtime={runResult.runtime}
+                  finalState={runResult.finalState}
+                  nodeCodes={runResult.nodeCodes}
+                  fields={FIELDS}
+                  emptyHint={EMPTY_HINT}
+                  inputHint={INPUT_HINT}
+                  flowComponent={FlowPipelineRecursion}
+                />
+              ) : (
+                <p className="text-sm text-gray-500">还没走。点上面的「well-behaved 收敛 / always-broken 抛错 / graceful 体面收场」之一之后，这里会按站填这些格。</p>
+              )}
+              {isCompleted ? (
+                <div className="border border-green-300 bg-green-50 rounded p-3 space-y-1">
+                  <div className="text-sm font-semibold text-green-900">completed · stoppedReason = "ok" · 变体 H baseline</div>
+                  <p className="text-xs text-gray-800">整张图跑完，进 END。retryCount = {runResult.finalState.retryCount}——路由正确判断 cupLabel 永远 null + retryCount &lt; 3 → 重做三次后路由返回 "ok" → serve。</p>
+                </div>
+              ) : null}
+              {isRecursionLimit && runResult.errorMessage ? (
+                <div className="border border-yellow-300 bg-yellow-50 rounded p-3 space-y-2">
+                  <div className="text-sm font-semibold text-yellow-900">graceful 模式体面收场 · stoppedReason = "recursion_limit" · 变体 H 教学点</div>
+                  <p className="text-xs text-gray-800">框架抛了 GraphRecursionError（异常文案见下方）。外层 try/catch 把它转成完成态：stoppedReason = "recursion_limit"，HTTP 仍返 200。这就是状态图的「体面收场」模式——对比模块 07 的 <span className="font-mono">stoppedReason = "max_rounds"</span>。</p>
+                  <pre className="whitespace-pre-wrap text-xs bg-white text-gray-700 p-2 rounded max-h-32 overflow-auto">{runResult.errorMessage}</pre>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

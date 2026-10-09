@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>什么时候才该上图 · 第八步（step-8）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { SourceBlock } from "/components/source-block.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "flat-single-node", label: "flat-single-node（单节点正确形状）", expectedRoute: "1 站直接给答案——FAQ 类问题不上图" },
+      { id: "over-graphed", label: "over-graphed（硬套出杯图）", expectedRoute: "3 站写入跟问题无关的 orderSlip / cupLabel / pickupCall——浪费" },
+    ];
+
+    const FIELDS = [
+      { key: "question", zh: "问题", who: "入口状态：客人提的问题（默认「店几点关门？」）" },
+      { key: "mode", zh: "mode", who: "决定 flat-single-node 还是 over-graphed" },
+      { key: "answer", zh: "答案", who: "flat 模式写入 ANSWER_OPEN_HOURS" },
+      { key: "orderSlip", zh: "订单条", who: "over-graphed 模式写入；和「店几点关门」无关" },
+      { key: "cupLabel", zh: "杯盖", who: "over-graphed 模式写入；和「店几点关门」无关" },
+      { key: "pickupCall", zh: "取餐广播", who: "over-graphed 模式写入；和「店几点关门」无关" },
+      { key: "stationsRun", zh: "跑过的站数", who: "flat 模式 = 1；over-graphed 模式 = 3" },
+    ];
+
+    const EMPTY_HINT = "现在只有 question、mode 有值。其它五格是空的。";
+    const INPUT_HINT = "入口状态：question + mode 有值；其它五格都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：① flat-single-node 模式 = 单节点直接给答案（answer 字段有值，runtime 1 站）；② over-graphed 模式 = 完整进出图（runtime 3 站，写入 orderSlip / cupLabel / pickupCall）。",
+      "理解判断口诀：步骤能提前画出来 → 上图；下一步只有模型临场才知道 → 留给模块 07 那种循环。",
+      "点两个 mode 按钮之一，看 runtime + stationsRun 字段：flat 模式 stationsRun=1；over-graphed 模式 stationsRun=3——可观察的代价直接写进状态里。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("flat-single-node");
+      const [question, setQuestion] = useState("店几点关门？");
+      const [declaration, setDeclaration] = useState([]);
+      const [nodeCodes, setNodeCodes] = useState({});
+      const [overGraphedCode, setOverGraphedCode] = useState("");
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50149, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/when-to-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setQuestion(data.questionDefault || "店几点关门？");
+            setNodeCodes(data.nodeCodes || {});
+            setOverGraphedCode(data.overGraphedCode || "");
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/when-to-graph", { question, mode: scenarioId });
+          setRunResult(data);
+          setStatus("ok");
+        } catch (err) {
+          setRunResult({ ok: false, error: err.message || "请求失败" });
+          setErrorText(err.message || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+      const runtimeOk = runResult && runResult.runtime && runResult.runtime.length > 0;
+      const stationsRun = runResult && runResult.finalState ? runResult.finalState.stationsRun : null;
+      const isFlat = mode === "flat-single-node";
+
+      function changedKeysOf(patch) {
+        return Object.keys(patch || {});
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              什么时候才该上图（变体 J） · 第八步（step-8） · 判断口诀 + 硬套图的代价
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="判断口诀：**步骤能提前画出来 → 上图；下一步只有模型临场才知道 → 留给模块 07 那种循环**。两个 mode：flat-single-node（FAQ 单节点直接给答案——正确形状）/ over-graphed（FAQ 硬套完整进出图——runtime 3 站写入跟问题无关的字段，可观察的代价）。"
+              steps={INTRO_STEPS}
+              takeaway="**FAQ 类问题不上图——单节点直接答是正确形状**。硬套完整进出图会浪费三站 runtime、写入了三个跟问题无关的字段（orderSlip / cupLabel / pickupCall）。变体 J 和变体 E 对照：变体 E 是「图画了但路径映射没列」（接口级报错），变体 J 是「图根本不该画」（结构级错误）。"
+              observe="flat-single-node 模式：runtime 1 站，answer 字段直接给答案；over-graphed 模式：runtime 3 站，stationsRun=3。**stationsRun 是这一小节的可观察代价指标**——直接写进状态里便于对照。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">两种 mode 的图（单节点 vs 三节点）+ 判断口诀。compile 还没发生。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">flat 1 站 / over-graphed 3 站——对照 stationsRun 字段就能看见代价。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <label className="block text-sm text-gray-700 md:col-span-2">
+                  问题（question · 入口状态）
+                  <input
+                    className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                    value={question}
+                    disabled={busy}
+                    onChange={function (event) { setQuestion(event.target.value); }}
+                  />
+                </label>
+                <div className="block text-sm text-gray-700">
+                  <div>当前 mode</div>
+                  <div className="mt-1 px-2 py-2 border border-gray-300 rounded text-sm bg-gray-50 font-mono">{mode}</div>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端 invoke 跑一遍。flat 模式 runtime 1 站、answer 字段给「营业时间」；over-graphed 模式 runtime 3 站、写入了三个跟问题无关的字段。点完看 #status-pill + 下方 runtime 卡 / stationsRun 卡片。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2 whitespace-pre-wrap">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={[]}
+                flowComponent={null}
+                useConditionalGoal={false}
+                subCaption="下面六步是「把两种 mode 的图画出来 + 判断口诀」的顺序。重点：① flat 模式 = 单节点——FAQ 正确形状；② over-graphed 模式 = 三节点——硬套图的代价；③ 判断口诀决定何时选哪种形状。"
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              {!runtimeOk ? (
+                <p className="text-sm text-gray-500">还没走。点上面的「flat-single-node / over-graphed」之一之后，这里会按站填这些格。</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="border border-gray-300 rounded p-3 bg-gray-50 space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">请求参数（入口状态）</div>
+                    <pre className="whitespace-pre-wrap text-xs bg-white text-gray-700 p-2 rounded max-h-32 overflow-auto">{JSON.stringify(runResult.input || { question, mode }, null, 2)}</pre>
+                  </div>
+
+                  <div className={isFlat ? "border border-green-300 bg-green-50 rounded p-3 space-y-2" : "border border-red-300 bg-red-50 rounded p-3 space-y-2"}>
+                    <div className="text-sm font-semibold">{isFlat ? "✅ flat 模式 · 正确形状 · stationsRun = 1" : "⚠ over-graphed 模式 · 硬套图 · stationsRun = 3"}</div>
+                    <p className="text-xs text-gray-800">
+                      {isFlat
+                        ? <>runtime 跑了 1 站——单节点直接给「店几点关门」的答案（answer 字段 = 营业时间）。这是 FAQ 类问题的<strong>正确形状</strong>。</>
+                        : <>runtime 跑了 3 站——takeOrder / brewHot / serve 各写了一个字段，但这些字段（orderSlip / cupLabel / pickupCall）都和「店几点关门」无关。<strong>硬套图的可观察代价</strong>。</>}
+                    </p>
+                    <pre className="whitespace-pre-wrap text-xs bg-white text-gray-700 p-2 rounded max-h-32 overflow-auto">{JSON.stringify({ stationsRun: stationsRun, runtimeLength: runResult.runtime.length }, null, 2)}</pre>
+                  </div>
+
+                  {runResult.runtime.map(function (step, i) {
+                    const changed = changedKeysOf(step.patch);
+                    return (
+                      <div key={step.node + "-" + i} className="border border-gray-300 rounded p-3 bg-white space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-sm font-semibold text-gray-900">
+                            第 {i + 1} 站 · {step.label}
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono">{step.node}</span>
+                          </div>
+                          <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-900">这一站只交回 {changed.join("、") || "（空补丁）"}</span>
+                        </div>
+                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 text-gray-700 p-2 rounded max-h-32 overflow-auto">{JSON.stringify(step.patch, null, 2)}</pre>
+                        <SourceBlock
+                          title={"节点函数源代码（" + step.node + "）"}
+                          why="这一站的运行时源代码来自 lib/flow/when-to-graph-source.ts；和运行时解耦。"
+                          code={nodeCodes[step.node] || overGraphedCode || "（这一站没有展示代码）"}
+                        />
+                      </div>
+                    );
+                  })}
+
+                  <div className="border border-green-300 rounded p-3 bg-green-50 space-y-2">
+                    <div className="text-xs font-semibold text-green-900">最终状态（走到 END · 响应结果）</div>
+                    <pre className="whitespace-pre-wrap text-xs bg-white text-gray-700 p-2 rounded max-h-32 overflow-auto">{JSON.stringify(runResult.finalState, null, 2)}</pre>
+                    <p className="text-xs text-gray-700">
+                      {isFlat
+                        ? "answer 字段直接给了「营业时间」——这就是 FAQ 的答案。其它字段都还是 null。"
+                        : "orderSlip / cupLabel / pickupCall 三个字段都被写了——但这些和「店几点关门」毫无关系。这就是硬套图的可观察代价：runtime 三站写入三个跟问题无关的字段。"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

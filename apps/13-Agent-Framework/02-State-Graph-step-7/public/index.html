@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>子图（Subgraph） · 第七步（step-7）</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/source-block.js"></script>
+  <script type="module" src="/components/flow-pipeline-subgraph.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/declaration-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { DeclarationList } from "/components/declaration-list.js";
+    import { FlowPipelineSubgraph } from "/components/flow-pipeline-subgraph.js";
+    import { SourceBlock } from "/components/source-block.js";
+    import { StateBoard } from "/components/state-board.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const SCENARIOS = [
+      { id: "flat", label: "flat（不抽子图）", expectedRoute: "makeDrink 是普通节点；不抽子图——单图就够用就别抽" },
+      { id: "subgraph-same-fields", label: "subgraph-same-fields（同名自动传）", expectedRoute: "addNode(\"makeDrink\", subgraph) 直接挂子图；同名字段自动传" },
+      { id: "subgraph-renamed", label: "subgraph-renamed（不同名 wrapper）", expectedRoute: "父图挂 wrapper；wrapper 手动调子图 invoke 并翻译字段" },
+    ];
+
+    const FIELDS = [
+      { key: "drinkName", zh: "客人口述", who: "进门时就有" },
+      { key: "mode", zh: "mode", who: "决定 makeDrink 装什么" },
+      { key: "orderSlip", zh: "订单条", who: "takeOrder 写" },
+      { key: "cupLabel", zh: "杯盖", who: "makeDrink 写；同名字段自动从子图回流" },
+      { key: "retryCount", zh: "重做次数", who: "makeDrink 写；同名字段自动从子图回流" },
+      { key: "pickupCall", zh: "取餐广播", who: "serve 写" },
+    ];
+
+    const EMPTY_HINT = "现在只有客人口述、mode 有值。其它四格是空的。takeOrder 还没跑过，orderSlip 仍是空。";
+    const INPUT_HINT = "入口状态：drinkName + mode 有值；其它四格都还没写过。";
+
+    const INTRO_STEPS = [
+      "看上半页「画路」：父图 START → takeOrder → makeDrink（包一整张子图）→ serve → END。下方紫框是 makeDrink 内部的子图：subStart → subBrewHot → subEnd。",
+      "理解三个 mode 的差别：flat = makeDrink 是普通节点；subgraph-same-fields = 父图 addNode(\"makeDrink\", subgraph) 直接挂子图（同名字段自动传）；subgraph-renamed = 父图挂 wrapper 节点，wrapper 手动翻译父→子 / 子→父字段名。",
+      "点三个场景按钮之一，看 runtime + subRuntime（makeDrink 节点下方的子图内部 brewHot 一站）。判断口诀总结",
+    ];
+
+    function changedKeysOf(patch) {
+      return Object.keys(patch || {});
+    }
+
+    function SubRuntimeCard(props) {
+      const sub = props.subRuntime || [];
+      if (sub.length === 0) return null;
+      return (
+        <div className="border border-purple-300 bg-purple-50 rounded p-3 space-y-2">
+          <div className="text-xs font-semibold text-purple-900">↑ makeDrink 这一站内部的子图（subRuntime）</div>
+          {sub.map(function (step, i) {
+            return (
+              <div key={i} className="border border-purple-200 bg-white rounded p-2 space-y-1">
+                <div className="text-xs font-semibold text-gray-900">
+                  子图第 {i + 1} 站 · {step.label}
+                  <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono">{step.node}</span>
+                </div>
+                <pre className="whitespace-pre-wrap text-xs bg-gray-50 text-gray-700 p-2 rounded max-h-32 overflow-auto">{JSON.stringify(step.patch, null, 2)}</pre>
+              </div>
+            );
+          })}
+          <p className="text-xs text-gray-700">同名字段自动回流父图（subgraph-same-fields）或被 wrapper 翻译回流（subgraph-renamed）。</p>
+        </div>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [mode, setMode] = useState("flat");
+      const [drinkName, setDrinkName] = useState("来一杯中杯热拿铁。");
+      const [declaration, setDeclaration] = useState([]);
+      const [makeDrinkCodes, setMakeDrinkCodes] = useState({ flat: "", "subgraph-same-fields": "", "subgraph-renamed": "" });
+      const [subgraphStateCodes, setSubgraphStateCodes] = useState({ "subgraph-same-fields": "", "subgraph-renamed": "" });
+      const [nodeCodes, setNodeCodes] = useState({});
+      const [runResult, setRunResult] = useState(null);
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50148, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/parent-graph")
+          .then(function (data) {
+            setDeclaration(data.declaration || []);
+            setDrinkName(data.drinkDefault || "来一杯中杯热拿铁。");
+            setMakeDrinkCodes(data.makeDrinkCodes || { flat: "", "subgraph-same-fields": "", "subgraph-renamed": "" });
+            setSubgraphStateCodes(data.subgraphStateCodes || { "subgraph-same-fields": "", "subgraph-renamed": "" });
+            setNodeCodes(data.nodeCodes || {});
+          })
+          .catch(function (err) {
+            setErrorText(err.message || "加载声明失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function runScenario(scenarioId) {
+        setMode(scenarioId);
+        setStatus("loading");
+        setErrorText("");
+        setRunResult(null);
+        try {
+          const data = await postJson("/api/parent-graph", { drinkName, mode: scenarioId });
+          setRunResult(data);
+          setStatus("ok");
+        } catch (err) {
+          setRunResult({ ok: false, error: err.message || "请求失败" });
+          setErrorText(err.message || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setErrorText((err && err.message) || "请求失败");
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+      const runtimeOk = runResult && runResult.runtime && runResult.runtime.length > 0;
+      const isFlat = mode === "flat";
+
+      // 根据 mode 动态替换 makeDrink 的源代码 + 子图状态标注
+      const currentMakeDrinkCode = makeDrinkCodes[mode] || "";
+      const currentSubgraphStateCode = mode === "subgraph-same-fields" || mode === "subgraph-renamed"
+        ? subgraphStateCodes[mode]
+        : null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              子图（Subgraph） · 第七步（step-7） · 同名字段自动传 vs 不同名走 wrapper
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一件事：编译好的一张子图，可以直接 addNode 挂到父图上当一站。**同名字段自动传；不同名要自己写 wrapper 翻译**。三个 mode：flat（不抽子图）/ subgraph-same-fields（同名自动传）/ subgraph-renamed（不同名 wrapper）。"
+              steps={INTRO_STEPS}
+              takeaway="子图 = 编译好的图直接 addNode 到父图。**同名字段自动传；不同名走 wrapper**——这是本步唯一硬规则。判断口诀：**能用一张 flat 图画清的就别抽子图**——子图的价值在「复用」和「边界」，不在「嵌套」。变体 J「店几点关门」就是反例。"
+              observe="subgraph-same-fields 模式：父图 addNode(&quot;makeDrink&quot;, subgraph) 一行挂子图；runtime 里 makeDrink 节点下方能看到子图内部 brewHot（subBrewHot）那一站的 patch。subgraph-renamed 模式：wrapper 翻译字段，runtime 里仍能看到子图内部 patch，但字段名（drinkSlip / label / retries）跟父图不一样。"
+            />
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">上半页 · 画路（声明期）</div>
+                <p className="text-xs text-gray-700">父图三站 + 子图三站 + 三个 mode 路由（其实是 makeDrink 节点按 mode 切换）。</p>
+              </div>
+              <div className="border border-gray-300 bg-white rounded p-3 space-y-1">
+                <div className="text-sm font-semibold text-gray-900">下半页 · 走路（运行期）</div>
+                <p className="text-xs text-gray-700">runtime 三行（takeOrder / makeDrink / serve），makeDrink 下挂 subRuntime 显示子图内部 brewHot。</p>
+              </div>
+            </section>
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <label className="block text-sm text-gray-700 md:col-span-2">
+                  客人口述（drinkName · 入口状态里唯一事先有值的字段）
+                  <input
+                    className="mt-1 w-full border border-gray-300 rounded p-2 text-sm"
+                    value={drinkName}
+                    disabled={busy}
+                    onChange={function (event) { setDrinkName(event.target.value); }}
+                  />
+                </label>
+                <div className="block text-sm text-gray-700">
+                  <div>当前 mode</div>
+                  <div className="mt-1 px-2 py-2 border border-gray-300 rounded text-sm bg-gray-50 font-mono">{mode}</div>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">点了会发生什么：服务端 invoke 跑一遍。runtime 三行（takeOrder / makeDrink / serve），makeDrink 这一行下面会挂 subRuntime 显示子图内部的 brewHot。点完看 #status-pill + 下半页。</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.map(function (s) {
+                  return (
+                    <button
+                      key={s.id}
+                      className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                      disabled={busy}
+                      onClick={function () { runScenario(s.id); }}
+                    >
+                      {s.label}（{s.expectedRoute}）
+                    </button>
+                  );
+                })}
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+              {errorText ? (
+                <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2 whitespace-pre-wrap">{errorText}</div>
+              ) : null}
+            </section>
+
+            <section className="bg-white shadow rounded p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-gray-900">上半页 · 画路（图还没跑，源代码在这里）</h2>
+              <DeclarationList
+                steps={declaration}
+                edges={[]}
+                pathMap={[]}
+                flowComponent={FlowPipelineSubgraph}
+                useConditionalGoal={false}
+                subCaption="下面十一步是「把主子图画出来」的顺序。重点：① 父图 addNode(&quot;makeDrink&quot;, subgraph) 同名字段自动传；② 不同名字段走 wrapper 翻译；③ 变体 J 反例——能用 flat 就别抽子图。"
+              />
+              {currentMakeDrinkCode ? (
+                <SourceBlock
+                  title={"makeDrink 节点源代码（当前 mode = " + mode + "）"}
+                  why="页面顶部按 mode 切换：flat 看普通节点；subgraph-same-fields 看 addNode(subgraph)；subgraph-renamed 看 wrapper。"
+                  code={currentMakeDrinkCode}
+                />
+              ) : null}
+              {currentSubgraphStateCode ? (
+                <SourceBlock
+                  title={"子图状态标注（" + mode + "）"}
+                  why="子图 A 用 orderSlip / cupLabel / retryCount（与父图同名）；子图 B 用 drinkSlip / label / retries（与父图不同名）。"
+                  code={currentSubgraphStateCode}
+                />
+              ) : null}
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-4 min-h-[200px]">
+              <h2 className="text-sm font-semibold text-gray-900">下半页 · 走路（调用流程 / 响应结果）</h2>
+              {!runtimeOk ? (
+                <p className="text-sm text-gray-500">还没走。点上面的三个 mode 按钮之一之后，这里会按父图三站 + 子图内部一站填这些格。</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="border border-gray-300 rounded p-3 bg-gray-50 space-y-2">
+                    <div className="text-xs font-semibold text-gray-700">请求参数（入口状态）</div>
+                    <StateBoard
+                      title="进门时的订单夹"
+                      hint={INPUT_HINT}
+                      state={runResult.input || { drinkName, mode }}
+                      changedKeys={["drinkName", "mode"]}
+                      fields={FIELDS}
+                    />
+                  </div>
+                  <FlowPipelineSubgraph
+                    doneNodes={["START"].concat(runResult.runtime.map(function (s) { return s.node; }))}
+                    currentNode="END"
+                    caption="绿 = 已经走过；整单走完，停在 END。"
+                  />
+                  {runResult.runtime.map(function (step, i) {
+                    const changed = changedKeysOf(step.patch);
+                    const isMakeDrink = step.node === "makeDrink";
+                    return (
+                      <div key={step.node + "-" + i} className="border border-gray-300 rounded p-3 bg-white space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-sm font-semibold text-gray-900">
+                            第 {i + 1} 站 · {step.label}
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono">{step.node}</span>
+                          </div>
+                          <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-900">这一站只交回 {changed.join("、") || "（空补丁）"}</span>
+                        </div>
+                        <pre className="whitespace-pre-wrap text-xs bg-gray-50 text-gray-700 p-2 rounded max-h-32 overflow-auto">{JSON.stringify(step.patch, null, 2)}</pre>
+                        <SourceBlock
+                          title={"节点函数源代码（" + step.node + "）"}
+                          why={isMakeDrink ? "当前 mode = " + mode + "——flat 是普通节点；subgraph-same-fields 是 addNode(subgraph)；subgraph-renamed 是 wrapper。" : "这一站的源代码来自 lib/flow/*-source.ts；和运行时解耦。"}
+                          code={isMakeDrink ? currentMakeDrinkCode : (nodeCodes[step.node] || "（这一站没有展示代码）")}
+                        />
+                        {isMakeDrink && step.subRuntime ? (
+                          <SubRuntimeCard subRuntime={step.subRuntime} />
+                        ) : null}
+                        <StateBoard
+                          title={"第 " + (i + 1) + " 站结束后的订单夹"}
+                          hint={isMakeDrink ? (isFlat ? "makeDrink 是 flat 模式——直接写父图 cupLabel。" : "makeDrink 这一站 = 子图。同名字段自动回流；不同名走 wrapper 翻译回流。") : "看绿格：这一站实际改了哪一格。"}
+                          state={step.stateAfter}
+                          changedKeys={changed}
+                          fields={FIELDS}
+                        />
+                      </div>
+                    );
+                  })}
+                  <div className="border border-green-300 rounded p-3 bg-green-50 space-y-2">
+                    <div className="text-xs font-semibold text-green-900">最终状态（走到 END · 响应结果）</div>
+                    <StateBoard
+                      title="出餐之后的订单夹"
+                      hint="这就是 graph.stream 走完之后你拿到的那一份状态。retryCount 是子图回流的——变体 I 教学点：走完 makeDrink 后，retryCount 已经写进了父图。"
+                      state={runResult.finalState}
+                      changedKeys={[]}
+                      fields={FIELDS}
+                    />
+                  </div>
+                </div>
+              )}
+              {isFlat && runtimeOk ? (
+                <div className="border border-blue-300 bg-blue-50 rounded p-3 space-y-1">
+                  <div className="text-sm font-semibold text-blue-900">flat 模式 · 不抽子图 · 判断口诀命中</div>
+                  <p className="text-xs text-gray-800">makeDrink 只在这一张父图里用一次，且没有自己的多状态——单图就够用。**能用一张 flat 图画清的就别抽子图**。</p>
+                </div>
+              ) : null}
+              {runtimeOk && !isFlat ? (
+                <div className="border border-purple-300 bg-purple-50 rounded p-3 space-y-1">
+                  <div className="text-sm font-semibold text-purple-900">{mode} 模式 · 子图回流确认</div>
+                  <p className="text-xs text-gray-800">makeDrink 这一站 = 整张子图。父图 cupLabel = 子图 cupLabel（或被 wrapper 翻译）；retryCount = 子图 retryCount（或被 wrapper 翻译）。这条信息是「同名字段自动传 / 不同名走 wrapper」的实际证据。</p>
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

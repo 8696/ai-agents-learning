@@ -168,6 +168,9 @@
 | `yarn app:13-02-state-graph-step-3` | `50144` | 模块 13 · 02 · 状态图 step-3：并行扇出扇入，takeOrder fan-out 到 branchHot / branchIce，cupLabel 字段三选一（no-reducer 报错 / array-reducer 合并 / distinct-fields 不冲突）（不调 LLM） |
 | `yarn app:13-02-state-graph-step-4` | `50145` | 模块 13 · 02 · 状态图 step-4：非法转移，路由函数返回的键在 pathMap 里找不到时 framework 抛异常；三 mode 演示 normal（pathMap 完整）/ invalid-edge（pathMap 缺 unknown → 异常）/ route-fallback（路由函数对未识别 drinkType 返回 reject 兜底）（不调 LLM） |
 | `yarn app:13-02-state-graph-step-5` | `50146` | 模块 13 · 02 · 状态图 step-5：检查点 + 中断，compile({ checkpointer }) + { thread_id } 跨请求恢复；interrupt + Command({ resume }) 完整闭环；idempotencyKey 防节点重扣（不调 LLM） |
+| `yarn app:13-02-state-graph-step-6` | `50147` | 模块 13 · 02 · 状态图 step-6：递归上限，compile({ recursionLimit }) 显式设上限；超了抛 GraphRecursionError。三 mode 演示 well-behaved（路由正确收敛）/ always-broken（路由忘写上限 → 抛错）/ graceful（同 always-broken，外层 try/catch 体面收场）（不调 LLM） |
+| `yarn app:13-02-state-graph-step-7` | `50148` | 模块 13 · 02 · 状态图 step-7：子图（subgraph），编译好的图 addNode 挂到父图上当一站；同名字段自动传，不同名字段走 wrapper 翻译。三 mode 演示 flat（不抽子图）/ subgraph-same-fields（同名 addNode(subgraph)）/ subgraph-renamed（不同名 wrapper 翻译字段）（不调 LLM） |
+| `yarn app:13-02-state-graph-step-8` | `50149` | 模块 13 · 02 · 状态图 step-8：什么时候才该上图（变体 J），判断口诀——步骤能提前画出来才上图；下一步只有模型临场才知道就留给模块 07。两个 mode：flat-single-node（FAQ 单节点直接给答案——正确形状）/ over-graphed（FAQ 硬套完整进出图——runtime 3 站写入跟问题无关的字段，stationsRun 字段直接写进状态作代价指标）（不调 LLM） |
 | （口不回收 · 原 step-2 已删，收进 step-1 最小发现） | `50130` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
