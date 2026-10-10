@@ -13,11 +13,11 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**LLM-as-Judge**：用模型打分方便，但 Judge 自己也有偏差](./01-LLM-as-Judge.md) | 知道不能把 Judge 分数当成客观真理 | `LLM as a judge evaluation` `G-eval metric` · OpenAI Evals · LangSmith Evaluation | — |
-| ⬜ | [**轨迹评测**：工具调对了没有、步骤是否跑偏，不只看最终答案](./02-轨迹评测.md) | 能说出至少 2 个过程指标 | `agent trajectory evaluation` `tool call accuracy metric` · Langfuse / LangSmith 文档 | — |
-| ⬜ | [**Faithfulness / Relevance / Retrieval Accuracy**：检索对了吗、回答是否只基于检索材料、答是否切题](./03-Faithfulness-Relevance-Retrieval-Accuracy.md) | 能区分这三项；评测报告里至少能量其中一项 | `RAG faithfulness metric` `answer relevance vs retrieval accuracy` · RAGAS / 评测博客 | — |
-| ⬜ | [**CI / ship-no-ship**：改动前后用同一 Golden Set 出数字，再决定能不能上](./04-CI-ship-no-ship.md) | 能描述一条「命令出报告」的门禁 | `LLM eval CI github actions` `golden dataset regression` · LangSmith / Promptfoo CI 示例 | — |
-| ⬜ | [**模块复盘**](./05-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./05-模块复盘.md) |
+| ✅ | [**LLM-as-Judge**：用模型打分方便，但 Judge 自己也有偏差](./01-LLM-as-Judge.md) | 知道不能把 Judge 分数当成客观真理 | `LLM as a judge evaluation` `G-eval metric` · OpenAI Evals · LangSmith Evaluation | 暂无链接 |
+| ✅ | [**轨迹评测**：工具调对了没有、步骤是否跑偏，不只看最终答案](./02-轨迹评测.md) | 能说出至少 2 个过程指标 | `agent trajectory evaluation` `tool call accuracy metric` · Langfuse / LangSmith 文档 | 暂无链接 |
+| ✅ | [**Faithfulness / Relevance / Retrieval Accuracy**：检索对了吗、回答是否只基于检索材料、答是否切题](./03-Faithfulness-Relevance-Retrieval-Accuracy.md) | 能区分这三项；评测报告里至少能量其中一项 | `RAG faithfulness metric` `answer relevance vs retrieval accuracy` · RAGAS / 评测博客 | 暂无链接 |
+| ✅ | [**CI / ship-no-ship**：改动前后用同一 Golden Set 出数字，再决定能不能上](./04-CI-ship-no-ship.md) | 能描述一条「命令出报告」的门禁 | `LLM eval CI github actions` `golden dataset regression` · LangSmith / Promptfoo CI 示例 | 暂无链接 |
+| ✅ | [**模块复盘**](./05-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./05-模块复盘.md) |
 
 ## 验收
 

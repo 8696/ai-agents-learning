@@ -13,9 +13,9 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**Accessibility Tree**：给 LLM 的页面摘要，通常比 DOM 短、噪音少](./01-Accessibility-Tree.md) | 知道为什么优先 a11y 而不是塞整个 HTML | `accessibility tree browser automation` `playwright accessibility snapshot` · [Playwright 文档](https://playwright.dev/docs/aria-snapshots) · Chrome DevTools a11y | — |
-| ⬜ | [**Computer Use**：比「只开浏览器」范围大（桌面），权限和风险更高](./02-Computer-Use.md) | 能说出和 Browser Agent 的差别 | `Claude computer use` `GUI agent LLM` · Anthropic Computer Use 文档 | — |
-| ⬜ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀（新建 `05-coding-agent`） | — | [沉淀](./03-模块复盘.md) |
+| ✅ | [**Accessibility Tree**：给 LLM 的页面摘要，通常比 DOM 短、噪音少](./01-Accessibility-Tree.md) | 知道为什么优先 a11y 而不是塞整个 HTML | `accessibility tree browser automation` `playwright accessibility snapshot` · [Playwright 文档](https://playwright.dev/docs/aria-snapshots) · Chrome DevTools a11y | [Playwright 无障碍快照](https://playwright.dev/docs/aria-snapshots) |
+| ✅ | [**Computer Use**：比「只开浏览器」范围大（桌面），权限和风险更高](./02-Computer-Use.md) | 能说出和 Browser Agent 的差别 | `Claude computer use` `GUI agent LLM` · Anthropic Computer Use 文档 | 暂无链接 |
+| ✅ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀（新建 `05-coding-agent`） | — | [沉淀](./03-模块复盘.md) |
 
 ## 验收
 

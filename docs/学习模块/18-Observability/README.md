@@ -13,9 +13,9 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**Trace / Span**：一次 Agent 执行 = 1 条 Trace，每步 LLM/Tool = Span](./01-Trace-Span.md) | 能画这层关系 | `OpenTelemetry trace span` `LLM observability tracing` · [Langfuse 文档](https://langfuse.com/docs) · OpenTelemetry 概念 | — |
-| ⬜ | [**轨迹可视化**：在 Langfuse / LangSmith 里点到失败的那一步](./02-轨迹可视化.md) | 会用 UI 定位，不只会打 console.log | `LangSmith trace view` `debug agent steps` · LangSmith / Langfuse 截图教程 | — |
-| ⬜ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
+| ✅ | [**Trace / Span**：一次 Agent 执行 = 1 条 Trace，每步 LLM/Tool = Span](./01-Trace-Span.md) | 能画这层关系 | `OpenTelemetry trace span` `LLM observability tracing` · [Langfuse 文档](https://langfuse.com/docs) · OpenTelemetry 概念 | 暂无链接 |
+| ✅ | [**轨迹可视化**：在 Langfuse / LangSmith 里点到失败的那一步](./02-轨迹可视化.md) | 会用 UI 定位，不只会打 console.log | `LangSmith trace view` `debug agent steps` · LangSmith / Langfuse 截图教程 | 暂无链接 |
+| ✅ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
 
 ## 验收
 
