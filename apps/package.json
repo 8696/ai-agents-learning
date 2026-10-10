@@ -158,7 +158,11 @@
     "app:13-02-state-graph-step-5": "PORT=50146 npx tsx 13-Agent-Framework/02-State-Graph-step-5/server.ts",
     "app:13-02-state-graph-step-6": "PORT=50147 npx tsx 13-Agent-Framework/02-State-Graph-step-6/server.ts",
     "app:13-02-state-graph-step-7": "PORT=50148 npx tsx 13-Agent-Framework/02-State-Graph-step-7/server.ts",
-    "app:13-02-state-graph-step-8": "PORT=50149 npx tsx 13-Agent-Framework/02-State-Graph-step-8/server.ts"
+    "app:13-02-state-graph-step-8": "PORT=50149 npx tsx 13-Agent-Framework/02-State-Graph-step-8/server.ts",
+    "app:13-03-agents-as-tools-vs-handoff-step-1": "PORT=50150 tsx 13-Agent-Framework/03-Agents-as-Tools-vs-Handoff-step-1/server.ts",
+    "app:13-03-agents-as-tools-vs-handoff-step-2": "PORT=50151 tsx 13-Agent-Framework/03-Agents-as-Tools-vs-Handoff-step-2/server.ts",
+    "app:13-03-agents-as-tools-vs-handoff-step-3": "PORT=50152 tsx 13-Agent-Framework/03-Agents-as-Tools-vs-Handoff-step-3/server.ts",
+    "app:13-03-agents-as-tools-vs-handoff-step-4": "PORT=50153 tsx 13-Agent-Framework/03-Agents-as-Tools-vs-Handoff-step-4/server.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",

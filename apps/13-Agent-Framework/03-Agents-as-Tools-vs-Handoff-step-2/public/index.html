@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agents as Tools vs Handoff · 第二步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/scenario-board.js"></script>
+  <script type="module" src="/components/message-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { ScenarioBoard } from "/components/scenario-board.js";
+    import { MessageList } from "/components/message-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const INTRO_STEPS = [
+      "读上半页：固定场景有两句用户原话（第一句触发 host → refund，第二句触发 refund → guide）+ 三段判据 + 三段入口代码。",
+      "左栏（mode: tool）点一次看 host 调工具；右栏（mode: handoff）连续点两次看两次切换——首次 host → refund，再来一次 refund → guide。",
+      "右栏第三次点：当前 Agent 已是导购，新消息直接挂在导购名下，专员没有停在原地等导购的返回值。",
+    ];
+
+    const ROLE_LABEL = { host: "总客服", refund: "退款专员", guide: "导购" };
+
+    // 按 turn 选用户该说的句子（同一对话线，右栏看 Agent 怎么换）
+    function userMessageFor(scenario, mode, turn) {
+      if (!scenario) return "（点一下）";
+      if (mode === "tool") {
+        return scenario.userMessage;
+      }
+      if (turn === 0) return scenario.userMessage;
+      if (turn === 1) return scenario.userMessage2 || "（继续问）";
+      return "（继续问）";
+    }
+
+    function Panel(props) {
+      const accent = props.accent;
+      const accentRing = accent === "tool"
+        ? "border-green-300 bg-green-50"
+        : "border-purple-300 bg-purple-50";
+      const accentBadge = accent === "tool"
+        ? "bg-green-100 text-green-800 border-green-300"
+        : "bg-purple-100 text-purple-800 border-purple-300";
+      const btnClass = accent === "tool"
+        ? "bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        : "bg-purple-600 text-white px-4 py-2 rounded disabled:opacity-50";
+
+      return (
+        <section className={"border-2 rounded p-4 space-y-3 " + accentRing}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">{props.title}</h2>
+            <span className={"text-xs px-2 py-1 rounded border font-semibold " + accentBadge}>
+              当前 Agent：{ROLE_LABEL[props.currentAgent] || props.currentAgent}
+            </span>
+          </div>
+
+          <div className="text-xs text-gray-700 bg-white border border-gray-200 rounded p-2">
+            <span className="font-semibold">下一句判据：</span>
+            {props.rationale || "（点「发送下一句」前没有判据）"}
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-gray-700 mb-1">消息列表</div>
+            <MessageList messages={props.messages} />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={btnClass}
+              disabled={props.busy}
+              onClick={props.onSend}
+            >
+              发送下一句（POST /api/send-next · mode={accent}）
+            </button>
+            <button
+              className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+              disabled={props.busy}
+              onClick={props.onReset}
+            >
+              清空这一栏
+            </button>
+          </div>
+
+          {props.errorText ? (
+            <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+              {props.errorText}
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [scenario, setScenario] = useState(null);
+      const [scenarioError, setScenarioError] = useState("");
+
+      // 左栏（tool 模式）状态
+      const [toolMessages, setToolMessages] = useState([]);
+      const [toolCurrentAgent, setToolCurrentAgent] = useState("host");
+      const [toolUserTurnCount, setToolUserTurnCount] = useState(0);
+      const [toolRationale, setToolRationale] = useState("");
+      const [toolError, setToolError] = useState("");
+
+      // 右栏（handoff 模式）状态
+      const [handoffMessages, setHandoffMessages] = useState([]);
+      const [handoffCurrentAgent, setHandoffCurrentAgent] = useState("host");
+      const [handoffUserTurnCount, setHandoffUserTurnCount] = useState(0);
+      const [handoffRationale, setHandoffRationale] = useState("");
+      const [handoffError, setHandoffError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50151, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/scenario")
+          .then(function (data) { setScenario(data.scenario); })
+          .catch(function (err) {
+            setScenarioError(err.message || "加载场景失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function sendNext(mode) {
+        if (!scenario) return;
+
+        setStatus("loading");
+        const turnCount = mode === "tool" ? toolUserTurnCount : handoffUserTurnCount;
+        const userMsg = userMessageFor(scenario, mode, turnCount);
+
+        if (mode === "tool") {
+          setToolError("");
+          setToolMessages(function (prev) { return prev.concat([{ from: "user", text: userMsg }]); });
+        } else {
+          setHandoffError("");
+          setHandoffMessages(function (prev) { return prev.concat([{ from: "user", text: userMsg }]); });
+        }
+
+        const body = mode === "tool"
+          ? { mode: "tool", currentAgent: toolCurrentAgent, userTurnCount: toolUserTurnCount }
+          : { mode: "handoff", currentAgent: handoffCurrentAgent, userTurnCount: handoffUserTurnCount };
+
+        try {
+          const data = await postJson("/api/send-next", body);
+          if (mode === "tool") {
+            setToolMessages(function (prev) { return prev.concat(data.appended || []); });
+            setToolCurrentAgent(data.nextCurrentAgent);
+            setToolRationale(data.rationale);
+            setToolUserTurnCount(function (n) { return n + 1; });
+          } else {
+            setHandoffMessages(function (prev) { return prev.concat(data.appended || []); });
+            setHandoffCurrentAgent(data.nextCurrentAgent);
+            setHandoffRationale(data.rationale);
+            setHandoffUserTurnCount(function (n) { return n + 1; });
+          }
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          if (mode === "tool") setToolError(msg); else setHandoffError(msg);
+          setStatus("error");
+        }
+      }
+
+      function resetPanel(mode) {
+        if (mode === "tool") {
+          setToolMessages([]); setToolCurrentAgent("host"); setToolUserTurnCount(0); setToolRationale(""); setToolError("");
+        } else {
+          setHandoffMessages([]); setHandoffCurrentAgent("host"); setHandoffUserTurnCount(0); setHandoffRationale(""); setHandoffError("");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败"));
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Agents as Tools vs Handoff · 链式任务移交：host → refund → guide
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一段对话，左栏走「当工具调用」（host 永远在线），右栏走「任务移交链」（host → refund → guide）。右栏连续点两次「发送下一句」看到两次 activeAgent 切换。"
+              steps={INTRO_STEPS}
+              takeaway="再交给下一个人 = 任务移交再来一次。每发生一次，activeAgent 就换一次，原 Agent 都不在原地等新 Agent 的返回值。判同一段对话。右栏连点两次看两次切换。"
+              observe="右栏第一次点完：徽标立刻变成「退款专员」；再点一次：徽标变成「导购」，并且新消息直接挂在导购名下。专员没有停在同一次请求里等导购交回一段文字再自己对用户说。"
+            />
+
+            <ScenarioBoard scenario={scenario} />
+
+            {scenarioError ? (
+              <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                {scenarioError}
+              </div>
+            ) : null}
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <div className="text-sm text-gray-500">本页教学点对照 · 同段对话两个模式 + 链式移交</div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Panel
+                title="左栏 · 当工具调用（mode: tool）"
+                accent="tool"
+                messages={toolMessages}
+                currentAgent={toolCurrentAgent}
+                rationale={toolRationale}
+                onSend={function () { sendNext("tool"); }}
+                onReset={function () { resetPanel("tool"); }}
+                busy={busy}
+                errorText={toolError}
+              />
+              <Panel
+                title="右栏 · 任务移交链（mode: handoff）"
+                accent="handoff"
+                messages={handoffMessages}
+                currentAgent={handoffCurrentAgent}
+                rationale={handoffRationale}
+                onSend={function () { sendNext("handoff"); }}
+                onReset={function () { resetPanel("handoff"); }}
+                busy={busy}
+                errorText={handoffError}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[120px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · 模式 + 当前 Agent + 已发轮次</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                <div>
+                  <div className="font-semibold">左栏</div>
+                  <div>模式 = tool · 当前 Agent = {ROLE_LABEL[toolCurrentAgent]} · 已发轮次 = {toolUserTurnCount}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">右栏</div>
+                  <div>模式 = handoff · 当前 Agent = {ROLE_LABEL[handoffCurrentAgent]} · 已发轮次 = {handoffUserTurnCount}</div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                每次「发送下一句」发出 POST /api/send-next，体量按上面表里的当前状态走。
+                step=0 触发首次移交（host → refund）；step=1 触发再次移交（refund → guide）；step≥2 由 guide 继续接。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

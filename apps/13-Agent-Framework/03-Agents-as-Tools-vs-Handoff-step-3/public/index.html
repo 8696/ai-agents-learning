@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agents as Tools vs Handoff · 第三步</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/scenario-board.js"></script>
+  <script type="module" src="/components/message-list.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { ScenarioBoard } from "/components/scenario-board.js";
+    import { MessageList } from "/components/message-list.js";
+    import { postJson, getJson, loadHealth } from "/utils/fetch-json.js";
+
+    const INTRO_STEPS = [
+      "读上半页的固定场景（订单 A10086 + 用户问有没有货几天到）和两边各自的下一句判据 + 入口代码。",
+      "左栏（mode: tool）点一次：消息列表追加「1 个 tool-call + 1 个 tool-result + 1 句 host 汇总」共 3 条。",
+      "右栏（mode: tool-multi）点一次：消息列表追加「2 个 tool-call + 2 个 tool-result + 1 句 host 汇总」共 5 条。两段专结论都进 host 的 tool_result；下一句仍由总客服接。",
+    ];
+
+    const ROLE_LABEL = { host: "总客服", refund: "退款专员", guide: "导购" };
+
+    function Panel(props) {
+      const accent = props.accent;
+      const accentRing = accent === "tool"
+        ? "border-green-300 bg-green-50"
+        : "border-orange-300 bg-orange-50";
+      const accentBadge = accent === "tool"
+        ? "bg-green-100 text-green-800 border-green-300"
+        : "bg-orange-100 text-orange-800 border-orange-300";
+      const btnClass = accent === "tool"
+        ? "bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        : "bg-orange-600 text-white px-4 py-2 rounded disabled:opacity-50";
+
+      return (
+        <section className={"border-2 rounded p-4 space-y-3 " + accentRing}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">{props.title}</h2>
+            <span className={"text-xs px-2 py-1 rounded border font-semibold " + accentBadge}>
+              当前 Agent：{ROLE_LABEL[props.currentAgent] || props.currentAgent}
+            </span>
+          </div>
+
+          <div className="text-xs text-gray-700 bg-white border border-gray-200 rounded p-2">
+            <span className="font-semibold">下一句判据：</span>
+            {props.rationale || "（点「发送下一句」前没有判据）"}
+          </div>
+
+          <div>
+            <div className="text-xs font-semibold text-gray-700 mb-1">消息列表</div>
+            <MessageList messages={props.messages} />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={btnClass}
+              disabled={props.busy}
+              onClick={props.onSend}
+            >
+              发送下一句（POST /api/send-next · mode={accent}）
+            </button>
+            <button
+              className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+              disabled={props.busy}
+              onClick={props.onReset}
+            >
+              清空这一栏
+            </button>
+          </div>
+
+          {props.errorText ? (
+            <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+              {props.errorText}
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [scenario, setScenario] = useState(null);
+      const [scenarioError, setScenarioError] = useState("");
+
+      // 左栏（tool 模式 · 单 tool_call）
+      const [toolMessages, setToolMessages] = useState([]);
+      const [toolCurrentAgent, setToolCurrentAgent] = useState("host");
+      const [toolUserTurnCount, setToolUserTurnCount] = useState(0);
+      const [toolRationale, setToolRationale] = useState("");
+      const [toolError, setToolError] = useState("");
+
+      // 右栏（tool-multi 模式 · 同一轮多 tool_call 并行）
+      const [multiMessages, setMultiMessages] = useState([]);
+      const [multiCurrentAgent, setMultiCurrentAgent] = useState("host");
+      const [multiUserTurnCount, setMultiUserTurnCount] = useState(0);
+      const [multiRationale, setMultiRationale] = useState("");
+      const [multiError, setMultiError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50152, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+        getJson("/api/scenario")
+          .then(function (data) { setScenario(data.scenario); })
+          .catch(function (err) {
+            setScenarioError(err.message || "加载场景失败");
+            setStatus("error");
+          });
+      }, []);
+
+      async function sendNext(mode) {
+        const userMsg = scenario && scenario.userMessage;
+        if (!userMsg) return;
+
+        setStatus("loading");
+        if (mode === "tool") {
+          setToolError("");
+          setToolMessages(function (prev) { return prev.concat([{ from: "user", text: userMsg }]); });
+        } else {
+          setMultiError("");
+          setMultiMessages(function (prev) { return prev.concat([{ from: "user", text: userMsg }]); });
+        }
+
+        const body = mode === "tool"
+          ? { mode: "tool", currentAgent: toolCurrentAgent, userTurnCount: toolUserTurnCount }
+          : { mode: "tool-multi", currentAgent: multiCurrentAgent, userTurnCount: multiUserTurnCount };
+
+        try {
+          const data = await postJson("/api/send-next", body);
+          if (mode === "tool") {
+            setToolMessages(function (prev) { return prev.concat(data.appended || []); });
+            setToolCurrentAgent(data.nextCurrentAgent);
+            setToolRationale(data.rationale);
+            setToolUserTurnCount(function (n) { return n + 1; });
+          } else {
+            setMultiMessages(function (prev) { return prev.concat(data.appended || []); });
+            setMultiCurrentAgent(data.nextCurrentAgent);
+            setMultiRationale(data.rationale);
+            setMultiUserTurnCount(function (n) { return n + 1; });
+          }
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          if (mode === "tool") setToolError(msg); else setMultiError(msg);
+          setStatus("error");
+        }
+      }
+
+      function resetPanel(mode) {
+        if (mode === "tool") {
+          setToolMessages([]); setToolCurrentAgent("host"); setToolUserTurnCount(0); setToolRationale(""); setToolError("");
+        } else {
+          setMultiMessages([]); setMultiCurrentAgent("host"); setMultiUserTurnCount(0); setMultiRationale(""); setMultiError("");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          await getJson("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败"));
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Agents as Tools vs Handoff · 同一轮问多人：单 tool_call vs 多 tool_call 并行
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一句话（左 = 「耳机有没有货几天到」），左栏走 mode=tool 一次调一个专员；右栏走 mode=tool-multi 同一轮并行调两个专员。下一句都由总客服接。"
+              steps={INTRO_STEPS}
+              takeaway="当工具调用允许同一轮并行调多个专员：所有专结论都进 host 的 tool_result；下一句仍由总客服接。判据不是「一个或多个」——而是「有没有新 Agent 接手」（没有 = 当工具调用，不论一个还是多个）。"
+            observe="左栏消息列表追加 3 条（1 tool-call + 1 tool-result + 1 host speech）；右栏追加 5 条（2 tool-call + 2 tool-result + 1 host speech）。两边的徽标始终是「总客服」。"
+            />
+
+            <ScenarioBoard scenario={scenario} />
+
+            {scenarioError ? (
+              <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                {scenarioError}
+              </div>
+            ) : null}
+
+            <section id="controls" className="bg-white shadow rounded p-4">
+              <div className="text-sm text-gray-500">本页教学点对照 · 同一轮问多人的两种模式</div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Panel
+                title="左栏 · 当工具调用（mode: tool · 单 tool_call）"
+                accent="tool"
+                messages={toolMessages}
+                currentAgent={toolCurrentAgent}
+                rationale={toolRationale}
+                onSend={function () { sendNext("tool"); }}
+                onReset={function () { resetPanel("tool"); }}
+                busy={busy}
+                errorText={toolError}
+              />
+              <Panel
+                title="右栏 · 当工具调用（mode: tool-multi · 同一轮多 tool_call 并行）"
+                accent="tool-multi"
+                messages={multiMessages}
+                currentAgent={multiCurrentAgent}
+                rationale={multiRationale}
+                onSend={function () { sendNext("tool-multi"); }}
+                onReset={function () { resetPanel("tool-multi"); }}
+                busy={busy}
+                errorText={multiError}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[120px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · 模式 + 当前 Agent + 已发轮数</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                <div>
+                  <div className="font-semibold">左栏</div>
+                  <div>模式 = tool · 当前 Agent = {ROLE_LABEL[toolCurrentAgent]} · 已发轮数 = {toolUserTurnCount}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">右栏</div>
+                  <div>模式 = tool-multi · 当前 Agent = {ROLE_LABEL[multiCurrentAgent]} · 已发轮数 = {multiUserTurnCount}</div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                关键对照：右栏一次 POST 拿到 5 条 appended（2 tool-call + 2 tool-result + 1 host speech），左栏 3 条；两边 nextCurrentAgent 仍是 host。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -171,6 +171,10 @@
 | `yarn app:13-02-state-graph-step-6` | `50147` | 模块 13 · 02 · 状态图 step-6：递归上限，compile({ recursionLimit }) 显式设上限；超了抛 GraphRecursionError。三 mode 演示 well-behaved（路由正确收敛）/ always-broken（路由忘写上限 → 抛错）/ graceful（同 always-broken，外层 try/catch 体面收场）（不调 LLM） |
 | `yarn app:13-02-state-graph-step-7` | `50148` | 模块 13 · 02 · 状态图 step-7：子图（subgraph），编译好的图 addNode 挂到父图上当一站；同名字段自动传，不同名字段走 wrapper 翻译。三 mode 演示 flat（不抽子图）/ subgraph-same-fields（同名 addNode(subgraph)）/ subgraph-renamed（不同名 wrapper 翻译字段）（不调 LLM） |
 | `yarn app:13-02-state-graph-step-8` | `50149` | 模块 13 · 02 · 状态图 step-8：什么时候才该上图（变体 J），判断口诀——步骤能提前画出来才上图；下一步只有模型临场才知道就留给模块 07。两个 mode：flat-single-node（FAQ 单节点直接给答案——正确形状）/ over-graphed（FAQ 硬套完整进出图——runtime 3 站写入跟问题无关的字段，stationsRun 字段直接写进状态作代价指标）（不调 LLM） |
+| `yarn app:13-03-agents-as-tools-vs-handoff-step-1` | `50150` | 模块 13 · 03 · Agents as Tools vs Handoff step-1：两栏对照页（同一句话 = 耳机右耳没声音想退款，订单 A10086），左栏走「当工具调用」、右栏走「任务移交」；点「发送下一句」实时切当前 Agent / 消息列表追加到哪份 / 下一句判据（不调 LLM，本地 mock 两 Agent 的话术循环） |
+| `yarn app:13-03-agents-as-tools-vs-handoff-step-2` | `50151` | 模块 13 · 03 · Agents as Tools vs Handoff step-2：链式任务移交（左栏当工具调用 host 永远在线；右栏连续两次「发送下一句」看 host → refund → guide 两次切换）（不调 LLM，本地 mock 三位 Agent 的话术循环） |
+| `yarn app:13-03-agents-as-tools-vs-handoff-step-3` | `50152` | 模块 13 · 03 · Agents as Tools vs Handoff step-3：同一轮问多人（并行的当工具调用）——左栏 mode=tool 一次调一个专员；右栏 mode=tool-multi 同一轮并行调两个专员（库存 + 物流），所有专结论都进 host 的 tool_result；下一句仍由总客服接（不调 LLM，本地 mock 库存/物流专员的话术循环） |
+| `yarn app:13-03-agents-as-tools-vs-handoff-step-4` | `50153` | 模块 13 · 03 · Agents as Tools vs Handoff step-4：进线分流 vs 中途分流。左栏 mode=entry-routing 从第一句起当前 Agent = 退款专员；右栏 mode=handoff 第一句总客服接、再移交专员。两栏共用同一段用户原话，第一句回复者不同（不调 LLM，本地 mock 总客服 + 退款专员的话术循环） |
 | （口不回收 · 原 step-2 已删，收进 step-1 最小发现） | `50130` | 不再单独启动 |
 
 HTTP 端口规则见 [AGENTS.md §5.3.3](../AGENTS.md#533-目录与脚本)：从 `50000` 起**顺序分配**，新增 Demo = `max(占用表) + 1`；删 demo 不回收口。建前先查本表，禁止撞口；不要把 `PORT` 写进共享 `apps/.env`。
