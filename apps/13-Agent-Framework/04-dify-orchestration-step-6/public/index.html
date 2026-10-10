@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dify 等编排产品 · 第六步 · 单次 vs 智能体节点</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/llm-node-panel.js"></script>
+  <script type="module" src="/components/agent-node-panel.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { LLMNodePanel } from "/components/llm-node-panel.js";
+    import { AgentNodePanel } from "/components/agent-node-panel.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const DEFAULT_TEXT = "来一杯冰拿铁。";
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 50159 · 协议 A · 会调大模型）。",
+      "两栏共用同一句用户原话（默认「来一杯冰拿铁。」）；点「跑」会同时发出两次独立请求（左栏 POST /api/llm-node / 右栏 POST /api/agent-node）。",
+      "对照看：左栏 rounds=1 · toolTrace=[]（没查库存）；右栏 rounds ≥ 1 · toolTrace ≠ []（自己查了库存 + 自己汇总）。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      const [text, setText] = useState(DEFAULT_TEXT);
+      const [maxRounds, setMaxRounds] = useState(4);
+      const [provider, setProvider] = useState("minimax");
+
+      const [llmResult, setLLMResult] = useState(null);
+      const [llmError, setLLMError] = useState("");
+      const [agentResult, setAgentResult] = useState(null);
+      const [agentError, setAgentError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50159, provider: null, model: null, hasKey: false, callsModel: true });
+        });
+      }, []);
+
+      async function runLLM() {
+        setStatus("loading");
+        setLLMError("");
+        try {
+          const data = await postJson("/api/llm-node", { text, maxRounds, provider: provider !== "minimax" ? provider : undefined });
+          setLLMResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setLLMError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runAgent() {
+        setStatus("loading");
+        setAgentError("");
+        try {
+          const data = await postJson("/api/agent-node", { text, maxRounds, provider: provider !== "minimax" ? provider : undefined });
+          setAgentResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setAgentError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runBoth() {
+        setStatus("loading");
+        setLLMError("");
+        setAgentError("");
+        try {
+          const payload = { text, maxRounds, provider: provider !== "minimax" ? provider : undefined };
+          const [a, b] = await Promise.all([
+            postJson("/api/llm-node", payload),
+            postJson("/api/agent-node", payload),
+          ]);
+          setLLMResult(a);
+          setAgentResult(b);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setLLMError(msg);
+          setAgentError(msg);
+          setStatus("error");
+        }
+      }
+
+      function resetPanel(which) {
+        if (which === "llm") {
+          setLLMResult(null); setLLMError("");
+        } else {
+          setAgentResult(null); setAgentError("");
+        }
+      }
+
+      async function demoBadInput() {
+        setStatus("loading");
+        try {
+          await postJson("/api/llm-node", { text: "", maxRounds: 4 });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("空入参演示：" + ((err && err.message) || "请求失败") + "（第一类错误：4xx · 入参不合法）");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          await fetch("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败") + "（第二类错误：路由层 500）");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Dify 等编排产品 · 单次 vs 智能体节点（step-6）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一句用户原话，左栏走「单独一个大模型节点」（调一次，不查库存）；右栏走「智能体节点」（带 tools + while，自己查库存 + 自己汇总）。"
+              steps={INTRO_STEPS}
+              takeaway="单次大模型节点 ≠ Agent 循环 —— 模型拿到用户原话就返回 finalReply，**不会**自己调工具查库存。「它会自动查库存」是对「智能体节点」的脑补，不是对「单独一个大模型节点」的脑补。"
+              observation="命中「冰拿铁」时：左栏 rounds=1 · toolTrace=[] · finalReply 凭印象（模型说「可以做」/「不能做」不一定准）；右栏 rounds ≥ 1 · toolTrace ≠ [] · finalReply 看的是真实库存。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">两栏共用同一句用户原话</div>
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <label className="text-gray-700">用户原话：</label>
+                <input
+                  className="border border-gray-300 px-3 py-2 rounded flex-1 min-w-[240px]"
+                  value={text}
+                  onChange={function (e) { setText(e.target.value); }}
+                />
+                <label className="text-gray-700 ml-4">maxRounds：</label>
+                <input
+                  type="number" min="1" max="8"
+                  className="border border-gray-300 px-2 py-1 rounded w-20"
+                  value={maxRounds}
+                  onChange={function (e) { setMaxRounds(Number(e.target.value) || 4); }}
+                />
+                <label className="text-gray-700 ml-4">提供商（provider · minimax 不支持 tools）：</label>
+                <select className="border border-gray-300 px-2 py-1 rounded" value={provider} onChange={function (e) { setProvider(e.target.value); }}>
+                  <option value="minimax">minimax（默认 · 不支持 tools）</option>
+                  <option value="zhipu">zhipu（智谱 · 支持 tools）</option>
+                  <option value="qwen">qwen（千问 · 支持 tools）</option>
+                  <option value="deepseek">deepseek（支持 tools）</option>
+                </select>
+              </div>
+              <div className="text-xs text-gray-500">
+                想跑智能体节点（右栏）请先把提供商切到支持 tools 的一家 —— minimax 这条路径传 tools 会返 500 unknown error (1000)。
+              </div>
+              <div className="text-xs text-gray-500">
+                空字符串会触发 4xx（第一类错误）；可点「演示后端 5xx」看第二类错误（路由层 500）。
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="bg-black text-white px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={runBoth}>
+                  同时跑两栏（浏览器侧并行 · 都真调大模型）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={demoBadInput}>
+                  演示空入参 4xx（第一类错误）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={demoServerError}>
+                  演示后端 5xx（第二类错误）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <LLMNodePanel
+                result={llmResult}
+                onSubmit={runLLM}
+                onReset={function () { resetPanel("llm"); }}
+                busy={busy}
+                errorText={llmError}
+              />
+              <AgentNodePanel
+                result={agentResult}
+                onSubmit={runAgent}
+                onReset={function () { resetPanel("agent"); }}
+                busy={busy}
+                errorText={agentError}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[120px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · rounds / toolTrace 对照</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                <div>
+                  <div className="font-semibold">左栏 · 单独一个大模型节点</div>
+                  <div>{llmResult ? "rounds=" + llmResult.rounds + " · toolTrace=" + llmResult.toolTrace.length + " 条 · passedTools=" + (llmResult.passedTools ? "true" : "false") : "（还没跑）"}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">右栏 · 智能体节点</div>
+                  <div>{agentResult ? "rounds=" + agentResult.rounds + " · toolTrace=" + agentResult.toolTrace.length + " 条 · passedTools=" + (agentResult.passedTools ? "true" : "false") : "（还没跑）"}</div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                rounds 左 = 1 / 右 ≥ 1 · toolTrace 左 = [] / 右 ≠ [] · 这一对照钉出「单次调用 ≠ Agent 循环」。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

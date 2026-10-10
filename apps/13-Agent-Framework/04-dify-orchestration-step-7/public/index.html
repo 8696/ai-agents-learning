@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dify 等编排产品 · 第七步 · 人工方块 ≠ 检查点</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/human-only-panel.js"></script>
+  <script type="module" src="/components/human-with-checkpoint-panel.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { HumanOnlyPanel } from "/components/human-only-panel.js";
+    import { HumanWithCheckpointPanel } from "/components/human-with-checkpoint-panel.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const DEFAULT_REFUND_ID = "R-20261010-001";
+    const DEFAULT_AMOUNT = 199;
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 50160 · 本地计算 · 不调大模型）。",
+      "两栏共用同一组入参（refundRequestId + amount + killAt）；点「跑」会同时发出两次独立请求（左栏 POST /api/human-only / 右栏 POST /api/human-with-checkpoint）。",
+      "对照看：killAt=before-charge 时左栏 chargedTimes=2（重复扣款）；右栏 chargedTimes=1（idempotency 去重）。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      const [refundRequestId, setRefundRequestId] = useState(DEFAULT_REFUND_ID);
+      const [amount, setAmount] = useState(DEFAULT_AMOUNT);
+      const [killAt, setKillAt] = useState("before-charge");
+
+      const [onlyResult, setOnlyResult] = useState(null);
+      const [onlyError, setOnlyError] = useState("");
+      const [withResult, setWithResult] = useState(null);
+      const [withError, setWithError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50160, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+      }, []);
+
+      async function runOnly() {
+        setStatus("loading");
+        setOnlyError("");
+        try {
+          const data = await postJson("/api/human-only", { refundRequestId, amount, killAt });
+          setOnlyResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setOnlyError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runWith() {
+        setStatus("loading");
+        setWithError("");
+        try {
+          const data = await postJson("/api/human-with-checkpoint", { refundRequestId, amount, killAt });
+          setWithResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setWithError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runBoth() {
+        setStatus("loading");
+        setOnlyError("");
+        setWithError("");
+        try {
+          const payload = { refundRequestId, amount, killAt };
+          const [a, b] = await Promise.all([
+            postJson("/api/human-only", payload),
+            postJson("/api/human-with-checkpoint", payload),
+          ]);
+          setOnlyResult(a);
+          setWithResult(b);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setOnlyError(msg);
+          setWithError(msg);
+          setStatus("error");
+        }
+      }
+
+      function resetPanel(which) {
+        if (which === "only") {
+          setOnlyResult(null); setOnlyError("");
+        } else {
+          setWithResult(null); setWithError("");
+        }
+      }
+
+      async function demoBadInput() {
+        setStatus("loading");
+        try {
+          await postJson("/api/human-only", { refundRequestId: "", amount: 100 });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("空入参演示：" + ((err && err.message) || "请求失败") + "（第一类错误：4xx · 入参不合法）");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          await fetch("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败") + "（第二类错误：路由层 500）");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Dify 等编排产品 · 人工方块 ≠ 检查点（step-7）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一组 refundRequestId + amount + killAt，左栏仅人工方块（没写 checkpoint + 没做 idempotency）；右栏人工方块 + checkpoint 持久化 + idempotency_key 去重。"
+              steps={INTRO_STEPS}
+              takeaway="「等点头」方块（产品界面）≠ 检查点 + idempotency。kill 阶段模拟 before-charge 时，左栏会重复扣款（chargedTimes=2）；右栏不重复（chargedTimes=1，靠 checkpoint 持久化 + idempotency_key 去重）。"
+              observe="命中 chargedTimes 这一行：左栏 kill 阶段 = before-charge 时 chargedTimes=2；右栏不论 kill 阶段 = before-charge 还是 none，chargedTimes=1。另一行 checkpoint 是否持久化 + idempotency 是否生效。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">两栏共用同一组入参（refundRequestId + amount + killAt）</div>
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <label className="text-gray-700">refundRequestId：</label>
+                <input
+                  className="border border-gray-300 px-3 py-2 rounded flex-1 min-w-[200px]"
+                  value={refundRequestId}
+                  onChange={function (e) { setRefundRequestId(e.target.value); }}
+                />
+                <label className="text-gray-700 ml-4">amount：</label>
+                <input
+                  type="number" min="1" max="100000"
+                  className="border border-gray-300 px-2 py-1 rounded w-24"
+                  value={amount}
+                  onChange={function (e) { setAmount(Number(e.target.value) || DEFAULT_AMOUNT); }}
+                />
+                <label className="text-gray-700 ml-4">killAt：</label>
+                <select className="border border-gray-300 px-2 py-1 rounded" value={killAt} onChange={function (e) { setKillAt(e.target.value); }}>
+                  <option value="none">不模拟（正常流程）</option>
+                  <option value="before-charge">before-charge（调扣款前杀进程）</option>
+                </select>
+              </div>
+              <div className="text-xs text-gray-500">
+                同一个 refundRequestId 在右栏的 STORE 里**会持久化**（跨请求存活）；左栏不持久化。
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="bg-black text-white px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={runBoth}>
+                  同时跑两栏（浏览器侧并行 · 不调大模型）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={demoBadInput}>
+                  演示空入参 4xx（第一类错误）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={demoServerError}>
+                  演示后端 5xx（第二类错误）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <HumanOnlyPanel
+                result={onlyResult}
+                onSubmit={runOnly}
+                onReset={function () { resetPanel("only"); }}
+                busy={busy}
+                errorText={onlyError}
+              />
+              <HumanWithCheckpointPanel
+                result={withResult}
+                onSubmit={runWith}
+                onReset={function () { resetPanel("with"); }}
+                busy={busy}
+                errorText={withError}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[120px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · chargedTimes 对照</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                <div>
+                  <div className="font-semibold">左栏 · 仅人工方块</div>
+                  <div>{onlyResult ? "chargedTimes=" + onlyResult.chargedTimes + " · checkpoint=" + (onlyResult.checkpointPersisted ? "已持久化" : "❌ 没持久化") + " · idempotency=" + (onlyResult.idempotencyApplied ? "生效" : "❌ 没生效") : "（还没跑）"}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">右栏 · 人工方块 + checkpoint + idempotency</div>
+                  <div>{withResult ? "chargedTimes=" + withResult.chargedTimes + " · checkpoint=" + (withResult.checkpointPersisted ? "已持久化" : "❌ 没持久化") + " · idempotency=" + (withResult.idempotencyApplied ? "生效" : "❌ 没生效") : "（还没跑）"}</div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                同一份 refundRequestId + killAt=before-charge：左栏 chargedTimes=2（没保护）；右栏 chargedTimes=1（靠 checkpoint + idempotency）。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

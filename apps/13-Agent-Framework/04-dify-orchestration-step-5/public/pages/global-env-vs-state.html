@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dify 等编排产品 · step-5 加 page · 正确 vs 反例 · 状态写在哪</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module"src="/components/global-env-vs-state-panel.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { GlobalEnvVsStatePanel } from "/components/global-env-vs-state-panel.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 50158 · 本地计算 · 不调大模型）。",
+      "两栏共用同一组 cupSize + drinkType；点「跑」会同时发出两次独立请求（左栏 side=correct / 右栏 side=polluted）。",
+      "对照看：左栏 GLOBAL_CONFIG 不变；右栏 GLOBAL_CONFIG 多了 cup_size + secret_token —— 下次跑会读到上次的 cupSize。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      const [cupSize, setCupSize] = useState("大杯");
+      const [drinkType, setDrinkType] = useState("热饮");
+
+      const [correctResult, setCorrectResult] = useState(null);
+      const [correctError, setCorrectError] = useState("");
+      const [pollutedResult, setPollutedResult] = useState(null);
+      const [pollutedError, setPollutedError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50158, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+      }, []);
+
+      async function runSide(side, setResult, setError) {
+        setStatus("loading");
+        setError("");
+        try {
+          const data = await postJson("/api/global-env-vs-state", { cupSize, drinkType, side });
+          setResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runBoth() {
+        setStatus("loading");
+        setCorrectError("");
+        setPollutedError("");
+        try {
+          const [a, b] = await Promise.all([
+            postJson("/api/global-env-vs-state", { cupSize, drinkType, side: "correct" }),
+            postJson("/api/global-env-vs-state", { cupSize, drinkType, side: "polluted" }),
+          ]);
+          setCorrectResult(a);
+          setPollutedResult(b);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setCorrectError(msg);
+          setPollutedError(msg);
+          setStatus("error");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Dify 等编排产品 · 正确 vs 反例 · 状态写在哪（step-5 加 page）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="global-env-vs-state" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一组 cupSize + drinkType，左栏写在 declared state 里（不污染全局）；右栏写进 GLOBAL_CONFIG（模拟 process.env · 下次跑会读到上次的 cupSize）。"
+              steps={INTRO_STEPS}
+              takeaway="这一趟的字段归这一趟，不能写进全局。密钥和 cupSize 都不该写进 process.env —— 全局不该被这一趟污染，下一趟不该读到上一趟的状态。"
+              observation="命中 GLOBAL_CONFIG 那一格：左栏 = 空（不污染）；右栏 = {cup_size=大杯, secret_token=fake-secret-...} —— 下次跑会读到上次的 cup_size。差别就是「declared state vs GLOBAL_CONFIG」这一行。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">两栏共用同一组入参（cupSize + drinkType）</div>
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <label className="text-gray-700">cupSize：</label>
+                <select className="border border-gray-300 px-2 py-1 rounded" value={cupSize} onChange={function (e) { setCupSize(e.target.value); }}>
+                  <option value="大杯">大杯</option>
+                  <option value="中杯">中杯</option>
+                  <option value="小杯">小杯</option>
+                </select>
+                <label className="text-gray-700 ml-4">drinkType：</label>
+                <select className="border border-gray-300 px-2 py-1 rounded" value={drinkType} onChange={function (e) { setDrinkType(e.target.value); }}>
+                  <option value="热饮">热饮</option>
+                  <option value="冰饮">冰饮</option>
+                </select>
+              </div>
+              <div className="text-xs text-gray-500">
+                点「跑 right 一次」—— 触发右栏（污染 GLOBAL_CONFIG）；点「reset GLOBAL_CONFIG」—— 清空污染。
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="bg-black text-white px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={runBoth}>
+                  同时跑两栏（浏览器侧并行 · 不调大模型）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={function () { runSide("correct", setCorrectResult, setCorrectError); }}>
+                  跑左栏（correct）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={function () { runSide("polluted", setPollutedResult, setPollutedError); }}>
+                  跑右栏（polluted · 污染 GLOBAL_CONFIG）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <GlobalEnvVsStatePanel
+                title="左栏 · 正确（写在 declared state）"
+                side="correct"
+                result={correctResult}
+                onSubmit={function () { runSide("correct", setCorrectResult, setCorrectError); }}
+                onReset={function () { setCorrectResult(null); setCorrectError(""); }}
+                busy={busy}
+                errorText={correctError}
+              />
+              <GlobalEnvVsStatePanel
+                title="右栏 · 反例（写进 GLOBAL_CONFIG）"
+                side="polluted"
+                result={pollutedResult}
+                onSubmit={function () { runSide("polluted", setPollutedResult, setPollutedError); }}
+                onReset={function () { setPollutedResult(null); setPollutedError(""); }}
+                busy={busy}
+                errorText={pollutedError}
+              />
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

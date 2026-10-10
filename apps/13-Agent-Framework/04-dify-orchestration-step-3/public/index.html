@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dify 等编排产品 · 第三步 · 回边 + 次数变量</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/loop-edge-without-counter-panel.js"></script>
+  <script type="module" src="/components/loop-edge-with-counter-panel.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { LoopEdgeWithoutCounterPanel } from "/components/loop-edge-without-counter-panel.js";
+    import { LoopEdgeWithCounterPanel } from "/components/loop-edge-with-counter-panel.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 50156 · 本地计算 · 不调大模型）。",
+      "两栏共用同一组参数（库存缺 + maxRounds + counterLimit 默认值）；点「跑」会同时发出两次独立请求（左栏无 counter / 右栏有 counter）。",
+      "对照看：左栏「没写次数变量」一直转 → maxRounds 闸门触发；右栏「自己写了 counter 变量」拉回 3 次 → counterLimit 退出。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      const [maxRounds, setMaxRounds] = useState(6);
+      const [counterLimit, setCounterLimit] = useState(3);
+
+      const [withoutResult, setWithoutResult] = useState(null);
+      const [withoutError, setWithoutError] = useState("");
+
+      const [withResult, setWithResult] = useState(null);
+      const [withError, setWithError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50156, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+      }, []);
+
+      async function runWithout() {
+        setStatus("loading");
+        setWithoutError("");
+        try {
+          const data = await postJson("/api/loop-edge-without-counter", { inStock: false, maxRounds });
+          setWithoutResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setWithoutError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runWith() {
+        setStatus("loading");
+        setWithError("");
+        try {
+          const data = await postJson("/api/loop-edge-with-counter", { inStock: false, maxRounds, counterLimit });
+          setWithResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setWithError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runBoth() {
+        setStatus("loading");
+        setWithoutError("");
+        setWithError("");
+        try {
+          const [a, b] = await Promise.all([
+            postJson("/api/loop-edge-without-counter", { inStock: false, maxRounds }),
+            postJson("/api/loop-edge-with-counter", { inStock: false, maxRounds, counterLimit }),
+          ]);
+          setWithoutResult(a);
+          setWithResult(b);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setWithoutError(msg);
+          setWithError(msg);
+          setStatus("error");
+        }
+      }
+
+      function resetPanel(which) {
+        if (which === "without") {
+          setWithoutResult(null); setWithoutError("");
+        } else {
+          setWithResult(null); setWithError("");
+        }
+      }
+
+      async function demoBadInput() {
+        setStatus("loading");
+        try {
+          await postJson("/api/loop-edge-without-counter", { maxRounds: 999 });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("超界演示：" + ((err && err.message) || "请求失败") + "（这是第一类错误：4xx · 入参超界）");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          await fetch("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败") + "（这是第二类错误：路由层 500）");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Dify 等编排产品 · 回边 + 次数变量（step-3）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="画布上画了回边：库存缺 → 拉回问客人 → 再查 → 再拉回 ... 两栏共用同一组入参（库存缺 + maxRounds + counterLimit）。左栏没自己写次数变量 → 一直转直到 maxRounds 闸门触发；右栏自己写了一个 counter 变量 → 拉回 counterLimit 次后退出。"
+              steps={INTRO_STEPS}
+              takeaway="画了圈不代表不让你手作圈 —— 没写次数变量就一直转，直到路由的 maxRounds 强行停。次数变量 = 你仓库里 declared 的字段（对照模块 07 的 maxIterations 闸门），到上限才退。圈在画布上画得出来，但执行权不归你。"
+              observe="左栏 rounds=6（maxRounds 闸门）· stoppedReason=maxRounds；右栏 rounds=3（counterLimit）· counterValue=3 · stoppedReason=counterLimit。两栏轨迹条数不同。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">两栏共用同一组参数</div>
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <label className="text-gray-700">闸门上限（maxRounds）：</label>
+                <input
+                  type="number" min="1" max="12"
+                  className="border border-gray-300 px-2 py-1 rounded w-20"
+                  value={maxRounds}
+                  onChange={function (e) { setMaxRounds(Number(e.target.value) || 6); }}
+                />
+                <label className="text-gray-700 ml-4">次数变量上限（counterLimit · 只右栏用）：</label>
+                <input
+                  type="number" min="1" max="12"
+                  className="border border-gray-300 px-2 py-1 rounded w-20"
+                  value={counterLimit}
+                  onChange={function (e) { setCounterLimit(Number(e.target.value) || 3); }}
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                超界会触发 4xx（第一类错误）；可点「演示后端 5xx」看第二类错误。
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="bg-gray-800 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={runBoth}
+                >
+                  同时跑两栏（浏览器侧并行）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoBadInput}
+                >
+                  演示超界 4xx（第一类错误）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <LoopEdgeWithoutCounterPanel
+                result={withoutResult}
+                onSubmit={runWithout}
+                onReset={function () { resetPanel("without"); }}
+                busy={busy}
+                errorText={withoutError}
+              />
+              <LoopEdgeWithCounterPanel
+                result={withResult}
+                onSubmit={runWith}
+                onReset={function () { resetPanel("with"); }}
+                busy={busy}
+                errorText={withError}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[120px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · 两栏闸门对照</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                <div>
+                  <div className="font-semibold">左栏 · 无次数变量</div>
+                  <div>${withoutResult ? "rounds=" + withoutResult.rounds + " · stoppedReason=" + withoutResult.stoppedReason : "（还没跑）"}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">右栏 · 有次数变量</div>
+                  <div>${withResult ? "rounds=" + withResult.rounds + " · counterValue=" + withResult.counterValue + "/" + withResult.counterLimit + " · stoppedReason=" + withResult.stoppedReason : "（还没跑）"}</div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                闸门差异：左 = maxRounds（route 层的兜底，闸门不归你）；右 = counterLimit（你自己写的字段，到上限退）。闸门越早归你写 = 越早能控制退的时机。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

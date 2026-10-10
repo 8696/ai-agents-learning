@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dify 等编排产品 · 第四步 · 条件分支 vs 边表核对</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/conditional-branch-panel.js"></script>
+  <script type="module" src="/components/edge-table-check-panel.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { ConditionalBranchPanel } from "/components/conditional-branch-panel.js";
+    import { EdgeTableCheckPanel } from "/components/edge-table-check-panel.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 50157 · 本地计算 · 不调大模型）。",
+      "三个 case 按钮（热饮+已付款 / 冰饮+已付款 / 未付款想出品+未付款）；点一下同时跑两栏（POST /api/conditional-branch + POST /api/edge-table-check），返回各自的 chosenRoute / nextNode / allowed。",
+      "对照看：case 1+2 两栏都放行（条件分支选的边在 declared 边表里）；case 3 左栏放行（条件分支只认 intent）+ 右栏拒绝（不在 declared 边表里）。",
+    ];
+
+    const CASES = [
+      { label: "case 1 · 热饮 + 已付款", intent: "热饮", paymentStatus: "已付款", expect: "两栏都放行" },
+      { label: "case 2 · 冰饮 + 已付款", intent: "冰饮", paymentStatus: "已付款", expect: "两栏都放行" },
+      { label: "case 3 · 未付款想出品 + 未付款", intent: "未付款想出品", paymentStatus: "未付款", expect: "左放行 · 右拒绝" },
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [status, setStatus] = useState("idle");
+
+      const [intent, setIntent] = useState("热饮");
+      const [paymentStatus, setPaymentStatus] = useState("已付款");
+
+      const [branchResult, setBranchResult] = useState(null);
+      const [branchError, setBranchError] = useState("");
+      const [edgeResult, setEdgeResult] = useState(null);
+      const [edgeError, setEdgeError] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50157, provider: null, model: null, hasKey: false, callsModel: false });
+        });
+      }, []);
+
+      function applyCase(c) {
+        setIntent(c.intent);
+        setPaymentStatus(c.paymentStatus);
+      }
+
+      async function runBranch() {
+        setStatus("loading");
+        setBranchError("");
+        try {
+          const data = await postJson("/api/conditional-branch", { intent, paymentStatus });
+          setBranchResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setBranchError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runEdge() {
+        setStatus("loading");
+        setEdgeError("");
+        try {
+          const data = await postJson("/api/edge-table-check", { intent, paymentStatus });
+          setEdgeResult(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setEdgeError(msg);
+          setStatus("error");
+        }
+      }
+
+      async function runBoth() {
+        setStatus("loading");
+        setBranchError("");
+        setEdgeError("");
+        try {
+          const [a, b] = await Promise.all([
+            postJson("/api/conditional-branch", { intent, paymentStatus }),
+            postJson("/api/edge-table-check", { intent, paymentStatus }),
+          ]);
+          setBranchResult(a);
+          setEdgeResult(b);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setBranchError(msg);
+          setEdgeError(msg);
+          setStatus("error");
+        }
+      }
+
+      function resetPanel(which) {
+        if (which === "branch") {
+          setBranchResult(null); setBranchError("");
+        } else {
+          setEdgeResult(null); setEdgeError("");
+        }
+      }
+
+      async function demoBadInput() {
+        setStatus("loading");
+        try {
+          await postJson("/api/conditional-branch", { intent: "未知", paymentStatus: "已付款" });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("超界演示：" + ((err && err.message) || "请求失败") + "（第一类错误：4xx · 入参超界）");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          await fetch("/api/force-error");
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败") + "（第二类错误：路由层 500）");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Dify 等编排产品 · 条件分支 vs 边表核对（step-4）
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="同一段选边（按 intent），左栏条件分支不拦非法转移；右栏边表核对按 declared edgeTable 拒绝不在名单的下一站。三个 case 演示拦截差异。"
+              steps={INTRO_STEPS}
+              takeaway="条件分支只按变量选边（你的代码里）；边表核对按 declared edgeTable 拒绝非法转移（你的代码里）。两者不是同一件事 —— 「产品会不会拦」不能脑补，要看你这条边有没有 declared。"
+              observe="case 3：左栏 chosenRoute = 「未付款想出品」· allowed=true（条件分支不拦）；右栏 nextNode = 「拦截（不在 declared 边表里）」· allowed=false。这是这一页最硬的对照钉子。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">入参（两栏共用） · 三个 case 按钮一键填好</div>
+              <div className="flex flex-wrap gap-2">
+                {CASES.map(function (c) {
+                  return (
+                    <button key={c.label} className="border border-gray-300 px-3 py-1 rounded text-sm disabled:opacity-50" disabled={busy} onClick={function () { applyCase(c); }}>
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <label className="text-gray-700">意图（intent）：</label>
+                <select className="border border-gray-300 px-2 py-1 rounded" value={intent} onChange={function (e) { setIntent(e.target.value); }}>
+                  <option value="热饮">热饮</option>
+                  <option value="冰饮">冰饮</option>
+                  <option value="未付款想出品">未付款想出品</option>
+                </select>
+                <label className="text-gray-700">付款状态（paymentStatus）：</label>
+                <select className="border border-gray-300 px-2 py-1 rounded" value={paymentStatus} onChange={function (e) { setPaymentStatus(e.target.value); }}>
+                  <option value="已付款">已付款</option>
+                  <option value="未付款">未付款</option>
+                </select>
+              </div>
+              <div className="text-xs text-gray-500">
+                超界会触发 4xx（第一类错误）；可点「演示后端 5xx」看第二类错误。
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="bg-black text-white px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={runBoth}>
+                  同时跑两栏（浏览器侧并行）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={demoBadInput}>
+                  演示超界 4xx（第一类错误）
+                </button>
+                <button className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50" disabled={busy} onClick={demoServerError}>
+                  演示后端 5xx（第二类错误）
+                </button>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ConditionalBranchPanel
+                result={branchResult}
+                onSubmit={runBranch}
+                onReset={function () { resetPanel("branch"); }}
+                busy={busy}
+                errorText={branchError}
+              />
+              <EdgeTableCheckPanel
+                result={edgeResult}
+                onSubmit={runEdge}
+                onReset={function () { resetPanel("edge"); }}
+                busy={busy}
+                errorText={edgeError}
+              />
+            </section>
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-3 min-h-[120px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · 两栏 chosenRoute / nextNode 对照</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700">
+                <div>
+                  <div className="font-semibold">左栏 · 条件分支</div>
+                  <div>{branchResult ? "intent=" + branchResult.intent + " · paymentStatus=" + branchResult.paymentStatus + " · chosenRoute=" + branchResult.chosenRoute + " · allowed=" + branchResult.allowed : "（还没跑）"}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">右栏 · 边表核对</div>
+                  <div>{edgeResult ? "intent=" + edgeResult.intent + " · paymentStatus=" + edgeResult.paymentStatus + " · chosenRoute=" + edgeResult.chosenRoute + " · nextNode=" + edgeResult.nextNode + " · allowed=" + edgeResult.allowed : "（还没跑）"}</div>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                chosenRoute 一样，但 nextNode 不同：左 = chosenRoute；右 = chosenRoute 或「拦截」。差别只在「有没有 declared 边表核对」。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
