@@ -42,7 +42,7 @@
 
 ## 动手落点
 
-> 落到 `apps/18-Observability/{小节文件夹}/`。Langfuse / LangSmith 二选一接上就停。
+> 模块 14 及之后：本仓库只写理论笔记。下面事项做在学习者单独的真实项目里，不新建 `apps/18-Observability/`。
 
 1. 每次执行一条 Trace；每个 LLM Call / Tool Call 是 Span（输入、输出、耗时、Token）
 2. 能在 UI 点到失败的那一步；记下成本

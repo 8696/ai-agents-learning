@@ -13,7 +13,7 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**Supervisor 模式**：谁分派、谁执行、怎么交还](./01-Supervisor-模式.md) | 能画一张分工图 | `multi agent supervisor pattern` `orchestrator worker LLM` · LangGraph Multi-Agent 示例 · [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | — |
+| ✅ | [**Supervisor 模式**：谁分派、谁执行、怎么交还](./01-Supervisor-模式.md) | 能画一张分工图 | `multi agent supervisor pattern` `orchestrator worker LLM` · LangGraph Multi-Agent 示例 · [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | — |
 | ⬜ | [**多 Agent 成本**：多一次交接就多一轮 Token；要有自己的数字](./02-多-Agent-成本.md) | 能对比单 Agent vs 多 Agent 的用量 | `multi agent token cost` · 自己实验数据 | — |
 | ⬜ | [**A2A**：MCP 连工具，A2A 连 Agent；本仓库只要求认知](./03-A2A.md) | 能说清边界，不必实现 | `A2A protocol` `Agent2Agent vs MCP` · [a2a-protocol.org](https://a2a-protocol.org) | — |
 | ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
@@ -43,7 +43,7 @@
 
 ## 动手落点
 
-> 落到 `apps/14-Multi-Agent/{小节文件夹}/`。
+> 模块 14 及之后：本仓库只写理论笔记。下面事项做在学习者单独的真实项目里，不新建 `apps/14-Multi-Agent/`。
 
 1. Supervisor + Researcher / Writer / Reviewer；实现 Handoff + Shared State
 2. 同一任务再打一版单 Agent，记下 Token 和耗时

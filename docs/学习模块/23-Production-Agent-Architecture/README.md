@@ -54,7 +54,7 @@
 
 ## 动手落点
 
-> 对照 [2.8](../../03-学习路线.md#28-综合验收模块-23-收口)。
+> 模块 14 及之后：本仓库写理论笔记和收口说明。下面事项对着学习者单独的真实项目，不新建 `apps/23-Production-Agent-Architecture/`。
 
 1. `apps/` 各子文件夹 README + 数据流补到 [2.7.2](../../03-学习路线.md#272-交付标准apps-子文件夹)
 2. `apps/23-Production-Agent-Architecture/01-Agent-Runtime/` 容量 / 成本估算、`02-容量-成本估算/` 补缺

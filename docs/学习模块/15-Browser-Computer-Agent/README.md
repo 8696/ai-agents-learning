@@ -41,7 +41,7 @@
 
 ## 动手落点
 
-> 新建 `apps/15-Browser-Computer-Agent/{小节文件夹}/`（先按 [AGENTS.md §5.2 可运行 Demo 怎么建](../../../AGENTS.md#52-小节-demo) 的流程来；用到 LLM 时共用 `apps/load-root-env.ts`）。
+> 模块 14 及之后：本仓库只写理论笔记。下面事项做在学习者单独的真实项目里，不新建 `apps/15-Browser-Computer-Agent/`。
 
 1. Playwright Tools：navigate / click / type / extract / screenshot
 2. 用 Accessibility Tree 描述页面，不要塞整个 HTML

@@ -47,7 +47,7 @@
 
 ## 动手落点
 
-> 落到 `apps/17-Agent-Evaluation/{小节文件夹}/`。
+> 模块 14 及之后：本仓库只写理论笔记。下面事项做在学习者单独的真实项目里，不新建 `apps/17-Agent-Evaluation/`。
 
 1. Golden Dataset ≥30 条；`yarn app:17-01-eval` 一条命令出报告（学到该条再加脚本）
 2. 最终答案 + 轨迹（Tool 是否该调）都评；能量 Faithfulness 或等价项

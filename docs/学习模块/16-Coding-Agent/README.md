@@ -45,7 +45,7 @@
 
 ## 动手落点
 
-> 落到 `apps/16-Coding-Agent/{小节文件夹}/`。
+> 模块 14 及之后：本仓库只写理论笔记。下面事项做在学习者单独的真实项目里，不新建 `apps/16-Coding-Agent/`。
 
 1. 文件 Tool（read / write / list / grep）+ 受限 Shell + Git
 2. 用 patch / 替换改文件，不要整文件重写；工作目录之外碰不到
