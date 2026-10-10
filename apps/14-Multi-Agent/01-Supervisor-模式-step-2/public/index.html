@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orchestrator-Workers · 第二步 · 拆 + 并行 + 汇总</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4.a 强制：Babel Standalone 锁定 7.26.4 -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4.a 强制：导入映射（import map） -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/orchestrator-panel.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { OrchestratorPanel } from "/components/orchestrator-panel.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const DEFAULT_UTTERANCE = "热拿铁、冰美式、燕麦拿铁，今天都能做吗？";
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 / 模型服务商 / 模型 / 密钥）。",
+      "填客人原话（默认「三杯今天都能做吗」），点「运行编排者」—— 客户端发一次 POST /api/orchestrator。",
+      "服务端跑三段：① 编排者 LLM 拆 N 个子任务 ② N 个菜单员 LLM 走 Promise.all 并行查菜单 ③ 汇总者 LLM 把 N 份结果拼成一段 guestReply。整段一次性返回。",
+      "对照 step-1 的「一次派一个 + 多次 round」= 总耗时 = sum(rounds)；这里三段顺序跑 + 工人并行，总耗时 ≈ max(N 个工人耗时)，不是 sum。",
+    ];
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
+      const [out, setOut] = useState(null);
+      const [status, setStatus] = useState("idle");
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50163, provider: null, model: null, hasKey: false, callsModel: true });
+        });
+      }, []);
+
+      async function runOrchestrator() {
+        setStatus("loading");
+        setErrorText("");
+        try {
+          const data = await postJson("/api/orchestrator", { orderSlip: utterance });
+          setOut(data);
+          setStatus("ok");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setErrorText(msg);
+          setStatus("error");
+        }
+      }
+
+      async function demoEmptyUtterance() {
+        setStatus("loading");
+        try {
+          await postJson("/api/orchestrator", { orderSlip: "" });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("空 orderSlip 演示：" + ((err && err.message) || "请求失败") + "（这是第一类错误：4xx · 入参不合法）");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          const res = await fetch("/api/force-error");
+          if (!res.ok) {
+            setStatus("error");
+            alert("后端 5xx 演示：HTTP " + res.status + "（这是第二类错误）");
+            return;
+          }
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败") + "（这是第二类错误）");
+        }
+      }
+
+      const busy = status === "loading";
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Orchestrator-Workers · 第二步（step-2）· 拆 + 并行 + 汇总
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="编排者-工人（Orchestrator-Workers）模式：先拆成 N 个互不依赖子任务，同时查，再汇总一次。对照 step-1 的「一次派一个 + 多次 round」= 总耗时 = sum；这里总耗时 ≈ max(N 个工人耗时)。"
+              steps={INTRO_STEPS}
+              takeaway="三杯互不依赖 = 一次拆 + 同时查 + 一次汇总；总耗时不再是 sum(rounds)，而是 sum(orchestrator + max(workers) + aggregator)。"
+              observe="页面看到三段卡片按顺序亮出来：① 编排者（fan-out 拆任务）② N 个菜单员同时跑（进度条对照各自耗时）③ 汇总者（fan-in 拼成一段）。最右有「max vs sum」数字直接看并行节省的时间。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">客人原话（一次请求，三段流水线同时跑）</div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <input
+                  className="border border-gray-300 px-3 py-2 rounded flex-1 min-w-[240px]"
+                  value={utterance}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                  placeholder="例如：热拿铁、冰美式、燕麦拿铁，今天都能做吗？"
+                  disabled={busy}
+                />
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !utterance}
+                  onClick={runOrchestrator}
+                >
+                  运行编排者（POST /api/orchestrator）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { setOut(null); setErrorText(""); setStatus("idle"); }}
+                >
+                  清空重来
+                </button>
+              </div>
+              <div className="text-xs text-gray-500">
+                一次发一次请求 = 跑完三段 = 编排者 + N 个菜单员并行 + 汇总者；总耗时按顺序相加，工人并行那段耗时 = max(单个工人耗时)。
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoEmptyUtterance}
+                >
+                  演示空 orderSlip 4xx（第一类错误 · /api/orchestrator）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+            </section>
+
+            <OrchestratorPanel out={out} errorText={errorText} />
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2 min-h-[80px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · 与 step-1 的差别</h2>
+              <div className="text-sm text-gray-700">
+                {out ? (function(){
+                  var ws = out.stages.workers || [];
+                  var maxW = ws.length ? Math.max.apply(null, ws.map(function(w){return w.elapsedMs;})) : 0;
+                  return "三段都跑完 · 总耗时 " + out.totalElapsedMs + " ms · 工人并行 max = " + maxW + " ms";
+                })() : "还没跑"}
+              </div>
+              <div className="text-xs text-gray-500">
+                对照 step-1 的「一次派一个 + 多次 round」= 总耗时 = 4 个 round 的 sum。这里三段顺序跑 + 工人并行：总耗时 = 编排者 + max(工人) + 汇总者。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

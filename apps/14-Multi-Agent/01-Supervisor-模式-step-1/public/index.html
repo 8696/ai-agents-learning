@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Supervisor 模式 · 第一步 · 一次派一个 + 共享状态</title>
+
+  <!-- §5.0 强制：Tailwind 4 browser CDN 原样引入（禁止换 CDN / 版本 / integrity） -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+      integrity="sha384-2ql948lIdLcGEE0/qxNiudyTjgauA3RDJERu5xW75kFCvSl5a9odyQYCb6tEjnmB"
+      crossorigin="anonymous"></script>
+
+  <!-- §5.3.4.a 强制：Babel Standalone 锁定 7.26.4（仅作 JSX → React.createElement 转译） -->
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+
+  <!-- §5.3.4.a 强制：导入映射（import map） -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div id="root"></div>
+
+  <!-- 公共模块必须在本页内联块之前 -->
+  <script type="module" src="/utils/fetch-json.js"></script>
+  <script type="module" src="/components/page-nav.js"></script>
+  <script type="module" src="/components/layout.js"></script>
+  <script type="module" src="/components/state-board.js"></script>
+  <script type="module" src="/components/round-trace.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect } from "react";
+    import { createRoot } from "react-dom/client";
+    import { PageNav } from "/components/page-nav.js";
+    import { PageIntro, StatusPill, EnvFooter } from "/components/layout.js";
+    import { StateBoard } from "/components/state-board.js";
+    import { RoundTrace } from "/components/round-trace.js";
+    import { postJson, loadHealth } from "/utils/fetch-json.js";
+
+    const DEFAULT_UTTERANCE = "来一杯中杯热拿铁。";
+    const INTRO_STEPS = [
+      "页面加载：GET /health 填页脚（端口 / 模型服务商 / 模型 / 密钥）。",
+      "填客人原话，点「开始这一杯」—— 客户端把 SharedState 初始化好（round=0，订单外字段全 null）。",
+      "每点一次「下一步」：发一次 POST /api/step（body 里带当前 state）。服务端跑一轮：① 店长 LLM 选 nextWorker ② 若不是 finish 就再调那个工人 LLM ③ 合并 patch ④ 返回 newState。客户端把 newState 存进 React state 准备下一轮。",
+      "直到店长选 finish —— 客户端停止发请求，把 guestReply 摆到「给客人的最后一句」卡片里。",
+    ];
+
+    function makeInitialState(orderSlip) {
+      return {
+        orderSlip: orderSlip,
+        menuNotes: null,
+        drinkType: null,
+        cupLabel: null,
+        pickupCall: null,
+        guestReply: null,
+        round: 0,
+      };
+    }
+
+    function App() {
+      const [env, setEnv] = useState(null);
+      const [utterance, setUtterance] = useState(DEFAULT_UTTERANCE);
+      const [state, setState] = useState(null);
+      const [trace, setTrace] = useState([]);
+      const [status, setStatus] = useState("idle");
+      const [errorText, setErrorText] = useState("");
+
+      useEffect(function () {
+        loadHealth().then(setEnv).catch(function () {
+          setEnv({ port: 50162, provider: null, model: null, hasKey: false, callsModel: true });
+        });
+      }, []);
+
+      function startOrder() {
+        setTrace([]);
+        setErrorText("");
+        setState(makeInitialState(utterance));
+        setStatus("idle");
+      }
+
+      async function runNextStep() {
+        if (!state) return;
+        setStatus("loading");
+        setErrorText("");
+        try {
+          const out = await postJson("/api/step", { state: state });
+          const newState = out.newState;
+          setState(newState);
+          setTrace(function (prev) {
+            return prev.concat([{
+              round: newState.round,
+              nextWorker: out.nextWorker,
+              supervisorReasoning: out.supervisorReasoning,
+              workerPatch: out.workerPatch,
+              workerReasoning: out.workerReasoning,
+              isFinished: out.isFinished,
+            }]);
+          });
+          setStatus(out.isFinished ? "ok" : "idle");
+        } catch (err) {
+          const msg = (err && err.message) || "请求失败";
+          setErrorText(msg);
+          setStatus("error");
+        }
+      }
+
+      async function demoEmptyState() {
+        setStatus("loading");
+        try {
+          await postJson("/api/step", { state: {} });
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("空 state 演示：" + ((err && err.message) || "请求失败") + "（这是第一类错误：4xx · 入参不合法）");
+        }
+      }
+
+      async function demoServerError() {
+        setStatus("loading");
+        try {
+          const res = await fetch("/api/force-error");
+          if (!res.ok) {
+            setStatus("error");
+            alert("后端 5xx 演示：HTTP " + res.status + "（这是第二类错误）");
+            return;
+          }
+          setStatus("ok");
+        } catch (err) {
+          setStatus("error");
+          alert("后端 5xx 演示：" + ((err && err.message) || "请求失败") + "（这是第二类错误）");
+        }
+      }
+
+      const busy = status === "loading";
+      const isFinished = state && state.guestReply !== null;
+
+      return (
+        <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+          <header id="page-header" className="border-b p-4 flex items-center justify-between bg-white">
+            <h1 id="page-title" className="text-xl font-semibold">
+              Supervisor 模式（Supervisor）· 第一步（step-1）· 一次派一个 + 共享状态
+            </h1>
+            <StatusPill status={status} />
+          </header>
+
+          <PageNav current="main" base="" />
+          <main id="page-main" className="container mx-auto p-4 space-y-4">
+            <PageIntro
+              lead="一次只派一个工人的主管（Supervisor）：店长选人，工人写字段，下一站从同一份 SharedState 读。"
+              steps={INTRO_STEPS}
+              takeaway="店长选人 = 一次一个（菜单 → 吧台 → 出餐 → finish），客人的下一句始终进店长这条线；工人之间不互相对话；交还 = 工人把字段写进同一份状态。"
+              observe="点「下一步」逐轮推进：每轮看 shared state 多出一个字段；最后店长选 finish，把 guestReply 写进状态、停止再调工人。轮次多少 = 几次 POST。"
+            />
+
+            <section id="controls" className="bg-white shadow rounded p-4 space-y-3">
+              <div className="text-sm text-gray-500">这一杯的客人原话（页面初始化一次）</div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <input
+                  className="border border-gray-300 px-3 py-2 rounded flex-1 min-w-[240px]"
+                  value={utterance}
+                  onChange={function (e) { setUtterance(e.target.value); }}
+                  placeholder="例如：来一杯中杯热拿铁。"
+                  disabled={busy || Boolean(state)}
+                />
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !utterance || Boolean(state)}
+                  onClick={startOrder}
+                >
+                  开始这一杯（初始化 SharedState）
+                </button>
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy || !state || isFinished}
+                  onClick={runNextStep}
+                >
+                  下一步（POST /api/step）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={function () { setState(null); setTrace([]); setErrorText(""); setStatus("idle"); }}
+                >
+                  清空重来
+                </button>
+              </div>
+              <div className="text-xs text-gray-500">
+                没有 state 时「下一步」是灰的；点了「开始这一杯」就拿到 round=0 的初始状态。「下一步」每点一次发一次请求 = 跑一轮 = 店长选人 + 工人写字段；直到店长选 finish。
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoEmptyState}
+                >
+                  演示空 state 4xx（第一类错误 · /api/step）
+                </button>
+                <button
+                  className="border border-gray-300 px-4 py-2 rounded disabled:opacity-50"
+                  disabled={busy}
+                  onClick={demoServerError}
+                >
+                  演示后端 5xx（第二类错误 · /api/force-error）
+                </button>
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {state ? (
+                <StateBoard state={state} title="当前 SharedState（每跑完一轮就刷新）" />
+              ) : (
+                <div className="bg-white shadow rounded p-4 text-sm text-gray-500 italic">
+                  先点「开始这一杯」初始化 SharedState。
+                </div>
+              )}
+              <section className="bg-white shadow rounded p-4 space-y-2">
+                <h2 className="text-sm font-semibold text-gray-900">给客人的最后一句（guestReply）</h2>
+                {isFinished ? (
+                  <div className="bg-green-50 border border-green-300 rounded p-3 text-sm text-gray-800 whitespace-pre-wrap">
+                    {state.guestReply}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 italic">
+                    {state ? "还在跑，guestReply 还没填。" : "还没开始。"}
+                  </div>
+                )}
+                {errorText ? (
+                  <div className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-2">
+                    {errorText}
+                  </div>
+                ) : null}
+              </section>
+            </div>
+
+            <RoundTrace entries={trace} />
+
+            <section id="output" className="bg-white shadow rounded p-4 space-y-2 min-h-[80px]">
+              <h2 className="text-sm font-semibold text-gray-900">输出区 · 这一杯走到哪了</h2>
+              <div className="text-sm text-gray-700">
+                {state
+                  ? "已跑 " + state.round + " 轮 · " + (isFinished ? "店长已选 finish，对客人说了最后一句" : "等下一次「下一步」")
+                  : "还没开始"
+                }
+              </div>
+              <div className="text-xs text-gray-500">
+                一次只派一个：店长的合法选择是 菜单 / 吧台 / 出餐 / finish 之一；上一轮工人写完字段，下一轮店长重新选人；字段共享 = 下一站读上一站写的。
+              </div>
+            </section>
+          </main>
+
+          <EnvFooter env={env} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

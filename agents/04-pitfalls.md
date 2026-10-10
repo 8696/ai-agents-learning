@@ -344,6 +344,40 @@
 - **反模式**：以为 Babel Standalone 支持外链 JSX，把组件 JSX 写到 `public/components/*.js` 后用 `<script type="text/babel" data-type="module" src=...>` 加载
 - **关联**：[agents/05-demo.md §5.3.4.a](../../agents/05-demo.md#534a-esm-模式新写默认)；2026-09-21 模块 13 · 01 step-2 工具调用循环页 `components/agent-loop-panel.js`
 
+### P-033  ·  Tailwind CDN 拼成 `cdn.jsdtimeout.net` 静默失效（2026-10-10 立）
+
+- **症状**：浏览器 console 报 `net::ERR_CONNECTION_CLOSED` 取 `@tailwindcss/browser@4.3.3/dist/index.global.js`；页面**能跑**但完全无样式（按钮灰底灰字、卡片无阴影、布局塌成一坨）。`curl` 这条 URL 直接 Connection refused / NXDOMAIN
+- **触发**：手写 `public/*.html` 的 Tailwind 脚本 src 时把 `cdn.jsdelivr.net` 拼错成 `cdn.jsdtimeout.net`（j-d-t-i-m-e-o-u-t）—— §5.0 强制要求「原样引入」，含 integrity；手抄错一字母就栽
+- **根因**：HTML 模板是复制粘贴来的，复制时注意力在 React / importmap，没扫到一行 7 字符的 CDN 域名拼错。check-demo 不查 HTML 里外链 URL 的可达性；浏览器自带的 Network 面板 / preview_console_logs 才看得到 ERR_CONNECTION_CLOSED
+- **修复**：URL 改回 `https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js`；写完 HTML 后跑一次 `mcp__Claude_Browser__preview_start` + `preview_console_logs` 看有没有 ERR_CONNECTION_CLOSED / Failed to fetch 类报错
+- **反模式**：看到「页面能加载 + 按钮能点 + React 跑了」就以为 Demo 跑通，**没单独看 CSS 是否应用**；或在终端 `curl -I https://...` 验 URL 但只验了一个，不验其它外链（babel / esm.sh / react UMD）
+- **关联**：[agents/05-demo.md §5.0](../../agents/05-demo.md#50-代码约定node--ts--注释--key--选型) 的 Tailwind 原样引入；2026-10-10 模块 14 · 01 Supervisor 模式 step-1
+
+### P-034  ·  json_schema strict 也会返回纯中文（不是 JSON）（2026-10-10 立）
+
+- **症状**：服务端 `client.chat.completions.create({ response_format: { type: "json_schema", strict: true } })` 后，`choices[0].message.content` 直接是中文解释（如 `"我先并行查一下今日菜单"`），**没有 `{ ... }`**。客户端 `JSON.parse(content)` 抛 `Unexpected token '我', "..." is not valid JSON`
+- **触发**：minimax 这条 OpenAI 路径（也是其它部分国产 provider 的 OpenAI 兼容接口）+ 系统提示词里写了「输出 JSON：{ nextWorker, reasoning }」之类的话 + 用户给的 state 触发了模型选「并行做」的解法（不符合 json_schema 但符合人话）。strict 模式按理说在 token-mask 层就挡住，但这条路径上仍有概率绕过
+- **根因**：provider 端的 json_schema 实现并非严格的 CFG / token-mask，有的仅做后处理校验；模型先用自然语言「思考」，再调 SDK 的 `response_format` 序列化时若解析失败就直接吐原文。stripThinkNoise 兜底「找 `{` 到 `}`」找不到就原样返回 → `JSON.parse` 抛错
+- **修复**：
+  1. `stripThinkNoise` 兜底改为「找不到 `{` 就抛 `LlmResponseNotJsonError`，原始内容前 200 字带进 message」
+  2. 上层 route catch 后 500 body 把原始内容 / issues 一起返给前端（routes/supervisor.ts 已带 `issues` 字段）
+  3. 系统提示词**明确写**：用严格的 json_schema 闸时，**禁止解释、不要先讲思路再出 JSON**，只能 `{ ... }`。例如：「严格返回 JSON，不写任何解释文字。」
+- **反模式**：以为 `strict: true` 就 100% 保证是 JSON；只写 `stripThinkNoise` 兜底找 `{...}` 而不报错（错误被吞进 parse 抛「Unexpected token」，看不出是 LLM 输出问题还是网络问题）
+- **关联**：[agents/05-demo.md §5.3.16 详细日志](../../agents/05-demo.md#5316-详细日志强制) + P-031；2026-10-10 模块 14 · 01 Supervisor 模式 step-1（用户手动 curl 触发）
+
+### P-035  ·  HTM 组件 `style` prop 字符串 → React #62（2026-10-10 立）
+
+- **症状**：浏览器 console 报 `Minified React error #62; visit .../error-decoder.html?invariant=62`。**只在 React 重新挂载到那一行时崩**（初次渲染 OK，因为那一行还没渲染到；setState 触发 re-render → 渲染那一行 → 崩）
+- **触发**：HTM 组件里写 `style=${"width: " + pct + "%"}`（外层 `${...}` 是 HTM 模板标签的表达式；内层表达式求值结果是字符串）。React 的 `style` 属性必须是**对象** `style=${{ width: pct + "%" }}`，字符串 / 数字 / 数组都不接受
+- **根因**：HTM 的 `${attr}` 表达式很自然让人想写「拼好的 CSS 字符串」，但 React 把 `style` 当成**属性对象**处理（vs HTML 的 style 属性才是字符串）。HTM 模板语法看起来像模板字符串，但**属性语义仍是 React.createElement 的语义**。错误码 #62 = 「style prop expects a mapping from style properties to values, not a string」
+- **修复**：HTM 写法改成对象：`style=${{ width: pct + "%" }}`；多个属性 `style=${{ width: pct + "%", height: "2px" }}`。**所有动态 style 一律对象**，包括 transform / background 等
+- **反模式**：
+  - 看到 React 崩在「点完按钮、setState 后 re-render 阶段」就猜「setState-after-await / 异步竞态 / useEffect 死循环」——其实是渲染到了某一行的非法 prop
+  - 用 `console.log` 在 React 错误前后打印「out 是什么」，但 out 正确；错误不在数据，在**渲染映射**
+  - 看到 `style="..."` 在普通 HTML 里能跑就以为 HTM 也能跑
+- **排查路径**：WebFetch React 错误码 → https://react.dev/errors/62 → 「style prop must be a mapping object, not a string」→ grep 全部 `style=` → 把字符串写法改成对象
+- **关联**：[agents/05-demo.md §5.3.6 组件规范](../../agents/05-demo.md#536-jsx-写完即跑-babelparser强制--2026-09-15-立--替换旧的jsx-报错定位段)；2026-10-10 模块 14 · 01 Supervisor 模式 step-2（orchestrator-panel.js 的进度条宽度）
+
 ---
 
 ## 4. 草稿（疑似坑 · 证据不足 · 等用户 review）

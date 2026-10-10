@@ -432,6 +432,22 @@
       "port": 50143,
       "url": "http://127.0.0.1:50143/",
       "autoPort": false
+    },
+    {
+      "name": "14-01-supervisor",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:14-01-supervisor-step-1"],
+      "port": 50162,
+      "url": "http://127.0.0.1:50162/",
+      "autoPort": false
+    },
+    {
+      "name": "14-01-orchestrator-workers",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "apps", "app:14-01-orchestrator-workers-step-2"],
+      "port": 50163,
+      "url": "http://127.0.0.1:50163/",
+      "autoPort": false
     }
   ]
 }
