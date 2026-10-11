@@ -13,10 +13,10 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**熔断**：连续失败 → 断开 → 半开探测 → 恢复，避免打爆下游](./01-熔断.md) | 能说出阈值、断开、恢复三步 | `circuit breaker pattern microservices` · Martin Fowler Circuit Breaker | — |
-| ⬜ | [**Prompt Caching**：重复的长前缀（System / 工具定义）可以少花钱](./02-Prompt-Caching.md) | 知道缓存的是前缀、不是任意中间段 | `Anthropic prompt caching` `OpenAI cached tokens` · 厂商 Caching 文档 | — |
-| ⬜ | [**Model Routing**：简单题走小模型；按**任务总成本**而不是单次单价](./03-Model-Routing.md) | 能举一个该路由的例子；能区分「按难度选模型」和「主模型挂了换备用」（降级） | `LLM model routing cascade` `small model large model routing` `model fallback` · 工程博客 · 自己 A/B | — |
-| ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
+| ✅ | [**熔断**：连续失败 → 断开 → 半开探测 → 恢复，避免打爆下游](./01-熔断.md) | 能说出阈值、断开、恢复三步 | `circuit breaker pattern microservices` · Martin Fowler Circuit Breaker | — |
+| ✅ | [**Prompt Caching**：重复的长前缀（System / 工具定义）可以少花钱](./02-Prompt-Caching.md) | 知道缓存的是前缀、不是任意中间段 | `Anthropic prompt caching` `OpenAI cached tokens` · 厂商 Caching 文档 | — |
+| ✅ | [**Model Routing**：简单题走小模型；按**任务总成本**而不是单次单价](./03-Model-Routing.md) | 能举一个该路由的例子；能区分「按难度选模型」和「主模型挂了换备用」（降级） | `LLM model routing cascade` `small model large model routing` `model fallback` · 工程博客 · 自己 A/B | — |
+| ✅ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 

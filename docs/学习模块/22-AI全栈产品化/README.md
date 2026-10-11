@@ -13,9 +13,9 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**流式 Markdown**：边到边渲染会闪、标题/列表会跳动](./01-流式-Markdown.md) | 知道常见原因（不完整语法） | `streaming markdown react` `incremental markdown render` · Vercel AI SDK UI · `react-markdown` issue 讨论 | — |
-| ⬜ | [**Agent Steps UI**：思考中 / 正在调工具 / 完成，要让人看懂 Agent 在干什么](./02-Agent-Steps-UI.md) | 能画出三种状态的界面 | `AI agent UI design steps` `tool call status UI` · ChatGPT / Claude / Cursor / Claude Code / Codex 产品截图分析 | — |
-| ⬜ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
+| ✅ | [**流式 Markdown**：边到边渲染会闪、标题/列表会跳动](./01-流式-Markdown.md) | 知道常见原因（不完整语法） | `streaming markdown react` `incremental markdown render` · Vercel AI SDK UI · `react-markdown` issue 讨论 | — |
+| ✅ | [**Agent Steps UI**：思考中 / 正在调工具 / 完成，要让人看懂 Agent 在干什么](./02-Agent-Steps-UI.md) | 能画出三种状态的界面 | `AI agent UI design steps` `tool call status UI` · ChatGPT / Claude / Cursor / Claude Code / Codex 产品截图分析 | — |
+| ✅ | [**模块复盘**](./03-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./03-模块复盘.md) |
 
 ## 验收
 

@@ -13,10 +13,10 @@
 
 | 状态 | 重点（学什么） | 本条要能讲清 | 搜什么 / 去哪学 | 我的链接 |
 |------|----------------|------------|-----------------|----------|
-| ⬜ | [**SSE 被网关缓冲**：Nginx / PaaS 默认可能攒满再发，流式会「卡住再一次性喷出」](./01-SSE-被网关缓冲.md) | 知道生产流式要关 buffer | `nginx SSE buffering disable` `reverse proxy streaming response` · Nginx `X-Accel-Buffering` · 各 PaaS 流式说明 | — |
-| ⬜ | [**任务队列**：长 Agent 不要占着 HTTP 请求不放](./02-任务队列.md) | 能说出为何要异步化、用什么扛 | `BullMQ tutorial` `async agent job queue` · BullMQ 文档 · Redis 队列模式 | — |
-| ⬜ | [**对象存储 / RBAC**：上传文件不进数据库大字段；角色决定能调哪些 Tool](./03-对象存储-RBAC.md) | 能说出文件落哪、为什么；能讲「角色 → 可调 Tool」，不必上完整权限系统 | `object storage vs database files` `RBAC agent tools` · S3 / 各云对象存储入门 | — |
-| ⬜ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
+| ✅ | [**SSE 被网关缓冲**：Nginx / PaaS 默认可能攒满再发，流式会「卡住再一次性喷出」](./01-SSE-被网关缓冲.md) | 知道生产流式要关 buffer | `nginx SSE buffering disable` `reverse proxy streaming response` · Nginx `X-Accel-Buffering` · 各 PaaS 流式说明 | — |
+| ✅ | [**任务队列**：长 Agent 不要占着 HTTP 请求不放](./02-任务队列.md) | 能说出为何要异步化、用什么扛 | `BullMQ tutorial` `async agent job queue` · BullMQ 文档 · Redis 队列模式 | — |
+| ✅ | [**对象存储 / RBAC**：上传文件不进数据库大字段；角色决定能调哪些 Tool](./03-对象存储-RBAC.md) | 能说出文件落哪、为什么；能讲「角色 → 可调 Tool」，不必上完整权限系统 | `object storage vs database files` `RBAC agent tools` · S3 / 各云对象存储入门 | — |
+| ✅ | [**模块复盘**](./04-模块复盘.md) | 本页验收 + 学习沉淀 | — | [沉淀](./04-模块复盘.md) |
 
 ## 验收
 
