@@ -2,6 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "docs-reader",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/static-server.js", "-p", "3100"],
+      "port": 3100,
+      "url": "http://127.0.0.1:3100/",
+      "autoPort": false
+    },
+    {
       "name": "00-api-key-billing",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["--cwd", "apps", "app:00-01-api-key-billing-step-1"],
