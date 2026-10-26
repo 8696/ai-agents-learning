@@ -88,6 +88,10 @@
         "path": "docs/07-核心术语.md"
       },
       {
+        "label": "08-知识点总清单.md",
+        "path": "docs/08-知识点总清单.md"
+      },
+      {
         "label": "学习模块",
         "children": [
           {
