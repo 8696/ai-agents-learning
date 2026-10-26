@@ -6,6 +6,7 @@
   <title>AI Agent开发</title>
   <link rel="icon" href="data:," />
   <script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css" />
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <style>
@@ -85,6 +86,24 @@
     pre code { background: transparent; padding: 0; font-size: 1em; color: inherit; }
     pre code.hljs { background: transparent; padding: 0; }
     .hljs { background: #f6f8fb; }
+
+    /* mermaid 图：渲染后是一个 svg 容器 */
+    .mermaid-figure {
+      margin: 18px 0;
+      padding: 14px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      text-align: center;
+    }
+    .mermaid-figure svg { max-width: 100%; height: auto; }
+    .mermaid-figure .mermaid-error {
+      color: var(--danger);
+      font-size: 13px;
+      text-align: left;
+      white-space: pre-wrap;
+    }
     kbd {
       padding: 0.05em 0.4em;
       font-size: 0.8em;
@@ -724,6 +743,59 @@
     }
 
     /* ════════════════════════════════════════════════════════════
+       mermaid：把 ```mermaid 代码块换成画好的图
+       ════════════════════════════════════════════════════════════ */
+    let mermaidReady = false;
+    function initMermaid() {
+      if (mermaidReady || !window.mermaid) return;
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'loose',
+        theme: 'base',
+        fontFamily: 'var(--font-sans)',
+        themeVariables: {
+          primaryColor: '#e6f3f0',
+          primaryTextColor: '#1b2430',
+          primaryBorderColor: '#1f6f64',
+          lineColor: '#8b95a1',
+          fontSize: '14px',
+        },
+      });
+      mermaidReady = true;
+    }
+
+    /** 找出文章里的 mermaid 代码块，逐个渲染成 svg */
+    async function renderMermaidDiagrams(article) {
+      const blocks = Array.from(article.querySelectorAll('pre > code.language-mermaid'));
+      if (!blocks.length) return;
+      initMermaid();
+      if (!window.mermaid) return;
+
+      for (const block of blocks) {
+        const source = block.textContent;
+        const pre = block.parentElement;
+        const figure = document.createElement('div');
+        figure.className = 'mermaid-figure';
+        pre.replaceWith(figure);
+        try {
+          const id = 'mmd-' + Math.random().toString(36).slice(2, 9);
+          const { svg } = await mermaid.render(id, source);
+          figure.innerHTML = svg;
+        } catch (err) {
+          // 渲染失败时把原文放回去，不让人卡在空白上
+          figure.innerHTML = '<div class="mermaid-error">这张图渲染失败，下面是原始写法：</div>';
+          const fallback = document.createElement('pre');
+          const code = document.createElement('code');
+          code.className = 'language-mermaid';
+          code.textContent = source;
+          fallback.appendChild(code);
+          figure.appendChild(fallback);
+          console.error('mermaid 渲染失败：', err);
+        }
+      }
+    }
+
+    /* ════════════════════════════════════════════════════════════
        工具函数
        ════════════════════════════════════════════════════════════ */
     /** 把当前文件路径 + 相对路径 → 仓库相对路径 */
@@ -860,6 +932,7 @@
         }
         article.className = '';
         article.innerHTML = html;
+        await renderMermaidDiagrams(article);
         highlightArticle(article);
       } catch (e) {
         const tip = contentSource === 'local'
