@@ -3239,6 +3239,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/01-Function-Calling-协议-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -3364,6 +3368,10 @@
                 "label": "lib",
                 "children": [
                   {
+                    "label": "flow",
+                    "children": []
+                  },
+                  {
                     "label": "http",
                     "children": [
                       {
@@ -3480,6 +3488,10 @@
               {
                 "label": "lib",
                 "children": [
+                  {
+                    "label": "flow",
+                    "children": []
+                  },
                   {
                     "label": "http",
                     "children": [
@@ -4607,6 +4619,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/03-Tool-Choice-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -4894,6 +4910,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/05-Tool-Calling/04-Tool-Gateway-幂等-step-2/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -5298,6 +5318,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/06-多轮对话与Context/02-压缩-摘要-vs-滑动窗口-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -7816,6 +7840,15 @@
             "label": "01-RAG-流水线-step-1",
             "children": [
               {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-1/data/chunks.db"
+                  }
+                ]
+              },
+              {
                 "label": "knowledge",
                 "children": [
                   {
@@ -7975,6 +8008,15 @@
           {
             "label": "01-RAG-流水线-step-2",
             "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-2/data/chunks.db"
+                  }
+                ]
+              },
               {
                 "label": "knowledge",
                 "children": [
@@ -8139,6 +8181,15 @@
           {
             "label": "01-RAG-流水线-step-3",
             "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-3/data/chunks.db"
+                  }
+                ]
+              },
               {
                 "label": "knowledge",
                 "children": [
@@ -8329,6 +8380,15 @@
           {
             "label": "01-RAG-流水线-step-4",
             "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-4/data/chunks.db"
+                  }
+                ]
+              },
               {
                 "label": "knowledge",
                 "children": [
@@ -8523,6 +8583,15 @@
           {
             "label": "01-RAG-流水线-step-5",
             "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "chunks.db",
+                    "path": "apps/08-RAG基础/01-RAG-流水线-step-5/data/chunks.db"
+                  }
+                ]
+              },
               {
                 "label": "knowledge",
                 "children": [
@@ -10136,6 +10205,10 @@
                         "path": "apps/08-RAG基础/04-RAG-vs-Fine-tuning-step-4/lib/data-shape/qa-corpus.ts"
                       }
                     ]
+                  },
+                  {
+                    "label": "flow",
+                    "children": []
                   },
                   {
                     "label": "http",
@@ -13269,23 +13342,6 @@
             "label": "02-写入策略-step-10",
             "children": [
               {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "facts.db",
-                    "path": "apps/10-Memory/02-写入策略-step-10/data/facts.db"
-                  },
-                  {
-                    "label": "facts.db-shm",
-                    "path": "apps/10-Memory/02-写入策略-step-10/data/facts.db-shm"
-                  },
-                  {
-                    "label": "facts.db-wal",
-                    "path": "apps/10-Memory/02-写入策略-step-10/data/facts.db-wal"
-                  }
-                ]
-              },
-              {
                 "label": "lib",
                 "children": [
                   {
@@ -13409,23 +13465,6 @@
           {
             "label": "02-写入策略-step-11",
             "children": [
-              {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "facts.db",
-                    "path": "apps/10-Memory/02-写入策略-step-11/data/facts.db"
-                  },
-                  {
-                    "label": "facts.db-shm",
-                    "path": "apps/10-Memory/02-写入策略-step-11/data/facts.db-shm"
-                  },
-                  {
-                    "label": "facts.db-wal",
-                    "path": "apps/10-Memory/02-写入策略-step-11/data/facts.db-wal"
-                  }
-                ]
-              },
               {
                 "label": "lib",
                 "children": [
@@ -13717,6 +13756,18 @@
                   {
                     "label": ".gitkeep",
                     "path": "apps/10-Memory/02-写入策略-step-13/data/.gitkeep"
+                  },
+                  {
+                    "label": "facts.db",
+                    "path": "apps/10-Memory/02-写入策略-step-13/data/facts.db"
+                  },
+                  {
+                    "label": "facts.db-shm",
+                    "path": "apps/10-Memory/02-写入策略-step-13/data/facts.db-shm"
+                  },
+                  {
+                    "label": "facts.db-wal",
+                    "path": "apps/10-Memory/02-写入策略-step-13/data/facts.db-wal"
                   }
                 ]
               },
@@ -14428,6 +14479,23 @@
             "label": "02-写入策略-step-7",
             "children": [
               {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.db",
+                    "path": "apps/10-Memory/02-写入策略-step-7/data/facts.db"
+                  },
+                  {
+                    "label": "facts.db-shm",
+                    "path": "apps/10-Memory/02-写入策略-step-7/data/facts.db-shm"
+                  },
+                  {
+                    "label": "facts.db-wal",
+                    "path": "apps/10-Memory/02-写入策略-step-7/data/facts.db-wal"
+                  }
+                ]
+              },
+              {
                 "label": "lib",
                 "children": [
                   {
@@ -14580,6 +14648,23 @@
             "label": "02-写入策略-step-8",
             "children": [
               {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "facts.db",
+                    "path": "apps/10-Memory/02-写入策略-step-8/data/facts.db"
+                  },
+                  {
+                    "label": "facts.db-shm",
+                    "path": "apps/10-Memory/02-写入策略-step-8/data/facts.db-shm"
+                  },
+                  {
+                    "label": "facts.db-wal",
+                    "path": "apps/10-Memory/02-写入策略-step-8/data/facts.db-wal"
+                  }
+                ]
+              },
+              {
                 "label": "lib",
                 "children": [
                   {
@@ -14703,23 +14788,6 @@
           {
             "label": "02-写入策略-step-9",
             "children": [
-              {
-                "label": "data",
-                "children": [
-                  {
-                    "label": "facts.db",
-                    "path": "apps/10-Memory/02-写入策略-step-9/data/facts.db"
-                  },
-                  {
-                    "label": "facts.db-shm",
-                    "path": "apps/10-Memory/02-写入策略-step-9/data/facts.db-shm"
-                  },
-                  {
-                    "label": "facts.db-wal",
-                    "path": "apps/10-Memory/02-写入策略-step-9/data/facts.db-wal"
-                  }
-                ]
-              },
               {
                 "label": "lib",
                 "children": [
@@ -15110,6 +15178,104 @@
                     "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/.gitkeep"
                   },
                   {
+                    "label": "checkpoints",
+                    "children": [
+                      {
+                        "label": "0d8cd96f-f219-44dc-b511-e004ff514d45.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/0d8cd96f-f219-44dc-b511-e004ff514d45.json"
+                      },
+                      {
+                        "label": "12f7afab-d793-4033-875e-59e8c1a8e2b5.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/12f7afab-d793-4033-875e-59e8c1a8e2b5.json"
+                      },
+                      {
+                        "label": "16157773-6264-41b3-8a54-39246c22f35a.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/16157773-6264-41b3-8a54-39246c22f35a.json"
+                      },
+                      {
+                        "label": "1d4450a1-0e31-4977-aed3-61137bef79e2.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/1d4450a1-0e31-4977-aed3-61137bef79e2.json"
+                      },
+                      {
+                        "label": "34b21bbe-79bf-4c7b-a887-94ed8751d2de.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/34b21bbe-79bf-4c7b-a887-94ed8751d2de.json"
+                      },
+                      {
+                        "label": "3ff82ec3-4450-414c-bac3-778cab17b6e6.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/3ff82ec3-4450-414c-bac3-778cab17b6e6.json"
+                      },
+                      {
+                        "label": "61a93c5f-a633-41f3-b11b-5339829fa664.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/61a93c5f-a633-41f3-b11b-5339829fa664.json"
+                      },
+                      {
+                        "label": "738af281-bc97-48e1-9191-2a765a5cad62.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/738af281-bc97-48e1-9191-2a765a5cad62.json"
+                      },
+                      {
+                        "label": "98101f93-8dfd-4921-9fc2-76c587be5160.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/98101f93-8dfd-4921-9fc2-76c587be5160.json"
+                      },
+                      {
+                        "label": "98556ba5-cf2b-43a8-afe9-9604307b5276.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/98556ba5-cf2b-43a8-afe9-9604307b5276.json"
+                      },
+                      {
+                        "label": "99b3d653-b935-4732-9ef9-9bfef494e2d9.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/99b3d653-b935-4732-9ef9-9bfef494e2d9.json"
+                      },
+                      {
+                        "label": "a7cb8e83-7d77-4cd8-b6a5-c43b35316e8e.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/a7cb8e83-7d77-4cd8-b6a5-c43b35316e8e.json"
+                      },
+                      {
+                        "label": "b1af71be-6a2a-43d2-a5bb-749575650d08.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/b1af71be-6a2a-43d2-a5bb-749575650d08.json"
+                      },
+                      {
+                        "label": "b63401cf-9efd-4aab-95da-1690f7bfe863.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/b63401cf-9efd-4aab-95da-1690f7bfe863.json"
+                      },
+                      {
+                        "label": "c0b883bc-84d2-4a09-b6ef-2cec955a3fb5",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/c0b883bc-84d2-4a09-b6ef-2cec955a3fb5/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/c0b883bc-84d2-4a09-b6ef-2cec955a3fb5/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/c0b883bc-84d2-4a09-b6ef-2cec955a3fb5/step-0003.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "c0b883bc-84d2-4a09-b6ef-2cec955a3fb5.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/c0b883bc-84d2-4a09-b6ef-2cec955a3fb5.json"
+                      },
+                      {
+                        "label": "ced523e9-76df-44d0-bded-56a29b3a5141.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/ced523e9-76df-44d0-bded-56a29b3a5141.json"
+                      },
+                      {
+                        "label": "d9fd8178-eb0d-436b-85e9-fb7ace8122d2.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/d9fd8178-eb0d-436b-85e9-fb7ace8122d2.json"
+                      },
+                      {
+                        "label": "e026815c-87ff-4910-a727-f5e94d3be812.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/e026815c-87ff-4910-a727-f5e94d3be812.json"
+                      },
+                      {
+                        "label": "e27f864f-6fdf-4151-8571-765d986a107f.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/checkpoints/e27f864f-6fdf-4151-8571-765d986a107f.json"
+                      }
+                    ]
+                  },
+                  {
                     "label": "payment-ledger.json",
                     "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-1/data/payment-ledger.json"
                   }
@@ -15348,6 +15514,23 @@
                 "label": "data",
                 "children": [
                   {
+                    "label": "checkpoints",
+                    "children": [
+                      {
+                        "label": "34e62241-7347-4bad-a8f4-14f9c92128b4.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-2/data/checkpoints/34e62241-7347-4bad-a8f4-14f9c92128b4.json"
+                      },
+                      {
+                        "label": "58381de8-2b52-44ec-a8be-72465d0cec7e.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-2/data/checkpoints/58381de8-2b52-44ec-a8be-72465d0cec7e.json"
+                      },
+                      {
+                        "label": "6f96df09-30b5-4df2-83dd-df8f5e710d42.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-2/data/checkpoints/6f96df09-30b5-4df2-83dd-df8f5e710d42.json"
+                      }
+                    ]
+                  },
+                  {
                     "label": "payment-ledger.json",
                     "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-2/data/payment-ledger.json"
                   }
@@ -15557,6 +15740,94 @@
               {
                 "label": "data",
                 "children": [
+                  {
+                    "label": "checkpoints",
+                    "children": [
+                      {
+                        "label": "20c809a4-cd7d-4621-94c0-b95d29654876",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/20c809a4-cd7d-4621-94c0-b95d29654876/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/20c809a4-cd7d-4621-94c0-b95d29654876/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/20c809a4-cd7d-4621-94c0-b95d29654876/step-0003.json"
+                          },
+                          {
+                            "label": "step-0004.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/20c809a4-cd7d-4621-94c0-b95d29654876/step-0004.json"
+                          },
+                          {
+                            "label": "step-0005.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/20c809a4-cd7d-4621-94c0-b95d29654876/step-0005.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "20c809a4-cd7d-4621-94c0-b95d29654876.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/20c809a4-cd7d-4621-94c0-b95d29654876.json"
+                      },
+                      {
+                        "label": "2982a822-12b6-4f3e-876c-90136f31115d.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/2982a822-12b6-4f3e-876c-90136f31115d.json"
+                      },
+                      {
+                        "label": "400e527d-50d2-45bc-812c-616baefe7a73",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/400e527d-50d2-45bc-812c-616baefe7a73/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/400e527d-50d2-45bc-812c-616baefe7a73/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/400e527d-50d2-45bc-812c-616baefe7a73/step-0003.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "400e527d-50d2-45bc-812c-616baefe7a73.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/400e527d-50d2-45bc-812c-616baefe7a73.json"
+                      },
+                      {
+                        "label": "44c6e6d9-8391-497c-8f79-23d5932b9e22.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/44c6e6d9-8391-497c-8f79-23d5932b9e22.json"
+                      },
+                      {
+                        "label": "aa3a6770-f1a8-4259-9394-2e6b3cf0beb7.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/aa3a6770-f1a8-4259-9394-2e6b3cf0beb7.json"
+                      },
+                      {
+                        "label": "cb79c137-6770-4c41-84b6-3a94960a8cc9.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/cb79c137-6770-4c41-84b6-3a94960a8cc9.json"
+                      },
+                      {
+                        "label": "d096db4e-b41d-490c-a29f-88baac6aac5a",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/d096db4e-b41d-490c-a29f-88baac6aac5a/step-0001.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "d096db4e-b41d-490c-a29f-88baac6aac5a.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/d096db4e-b41d-490c-a29f-88baac6aac5a.json"
+                      },
+                      {
+                        "label": "fd9fa424-d119-445d-892f-865382f29312.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/checkpoints/fd9fa424-d119-445d-892f-865382f29312.json"
+                      }
+                    ]
+                  },
                   {
                     "label": "payment-ledger.json",
                     "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-3/data/payment-ledger.json"
@@ -15776,6 +16047,186 @@
                 "label": "data",
                 "children": [
                   {
+                    "label": "checkpoints",
+                    "children": [
+                      {
+                        "label": "09d63702-5021-451b-a0c9-27b3f3dbf22a",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/09d63702-5021-451b-a0c9-27b3f3dbf22a/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/09d63702-5021-451b-a0c9-27b3f3dbf22a/step-0002.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "09d63702-5021-451b-a0c9-27b3f3dbf22a.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/09d63702-5021-451b-a0c9-27b3f3dbf22a.json"
+                      },
+                      {
+                        "label": "1669f635-632d-4cff-be81-621a99274cff",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/1669f635-632d-4cff-be81-621a99274cff/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/1669f635-632d-4cff-be81-621a99274cff/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/1669f635-632d-4cff-be81-621a99274cff/step-0003.json"
+                          },
+                          {
+                            "label": "step-0004.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/1669f635-632d-4cff-be81-621a99274cff/step-0004.json"
+                          },
+                          {
+                            "label": "step-0005.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/1669f635-632d-4cff-be81-621a99274cff/step-0005.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "1669f635-632d-4cff-be81-621a99274cff.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/1669f635-632d-4cff-be81-621a99274cff.json"
+                      },
+                      {
+                        "label": "2ca0f94a-6535-45f7-af8d-c7e65f008d8c",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/2ca0f94a-6535-45f7-af8d-c7e65f008d8c/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/2ca0f94a-6535-45f7-af8d-c7e65f008d8c/step-0002.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "2ca0f94a-6535-45f7-af8d-c7e65f008d8c.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/2ca0f94a-6535-45f7-af8d-c7e65f008d8c.json"
+                      },
+                      {
+                        "label": "50878d46-50f9-4331-815f-0795e3c38b82",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/50878d46-50f9-4331-815f-0795e3c38b82/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/50878d46-50f9-4331-815f-0795e3c38b82/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/50878d46-50f9-4331-815f-0795e3c38b82/step-0003.json"
+                          },
+                          {
+                            "label": "step-0004.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/50878d46-50f9-4331-815f-0795e3c38b82/step-0004.json"
+                          },
+                          {
+                            "label": "step-0005.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/50878d46-50f9-4331-815f-0795e3c38b82/step-0005.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "50878d46-50f9-4331-815f-0795e3c38b82.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/50878d46-50f9-4331-815f-0795e3c38b82.json"
+                      },
+                      {
+                        "label": "59b77eec-490b-48a9-aed9-8c4989f7d057",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/59b77eec-490b-48a9-aed9-8c4989f7d057/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/59b77eec-490b-48a9-aed9-8c4989f7d057/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/59b77eec-490b-48a9-aed9-8c4989f7d057/step-0003.json"
+                          },
+                          {
+                            "label": "step-0004.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/59b77eec-490b-48a9-aed9-8c4989f7d057/step-0004.json"
+                          },
+                          {
+                            "label": "step-0005.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/59b77eec-490b-48a9-aed9-8c4989f7d057/step-0005.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "59b77eec-490b-48a9-aed9-8c4989f7d057.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/59b77eec-490b-48a9-aed9-8c4989f7d057.json"
+                      },
+                      {
+                        "label": "7ce48b46-90c8-4460-8fda-0e03c992fa33",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/7ce48b46-90c8-4460-8fda-0e03c992fa33/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/7ce48b46-90c8-4460-8fda-0e03c992fa33/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/7ce48b46-90c8-4460-8fda-0e03c992fa33/step-0003.json"
+                          },
+                          {
+                            "label": "step-0004.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/7ce48b46-90c8-4460-8fda-0e03c992fa33/step-0004.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "7ce48b46-90c8-4460-8fda-0e03c992fa33.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/7ce48b46-90c8-4460-8fda-0e03c992fa33.json"
+                      },
+                      {
+                        "label": "fa6fb792-81b3-4347-9794-397971fef9b3",
+                        "children": [
+                          {
+                            "label": "step-0001.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/fa6fb792-81b3-4347-9794-397971fef9b3/step-0001.json"
+                          },
+                          {
+                            "label": "step-0002.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/fa6fb792-81b3-4347-9794-397971fef9b3/step-0002.json"
+                          },
+                          {
+                            "label": "step-0003.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/fa6fb792-81b3-4347-9794-397971fef9b3/step-0003.json"
+                          },
+                          {
+                            "label": "step-0004.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/fa6fb792-81b3-4347-9794-397971fef9b3/step-0004.json"
+                          },
+                          {
+                            "label": "step-0005.json",
+                            "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/fa6fb792-81b3-4347-9794-397971fef9b3/step-0005.json"
+                          }
+                        ]
+                      },
+                      {
+                        "label": "fa6fb792-81b3-4347-9794-397971fef9b3.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/checkpoints/fa6fb792-81b3-4347-9794-397971fef9b3.json"
+                      }
+                    ]
+                  },
+                  {
                     "label": "payment-ledger.json",
                     "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-4/data/payment-ledger.json"
                   }
@@ -15990,6 +16441,23 @@
                 "label": "data",
                 "children": [
                   {
+                    "label": "checkpoints",
+                    "children": [
+                      {
+                        "label": "1d3e770f-4b67-42e4-9935-1c533ed2d62b.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-5/data/checkpoints/1d3e770f-4b67-42e4-9935-1c533ed2d62b.json"
+                      },
+                      {
+                        "label": "761e9e61-1e88-40d7-b475-fa08eb99ebc3.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-5/data/checkpoints/761e9e61-1e88-40d7-b475-fa08eb99ebc3.json"
+                      },
+                      {
+                        "label": "bb00403a-0a24-443c-8aea-109ebd8d2c55.json",
+                        "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-5/data/checkpoints/bb00403a-0a24-443c-8aea-109ebd8d2c55.json"
+                      }
+                    ]
+                  },
+                  {
                     "label": "payment-ledger.json",
                     "path": "apps/11-Agent-State-Workflow/02-Checkpoint-Durable-Resume-step-5/data/payment-ledger.json"
                   }
@@ -16176,6 +16644,15 @@
           {
             "label": "02-Checkpoint-Durable-Resume-step-6",
             "children": [
+              {
+                "label": "data",
+                "children": [
+                  {
+                    "label": "checkpoints",
+                    "children": []
+                  }
+                ]
+              },
               {
                 "label": "lib",
                 "children": [
@@ -16548,6 +17025,18 @@
                   {
                     "label": ".gitkeep",
                     "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/.gitkeep"
+                  },
+                  {
+                    "label": "transfers.db",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/transfers.db"
+                  },
+                  {
+                    "label": "transfers.db-shm",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/transfers.db-shm"
+                  },
+                  {
+                    "label": "transfers.db-wal",
+                    "path": "apps/11-Agent-State-Workflow/03-Human-in-the-loop-step-2/data/transfers.db-wal"
                   }
                 ]
               },
@@ -17209,6 +17698,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-1/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -17449,8 +17942,16 @@
                 "label": "public",
                 "children": [
                   {
+                    "label": "components",
+                    "children": []
+                  },
+                  {
                     "label": "index.html",
                     "path": "apps/12-MCP/02-stdio-vs-Streamable-HTTP-step-2-mcp-server/public/index.html"
+                  },
+                  {
+                    "label": "utils",
+                    "children": []
                   }
                 ]
               },
@@ -17796,6 +18297,10 @@
                   {
                     "label": "index.html",
                     "path": "apps/12-MCP/03-Skills-vs-MCP-step-3/public/index.html"
+                  },
+                  {
+                    "label": "pages",
+                    "children": []
                   },
                   {
                     "label": "utils",
@@ -18316,6 +18821,10 @@
                     "path": "apps/13-Agent-Framework/01-框架解决什么-step-3/public/index.html"
                   },
                   {
+                    "label": "pages",
+                    "children": []
+                  },
+                  {
                     "label": "utils",
                     "children": [
                       {
@@ -18595,10 +19104,6 @@
                     "path": "apps/13-Agent-Framework/02-State-Graph-step-2/public/index.html"
                   },
                   {
-                    "label": "pages",
-                    "children": []
-                  },
-                  {
                     "label": "utils",
                     "children": [
                       {
@@ -18720,10 +19225,6 @@
                     "path": "apps/13-Agent-Framework/02-State-Graph-step-3/public/index.html"
                   },
                   {
-                    "label": "pages",
-                    "children": []
-                  },
-                  {
                     "label": "utils",
                     "children": [
                       {
@@ -18843,10 +19344,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/13-Agent-Framework/02-State-Graph-step-4/public/index.html"
-                  },
-                  {
-                    "label": "pages",
-                    "children": []
                   },
                   {
                     "label": "utils",
@@ -18972,10 +19469,6 @@
                   {
                     "label": "index.html",
                     "path": "apps/13-Agent-Framework/02-State-Graph-step-5/public/index.html"
-                  },
-                  {
-                    "label": "pages",
-                    "children": []
                   },
                   {
                     "label": "utils",
@@ -20853,10 +21346,6 @@
       {
         "label": "README.md",
         "path": "apps/README.md"
-      },
-      {
-        "label": "scripts",
-        "children": []
       },
       {
         "label": "tsconfig.base.json",
